@@ -1,0 +1,31 @@
+name: Deploy theme to dev.rytkoset.net
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'wp-content/themes/rytkoset-theme/**'   # vain teeman muutokset triggaavat
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Jos joskus buildaat CSS/JS:t (npm run build tms.), ne väliin tähän
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT }}
+          protocol: ftps
+          local-dir: wp-content/themes/rytkoset-theme
+          server-dir: /wp-content/themes/rytkoset-theme
+          log-level: standard
+          dangerous-clean-slate: false  # ei poisteta muita tiedostoja

@@ -20,6 +20,10 @@ wp-content/plugins/*
 _db-dumps/*
 !wp-content/plugins/rytkoset-*
 
+wp-content/cache/
+wp-content/plugins/akismet/
+
+
 
 # Configuration
 wp-config.php
