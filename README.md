@@ -89,8 +89,3 @@ Foorumin sisältö on nyt arkistotilassa WordPressissä. Lopullinen esitystapa p
 - `docs/migration-guide.md`
 - `CHANGELOG.md`
 - `status-update.md`
-
----
-
-## 📜 Lisenssi
-Tämä on yksityinen projekti, eikä lähdekoodi ole tarkoitettu julkiseen jakeluun.
