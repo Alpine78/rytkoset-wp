@@ -18,7 +18,7 @@ jobs:
       # Jos joskus buildaat CSS/JS:t (npm run build tms.), ne väliin tähän
 
       - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
