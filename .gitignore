@@ -16,6 +16,10 @@
 /readme.html
 /wp-*.php
 /xmlrpc.php
+wp-content/plugins/*
+_db-dumps/*
+!wp-content/plugins/rytkoset-*
+
 
 # Configuration
 wp-config.php
