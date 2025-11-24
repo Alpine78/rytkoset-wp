@@ -4,6 +4,22 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ---
 
+## [0.2.0] – 2025-11-24
+### Added
+- Dev-ympäristö `dev.rytkoset.net` luotu erilliseksi staging-alueeksi
+- Dev-sivuston sisällön päivitys tuotannosta (All-in-One Migration)
+- `.htaccess`-muutokset devissä: nostettu upload-limiitit Joomla-migraation mahdollistamiseksi
+- Automatisoitu CI/CD-putki GitHub Actionsilla (FTPS → dev.rytkoset.net)
+- Workflow-tiedosto: `deploy-dev.yml`
+- Dokumentaatiota päivitetty: README.md päivitetty kattamaan staging, CI/CD, migraatiot
+
+### Changed
+- Dev-teema päivittyy nyt automaattisesti jokaisella `main`-branchin teeman muutoksella
+- Joomla → WordPress -sisällön migraatio toistettu dev-ympäristöön
+- Päivitetty README.md selkeyttämään dev-datan tuontia ja automaattista julkaisuputkea
+
+---
+
 ## [0.1.0] – 2025-11-23
 ### Added
 - Joomla-dumpin tuonti erilliseen Docker-MariaDB-instanssiin
