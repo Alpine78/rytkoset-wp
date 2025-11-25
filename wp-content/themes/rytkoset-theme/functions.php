@@ -1,15 +1,56 @@
 <?php
+/**
+ * Rytköset Theme functions.
+ */
 
-// Perustiedot ja asetukset
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 function rytkoset_theme_setup() {
-    add_theme_support('title-tag');
-    add_theme_support('post-thumbnails');
-    add_theme_support('html5', ['search-form', 'comment-form', 'comment-list', 'gallery', 'caption']);
-}
-add_action('after_setup_theme', 'rytkoset_theme_setup');
+	// Otsikkotagi WP:n hallintaan
+	add_theme_support( 'title-tag' );
 
-// Staattiset tyylit ja skriptit
-function rytkoset_theme_assets() {
-    wp_enqueue_style('rytkoset-style', get_stylesheet_uri());
+	// Esikatselukuvat
+	add_theme_support( 'post-thumbnails' );
+
+	// HTML5-markup
+	add_theme_support(
+		'html5',
+		array( 'search-form', 'comment-form', 'comment-list', 'gallery', 'caption' )
+	);
+
+	// Navigaatiomenut
+	register_nav_menus(
+		array(
+			'primary'   => __( 'Päävalikko', 'rytkoset-theme' ),
+			'footer'    => __( 'Footer-valikko', 'rytkoset-theme' ),
+			'account'   => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
+		)
+	);
 }
-add_action('wp_enqueue_scripts', 'rytkoset_theme_assets');
+add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
+
+/**
+ * Lataa tyylit ja skriptit.
+ */
+function rytkoset_theme_scripts() {
+	$theme_version = wp_get_theme()->get( 'Version' );
+
+	wp_enqueue_style(
+		'rytkoset-theme-style',
+		get_stylesheet_uri(), // style.css
+		array(),
+		$theme_version
+	);
+
+	// Vähän JS:ää mobiilivalikkoa varten
+	wp_enqueue_script(
+		'rytkoset-theme-main-js',
+		get_template_directory_uri() . '/assets/js/main.js',
+		array(),
+		$theme_version,
+		true
+	);
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
