@@ -4,6 +4,36 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ---
 
+## [0.3.0] – 2025-11-26
+### Added
+- Projektin epicit ja sub-issue -rakenne luotu GitHub Projectsiin
+- Uudet labelit lisätty (frontend, backend, WooCommerce, media, events, content, accessibility)
+- Issue-tyypit yhtenäistetty: `epic`, `feature`, `task`, `enhancement`, `content`, `documentation`, `design`
+- Neljä pääepiciä luotu:
+  - **Perusrakenne & navigaatio (UI/UX / Theme Core)**
+  - **Media (kuvat, albumit, videot)**
+  - **WooCommerce (jäsenmaksut, tuotteet, maksut)**
+  - **Blogi & sisältösivut**
+  - (+ erillinen **Saavutettavuus (WCAG 2.1 AA)** -epic)
+- Tapahtumat & ilmoittautumiset -epic rakennettu uudelleen 14 selkeäksi osa-issueksi
+- GitHub Projectsin rakenteen optimointi: parent–child-suhteet lisätty kaikkiin relevantteihin issueihin
+
+### Changed
+- Vanhoja, päällekkäisiä tai virheellisesti luotuja issueita poistettu
+- Kaikille olemassa oleville issueteille asetettu:
+  - **priority**
+  - **type**
+  - **labels**
+  - **parent epic** (jos kuuluu kokonaisuuteen)
+- README.md päivitetty vastaamaan uutta projektirakennetta (Docker, CI/CD, staging)
+- Projektin hallinnointi selkeytetty: epicit sisältävät nyt vain relevantit tehtävät
+
+### Removed
+- Duplikaatti-issueita poistettu (mm. vanha saavutettavuustestaus)
+- Vanhentuneet luonnos-issueet siivottu pois
+
+---
+
 ## [0.2.0] – 2025-11-24
 ### Added
 - Dev-ympäristö `dev.rytkoset.net` luotu erilliseksi staging-alueeksi
