@@ -82,6 +82,27 @@
                 </span>
             </button>
 
+            <div class="account-nav-wrapper">
+                <?php if ( is_user_logged_in() ) : ?>
+                    <nav class="account-nav" aria-label="<?php esc_attr_e( 'Tilivalikko', 'rytkoset-theme' ); ?>">
+                        <?php
+                        wp_nav_menu(
+                            array(
+                                'theme_location' => 'account',
+                                'menu_class'     => 'account-nav__list',
+                                'container'      => false,
+                                'fallback_cb'    => 'rytkoset_theme_account_menu_logged_in_fallback',
+                            )
+                        );
+                        ?>
+                    </nav>
+                <?php else : ?>
+                    <nav class="account-nav" aria-label="<?php esc_attr_e( 'Tilivalikko', 'rytkoset-theme' ); ?>">
+                        <?php rytkoset_theme_account_menu_logged_out_fallback(); ?>
+                    </nav>
+                <?php endif; ?>
+            </div>
+
         </div><!-- .site-nav-wrapper -->
     </div><!-- .site-header__inner -->
 

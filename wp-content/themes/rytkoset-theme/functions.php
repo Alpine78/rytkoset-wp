@@ -21,15 +21,64 @@ function rytkoset_theme_setup() {
 	);
 
 	// Navigaatiomenut
-	register_nav_menus(
-		array(
-			'primary'   => __( 'Päävalikko', 'rytkoset-theme' ),
-			'footer'    => __( 'Footer-valikko', 'rytkoset-theme' ),
-			'account'   => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
-		)
-	);
+        register_nav_menus(
+                array(
+                        'primary'   => __( 'Päävalikko', 'rytkoset-theme' ),
+                        'footer'    => __( 'Footer-valikko', 'rytkoset-theme' ),
+                        'account'   => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
+                )
+        );
 }
 add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
+
+/**
+ * Palauttaa uloskirjautumis-URL:n etusivulle ohjauksella.
+ *
+ * @return string Uloskirjautumis-URL.
+ */
+function rytkoset_theme_get_logout_url() {
+        return wp_logout_url( home_url( '/' ) );
+}
+
+/**
+ * Fallback-kutsu kirjautuneiden tilivalikolle.
+ */
+function rytkoset_theme_account_menu_logged_in_fallback() {
+        echo '<ul class="account-nav__list">';
+        echo '<li class="menu-item">';
+        echo '<a href="' . esc_url( admin_url( 'profile.php' ) ) . '">';
+        echo esc_html__( 'Oma tili', 'rytkoset-theme' );
+        echo '</a>';
+        echo '</li>';
+        echo '<li class="menu-item">';
+        echo '<a href="' . esc_url( rytkoset_theme_get_logout_url() ) . '">';
+        echo esc_html__( 'Kirjaudu ulos', 'rytkoset-theme' );
+        echo '</a>';
+        echo '</li>';
+        echo '</ul>';
+}
+
+/**
+ * Fallback-kutsu vierailijoiden tilivalikolle.
+ */
+function rytkoset_theme_account_menu_logged_out_fallback() {
+        echo '<ul class="account-nav__list">';
+        echo '<li class="menu-item">';
+        echo '<a href="' . esc_url( wp_login_url() ) . '">';
+        echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
+        echo '</a>';
+        echo '</li>';
+
+        if ( get_option( 'users_can_register' ) && wp_registration_url() ) {
+                echo '<li class="menu-item">';
+                echo '<a href="' . esc_url( wp_registration_url() ) . '">';
+                echo esc_html__( 'Rekisteröidy', 'rytkoset-theme' );
+                echo '</a>';
+                echo '</li>';
+        }
+
+        echo '</ul>';
+}
 
 /**
  * Lataa tyylit ja skriptit.
