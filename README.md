@@ -181,6 +181,12 @@ Projektia seurataan GitHub-issuilla ja epiceillä. Pääepicit:
 
 ---
 
+### Sisällönhallinnan muistilaput
+
+- [Ensisijaisen valikon päivitys ja testaaminen](docs/menu-structure.md)
+
+---
+
 ## 📦 Content-tyypit
 
 Sisällöt ryhmitellään mm. seuraaviin tyyppeihin:

@@ -75,31 +75,60 @@
             <button class="mobile-menu-toggle"
                     type="button"
                     aria-expanded="false"
-                    aria-controls="mobile-menu">
-                <span class="mobile-menu-toggle__icon" aria-hidden="true"></span>
+                    aria-controls="mobile-menu"
+                    aria-haspopup="true"
+                    data-submenu-label="<?php esc_attr_e( 'Avaa alavalikko', 'rytkoset-theme' ); ?>">
+                <span class="mobile-menu-toggle__icon" aria-hidden="true"><span></span></span>
                 <span class="mobile-menu-toggle__label">
                     <?php esc_html_e( 'Valikko', 'rytkoset-theme' ); ?>
                 </span>
             </button>
 
+            <div class="account-nav-wrapper">
+                <?php if ( is_user_logged_in() ) : ?>
+                    <nav class="account-nav" aria-label="<?php esc_attr_e( 'Tilivalikko', 'rytkoset-theme' ); ?>">
+                        <?php
+                        wp_nav_menu(
+                            array(
+                                'theme_location' => 'account',
+                                'menu_class'     => 'account-nav__list',
+                                'container'      => false,
+                                'fallback_cb'    => 'rytkoset_theme_account_menu_logged_in_fallback',
+                            )
+                        );
+                        ?>
+                    </nav>
+                <?php else : ?>
+                    <nav class="account-nav" aria-label="<?php esc_attr_e( 'Tilivalikko', 'rytkoset-theme' ); ?>">
+                        <?php rytkoset_theme_account_menu_logged_out_fallback(); ?>
+                    </nav>
+                <?php endif; ?>
+            </div>
+
         </div><!-- .site-nav-wrapper -->
     </div><!-- .site-header__inner -->
 
     <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisätään myöhemmin) -->
-    <nav id="mobile-menu"
-        class="mobile-menu"
-        aria-label="<?php esc_attr_e( 'Mobiilivalikko', 'rytkoset-theme' ); ?>">
-        <?php
-        wp_nav_menu(
-            array(
-                'theme_location' => 'primary',
-                'menu_class'     => 'mobile-menu__list',
-                'container'      => false,
-                'fallback_cb'    => false,
-            )
-        );
-        ?>
-    </nav>
+    <div class="mobile-menu-layer">
+        <div class="mobile-menu__overlay" aria-hidden="true" hidden></div>
+        <nav id="mobile-menu"
+            class="mobile-menu"
+            aria-label="<?php esc_attr_e( 'Mobiilivalikko', 'rytkoset-theme' ); ?>"
+            aria-hidden="true"
+            aria-expanded="false"
+            tabindex="-1">
+            <?php
+            wp_nav_menu(
+                array(
+                    'theme_location' => 'primary',
+                    'menu_class'     => 'mobile-menu__list',
+                    'container'      => false,
+                    'fallback_cb'    => false,
+                )
+            );
+            ?>
+        </nav>
+    </div>
 
 </header>
 

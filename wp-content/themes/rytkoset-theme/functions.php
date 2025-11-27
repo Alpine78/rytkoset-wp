@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once get_template_directory() . '/inc/social-links.php';
+
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
 	add_theme_support( 'title-tag' );
@@ -21,15 +23,84 @@ function rytkoset_theme_setup() {
 	);
 
 	// Navigaatiomenut
-	register_nav_menus(
-		array(
-			'primary'   => __( 'Päävalikko', 'rytkoset-theme' ),
-			'footer'    => __( 'Footer-valikko', 'rytkoset-theme' ),
-			'account'   => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
-		)
-	);
+        register_nav_menus(
+                array(
+                        'primary'   => __( 'Päävalikko', 'rytkoset-theme' ),
+                        'footer'    => __( 'Footer-valikko', 'rytkoset-theme' ),
+                        'account'   => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
+                )
+        );
 }
 add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
+
+/**
+ * Palauttaa uloskirjautumis-URL:n etusivulle ohjauksella.
+ *
+ * @return string Uloskirjautumis-URL.
+ */
+function rytkoset_theme_get_logout_url() {
+        return wp_logout_url( home_url( '/' ) );
+}
+
+/**
+ * Fallback-kutsu kirjautuneiden tilivalikolle.
+ */
+function rytkoset_theme_account_menu_logged_in_fallback() {
+        $current_user = wp_get_current_user();
+
+        if ( ! $current_user instanceof WP_User ) {
+                return;
+        }
+
+        $display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+        $profile_url  = admin_url( 'profile.php' );
+
+        echo '<ul class="account-nav__list">';
+        echo '<li class="menu-item menu-item-has-children account-menu__user">';
+        echo '<a href="' . esc_url( $profile_url ) . '">';
+        echo '<span class="account-menu__avatar">' . wp_kses_post( get_avatar( $current_user->ID, 32 ) ) . '</span>';
+        echo '<span class="account-menu__meta">';
+        echo '<span class="account-menu__greeting">' . esc_html__( 'Tervehdys,', 'rytkoset-theme' ) . '</span>';
+        echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
+        echo '</span>';
+        echo '</a>';
+        echo '<ul class="sub-menu">';
+        echo '<li class="menu-item">';
+        echo '<a href="' . esc_url( $profile_url ) . '">';
+        echo esc_html__( 'Muokkaa profiilia', 'rytkoset-theme' );
+        echo '</a>';
+        echo '</li>';
+        echo '<li class="menu-item">';
+        echo '<a href="' . esc_url( rytkoset_theme_get_logout_url() ) . '">';
+        echo esc_html__( 'Kirjaudu ulos', 'rytkoset-theme' );
+        echo '</a>';
+        echo '</li>';
+        echo '</ul>';
+        echo '</li>';
+        echo '</ul>';
+}
+
+/**
+ * Fallback-kutsu vierailijoiden tilivalikolle.
+ */
+function rytkoset_theme_account_menu_logged_out_fallback() {
+        echo '<ul class="account-nav__list">';
+        echo '<li class="menu-item">';
+        echo '<a href="' . esc_url( wp_login_url() ) . '">';
+        echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
+        echo '</a>';
+        echo '</li>';
+
+        if ( get_option( 'users_can_register' ) && wp_registration_url() ) {
+                echo '<li class="menu-item">';
+                echo '<a href="' . esc_url( wp_registration_url() ) . '">';
+                echo esc_html__( 'Rekisteröidy', 'rytkoset-theme' );
+                echo '</a>';
+                echo '</li>';
+        }
+
+        echo '</ul>';
+}
 
 /**
  * Lataa tyylit ja skriptit.
