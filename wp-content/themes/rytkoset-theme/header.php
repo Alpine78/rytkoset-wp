@@ -75,8 +75,10 @@
             <button class="mobile-menu-toggle"
                     type="button"
                     aria-expanded="false"
-                    aria-controls="mobile-menu">
-                <span class="mobile-menu-toggle__icon" aria-hidden="true"></span>
+                    aria-controls="mobile-menu"
+                    aria-haspopup="true"
+                    data-submenu-label="<?php esc_attr_e( 'Avaa alavalikko', 'rytkoset-theme' ); ?>">
+                <span class="mobile-menu-toggle__icon" aria-hidden="true"><span></span></span>
                 <span class="mobile-menu-toggle__label">
                     <?php esc_html_e( 'Valikko', 'rytkoset-theme' ); ?>
                 </span>
@@ -107,20 +109,26 @@
     </div><!-- .site-header__inner -->
 
     <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisätään myöhemmin) -->
-    <nav id="mobile-menu"
-        class="mobile-menu"
-        aria-label="<?php esc_attr_e( 'Mobiilivalikko', 'rytkoset-theme' ); ?>">
-        <?php
-        wp_nav_menu(
-            array(
-                'theme_location' => 'primary',
-                'menu_class'     => 'mobile-menu__list',
-                'container'      => false,
-                'fallback_cb'    => false,
-            )
-        );
-        ?>
-    </nav>
+    <div class="mobile-menu-layer">
+        <div class="mobile-menu__overlay" aria-hidden="true" hidden></div>
+        <nav id="mobile-menu"
+            class="mobile-menu"
+            aria-label="<?php esc_attr_e( 'Mobiilivalikko', 'rytkoset-theme' ); ?>"
+            aria-hidden="true"
+            aria-expanded="false"
+            tabindex="-1">
+            <?php
+            wp_nav_menu(
+                array(
+                    'theme_location' => 'primary',
+                    'menu_class'     => 'mobile-menu__list',
+                    'container'      => false,
+                    'fallback_cb'    => false,
+                )
+            );
+            ?>
+        </nav>
+    </div>
 
 </header>
 
