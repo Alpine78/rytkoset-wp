@@ -80,18 +80,18 @@
   transform: translateY(-2px) rotate(45deg); 
 }
 
-.site-nav .sub-menu { 
-  display: none; 
-  position: absolute; 
-  top: calc(100% + 0.35rem); 
-  left: 0; 
-  background: var(--color-surface); 
-  color: var(--color-text); 
-  min-width: 210px; 
-  padding: 0.6rem 0; 
-  border-radius: var(--radius-medium); 
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12); 
-  z-index: 5; 
+.site-nav .sub-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 210px;
+  padding: 0.35rem 0 0.6rem;
+  border-radius: var(--radius-medium);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.12);
+  z-index: 5;
 }
 
 .site-nav .sub-menu li { 
@@ -111,15 +111,45 @@
   white-space: nowrap; 
 }
 
-.site-nav .sub-menu a:hover, 
-.site-nav .sub-menu a:focus-visible { 
-  background: var(--color-surface-muted); 
-  text-decoration: none; 
+.site-nav .sub-menu a:hover,
+.site-nav .sub-menu a:focus-visible {
+  background: var(--color-surface-muted);
+  text-decoration: none;
 }
 
-.site-nav__list > li:focus-within > .sub-menu, 
-.site-nav__list > li:hover > .sub-menu { 
-  display: block; 
+.site-nav__list > li:focus-within > .sub-menu,
+.site-nav__list > li:hover > .sub-menu,
+.site-nav .sub-menu:focus-within,
+.site-nav .sub-menu:hover {
+  display: block;
+}
+
+/* Tilivalikko */
+
+.account-nav-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.account-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.account-nav__list > li > a {
+  color: var(--color-text-inverted);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.account-nav__list > li > a:hover,
+.account-nav__list > li.current-menu-item > a {
+  text-decoration: underline;
 }
 
 /* Skip-link */
