@@ -478,13 +478,13 @@
   border: 1px solid rgba(255, 255, 255, 0.28);
   color: var(--color-text-inverted);
   cursor: pointer;
-  padding: 0.45rem 0.65rem;
+  padding: 0.55rem 0.8rem;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.25rem;
-  min-width: 2.25rem;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
@@ -502,7 +502,11 @@
 }
 
 .mobile-submenu-toggle__icon {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
   transition: transform 0.25s ease;
 }
 
