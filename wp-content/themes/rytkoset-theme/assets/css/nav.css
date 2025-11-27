@@ -25,6 +25,10 @@
   line-height: 1.2;
 }
 
+.site-title {
+  margin: 0;
+}
+
 .site-title a {
   color: var(--color-text-inverted);
   text-decoration: none;
