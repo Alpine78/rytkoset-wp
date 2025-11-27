@@ -1,4 +1,7 @@
+# ===============================
 # Frontend / teema
+# ===============================
+
 "frontend: layout":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/**"
@@ -12,7 +15,11 @@
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/**/form-*.php"
 
+
+# ===============================
 # Backend / CPT / logiikka
+# ===============================
+
 "backend: CPT":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**/cpt-*.php"
@@ -21,7 +28,11 @@
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**/api/**"
 
+
+# ===============================
 # WooCommerce
+# ===============================
+
 "woocommerce: settings":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**woocommerce*/**/settings*.php"
@@ -38,7 +49,11 @@
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**woocommerce*/**membership*/**"
 
+
+# ===============================
 # Events
+# ===============================
+
 "events: core":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**events*/**"
@@ -51,7 +66,11 @@
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**events*/**admin/**"
 
+
+# ===============================
 # Media
+# ===============================
+
 "media: gallery":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**gallery*/**"
@@ -64,7 +83,11 @@
   - changed-files:
       - any-glob-to-any-file: "wp-content/**photoswipe*/**"
 
+
+# ===============================
 # Content & docs
+# ===============================
+
 "content: pages":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/page-*.php"
