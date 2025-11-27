@@ -1,0 +1,52 @@
+# Frontend / teema
+frontend: layout:
+  - "wp-content/themes/rytkoset-theme/**"
+frontend: navigation:
+  - "wp-content/themes/rytkoset-theme/header.php"
+  - "wp-content/themes/rytkoset-theme/template-parts/navigation/**"
+frontend: forms:
+  - "wp-content/themes/rytkoset-theme/**/form-*.php"
+
+# Backend / CPT / logiikka
+backend: CPT:
+  - "wp-content/plugins/**/cpt-*.php"
+backend: API:
+  - "wp-content/plugins/**/api/**"
+
+# WooCommerce
+woocommerce: settings:
+  - "wp-content/plugins/**woocommerce*/**/settings*.php"
+woocommerce: products:
+  - "wp-content/plugins/**woocommerce*/**/product*.php"
+woocommerce: payments:
+  - "wp-content/plugins/**woocommerce*/**/payment*.php"
+woocommerce: membership:
+  - "wp-content/plugins/**woocommerce*/**membership*/**"
+
+# Events
+events: core:
+  - "wp-content/plugins/**events*/**"
+events: registration:
+  - "wp-content/plugins/**events*/**registration**"
+events: organizer-tools:
+  - "wp-content/plugins/**events*/**admin/**"
+
+# Media
+media: gallery:
+  - "wp-content/plugins/**gallery*/**"
+media: video:
+  - "wp-content/plugins/**video*/**"
+media: photoswipe:
+  - "wp-content/**photoswipe*/**"
+
+# Content & docs
+content: pages:
+  - "wp-content/themes/rytkoset-theme/page-*.php"
+content: blog:
+  - "wp-content/themes/rytkoset-theme/single.php"
+  - "wp-content/themes/rytkoset-theme/archive.php"
+content: sukuseura:
+  - "wp-content/themes/rytkoset-theme/templates/sukuseura-*/**"
+
+documentation:
+  - "**/*.md"
