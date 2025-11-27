@@ -395,7 +395,7 @@
 .mobile-menu {
   position: fixed;
   inset: 0 0 0 auto;
-  width: min(80vw, 380px);
+  width: min(100vw, 420px);
   background: var(--color-primary-dark);
   border-left: 1px solid var(--color-border-light);
   box-shadow: -6px 0 18px rgba(0, 0, 0, 0.2);

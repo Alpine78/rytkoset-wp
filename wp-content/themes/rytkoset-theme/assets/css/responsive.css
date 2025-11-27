@@ -80,6 +80,34 @@
   }
 }
 
+@media (max-width: 640px) {
+  .site-header__inner {
+    align-items: flex-start;
+  }
+
+  .site-nav-wrapper {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .mobile-menu-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .account-nav-wrapper {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .account-menu__user > a {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
   .site-nav-wrapper {
     grid-template-columns: 1fr;
