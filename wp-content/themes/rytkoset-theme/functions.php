@@ -46,16 +46,36 @@ function rytkoset_theme_get_logout_url() {
  * Fallback-kutsu kirjautuneiden tilivalikolle.
  */
 function rytkoset_theme_account_menu_logged_in_fallback() {
+        $current_user = wp_get_current_user();
+
+        if ( ! $current_user instanceof WP_User ) {
+                return;
+        }
+
+        $display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+        $profile_url  = admin_url( 'profile.php' );
+
         echo '<ul class="account-nav__list">';
+        echo '<li class="menu-item menu-item-has-children account-menu__user">';
+        echo '<a href="' . esc_url( $profile_url ) . '">';
+        echo '<span class="account-menu__avatar">' . wp_kses_post( get_avatar( $current_user->ID, 32 ) ) . '</span>';
+        echo '<span class="account-menu__meta">';
+        echo '<span class="account-menu__greeting">' . esc_html__( 'Tervehdys,', 'rytkoset-theme' ) . '</span>';
+        echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
+        echo '</span>';
+        echo '</a>';
+        echo '<ul class="sub-menu">';
         echo '<li class="menu-item">';
-        echo '<a href="' . esc_url( admin_url( 'profile.php' ) ) . '">';
-        echo esc_html__( 'Oma tili', 'rytkoset-theme' );
+        echo '<a href="' . esc_url( $profile_url ) . '">';
+        echo esc_html__( 'Muokkaa profiilia', 'rytkoset-theme' );
         echo '</a>';
         echo '</li>';
         echo '<li class="menu-item">';
         echo '<a href="' . esc_url( rytkoset_theme_get_logout_url() ) . '">';
         echo esc_html__( 'Kirjaudu ulos', 'rytkoset-theme' );
         echo '</a>';
+        echo '</li>';
+        echo '</ul>';
         echo '</li>';
         echo '</ul>';
 }
