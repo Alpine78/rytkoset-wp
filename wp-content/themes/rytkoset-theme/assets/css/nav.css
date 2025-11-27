@@ -442,36 +442,59 @@
   outline: none;
 }
 
-.mobile-menu .sub-menu {
-  margin-top: 0.4rem;
-  padding-left: 1rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
+  .mobile-menu .menu-item-has-children {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 0.5rem;
+  }
 
-.mobile-submenu-toggle {
-  background: none;
-  border: none;
-  color: var(--color-text-inverted);
-  margin-left: 0.35rem;
-  cursor: pointer;
-  padding: 0.1rem 0.3rem;
-  border-radius: var(--radius-small);
-}
+  .mobile-menu .menu-item-has-children > a {
+    width: 100%;
+    padding-right: 0.5rem;
+  }
 
-.mobile-submenu-toggle:focus-visible {
-  outline: 2px solid var(--color-highlight);
-  outline-offset: 2px;
-  background: rgba(255, 255, 255, 0.12);
-}
+  .mobile-menu .menu-item-has-children > .sub-menu {
+    grid-column: 1 / -1;
+    margin: 0.35rem 0 0.1rem;
+    padding: 0.35rem 0 0.35rem 0.9rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+  }
 
-.mobile-submenu-toggle__icon {
-  display: inline-block;
-  transition: transform 0.25s ease;
-}
+  .mobile-submenu-toggle {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    color: var(--color-text-inverted);
+    cursor: pointer;
+    padding: 0.35rem 0.55rem;
+    border-radius: var(--radius-small);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.1rem;
+  }
 
-.submenu-open > .mobile-submenu-toggle .mobile-submenu-toggle__icon {
-  transform: rotate(180deg);
-}
+  .mobile-submenu-toggle:hover,
+  .mobile-submenu-toggle:focus-visible {
+    outline: 2px solid var(--color-highlight);
+    outline-offset: 2px;
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .submenu-open > .mobile-submenu-toggle {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .mobile-submenu-toggle__icon {
+    display: inline-block;
+    transition: transform 0.25s ease;
+  }
+
+  .submenu-open > .mobile-submenu-toggle .mobile-submenu-toggle__icon {
+    transform: rotate(180deg);
+  }
 
 /* Pieni ruutu: desktop-nav piiloon, mobiili esiin */
 
