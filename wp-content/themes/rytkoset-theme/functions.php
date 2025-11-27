@@ -35,22 +35,24 @@ add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
-	$theme_version = wp_get_theme()->get( 'Version' );
+    $theme_version = wp_get_theme()->get( 'Version' );
 
-	wp_enqueue_style(
-		'rytkoset-theme-style',
-		get_stylesheet_uri(), // style.css
-		array(),
-		$theme_version
-	);
+    // Teeman päätyyli (style.css) – WordPress hoitaa tämän usein automaattisesti, mutta tehdään eksplisiittisesti.
+    wp_enqueue_style(
+        'rytkoset-theme-style',
+        get_stylesheet_uri(),
+        array(),
+        $theme_version
+    );
 
-	// Vähän JS:ää mobiilivalikkoa varten
-	wp_enqueue_script(
-		'rytkoset-theme-main-js',
-		get_template_directory_uri() . '/assets/js/main.js',
-		array(),
-		$theme_version,
-		true
-	);
+    // Mobiilivalikon JS
+    wp_enqueue_script(
+        'rytkoset-theme-main',
+        get_template_directory_uri() . '/assets/js/main.js',
+        array(),
+        $theme_version,
+        true // footer
+    );
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
+

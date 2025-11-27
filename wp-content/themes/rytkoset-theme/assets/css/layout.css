@@ -1,0 +1,39 @@
+.container {
+  width: min(1100px, 100% - 2rem);
+  margin-inline: auto;
+}
+
+.section {
+  padding: 3.5rem 0;
+  background: var(--color-surface);
+}
+.section--light {
+  background: var(--color-surface-alt);
+}
+.section--accent {
+  background: var(--color-primary);
+  color: var(--color-text-inverted);
+}
+
+.section__narrow {
+  max-width: 720px;
+}
+
+.section__split {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.section__cta {
+  flex-shrink: 0;
+}
+
+/* Cards & grid */
+.grid {
+  display: grid;
+  gap: 1.75rem;
+}
+.grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

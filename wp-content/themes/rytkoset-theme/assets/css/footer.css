@@ -1,0 +1,17 @@
+.site-footer {
+  background: #111827; /* halutessasi voit myöhemmin tehdä tästä oman tokenin */
+  color: var(--color-text-light);
+  padding: 1.5rem 0;
+  margin-top: 3rem;
+}
+
+.site-footer__inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.site-footer a {
+  color: var(--color-text-light);
+}
