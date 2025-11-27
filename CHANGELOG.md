@@ -4,7 +4,22 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ---
 
+## [0.3.0] – 2025-11-26
+
+### Added
+- Projektin GitHub Projects -tauluun epicit ja alitehtävät (tapahtumat, media, WooCommerce, blogi, saavutettavuus)
+- Yhtenäinen label-järjestelmä (frontend/backend/WooCommerce/events/content jne.) issueiden luokitteluun
+- EPIC: Saavutettavuus (WCAG 2.1 AA) + ensimmäiset saavutettavuuteen liittyvät tehtävät (mm. navigaatio ja lomakkeet)
+- Dokumentoitu projektinhallinnan rakenne (epicit, prioriteetit, typet) README:n ja GitHubin avulla
+
+### Changed
+- Siivottu päällekkäiset / vanhat issuet ja järjestetty ne epicien alle loogisiksi kokonaisuuksiksi
+- Selkeytetty projektin kehityspolkua (MVP → jatkokehitys) ja jaettu isoja tehtäviä pienemmiksi, toteutettaviksi osiksi
+
+---
+
 ## [0.2.0] – 2025-11-24
+
 ### Added
 - Dev-ympäristö `dev.rytkoset.net` luotu erilliseksi staging-alueeksi
 - Dev-sivuston sisällön päivitys tuotannosta (All-in-One Migration)
@@ -21,15 +36,16 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ---
 
 ## [0.1.0] – 2025-11-23
+
 ### Added
 - Joomla-dumpin tuonti erilliseen Docker-MariaDB-instanssiin
 - FG Joomla Premium + Kunena import
 - Migrated: 358 users, 7 forums, 198 topics, 511 replies
-- Dokumentaatio: migration-guide.md, projektin README, repo README
+- Dokumentaatio: `migration-guide.md`, projektin README, repo README
 - Docker-kehitysympäristö (WordPress + MariaDB)
-- Custom teeman perusrakenne (`rytkoset-theme`)
+- Custom-teeman perusrakenne (`rytkoset-theme`)
 - Projektin aloitusdokumentit
 
 ### Changed
-- Dockerfile: lisätty pdo_mysql
+- Dockerfile: lisätty `pdo_mysql`
 - README.md päivitetty kuvaamaan migraatiota

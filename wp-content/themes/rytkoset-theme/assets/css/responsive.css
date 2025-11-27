@@ -1,0 +1,23 @@
+@media (max-width: 800px) {
+  .grid--3 {
+    grid-template-columns: 1fr;
+  }
+  .section__split {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (min-width: 768px) {
+  .site-nav {
+    display: block;
+  }
+
+  .mobile-menu-toggle {
+    display: none;
+  }
+
+  .mobile-menu {
+    display: none !important;
+  }
+}

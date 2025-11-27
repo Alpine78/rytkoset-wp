@@ -1,7 +1,7 @@
 # 🐦 Rytköset.net – WordPress-projekti
 
 Tämä repository sisältää Rytkösten Sukuseura ry:n uuden WordPress-sivuston kehityksen.  
-Projektissa käytetään modernia local-dev -ympäristöä (Docker), erillistä Joomla-importtia, automaattista dev-deployta sekä GitHub Actions -pohjaista CI/CD-putkea.
+Projektissa käytetään Docker-kehitysympäristöä, erillistä Joomla-importtia, staging-ympäristöä (`dev.rytkoset.net`) sekä GitHub Actions -pohjaista CI/CD-putkea.
 
 ---
 
@@ -13,136 +13,191 @@ Paikallinen kehitys tehdään Dockerilla. Projektissa on kolme konttia:
 - **db** – MariaDB 10.11 (WordPress)  
 - **joomla-db** – MariaDB 10.11 (Joomla-migraatiota varten)
 
-### 🔧 Käynnistys
+### Käynnistä kontit
 
-```bash
-docker compose up -d
-```
+    docker compose up -d
 
-🛑 Sammutus
+### Sammuta kontit
 
-```bash
-docker compose down
-```
+    docker compose down
 
-🌍 WordPress kehityksessä
+WordPress dev-ympäristö löytyy osoitteesta:
 
-http://localhost:8000
+- http://localhost:8000
 
-📦 Joomla-migraatio
+### Konttien tiivistelmä
 
-Migraatio tehdään erilliseen joomla-db -konttiin.
-1. Kopioi Joomla SQL dump konttiin
+- `wordpress` – itse WordPress + custom-teema  
+- `db` – WordPressin tietokanta  
+- `joomla-db` – Joomla-datan väliaikaista migraatiota varten
 
-```bash
-docker cp _db-dumps/joomla.sql rytkoset-joomla-db:/joomla.sql
-```
+---
 
-2. Aja SQL sisään
+## 📦 Joomla-migraatio (valinnainen)
 
-```bash
-docker exec -it rytkoset-joomla-db bash
-mysql -u root -p joomla_db < /joomla.sql
-```
+Migraatio suoritetaan `joomla-db`-konttiin.
 
-3. Suorita FG Joomla Premium -import WordPressin administa
+1. **Kopioi Joomla SQL dump konttiin**
 
-Tools → FG Joomla to WordPress → Run Import
+       docker cp _db-dumps/joomla.sql rytkoset-joomla-db:/joomla.sql
 
-🌱 Dev / Staging -ympäristö
+2. **Aja SQL sisään**
 
-Käytössä on staging-ympäristö, jota hallituksen jäsenet voivat käyttää arviointiin:
+       docker exec -it rytkoset-joomla-db bash
+       mysql -u root -p joomla_db < /joomla.sql
 
-🔗 https://dev.rytkoset.net
+3. **Suorita FG Joomla Premium -import WordPressin administa**
 
-Dev-ympäristö päivittyy automaattisesti vain teeman muutoksista (tyyli, ulkoasu, template).
+   - *Tools → FG Joomla to WordPress → Run Import*  
+   - Migraatio tuo käyttäjät, foorumit, aiheet ja viestit WordPressiin (bbPress).
 
-🔄 Dev-datan päivittäminen tuotannosta
+---
 
-Dev-sivuston sisältö voidaan päivittää tuotannosta All-in-One Migrationilla:
+## 🌱 Staging / dev-ympäristö
 
-1. Ota export tuotantoympäristöstä
-2. Nosta devin upload-limiitti .htaccess-muutoksella:
+Staging-ympäristöä käytetään hallituksen katselmointeihin:
 
-```apache
-php_value upload_max_filesize 64M
-php_value post_max_size 64M
-php_value max_execution_time 300
-php_value max_input_time 300
-```
+- 🔗 https://dev.rytkoset.net
 
-3. Import deviin
-4. Valitse: Replace matching content only
+Dev-ympäristössä:
 
-Admin-käyttäjä säilyy devissä
+- Teema (`wp-content/themes/rytkoset-theme`) päivittyy automaattisesti GitHub-deployn kautta
+- Sisältö (käyttäjät, foorumipostaukset jne.) voidaan päivittää tuotannosta All-in-One Migrationilla
 
-Dev on nyt 1:1 kopio tuotannosta sisältöjen osalta.
+Admin-tunnus devissä on oma erillinen käyttäjänsä, joka säilytetään myös importtien yli.
 
-⚙️ CI/CD – Automaattinen teeman deploy deviin
+---
 
-Kun main-branchiin pusketaan muutos, joka koskee:
+## 🔁 Dev-sisällön päivittäminen tuotannosta
 
-`wp-content/themes/rytkoset-theme/**`
+Stagingin sisällöt voidaan päivittää tuotannosta **All-in-One Migration** -lisäosalla.
+
+1. Ota **export** tuotantoympäristöstä
+2. **Nosta upload-limiittejä webhotellin PHP-asetuksista**  
+   (post\_max\_size, upload\_max\_filesize jne. – `.htaccess` ei tässä ympäristössä riitä)
+3. Aja **import deviin** (All-in-One Migration → Import)
+4. Valitse: **“Replace matching content only”**  
+   → Dev-admin ja muut dev-spesifiset käyttäjät säilyvät
+
+Dev on nyt sisällöltään 1:1 kopio tuotannosta, mutta teema ja koodi elävät GitHub-repon mukana.
+
+---
+
+## ⚙️ CI/CD – Automaattinen teeman deploy deviin
+
+Kun `main`-branchiin tulee muutos, joka koskee hakemistoa
+
+- `wp-content/themes/rytkoset-theme/**`
 
 GitHub Actions:
 
-- Checkouttaa koodin
-- Lähettää muutokset FTPS:llä
-- Päivittää teeman suoraan dev.rytkoset.net -palvelimelle
+1. Checkouttaa repositorion
+2. Deployaa teeman FTPS:llä
+3. Päivittää `dev.rytkoset.net` -instanssin teeman
 
-Workflow-tiedosto (.github/workflows/deploy-dev.yml)
+**Workflow:** `.github/workflows/deploy-dev.yml`
 
-```yaml
-name: Deploy theme to dev.rytkoset.net
+Ydinsisältö:
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'wp-content/themes/rytkoset-theme/**'
+    name: Deploy theme to dev.rytkoset.net
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    on:
+      push:
+        branches:
+          - main
+        paths:
+          - 'wp-content/themes/rytkoset-theme/**'
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
-        with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: ${{ secrets.FTP_PORT }}
-          protocol: ftps
-          local-dir: wp-content/themes/rytkoset-theme/
-          server-dir: /wp-content/themes/rytkoset-theme/
-          log-level: standard
-```
+        steps:
+          - name: Checkout repo
+            uses: actions/checkout@v4
 
-🧩 Arkkitehtuurikaavio (Mermaid)
+          - name: Deploy via FTP
+            uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+            with:
+              server: ${{ secrets.FTP_HOST }}
+              username: ${{ secrets.FTP_USERNAME }}
+              password: ${{ secrets.FTP_PASSWORD }}
+              port: ${{ secrets.FTP_PORT }}
+              protocol: ftps
+              local-dir: wp-content/themes/rytkoset-theme/
+              server-dir: /wp-content/themes/rytkoset-theme/
+              log-level: standard
 
-```mermaid
-flowchart TD
-    A[Local dev Docker<br>WP + DB + Joomla-DB] -->|Git push| B[GitHub main branch]
-    B --> C[GitHub Actions<br>CI/CD pipeline]
-    C -->|FTPS deploy| D[dev.rytkoset.net<br>Staging environment]
-    D --> E[Hallituksen testaus & hyväksyntä]
-    E -->|Manuaalinen julkaisu| F[Tuotantopalvelin rytkoset.net]
-```
+---
 
-🛠️ Julkaisuprosessi
+## 🧩 Arkkitehtuurikaavio (Mermaid)
 
-- Kehitä Dockerissa
-- Commit → push → teema päivittyy automaattisesti deviin
-- Hallitus hyväksyy dev-version
-- Teeman päivitys siirretään manuaalisesti tuotantoon
+    flowchart TD
+        A[Local dev Docker<br>WP + DB + Joomla-DB] -->|Git push| B[GitHub main branch]
+        B --> C[GitHub Actions<br>CI/CD pipeline]
+        C -->|FTPS deploy| D[dev.rytkoset.net<br>Staging environment]
+        D --> E[Hallituksen testaus & hyväksyntä]
+        E -->|Manuaalinen julkaisu| F[Tuotantopalvelin rytkoset.net]
 
-📝 Changelog
+---
 
-Changelog löytyy tiedostosta:
+## 🗂 Projektin rakenne
 
-👉 CHANGELOG.md
+Teema:
+
+    wp-content/themes/rytkoset-theme/
+
+Mahdolliset omat plugin-toteutukset:
+
+    wp-content/plugins/rytkoset-plugin/
+
+Joomla-dumpit:
+
+    _db-dumps/joomla.sql
+
+---
+
+## 🧱 Suunnittelun pääepicit
+
+Projektia seurataan GitHub-issuilla ja epiceillä. Pääepicit:
+
+1. **EPIC 1 — Perusrakenne & navigaatio (UI/UX / Theme Core)**
+   - Teeman peruslayout, header/footer, navigaatio, responsiivisuus
+
+2. **EPIC 2 — Media (Kuvat, albumit, video)**
+   - Galleria-albumit, Photoswipe, videoiden upotus
+
+3. **EPIC 3 — WooCommerce (jäsenmaksut, tuotteet, maksut)**
+   - Jäsenmaksutuotteet, digitaaliset tuotteet, maksutavat, jäsenyydet
+
+4. **EPIC 4 — Blogi & sisältösivut**
+   - Sukuseuran sivusisällöt, blogi, tapahtumasivut
+
+5. **EPIC 5 — Tapahtumat & ilmoittautumiset (ilmaiset + maksulliset)**
+   - Event-CPT, ilmoittautumislomakkeet, osallistujalistat, organizer-työkalut
+
+6. **EPIC 6 — Saavutettavuus (WCAG 2.1 AA)**
+   - Kontrastit, näppäimistökäyttö, ARIA, lomakkeet, dev-testaus
+
+---
+
+## 📦 Content-tyypit
+
+Sisällöt ryhmitellään mm. seuraaviin tyyppeihin:
+
+- `content: pages`
+- `content: blog`
+- `content: sukuseura`
+- `events: core`
+- `events: registration`
+- `events: organizer-tools`
+
+---
+
+## 📤 Julkaisuprosessi
+
+1. Kehitä Docker-ympäristössä (`localhost:8000`)
+2. Commit → push → automaattinen deploy deviin (`dev.rytkoset.net`)
+3. Hallitus käy dev-version läpi ja hyväksyy muutokset
+4. Teeman päivitys julkaistaan tuotantoon **manuaalisesti** (webhotellin WP-instanssi)
+5. Päivityshistoria kirjataan `CHANGELOG.md`-tiedostoon

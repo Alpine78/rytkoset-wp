@@ -1,0 +1,22 @@
+name: Pull Request Labeler
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Huom: ei ole pakko tehdä checkoutia, labeler lukee labeler.yml:n
+      - name: Run labeler
+        uses: actions/labeler@v6 
+        with:
+          configuration-path: .github/labeler.yml
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
