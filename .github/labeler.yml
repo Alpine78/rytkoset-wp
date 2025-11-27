@@ -1,83 +1,125 @@
-# Frontend / teema
+# ===============================
+# Frontend
+# ===============================
+
+"frontend: layout": []
 "frontend: layout":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/**"
 
+"frontend: navigation": []
 "frontend: navigation":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/header.php"
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/template-parts/navigation/**"
 
+"frontend: forms": []
 "frontend: forms":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/**/form-*.php"
 
-# Backend / CPT / logiikka
+
+# ===============================
+# Backend
+# ===============================
+
+"backend: CPT": []
 "backend: CPT":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**/cpt-*.php"
 
+"backend: API": []
 "backend: API":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**/api/**"
 
+
+# ===============================
 # WooCommerce
+# ===============================
+
+"woocommerce: settings": []
 "woocommerce: settings":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**woocommerce*/**/settings*.php"
 
+"woocommerce: products": []
 "woocommerce: products":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**woocommerce*/**/product*.php"
 
+"woocommerce: payments": []
 "woocommerce: payments":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**woocommerce*/**/payment*.php"
 
+"woocommerce: membership": []
 "woocommerce: membership":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**woocommerce*/**membership*/**"
 
+
+# ===============================
 # Events
+# ===============================
+
+"events: core": []
 "events: core":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**events*/**"
 
+"events: registration": []
 "events: registration":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**events*/**registration**"
 
+"events: organizer-tools": []
 "events: organizer-tools":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**events*/**admin/**"
 
+
+# ===============================
 # Media
+# ===============================
+
+"media: gallery": []
 "media: gallery":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**gallery*/**"
 
+"media: video": []
 "media: video":
   - changed-files:
       - any-glob-to-any-file: "wp-content/plugins/**video*/**"
 
+"media: photoswipe": []
 "media: photoswipe":
   - changed-files:
       - any-glob-to-any-file: "wp-content/**photoswipe*/**"
 
-# Content & docs
+
+# ===============================
+# Content & documentation
+# ===============================
+
+"content: pages": []
 "content: pages":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/page-*.php"
 
+"content: blog": []
 "content: blog":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/single.php"
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/archive.php"
 
+"content: sukuseura": []
 "content: sukuseura":
   - changed-files:
       - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/templates/sukuseura-*/**"
 
+documentation: []
 documentation:
   - changed-files:
       - any-glob-to-any-file: "**/*.md"
