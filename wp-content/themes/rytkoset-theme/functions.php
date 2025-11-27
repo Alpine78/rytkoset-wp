@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once get_template_directory() . '/inc/social-links.php';
+
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
 	add_theme_support( 'title-tag' );
