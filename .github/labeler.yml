@@ -1,7 +1,7 @@
 # Frontend / teema
 "frontend: layout":
   - "wp-content/themes/rytkoset-theme/**"
-frontend: navigation:
+"frontend: navigation":
   - "wp-content/themes/rytkoset-theme/header.php"
   - "wp-content/themes/rytkoset-theme/template-parts/navigation/**"
 "frontend: forms":
