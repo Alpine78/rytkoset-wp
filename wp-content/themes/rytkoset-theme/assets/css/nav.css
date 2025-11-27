@@ -224,7 +224,7 @@
 .account-nav .sub-menu {
   display: none;
   position: absolute;
-  top: calc(100% + 0.55rem);
+  top: calc(100% + 0.15rem);
   right: 0;
   background: var(--color-surface);
   color: var(--color-text);
