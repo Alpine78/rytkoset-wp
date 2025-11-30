@@ -49,7 +49,7 @@
   .account-nav-wrapper,
   .account-nav__list {
     width: 100%;
-    justify-content: center;
+    margin-left: 0;
   }
 }
 
