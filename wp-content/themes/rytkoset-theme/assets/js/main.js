@@ -55,16 +55,20 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const resetSubmenus = () => {
-    const openItems = mobileMenu.querySelectorAll('.menu-item-has-children.submenu-open');
+    const submenuItems = mobileMenu.querySelectorAll('.menu-item-has-children');
 
-    openItems.forEach((item) => {
+    submenuItems.forEach((item) => {
       const toggle = item.querySelector(':scope > .mobile-submenu-toggle');
       const submenu = item.querySelector(':scope > .sub-menu');
 
-      if (!toggle || !submenu) return;
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', 'false');
+      }
 
-      toggle.setAttribute('aria-expanded', 'false');
-      submenu.hidden = true;
+      if (submenu) {
+        submenu.hidden = true;
+      }
+
       item.classList.remove('submenu-open');
     });
   };
@@ -88,6 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const openMenu = () => {
+    resetSubmenus();
+
     lastFocusedElement = document.activeElement;
     toggleButton.setAttribute('aria-expanded', 'true');
     mobileMenu.classList.add('mobile-menu--open');

@@ -415,7 +415,7 @@
   visibility: visible;
 }
 
-.mobile-menu {
+.mobile-menu { 
   position: fixed;
   inset: 0 0 0 auto;
   width: 100vw;
@@ -438,6 +438,10 @@
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+.mobile-menu:not(.mobile-menu--open) .sub-menu {
+  display: none;
 }
 
 .mobile-menu ul {
