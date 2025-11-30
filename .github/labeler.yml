@@ -104,3 +104,22 @@
 documentation:
   - changed-files:
       - any-glob-to-any-file: "**/*.md"
+
+
+# ===============================
+# Email & AcyMailing
+# ===============================
+
+"plugin: acymailing":
+  - changed-files:
+      - any-glob-to-any-file: "wp-content/plugins/**acymailing*/**"
+
+newsletter:
+  - changed-files:
+      - any-glob-to-any-file: "wp-content/plugins/**acymailing*/**newsletter*/**"
+      - any-glob-to-any-file: "wp-content/themes/rytkoset-theme/templates/newsletter*/**"
+
+email:
+  - changed-files:
+      - any-glob-to-any-file: "wp-content/plugins/**acymailing*/**"
+      - any-glob-to-any-file: "wp-content/plugins/**/wp-mail-smtp*/**"
