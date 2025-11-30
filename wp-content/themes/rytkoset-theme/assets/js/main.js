@@ -193,4 +193,43 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   initSubmenuToggles();
+
+  const accountMenuItem = document.querySelector('.account-menu__user');
+  const accountMenuTrigger = accountMenuItem?.querySelector('.account-menu__user-trigger');
+
+  if (accountMenuItem && accountMenuTrigger) {
+    accountMenuTrigger.setAttribute('aria-expanded', 'false');
+
+    const closeAccountMenu = () => {
+      accountMenuItem.classList.remove('is-open');
+      accountMenuTrigger.setAttribute('aria-expanded', 'false');
+    };
+
+    const toggleAccountMenu = () => {
+      const isOpen = accountMenuItem.classList.toggle('is-open');
+      accountMenuTrigger.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    accountMenuTrigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (accountMenuItem.classList.contains('is-open')) {
+        closeAccountMenu();
+      } else {
+        toggleAccountMenu();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!accountMenuItem.contains(event.target)) {
+        closeAccountMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && accountMenuItem.classList.contains('is-open')) {
+        closeAccountMenu();
+        accountMenuTrigger.focus();
+      }
+    });
+  }
 });

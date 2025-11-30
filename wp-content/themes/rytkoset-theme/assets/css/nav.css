@@ -221,6 +221,11 @@
   opacity: 0.85;
 }
 
+.account-menu__user.is-open > a::after,
+.account-menu__user.is-open > button::after {
+  transform: translateY(-1px) rotate(-135deg);
+}
+
 .account-menu__user > a:hover,
 .account-menu__user > a:focus-visible,
 .account-menu__user > button:hover,
@@ -303,7 +308,7 @@
   outline: none;
 }
 
-.account-menu__user:focus-within > .sub-menu,
+.account-menu__user.is-open > .sub-menu,
 .account-menu__user:hover > .sub-menu {
   display: block;
 }
