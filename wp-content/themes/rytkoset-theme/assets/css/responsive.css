@@ -1,3 +1,68 @@
+@media (max-width: 1100px) {
+  .site-header__inner {
+    grid-template-columns: auto 1fr;
+    column-gap: 1.5rem;
+  }
+
+  .site-nav__list {
+    gap: 1.1rem;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 960px) {
+  .site-header {
+    padding: 1.25rem 0 1.5rem;
+  }
+
+  .site-header__inner {
+    grid-template-columns: 1fr;
+    row-gap: 0.85rem;
+    justify-items: center;
+  }
+
+  .site-branding {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .site-title,
+  .site-description {
+    text-align: center;
+  }
+
+  .site-nav-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .mobile-menu-toggle,
+  .account-menu__user > a {
+    width: min(100%, 540px);
+    justify-content: center;
+    margin: 0 auto;
+  }
+
+  .account-nav-wrapper,
+  .account-nav__list {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 900px) {
+  .site-header__inner {
+    column-gap: 1.25rem;
+  }
+
+  .site-nav__list > li > a {
+    padding-inline: 0.65rem;
+  }
+}
+
 @media (max-width: 800px) {
   .grid--3 {
     grid-template-columns: 1fr;
@@ -8,7 +73,70 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (max-width: 720px) {
+  .site-branding {
+    gap: 0.75rem;
+  }
+
+  .account-nav__list {
+    gap: 0.65rem;
+  }
+
+  .site-footer__inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+  }
+
+  .site-footer__nav,
+  .site-footer__meta {
+    margin-left: 0;
+  }
+
+  .site-footer__nav {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .site-footer__menu {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .site-footer__brand {
+    align-items: center;
+    width: 100%;
+    text-align: center;
+  }
+
+  .site-footer__social-list {
+    justify-content: center;
+  }
+
+  .site-footer__meta {
+    align-items: center;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-nav-wrapper {
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-menu-toggle,
+  .account-menu__user > a {
+    width: min(100%, 420px);
+  }
+}
+
+@media (min-width: 960px) {
   .site-nav {
     display: block;
   }

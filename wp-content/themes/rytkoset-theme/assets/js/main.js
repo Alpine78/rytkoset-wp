@@ -161,9 +161,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <span aria-hidden="true" class="mobile-submenu-toggle__icon">▾</span>
       `;
 
-      const link = item.querySelector(':scope > a');
-      if (link) {
-        link.insertAdjacentElement('afterend', toggle);
+      const linkOrButton = item.querySelector(':scope > a, :scope > button');
+      if (linkOrButton) {
+        linkOrButton.insertAdjacentElement('afterend', toggle);
+
+        linkOrButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          toggle.click();
+        });
       } else {
         item.prepend(toggle);
       }
