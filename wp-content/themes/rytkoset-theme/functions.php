@@ -54,17 +54,27 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 
         $display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
         $profile_url  = admin_url( 'profile.php' );
+        $avatar       = wp_kses_post( get_avatar( $current_user->ID, 40 ) );
 
         echo '<ul class="account-nav__list">';
         echo '<li class="menu-item menu-item-has-children account-menu__user">';
-        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true">';
-        echo '<span class="account-menu__avatar">' . wp_kses_post( get_avatar( $current_user->ID, 32 ) ) . '</span>';
+        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false">';
+        echo '<span class="account-menu__avatar">' . $avatar . '</span>';
         echo '<span class="account-menu__meta">';
         echo '<span class="account-menu__greeting">' . esc_html__( 'Tervehdys,', 'rytkoset-theme' ) . '</span>';
         echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
         echo '</span>';
         echo '</button>';
-        echo '<ul class="sub-menu">';
+        echo '<ul class="sub-menu" aria-label="' . esc_attr__( 'Tilivalikko', 'rytkoset-theme' ) . '">';
+        echo '<li class="menu-item account-menu__summary">';
+        echo '<div class="account-menu__summary-inner">';
+        echo '<span class="account-menu__avatar">' . $avatar . '</span>';
+        echo '<span class="account-menu__meta">';
+        echo '<span class="account-menu__greeting">' . esc_html__( 'Tervehdys,', 'rytkoset-theme' ) . '</span>';
+        echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
+        echo '</span>';
+        echo '</div>';
+        echo '</li>';
         echo '<li class="menu-item">';
         echo '<a href="' . esc_url( $profile_url ) . '">';
         echo esc_html__( 'Muokkaa profiilia', 'rytkoset-theme' );

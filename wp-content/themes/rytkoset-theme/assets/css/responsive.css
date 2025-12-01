@@ -39,19 +39,21 @@
     gap: 0.6rem;
   }
 
-  .mobile-menu-toggle,
-  .account-menu__user > a {
+  .mobile-menu-toggle {
     width: min(100%, 540px);
     justify-content: center;
     margin: 0 auto;
   }
 
-  .account-nav-wrapper,
-  .account-nav__list {
-    width: 100%;
-    /* justify-content: center; */
-    margin-left: 0;
-    margin-top: 0.25rem;
+  .account-menu__user > a,
+  .account-menu__user > .account-menu__user-trigger {
+    width: auto;
+    margin: 0;
+    justify-content: center;
+  }
+
+  .account-nav-wrapper {
+    display: none;
   }
 }
 
@@ -132,8 +134,7 @@
 }
 
 @media (max-width: 480px) {
-  .mobile-menu-toggle,
-  .account-menu__user > a {
+  .mobile-menu-toggle {
     width: min(100%, 420px);
   }
 }
