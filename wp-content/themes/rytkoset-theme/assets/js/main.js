@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleButton = document.querySelector('.mobile-menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
   const overlay = document.querySelector('.mobile-menu__overlay');
+  const closeButton = document.querySelector('.mobile-menu__close');
 
   const focusableSelectors = [
     'a[href]',
@@ -114,6 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
   toggleButton.addEventListener('click', () => {
     toggleMenu();
   });
+
+  if (closeButton) {
+    closeButton.addEventListener('click', () => toggleMenu(false));
+  }
 
   const handleEscape = (event) => {
     if (event.key !== 'Escape') return;

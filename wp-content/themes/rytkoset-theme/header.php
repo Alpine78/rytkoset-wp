@@ -117,6 +117,10 @@
             aria-hidden="true"
             aria-expanded="false"
             tabindex="-1">
+            <button type="button" class="mobile-menu__close">
+                <span aria-hidden="true">&#10005;</span>
+                <span class="mobile-menu__close-label"><?php esc_html_e( 'Sulje valikko', 'rytkoset-theme' ); ?></span>
+            </button>
             <?php
             wp_nav_menu(
                 array(
