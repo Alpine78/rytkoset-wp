@@ -1,0 +1,171 @@
+- name: automation
+  color: "#0366d6"
+  description: "Automaatio- ja workflow-tehtävät"
+
+- name: "backend: API"
+  color: "#1f883d"
+  description: "Taustapalvelut, integraatiot, REST / API"
+
+- name: "backend: CPT"
+  color: "#1f883d"
+  description: "Custom post type -logiikka ja rekisterit"
+
+- name: "backend: database"
+  color: "#0e8a16"
+  description: "Tietokantataulut, migraatiot, kyselyt"
+
+- name: bug
+  color: "#d73a4a"
+  description: "Something isn't working"
+
+- name: codex
+  color: "#6f42c1"
+  description: "Codex / kehittäjäohjeet"
+
+- name: configuration
+  color: "#0b5fff"
+  description: "Asetukset, konfigurointi"
+
+- name: "content: blog"
+  color: "#8c4b00"
+  description: "Blogipostaukset ja blogin näkymät"
+
+- name: "content: pages"
+  color: "#8c4b00"
+  description: "Sivupohjat ja staattinen sisältö"
+
+- name: "content: sukuseura"
+  color: "#8c4b00"
+  description: "Sukuseuran esittely, historia, hallitus yms."
+
+- name: data
+  color: "#0ea5e9"
+  description: "Datasiirrot, importit, CSV"
+
+- name: design
+  color: "#d4ac0d"
+  description: "Ulkoasu ja templatet"
+
+- name: documentation
+  color: "#0969da"
+  description: "Improvements or additions to documentation"
+
+- name: duplicate
+  color: "#cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: email
+  color: "#fb7185"
+  description: "Sähköpostijärjestelmä ja lähetykset"
+
+- name: enhancement
+  color: "#a2eeef"
+  description: "New feature or request"
+
+- name: "environment: dev"
+  color: "#22c55e"
+  description: "Dev-ympäristötehtävät"
+
+- name: "environment: prod"
+  color: "#15803d"
+  description: "Tuotantoympäristötehtävät"
+
+- name: epic
+  color: "#a855f7"
+  description: "Laaja kokonaisuus, jossa useita alitehtäviä"
+
+- name: "events: core"
+  color: "#7c3aed"
+  description: "Tapahtumien perustoiminnallisuus"
+
+- name: "events: organizer-tools"
+  color: "#7c3aed"
+  description: "Event Organizer -rooli ja työkalut"
+
+- name: "events: registration"
+  color: "#7c3aed"
+  description: "Ilmoittautumislomakkeet ja osallistujat"
+
+- name: "frontend: accessibility"
+  color: "#1d4ed8"
+  description: "Saavutettavuus, WCAG, kontrastit"
+
+- name: "frontend: forms"
+  color: "#2563eb"
+  description: "Lomakkeisiin liittyvät tehtävät"
+
+- name: "frontend: layout"
+  color: "#1d4ed8"
+  description: "Rakenteet, gridit, spacing"
+
+- name: "frontend: navigation"
+  color: "#1d4ed8"
+  description: "Valikot ja navigaatio"
+
+- name: "good first issue"
+  color: "#7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "#008672"
+  description: "Extra attention is needed"
+
+- name: invalid
+  color: "#b1bac4"
+  description: "This doesn't seem right"
+
+- name: "media: gallery"
+  color: "#16a34a"
+  description: "Kuvagalleriat ja albumit"
+
+- name: "media: photoswipe"
+  color: "#16a34a"
+  description: "PhotoSwipe-integraatio"
+
+- name: "media: video"
+  color: "#16a34a"
+  description: "Videot ja soitin"
+
+- name: newsletter
+  color: "#ec4899"
+  description: "Kaikki uutiskirjeisiin liittyvä"
+
+- name: "plugin: acymailing"
+  color: "#db2777"
+  description: "AcyMailing-pluginin työt"
+
+- name: question
+  color: "#d876e3"
+  description: "Further information is requested"
+
+- name: task
+  color: "#4b5563"
+  description: "Peruskehitystehtävät"
+
+- name: testing
+  color: "#f59e0b"
+  description: "Testaukset"
+
+- name: theme
+  color: "#9333ea"
+  description: "Teemakoodi ja asetukset"
+
+- name: wontfix
+  color: "#6e7781"
+  description: "This will not be worked on"
+
+- name: "woocommerce: membership"
+  color: "#b45309"
+  description: "WooCommerce-jäsenyydet"
+
+- name: "woocommerce: payments"
+  color: "#b45309"
+  description: "Maksutavat ja maksujen käsittely"
+
+- name: "woocommerce: products"
+  color: "#b45309"
+  description: "Tuotteet ja hinnat"
+
+- name: "woocommerce: settings"
+  color: "#b45309"
+  description: "WooCommerce-asetukset ja integraatiot"
