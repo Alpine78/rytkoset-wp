@@ -117,6 +117,10 @@
             aria-hidden="true"
             aria-expanded="false"
             tabindex="-1">
+            <button type="button" class="mobile-menu__close">
+                <span aria-hidden="true">&#10005;</span>
+                <span class="mobile-menu__close-label"><?php esc_html_e( 'Sulje valikko', 'rytkoset-theme' ); ?></span>
+            </button>
             <?php
             wp_nav_menu(
                 array(
@@ -127,6 +131,26 @@
                 )
             );
             ?>
+
+            <?php if ( is_user_logged_in() || has_nav_menu( 'account' ) ) : ?>
+                <div class="mobile-menu__section mobile-menu__account">
+                    <p class="mobile-menu__section-title">
+                        <?php esc_html_e( 'Tili', 'rytkoset-theme' ); ?>
+                    </p>
+                    <?php
+                    wp_nav_menu(
+                        array(
+                            'theme_location' => 'account',
+                            'menu_class'     => 'mobile-menu__list mobile-account-nav__list',
+                            'container'      => false,
+                            'fallback_cb'    => is_user_logged_in()
+                                ? 'rytkoset_theme_account_menu_logged_in_fallback'
+                                : 'rytkoset_theme_account_menu_logged_out_fallback',
+                        )
+                    );
+                    ?>
+                </div>
+            <?php endif; ?>
         </nav>
     </div>
 
