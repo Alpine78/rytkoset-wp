@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toggleButton = document.querySelector('.mobile-menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
   const overlay = document.querySelector('.mobile-menu__overlay');
+  const closeButton = document.querySelector('.mobile-menu__close');
 
   const focusableSelectors = [
     'a[href]',
@@ -115,6 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleMenu();
   });
 
+  if (closeButton) {
+    closeButton.addEventListener('click', () => toggleMenu(false));
+  }
+
   const handleEscape = (event) => {
     if (event.key !== 'Escape') return;
 
@@ -143,6 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const submenuItems = mobileMenu.querySelectorAll('.menu-item-has-children');
 
     submenuItems.forEach((item, index) => {
+      if (item.closest('.mobile-menu__account')) {
+        return;
+      }
+
       const submenu = item.querySelector(':scope > .sub-menu');
       if (!submenu) return;
 
@@ -158,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="screen-reader-text">
           ${toggleButton.getAttribute('data-submenu-label') || 'Avaa alavalikko'}
         </span>
-        <span aria-hidden="true" class="mobile-submenu-toggle__icon">▾</span>
+        <span aria-hidden="true" class="mobile-submenu-toggle__icon">&#9662;</span>
       `;
 
       const link = item.querySelector(':scope > a');
@@ -189,3 +198,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initSubmenuToggles();
 });
+
+(function () {
+  const accountItems = document.querySelectorAll('.account-menu__user');
+  if (!accountItems.length) return;
+
+  const closeItem = (item) => {
+    const trigger = item.querySelector('.account-menu__user-trigger');
+    const submenu = item.querySelector(':scope > .sub-menu');
+    if (!trigger || !submenu) return;
+    item.classList.remove('submenu-open');
+    trigger.setAttribute('aria-expanded', 'false');
+  };
+
+  accountItems.forEach((item) => {
+    const trigger = item.querySelector('.account-menu__user-trigger');
+    const submenu = item.querySelector(':scope > .sub-menu');
+    if (!trigger || !submenu) return;
+
+    closeItem(item);
+
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      const isOpen = item.classList.toggle('submenu-open');
+      trigger.setAttribute('aria-expanded', String(isOpen));
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    accountItems.forEach((item) => {
+      if (!item.contains(event.target)) {
+        closeItem(item);
+      }
+    });
+  });
+})();
