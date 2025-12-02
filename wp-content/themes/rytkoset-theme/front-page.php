@@ -35,36 +35,36 @@
   <!-- KOLME NOSTOA -->
   <section class="section">
     <div class="container grid grid--3">
-      <!-- Ajankohtaista -->
+      <!-- Blogi -->
       <article class="card">
-        <h3 class="card__title">Ajankohtaista</h3>
+        <h3 class="card__title">Blogi</h3>
         <p class="card__text">
-          Viimeisimmät uutiset ja tiedotteet sukuseuran toiminnasta.
+          Lue suvun tarinoita, haastatteluja ja vinkkejä sukututkimukseen.
         </p>
-        <a href="<?php echo esc_url( home_url('/kategoriat/ajankohtaista') ); ?>" class="card__link">
-          Lue ajankohtaisia &rarr;
+        <a href="<?php echo esc_url( home_url('/blogi') ); ?>" class="card__link">
+          Siirry blogiin &rarr;
         </a>
       </article>
 
-      <!-- Tapahtumat -->
+      <!-- Foorumi -->
       <article class="card">
-        <h3 class="card__title">Sukukokoukset ja tapahtumat</h3>
+        <h3 class="card__title">Foorumi</h3>
         <p class="card__text">
-          Seuraavat sukujuhlat järjestetään Tampereella 2026. Lisätietoja tapahtumasivulta.
+          Osallistu keskusteluihin ja jaa havaintoja muiden Rytkösten kanssa.
         </p>
-        <a href="<?php echo esc_url( home_url('/sukuseura/tapahtumat') ); ?>" class="card__link">
-          Katso tapahtumat &rarr;
+        <a href="<?php echo esc_url( home_url('/foorumi') ); ?>" class="card__link">
+          Avaa foorumi &rarr;
         </a>
       </article>
 
-      <!-- Kuvat -->
+      <!-- Kauppa -->
       <article class="card">
-        <h3 class="card__title">Kuvia sukukokouksista</h3>
+        <h3 class="card__title">Kauppa</h3>
         <p class="card__text">
-          Kuvagalleriasta löydät tunnelmia sukujuhlista ja suvun historiasta.
+          Tilaa sukuseuran tuotteita ja julkaisuja suoraan kotiin.
         </p>
-        <a href="<?php echo esc_url( home_url('/valokuvat') ); ?>" class="card__link">
-          Avaa kuvagalleria &rarr;
+        <a href="<?php echo esc_url( home_url('/kauppa') ); ?>" class="card__link">
+          Käy kaupassa &rarr;
         </a>
       </article>
     </div>
