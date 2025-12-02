@@ -131,7 +131,7 @@
 .site-nav .sub-menu a:focus-visible {
   background: var(--color-surface-muted);
   text-decoration: none;
-  outline: none;
+  border-radius: var(--radius-small);
 }
 
 .site-nav__list > li:focus-within > .sub-menu,
@@ -302,7 +302,25 @@
 .account-nav .sub-menu a:focus-visible {
   background: var(--color-surface-muted);
   text-decoration: none;
-  outline: none;
+  border-radius: var(--radius-small);
+}
+
+.site-nav .sub-menu a:focus-visible,
+.account-nav .sub-menu a:focus-visible,
+.mobile-menu .menu-item-has-children > .sub-menu a:focus-visible,
+.mobile-menu .account-menu__user .sub-menu a:focus-visible {
+  outline: 3px solid var(--color-highlight);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.16);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-small);
+}
+
+.account-menu__user > a:focus-visible,
+.account-menu__user > .account-menu__user-trigger:focus-visible {
+  outline: 3px solid var(--color-highlight);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
 }
 
 .account-menu__user > .sub-menu {
