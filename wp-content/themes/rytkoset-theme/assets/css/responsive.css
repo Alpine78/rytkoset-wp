@@ -114,6 +114,8 @@
     align-items: center;
     width: 100%;
     text-align: center;
+    flex-direction: column;
+    gap: 0.6rem;
   }
 
   .site-footer__social-list {

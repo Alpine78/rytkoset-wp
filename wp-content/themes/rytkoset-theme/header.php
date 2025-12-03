@@ -25,11 +25,14 @@
     <div class="site-header__inner">
 
         <div class="site-branding">
-            <?php if ( has_custom_logo() ) : ?>
-                <div class="site-logo">
-                    <?php the_custom_logo(); ?>
-                </div>
-            <?php endif; ?>
+            <?php
+            rytkoset_theme_the_logo(
+                array(
+                    'class'      => 'site-logo site-logo--header',
+                    'link_class' => 'site-logo__link site-logo__link--header',
+                )
+            );
+            ?>
 
             <div class="site-title-group">
                 <?php if ( is_front_page() && is_home() ) : ?>
@@ -121,6 +124,26 @@
                 <span aria-hidden="true">&#10005;</span>
                 <span class="mobile-menu__close-label"><?php esc_html_e( 'Sulje valikko', 'rytkoset-theme' ); ?></span>
             </button>
+
+            <div class="mobile-menu__brand">
+                <?php
+                rytkoset_theme_the_logo(
+                    array(
+                        'class'      => 'site-logo site-logo--mobile',
+                        'link_class' => 'site-logo__link site-logo__link--mobile',
+                    )
+                );
+                ?>
+                <div class="mobile-menu__brand-meta">
+                    <span class="mobile-menu__brand-name"><?php bloginfo( 'name' ); ?></span>
+                    <?php
+                    $description = get_bloginfo( 'description', 'display' );
+                    if ( $description || is_customize_preview() ) :
+                        ?>
+                        <span class="mobile-menu__brand-tagline"><?php echo esc_html( $description ); ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
             <?php
             wp_nav_menu(
                 array(
