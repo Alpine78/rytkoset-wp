@@ -1,0 +1,185 @@
+.account-nav-wrapper {
+  display: flex;
+  align-items: center;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.account-nav {
+  position: relative;
+}
+
+.account-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.account-menu__user {
+  position: relative;
+}
+
+.account-menu__user-trigger {
+  font: inherit;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.account-menu__user > a,
+.account-menu__user > .account-menu__user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.85rem 0.45rem 0.55rem;
+  background: var(--color-nav-surface);
+  border: 1px solid var(--color-nav-border);
+  border-radius: var(--radius-nav-pill);
+  color: var(--color-text-inverted);
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  transition: background var(--transition-hover), border-color var(--transition-hover), box-shadow var(--transition-hover);
+}
+
+.account-menu__user > a::after,
+.account-menu__user > .account-menu__user-trigger::after {
+  content: "";
+  display: inline-block;
+  margin-left: 0.15rem;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+  opacity: 0.85;
+}
+
+.account-menu__user > a:hover,
+.account-menu__user > a:focus-visible,
+.account-menu__user > .account-menu__user-trigger:hover,
+.account-menu__user > .account-menu__user-trigger:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.24);
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.account-menu__user > a:focus-visible,
+.account-menu__user > .account-menu__user-trigger:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.12);
+}
+
+.account-menu__avatar img {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+}
+
+.account-menu__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.account-menu__greeting {
+  font-size: 0.75rem;
+  opacity: 0.82;
+}
+
+.account-menu__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.account-nav .sub-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  min-width: 240px;
+  padding: 0.45rem 0.45rem 0.6rem;
+  border-radius: var(--radius-medium);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--color-border-light);
+  backdrop-filter: blur(6px);
+  z-index: 7;
+}
+
+.account-nav .sub-menu li {
+  list-style: none;
+}
+
+.account-nav .sub-menu li + li {
+  margin-top: 0.1rem;
+}
+
+.account-nav .sub-menu a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.95rem;
+  border-radius: var(--radius-small);
+}
+
+.account-nav .sub-menu a:hover,
+.account-nav .sub-menu a:focus-visible {
+  background: var(--color-surface-muted);
+  text-decoration: none;
+  border-radius: var(--radius-small);
+}
+
+.site-nav .sub-menu a:focus-visible,
+.account-nav .sub-menu a:focus-visible,
+.mobile-menu .menu-item-has-children > .sub-menu a:focus-visible,
+.mobile-menu .account-menu__user .sub-menu a:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 3px;
+  box-shadow: none;
+  background: transparent;
+  border-radius: var(--radius-small);
+}
+
+.account-menu__user > .sub-menu {
+  display: none;
+}
+
+.account-menu__user.submenu-open > .sub-menu {
+  display: block;
+}
+
+.account-menu__summary {
+  padding: 0.35rem 0.35rem 0.55rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.account-menu__summary-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.account-menu__summary .account-menu__greeting {
+  opacity: 0.7;
+}
+
+.account-menu__user:focus-within > .sub-menu,
+.account-menu__user:hover > .sub-menu {
+  display: block;
+}

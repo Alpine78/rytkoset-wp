@@ -21,7 +21,10 @@ Text Domain: rytkoset-theme
 @import url("assets/css/components.css");
 
 /* Navigaatio: header + mobiilivalikko */
-@import url("assets/css/nav.css");
+@import url("assets/css/nav.base.css");
+@import url("assets/css/nav.desktop.css");
+@import url("assets/css/nav.account.css");
+@import url("assets/css/nav.mobile.css");
 
 /* Footer */
 @import url("assets/css/footer.css");

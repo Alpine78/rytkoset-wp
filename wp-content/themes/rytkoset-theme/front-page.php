@@ -1,4 +1,4 @@
-<?php get_header(); ?>
+﻿<?php get_header(); ?>
 
 <main class="site-main">
 
@@ -35,25 +35,25 @@
   <!-- KOLME NOSTOA -->
   <section class="section">
     <div class="container grid grid--3">
-      <!-- Blogi -->
+      <!-- Valokuvat -->
       <article class="card">
-        <h3 class="card__title">Blogi</h3>
+        <h3 class="card__title">Valokuvat</h3>
         <p class="card__text">
-          Lue suvun tarinoita, haastatteluja ja vinkkejä sukututkimukseen.
+          Katso kuvagalleriasta tunnelmia sukujuhlista ja tapaamisista eri vuosilta.
         </p>
-        <a href="<?php echo esc_url( home_url('/blogi') ); ?>" class="card__link">
-          Siirry blogiin &rarr;
+        <a href="<?php echo esc_url( home_url('/valokuvat') ); ?>" class="card__link">
+          Siirry valokuviin &rarr;
         </a>
       </article>
 
-      <!-- Foorumi -->
+      <!-- Sukujuhlat -->
       <article class="card">
-        <h3 class="card__title">Foorumi</h3>
+        <h3 class="card__title">Sukujuhlat Tampereella</h3>
         <p class="card__text">
-          Osallistu keskusteluihin ja jaa havaintoja muiden Rytkösten kanssa.
+          Seuraavat sukujuhlat järjestetään ensi kesänä Tampereella. Näe suvun väkeä ja pysy ajan tasalla ohjelmasta.
         </p>
-        <a href="<?php echo esc_url( home_url('/foorumi') ); ?>" class="card__link">
-          Avaa foorumi &rarr;
+        <a href="<?php echo esc_url( home_url('/sukujuhlat') ); ?>" class="card__link">
+          Lue lisää sukujuhlista &rarr;
         </a>
       </article>
 

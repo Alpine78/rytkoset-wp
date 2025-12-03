@@ -26,36 +26,40 @@
 
         <div class="site-branding">
             <?php
-            rytkoset_theme_the_logo(
-                array(
-                    'class'      => 'site-logo site-logo--header',
-                    'link_class' => 'site-logo__link site-logo__link--header',
-                )
-            );
+            $home_url      = esc_url( home_url( '/' ) );
+            $custom_logo   = '';
+            $custom_logo_id = get_theme_mod( 'custom_logo' );
+
+            if ( $custom_logo_id ) {
+                $custom_logo = wp_get_attachment_image( $custom_logo_id, 'full', false, array( 'class' => 'custom-logo' ) );
+            }
             ?>
-
-            <div class="site-title-group">
-                <?php if ( is_front_page() && is_home() ) : ?>
-                    <h1 class="site-title">
-                        <a href="<?php echo esc_url( home_url( '/' ) ); ?>">
-                            <?php bloginfo( 'name' ); ?>
-                        </a>
-                    </h1>
-                <?php else : ?>
-                    <p class="site-title">
-                        <a href="<?php echo esc_url( home_url( '/' ) ); ?>">
-                            <?php bloginfo( 'name' ); ?>
-                        </a>
-                    </p>
-                <?php endif; ?>
-
-                <?php
-                $description = get_bloginfo( 'description', 'display' );
-                if ( $description || is_customize_preview() ) :
+            <a class="site-branding__link" href="<?php echo $home_url; ?>">
+                <span class="site-logo site-logo--header">
+                    <?php
+                    if ( $custom_logo ) {
+                        echo wp_kses_post( $custom_logo );
+                    } else {
+                        bloginfo( 'name' );
+                    }
                     ?>
-                    <p class="site-description"><?php echo esc_html( $description ); ?></p>
-                <?php endif; ?>
-            </div>
+                </span>
+
+                <span class="site-title-group">
+                    <?php if ( is_front_page() && is_home() ) : ?>
+                        <h1 class="site-title"><?php bloginfo( 'name' ); ?></h1>
+                    <?php else : ?>
+                        <p class="site-title"><?php bloginfo( 'name' ); ?></p>
+                    <?php endif; ?>
+
+                    <?php
+                    $description = get_bloginfo( 'description', 'display' );
+                    if ( $description || is_customize_preview() ) :
+                        ?>
+                        <span class="site-description"><?php echo esc_html( $description ); ?></span>
+                    <?php endif; ?>
+                </span>
+            </a>
         </div><!-- .site-branding -->
 
         <div class="site-nav-wrapper">
