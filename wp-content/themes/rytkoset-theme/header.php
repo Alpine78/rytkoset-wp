@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Header template for Rytköset Theme
+ * Header template for RytkÃ¶set Theme
  *
  * @package Rytkoset_Theme
  * @version 0.2.0
@@ -65,7 +65,7 @@
         <div class="site-nav-wrapper">
 
             <!-- Desktop-navigaatio -->
-            <nav class="site-nav" aria-label="<?php esc_attr_e( 'Päävalikko', 'rytkoset-theme' ); ?>">
+            <nav class="site-nav" aria-label="<?php esc_attr_e( 'PÃ¤Ã¤valikko', 'rytkoset-theme' ); ?>">
                 <?php
                 wp_nav_menu(
                     array(
@@ -110,12 +110,14 @@
                         <?php rytkoset_theme_account_menu_logged_out_fallback(); ?>
                     </nav>
                 <?php endif; ?>
+
+                
             </div>
 
         </div><!-- .site-nav-wrapper -->
     </div><!-- .site-header__inner -->
 
-    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisätään myöhemmin) -->
+    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisÃ¤tÃ¤Ã¤n myÃ¶hemmin) -->
     <div class="mobile-menu-layer">
         <div class="mobile-menu__overlay" aria-hidden="true" hidden></div>
         <nav id="mobile-menu"
@@ -164,6 +166,12 @@
                     <p class="mobile-menu__section-title">
                         <?php esc_html_e( 'Tili', 'rytkoset-theme' ); ?>
                     </p>
+                    <div class="mobile-menu__theme">
+                        <button class="theme-toggle" type="button" aria-pressed="false">
+                            <span class="theme-toggle__icon" aria-hidden="true">ðŸŒ™</span>
+                            <span class="theme-toggle__label"><?php esc_html_e( 'Teema', 'rytkoset-theme' ); ?></span>
+                        </button>
+                    </div>
                     <?php
                     wp_nav_menu(
                         array(
@@ -184,3 +192,4 @@
 </header>
 
 <main id="primary" class="site-main">
+

@@ -3,6 +3,7 @@
   align-items: center;
   margin-left: 0.5rem;
   flex-shrink: 0;
+  gap: 0.5rem;
 }
 
 .account-nav {
@@ -182,4 +183,48 @@
 .account-menu__user:focus-within > .sub-menu,
 .account-menu__user:hover > .sub-menu {
   display: block;
+}
+
+.account-nav__extras {
+  display: inline-flex;
+  align-items: center;
+}
+
+.account-nav .sub-menu .theme-toggle {
+  width: 100%;
+  justify-content: flex-start;
+  background: var(--color-nav-surface);
+  border-color: var(--nav-border);
+  border-radius: var(--radius-small);
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.2rem;
+  color: var(--color-text);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="dark"] .account-nav .sub-menu .theme-toggle {
+  color: var(--color-text-inverted);
+  background: var(--color-nav-surface);
+  border-color: var(--nav-border);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.account-nav .sub-menu .theme-toggle:focus-visible {
+  outline: none;
+  background: var(--nav-hover-bg);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.22),
+    0 0 0 3px rgba(251, 191, 36, 0.75);
+}
+
+:root[data-theme="dark"] .account-nav .sub-menu .theme-toggle:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(251, 191, 36, 0.95);
+}
+
+.account-nav .sub-menu .theme-toggle__icon {
+  font-size: 0.95rem;
 }

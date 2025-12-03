@@ -233,3 +233,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 })();
+
+(function () {
+  const root = document.documentElement;
+  const storageKey = 'rytkoset-theme';
+
+  const createThemeToggle = () => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'theme-toggle';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.innerHTML = `
+      <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
+      <span class="theme-toggle__label">Teema</span>
+    `;
+    return btn;
+  };
+
+  const ensureMenuToggles = () => {
+    const submenus = document.querySelectorAll('.account-nav .sub-menu');
+    submenus.forEach((submenu) => {
+      if (submenu.querySelector('.theme-toggle')) return;
+      const li = document.createElement('li');
+      li.className = 'menu-item theme-toggle-item';
+      li.appendChild(createThemeToggle());
+      submenu.appendChild(li);
+    });
+  };
+
+  ensureMenuToggles();
+
+  const toggles = Array.from(document.querySelectorAll('.theme-toggle'));
+  if (!toggles.length) return;
+
+  const applyTheme = (theme) => {
+    root.setAttribute('data-theme', theme);
+    toggles.forEach((btn) => {
+      btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+      const icon = btn.querySelector('.theme-toggle__icon');
+      const label = btn.querySelector('.theme-toggle__label');
+      if (icon) {
+        icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+      }
+      if (label) {
+        label.textContent = theme === 'dark' ? 'Teema: tumma' : 'Teema: vaalea';
+      }
+    });
+  };
+
+  const stored = localStorage.getItem(storageKey);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initialTheme = stored || (prefersDark ? 'dark' : 'light');
+  applyTheme(initialTheme);
+
+  toggles.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      localStorage.setItem(storageKey, next);
+    });
+  });
+})();
