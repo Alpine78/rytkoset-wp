@@ -2,6 +2,8 @@
 
 Tämän ohjeen avulla päivität teeman päävalikon ("Primary menu") vaatimusten mukaiseen rakenteeseen ja varmistat, että sama rakenne näkyy sekä desktop- että mobiilinavigaatiossa.
 
+> **Huom.** Sivusto on yksikielinen (suomi). Älä luo kieliversiokohtaisia valikoita tai käytä monikielisyyslisäosia tämän valikon kanssa.
+
 ## 1) Avaa päävalikko
 1. Kirjaudu WordPressin ylläpitoon.
 2. Siirry kohtaan **Appearance → Menus**.

@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Header template for Rytköset Theme
+ * Header template for RytkÃ¶set Theme
  *
  * @package Rytkoset_Theme
  * @version 0.2.0
@@ -25,40 +25,47 @@
     <div class="site-header__inner">
 
         <div class="site-branding">
-            <?php if ( has_custom_logo() ) : ?>
-                <div class="site-logo">
-                    <?php the_custom_logo(); ?>
-                </div>
-            <?php endif; ?>
+            <?php
+            $home_url      = esc_url( home_url( '/' ) );
+            $custom_logo   = '';
+            $custom_logo_id = get_theme_mod( 'custom_logo' );
 
-            <div class="site-title-group">
-                <?php if ( is_front_page() && is_home() ) : ?>
-                    <h1 class="site-title">
-                        <a href="<?php echo esc_url( home_url( '/' ) ); ?>">
-                            <?php bloginfo( 'name' ); ?>
-                        </a>
-                    </h1>
-                <?php else : ?>
-                    <p class="site-title">
-                        <a href="<?php echo esc_url( home_url( '/' ) ); ?>">
-                            <?php bloginfo( 'name' ); ?>
-                        </a>
-                    </p>
-                <?php endif; ?>
-
-                <?php
-                $description = get_bloginfo( 'description', 'display' );
-                if ( $description || is_customize_preview() ) :
+            if ( $custom_logo_id ) {
+                $custom_logo = wp_get_attachment_image( $custom_logo_id, 'full', false, array( 'class' => 'custom-logo' ) );
+            }
+            ?>
+            <a class="site-branding__link" href="<?php echo $home_url; ?>">
+                <span class="site-logo site-logo--header">
+                    <?php
+                    if ( $custom_logo ) {
+                        echo wp_kses_post( $custom_logo );
+                    } else {
+                        bloginfo( 'name' );
+                    }
                     ?>
-                    <p class="site-description"><?php echo esc_html( $description ); ?></p>
-                <?php endif; ?>
-            </div>
+                </span>
+
+                <span class="site-title-group">
+                    <?php if ( is_front_page() && is_home() ) : ?>
+                        <h1 class="site-title"><?php bloginfo( 'name' ); ?></h1>
+                    <?php else : ?>
+                        <p class="site-title"><?php bloginfo( 'name' ); ?></p>
+                    <?php endif; ?>
+
+                    <?php
+                    $description = get_bloginfo( 'description', 'display' );
+                    if ( $description || is_customize_preview() ) :
+                        ?>
+                        <span class="site-description"><?php echo esc_html( $description ); ?></span>
+                    <?php endif; ?>
+                </span>
+            </a>
         </div><!-- .site-branding -->
 
         <div class="site-nav-wrapper">
 
             <!-- Desktop-navigaatio -->
-            <nav class="site-nav" aria-label="<?php esc_attr_e( 'Päävalikko', 'rytkoset-theme' ); ?>">
+            <nav class="site-nav" aria-label="<?php esc_attr_e( 'PÃ¤Ã¤valikko', 'rytkoset-theme' ); ?>">
                 <?php
                 wp_nav_menu(
                     array(
@@ -103,12 +110,14 @@
                         <?php rytkoset_theme_account_menu_logged_out_fallback(); ?>
                     </nav>
                 <?php endif; ?>
+
+                
             </div>
 
         </div><!-- .site-nav-wrapper -->
     </div><!-- .site-header__inner -->
 
-    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisätään myöhemmin) -->
+    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisÃ¤tÃ¤Ã¤n myÃ¶hemmin) -->
     <div class="mobile-menu-layer">
         <div class="mobile-menu__overlay" aria-hidden="true" hidden></div>
         <nav id="mobile-menu"
@@ -121,6 +130,26 @@
                 <span aria-hidden="true">&#10005;</span>
                 <span class="mobile-menu__close-label"><?php esc_html_e( 'Sulje valikko', 'rytkoset-theme' ); ?></span>
             </button>
+
+            <div class="mobile-menu__brand">
+                <?php
+                rytkoset_theme_the_logo(
+                    array(
+                        'class'      => 'site-logo site-logo--mobile',
+                        'link_class' => 'site-logo__link site-logo__link--mobile',
+                    )
+                );
+                ?>
+                <div class="mobile-menu__brand-meta">
+                    <span class="mobile-menu__brand-name"><?php bloginfo( 'name' ); ?></span>
+                    <?php
+                    $description = get_bloginfo( 'description', 'display' );
+                    if ( $description || is_customize_preview() ) :
+                        ?>
+                        <span class="mobile-menu__brand-tagline"><?php echo esc_html( $description ); ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
             <?php
             wp_nav_menu(
                 array(
@@ -137,6 +166,12 @@
                     <p class="mobile-menu__section-title">
                         <?php esc_html_e( 'Tili', 'rytkoset-theme' ); ?>
                     </p>
+                    <div class="mobile-menu__theme">
+                        <button class="theme-toggle" type="button" aria-pressed="false">
+                            <span class="theme-toggle__icon" aria-hidden="true">ðŸŒ™</span>
+                            <span class="theme-toggle__label"><?php esc_html_e( 'Teema', 'rytkoset-theme' ); ?></span>
+                        </button>
+                    </div>
                     <?php
                     wp_nav_menu(
                         array(
@@ -157,3 +192,4 @@
 </header>
 
 <main id="primary" class="site-main">
+

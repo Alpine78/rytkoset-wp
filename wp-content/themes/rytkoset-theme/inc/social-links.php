@@ -17,23 +17,23 @@ if ( ! function_exists( 'rytkoset_theme_get_social_links' ) ) {
 		return array(
 			array(
 				'label' => 'Facebook',
-				'url'   => 'https://www.facebook.com/',
+				'url'   => 'https://www.facebook.com/rytkoset',
 				'icon'  => 'facebook',
 			),
 			array(
+				'label' => 'YouTube',
+				'url'   => 'https://www.youtube.com/@rytkoset',
+				'icon'  => 'youtube',
+			),
+			array(
 				'label' => 'Instagram',
-				'url'   => 'https://www.instagram.com/',
+				'url'   => 'https://www.instagram.com/rytkoset/',
 				'icon'  => 'instagram',
 			),
 			array(
 				'label' => 'X',
-				'url'   => 'https://www.x.com/',
+				'url'   => 'https://x.com/rytkoset',
 				'icon'  => 'x',
-			),
-			array(
-				'label' => 'YouTube',
-				'url'   => 'https://www.youtube.com/',
-				'icon'  => 'youtube',
 			),
 		);
 	}

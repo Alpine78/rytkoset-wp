@@ -16,6 +16,18 @@ function rytkoset_theme_setup() {
 	// Esikatselukuvat
 	add_theme_support( 'post-thumbnails' );
 
+	// Sivuston logo
+	add_theme_support(
+		'custom-logo',
+		array(
+			'height'               => 160,
+			'width'                => 160,
+			'flex-height'          => true,
+			'flex-width'           => true,
+			'unlink-homepage-logo' => false,
+		)
+	);
+
 	// HTML5-markup
 	add_theme_support(
 		'html5',
@@ -32,6 +44,61 @@ function rytkoset_theme_setup() {
         );
 }
 add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
+
+/**
+ * Palauttaa logon HTML:n� wrapper-luokkineen.
+ *
+ * @param array $args Asetukset: class (wrapper) ja link_class (fallback-linkille).
+ * @return string Logo-html.
+ */
+function rytkoset_theme_get_logo_markup( $args = array() ) {
+	$defaults = array(
+		'class'      => 'site-logo',
+		'link_class' => 'site-logo__link',
+	);
+
+	$args      = wp_parse_args( $args, $defaults );
+	$home_url  = esc_url( home_url( '/' ) );
+	$site_name = get_bloginfo( 'name' );
+
+	ob_start();
+	?>
+	<div class="<?php echo esc_attr( trim( $args['class'] ) ); ?>">
+		<?php
+		$logo = get_custom_logo();
+
+		if ( $logo ) {
+			if ( ! empty( $args['link_class'] ) ) {
+				$logo = str_replace(
+					'custom-logo-link',
+					'custom-logo-link ' . esc_attr( $args['link_class'] ),
+					$logo
+				);
+			}
+
+			echo $logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		} else {
+			?>
+			<a class="<?php echo esc_attr( trim( $args['link_class'] ) ); ?>" href="<?php echo $home_url; ?>">
+				<?php echo esc_html( $site_name ); ?>
+			</a>
+			<?php
+		}
+		?>
+	</div>
+	<?php
+
+	return trim( ob_get_clean() );
+}
+
+/**
+ * Tulostaa logon.
+ *
+ * @param array $args Asetukset: class (wrapper) ja link_class (fallback-linkille).
+ */
+function rytkoset_theme_the_logo( $args = array() ) {
+	echo rytkoset_theme_get_logo_markup( $args ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+}
 
 /**
  * Palauttaa uloskirjautumis-URL:n etusivulle ohjauksella.

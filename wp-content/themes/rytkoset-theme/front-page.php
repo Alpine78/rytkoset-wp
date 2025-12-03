@@ -1,4 +1,4 @@
-<?php get_header(); ?>
+﻿<?php get_header(); ?>
 
 <main class="site-main">
 
@@ -35,36 +35,36 @@
   <!-- KOLME NOSTOA -->
   <section class="section">
     <div class="container grid grid--3">
-      <!-- Ajankohtaista -->
+      <!-- Valokuvat -->
       <article class="card">
-        <h3 class="card__title">Ajankohtaista</h3>
+        <h3 class="card__title">Valokuvat</h3>
         <p class="card__text">
-          Viimeisimmät uutiset ja tiedotteet sukuseuran toiminnasta.
-        </p>
-        <a href="<?php echo esc_url( home_url('/kategoriat/ajankohtaista') ); ?>" class="card__link">
-          Lue ajankohtaisia &rarr;
-        </a>
-      </article>
-
-      <!-- Tapahtumat -->
-      <article class="card">
-        <h3 class="card__title">Sukukokoukset ja tapahtumat</h3>
-        <p class="card__text">
-          Seuraavat sukujuhlat järjestetään Tampereella 2026. Lisätietoja tapahtumasivulta.
-        </p>
-        <a href="<?php echo esc_url( home_url('/sukuseura/tapahtumat') ); ?>" class="card__link">
-          Katso tapahtumat &rarr;
-        </a>
-      </article>
-
-      <!-- Kuvat -->
-      <article class="card">
-        <h3 class="card__title">Kuvia sukukokouksista</h3>
-        <p class="card__text">
-          Kuvagalleriasta löydät tunnelmia sukujuhlista ja suvun historiasta.
+          Katso kuvagalleriasta tunnelmia sukujuhlista ja tapaamisista eri vuosilta.
         </p>
         <a href="<?php echo esc_url( home_url('/valokuvat') ); ?>" class="card__link">
-          Avaa kuvagalleria &rarr;
+          Siirry valokuviin &rarr;
+        </a>
+      </article>
+
+      <!-- Sukujuhlat -->
+      <article class="card">
+        <h3 class="card__title">Sukujuhlat Tampereella</h3>
+        <p class="card__text">
+          Seuraavat sukujuhlat järjestetään ensi kesänä Tampereella. Näe suvun väkeä ja pysy ajan tasalla ohjelmasta.
+        </p>
+        <a href="<?php echo esc_url( home_url('/sukujuhlat') ); ?>" class="card__link">
+          Lue lisää sukujuhlista &rarr;
+        </a>
+      </article>
+
+      <!-- Kauppa -->
+      <article class="card">
+        <h3 class="card__title">Kauppa</h3>
+        <p class="card__text">
+          Tilaa sukuseuran tuotteita ja julkaisuja suoraan kotiin.
+        </p>
+        <a href="<?php echo esc_url( home_url('/kauppa') ); ?>" class="card__link">
+          Käy kaupassa &rarr;
         </a>
       </article>
     </div>

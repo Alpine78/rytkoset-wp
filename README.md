@@ -179,6 +179,9 @@ Projektia seurataan GitHub-issuilla ja epiceillä. Pääepicit:
 6. **EPIC 6 — Saavutettavuus (WCAG 2.1 AA)**
    - Kontrastit, näppäimistökäyttö, ARIA, lomakkeet, dev-testaus
 
+### Rajaukset
+- Sivusto on yksikielinen (suomi). Monikielisyys ja kieliversioita hyödyntävät lisäosat (esim. Polylang, MultilingualPress) eivät ole osa projektin laajuutta eikä niitä ole tarkoitus asentaa.
+
 ---
 
 ### Sisällönhallinnan muistilaput
