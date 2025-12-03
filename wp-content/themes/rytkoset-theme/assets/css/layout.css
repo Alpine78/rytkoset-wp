@@ -23,7 +23,8 @@
   display: flex;
   gap: 2rem;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
 }
 .section__cta {
   flex-shrink: 0;
