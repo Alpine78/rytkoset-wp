@@ -81,12 +81,36 @@
   --color-surface-muted: #1e2a3d;
 }
 
+html, body {
+  margin: 0;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  background: var(--nav-bg);
+}
+
 body {
   font-family: var(--font-body);
   margin: 0;
+  padding: 0;
   color: var(--color-text);
-  background: var(--color-bg);
+  background: var(--nav-bg);
   line-height: 1.6;
+}
+
+/* Remove WP admin bar gap on the front-end */
+#wpadminbar {
+  display: none;
+}
+html {
+  margin-top: 0 !important;
+}
+@media screen and (max-width: 782px) {
+  html {
+    margin-top: 0 !important;
+  }
 }
 
 p {
@@ -107,7 +131,12 @@ a:hover {
 }
 
 .site-main {
-  min-height: 70vh;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.site-main > *:first-child {
+  margin-top: 0;
 }
 
 /* Yleinen focus-tyyli linkeille ja nappeille */
