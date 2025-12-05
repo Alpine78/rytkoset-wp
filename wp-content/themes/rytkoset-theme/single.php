@@ -1,11 +1,13 @@
 <?php
 /**
- * Yleinen sivupohja (Pages)
+ * Sivupohja yksittäisille artikkeleille.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit;
+        exit;
 }
+
+global $post;
 
 get_header();
 ?>
@@ -18,20 +20,22 @@ get_header();
                                 the_post();
                                 ?>
                                 <article <?php post_class( 'article' ); ?>>
-                                        <h1 class="article__title"><?php the_title(); ?></h1>
+                                        <header class="article__header">
+                                                <p class="article__meta"><?php echo esc_html( get_the_date() ); ?></p>
+                                                <h1 class="article__title"><?php the_title(); ?></h1>
+                                        </header>
+
                                         <div class="article__content">
                                                 <?php the_content(); ?>
                                         </div>
 
                                         <?php
-                                        if ( rytkoset_theme_should_show_gallery_share( get_the_ID() ) ) {
-                                                rytkoset_theme_share_buttons(
-                                                        array(
-                                                                'heading' => __( 'Jaa galleria', 'rytkoset-theme' ),
-                                                                'post_id' => get_the_ID(),
-                                                        )
-                                                );
-                                        }
+                                        rytkoset_theme_share_buttons(
+                                                array(
+                                                        'heading' => __( 'Jaa artikkeli', 'rytkoset-theme' ),
+                                                        'post_id' => $post->ID,
+                                                )
+                                        );
                                         ?>
                                 </article>
                                 <?php

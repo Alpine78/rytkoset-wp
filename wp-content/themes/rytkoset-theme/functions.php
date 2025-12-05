@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once get_template_directory() . '/inc/social-links.php';
+require_once get_template_directory() . '/inc/share.php';
 
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
