@@ -141,19 +141,48 @@ Ydinsisältö:
 
 ---
 
-## 🗂 Projektin rakenne
+## Roadmap & projektinhallinta
 
-Teema:
+- GitHub Projects (roadmap + tehtävätaulu): https://github.com/Alpine78/rytkoset-wp/projects
+- Epicit ja alitehtävät on jaettu taululle; hallitus voi seurata etenemistä tilojen (Todo -> In progress -> Done) ja milestonejen kautta.
 
-    wp-content/themes/rytkoset-theme/
+### MVP
+- Teeman peruslayout (header/footer, navigaatio), etusivu ja keskeiset sisältösivut julkaistavassa kunnossa.
+- Blogi ja uutisvirta sekä perus media-albumit (Photoswipe) katsottavissa myös mobiilissa.
+- Dev/staging (Docker + CI/CD + FTPS) toimii ja hallitus pääsee katselmoimaan dev.rytkoset.netissä.
+- Saavutettavuuden peruslinjaukset valmiit (kontrastit, fokus, näppäimistö).
 
-Mahdolliset omat plugin-toteutukset:
+### Phase 2
+- WooCommerce-jäsenmaksut ja digitaaliset tuotteet, maksutavat ja sähköpostit.
+- Tapahtumien luonti + ilmoittautuminen ilmaisille tapahtumille (lomake + osallistujanäkymä).
+- Sisällönhallinnan ohjeistus (menu, blogi, galleriat) dokumentoituna ja testattuna.
+- Saavutettavuuden tarkennukset lomakkeisiin ja modaalikomponentteihin.
 
-    wp-content/plugins/rytkoset-plugin/
+### Long-term
+- Maksullisten tapahtumien maksupolku (liput, maksutavat) ja organizer-työkalut.
+- Jäsenyyden jatkot: uusinnat, sähköpostimuistutukset ja raportointi.
+- Lisäintegraatiot (uutiskirje, analytiikka) ja laajennetut hakutoiminnot sivustolla.
+- Jatkuva optimointi: suorituskyky, kuvien optimointi, varmuuskopioinnin automatisointi.
 
-Joomla-dumpit:
+---
 
-    _db-dumps/joomla.sql
+## Projektin rakenne & teknologiat
+
+**Teknologiapino**
+
+- WordPress 6.x + custom-teema `rytkoset-theme`
+- PHP 8.3 + Apache (Docker `wordpress` -kontti)
+- MariaDB 10.11 (`db`) + erillinen `joomla-db` migraatiota varten
+- FG Joomla Premium -importteri migraatioon
+- GitHub Actions + FTPS deploy dev.rytkoset.netiin
+
+**Hakemistorakenne**
+
+- Teema: `wp-content/themes/rytkoset-theme/`
+- Mahdolliset omat plugin-toteutukset: `wp-content/plugins/rytkoset-plugin/`
+- Teeman assetit: `wp-content/themes/rytkoset-theme/assets/` (css, js, icons)
+- Dokumentaatio: `docs/`
+- Joomla-dumpit: `_db-dumps/joomla.sql`
 
 ---
 
@@ -178,6 +207,9 @@ Projektia seurataan GitHub-issuilla ja epiceillä. Pääepicit:
 
 6. **EPIC 6 — Saavutettavuus (WCAG 2.1 AA)**
    - Kontrastit, näppäimistökäyttö, ARIA, lomakkeet, dev-testaus
+   - 
+7. **EPIC 7 — Uutiskirjeet & AcyMailing**
+   - AcyMailing-uutiskirjeiden hallinta, lähettäminen ja ylläpito
 
 ### Rajaukset
 - Sivusto on yksikielinen (suomi). Monikielisyys ja kieliversioita hyödyntävät lisäosat (esim. Polylang, MultilingualPress) eivät ole osa projektin laajuutta eikä niitä ole tarkoitus asentaa.
