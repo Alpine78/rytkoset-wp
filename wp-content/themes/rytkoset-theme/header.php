@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 /**
- * Header template for RytkÃ¶set Theme
+ * Header template for Rytköset Theme
  *
  * @package Rytkoset_Theme
  * @version 0.2.0
@@ -65,7 +65,7 @@
         <div class="site-nav-wrapper">
 
             <!-- Desktop-navigaatio -->
-            <nav class="site-nav" aria-label="<?php esc_attr_e( 'PÃ¤Ã¤valikko', 'rytkoset-theme' ); ?>">
+            <nav class="site-nav" aria-label="<?php esc_attr_e( 'Päävalikko', 'rytkoset-theme' ); ?>">
                 <?php
                 wp_nav_menu(
                     array(
@@ -77,6 +77,30 @@
                 );
                 ?>
             </nav>
+
+            <?php
+            $social_links = rytkoset_theme_get_social_links();
+
+            if ( ! empty( $social_links ) ) :
+            ?>
+                <div class="site-header__social" aria-label="<?php esc_attr_e( 'Sosiaalisen median linkit', 'rytkoset-theme' ); ?>">
+                    <ul class="site-header__social-list">
+                        <?php foreach ( $social_links as $social_link ) : ?>
+                            <?php
+                            if ( empty( $social_link['icon_src'] ) ) {
+                                continue;
+                            }
+                            ?>
+                            <li class="site-header__social-item">
+                                <a class="site-header__social-link" href="<?php echo esc_url( $social_link['url'] ); ?>">
+                                    <span class="screen-reader-text"><?php echo esc_html( $social_link['label'] ); ?></span>
+                                    <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" aria-hidden="true" />
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
 
             <!-- Mobiilivalikon placeholder -->
             <button class="mobile-menu-toggle"
@@ -111,13 +135,17 @@
                     </nav>
                 <?php endif; ?>
 
-                
+                <button class="theme-toggle desktop-theme-toggle" type="button" aria-pressed="false">
+                    <span class="theme-toggle__icon" aria-hidden="true">ÐYOT</span>
+                    <span class="screen-reader-text"><?php esc_html_e( 'Vaihda teema', 'rytkoset-theme' ); ?></span>
+                </button>
+
             </div>
 
         </div><!-- .site-nav-wrapper -->
     </div><!-- .site-header__inner -->
 
-    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisÃ¤tÃ¤Ã¤n myÃ¶hemmin) -->
+    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisätään myöhemmin) -->
     <div class="mobile-menu-layer">
         <div class="mobile-menu__overlay" aria-hidden="true" hidden></div>
         <nav id="mobile-menu"
@@ -131,25 +159,6 @@
                 <span class="mobile-menu__close-label"><?php esc_html_e( 'Sulje valikko', 'rytkoset-theme' ); ?></span>
             </button>
 
-            <div class="mobile-menu__brand">
-                <?php
-                rytkoset_theme_the_logo(
-                    array(
-                        'class'      => 'site-logo site-logo--mobile',
-                        'link_class' => 'site-logo__link site-logo__link--mobile',
-                    )
-                );
-                ?>
-                <div class="mobile-menu__brand-meta">
-                    <span class="mobile-menu__brand-name"><?php bloginfo( 'name' ); ?></span>
-                    <?php
-                    $description = get_bloginfo( 'description', 'display' );
-                    if ( $description || is_customize_preview() ) :
-                        ?>
-                        <span class="mobile-menu__brand-tagline"><?php echo esc_html( $description ); ?></span>
-                    <?php endif; ?>
-                </div>
-            </div>
             <?php
             wp_nav_menu(
                 array(
@@ -161,7 +170,6 @@
             );
             ?>
 
-            <?php if ( is_user_logged_in() || has_nav_menu( 'account' ) ) : ?>
                 <div class="mobile-menu__section mobile-menu__account">
                     <p class="mobile-menu__section-title">
                         <?php esc_html_e( 'Tili', 'rytkoset-theme' ); ?>
@@ -185,11 +193,10 @@
                     );
                     ?>
                 </div>
-            <?php endif; ?>
         </nav>
     </div>
 
 </header>
 
-<main id="primary" class="site-main">
+
 
