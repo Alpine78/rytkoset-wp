@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Header template for Rytköset Theme
  *
@@ -197,5 +197,6 @@
     </div>
 
 </header>
+
 
 
