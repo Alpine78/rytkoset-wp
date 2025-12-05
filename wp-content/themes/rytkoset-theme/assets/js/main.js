@@ -197,6 +197,37 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   initSubmenuToggles();
+
+  const shareBlocks = document.querySelectorAll('[data-share]');
+
+  shareBlocks.forEach((share) => {
+    const status = share.querySelector('[data-share-status]');
+    const copyButton = share.querySelector('[data-share-copy]');
+
+    if (!copyButton) return;
+
+    copyButton.addEventListener('click', async () => {
+      const url = copyButton.getAttribute('data-share-copy');
+      if (!url) return;
+
+      try {
+        await navigator.clipboard.writeText(url);
+        if (status) {
+          status.textContent = copyButton.dataset.shareSuccess || 'Linkki kopioitu leikepöydälle';
+          status.hidden = false;
+
+          window.setTimeout(() => {
+            status.hidden = true;
+          }, 2500);
+        }
+      } catch (error) {
+        if (status) {
+          status.textContent = copyButton.dataset.shareError || 'Linkin kopiointi ei onnistunut';
+          status.hidden = false;
+        }
+      }
+    });
+  });
 });
 
 (function () {
