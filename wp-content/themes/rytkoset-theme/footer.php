@@ -34,29 +34,22 @@
 
       <?php
       $social_links = rytkoset_theme_get_social_links();
-      $icon_files   = array(
-        'facebook'  => 'Facebook.svg',
-        'youtube'   => 'YouTube.svg',
-        'instagram' => 'Instagram.svg',
-        'x'         => 'X.svg',
-      );
 
       if ( ! empty( $social_links ) ) :
       ?>
         <ul class="site-footer__social-list" aria-label="Sosiaalisen median linkit">
           <?php foreach ( $social_links as $social_link ) : ?>
             <?php
-            $icon = $social_link['icon'];
-            if ( isset( $icon_files[ $icon ] ) ) :
-              $icon_src = get_template_directory_uri() . '/assets/icons/social/' . $icon_files[ $icon ];
+            if ( empty( $social_link['icon_src'] ) ) {
+              continue;
+            }
             ?>
               <li class="site-footer__social-item">
                 <a class="site-footer__social-link" href="<?php echo esc_url( $social_link['url'] ); ?>">
                   <span class="screen-reader-text"><?php echo esc_html( $social_link['label'] ); ?></span>
-                  <img src="<?php echo esc_url( $icon_src ); ?>" alt="" aria-hidden="true" />
+                  <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" aria-hidden="true" />
                 </a>
               </li>
-            <?php endif; ?>
           <?php endforeach; ?>
         </ul>
       <?php endif; ?>

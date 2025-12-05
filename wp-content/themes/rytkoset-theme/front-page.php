@@ -1,6 +1,6 @@
-﻿<?php get_header(); ?>
+<?php get_header(); ?>
 
-<main class="site-main">
+<main id="primary" class="site-main">
 
   <!-- HERO -->
   <section class="hero">
@@ -88,6 +88,7 @@
     </div>
   </section>
 
-</main>
+  </main>
 
 <?php get_footer(); ?>
+

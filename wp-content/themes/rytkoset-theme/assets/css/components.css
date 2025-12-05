@@ -37,6 +37,10 @@
   color: var(--color-text);
   border-color: var(--color-surface);
 }
+.btn--light:hover,
+.btn--light:focus-visible {
+  color: var(--color-text);
+}
 
 /* Cards */
 .card {
