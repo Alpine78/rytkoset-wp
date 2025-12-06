@@ -99,6 +99,54 @@
   font-size: 1rem;
 }
 
+.share__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.share__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-pill);
+  padding: 0.4rem 0.85rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+}
+
+.share__trigger:hover,
+.share__trigger:focus-visible {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.share__trigger:active {
+  transform: scale(0.98);
+}
+
+.share__trigger-icon {
+  display: inline-flex;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.share__menu {
+  margin-top: 0.65rem;
+}
+
+.share__menu[hidden] {
+  display: none;
+}
+
 .share__actions {
   display: flex;
   flex-wrap: wrap;
