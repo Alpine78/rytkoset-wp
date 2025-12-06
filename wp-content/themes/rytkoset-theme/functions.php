@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
+require_once get_template_directory() . '/inc/gallery-albums.php';
 
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
@@ -193,6 +194,49 @@ function rytkoset_theme_scripts() {
         $theme_version,
         true // footer
     );
+
+    if ( is_post_type_archive( 'gallery_album' ) || is_singular( 'gallery_album' ) ) {
+        $photoswipe_version = '5.4.4';
+        $photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
+
+        wp_enqueue_style(
+            'rytkoset-theme-gallery',
+            get_template_directory_uri() . '/assets/css/gallery.css',
+            array( 'rytkoset-theme-style' ),
+            $theme_version
+        );
+
+        wp_enqueue_style(
+            'photoswipe',
+            $photoswipe_base . '/photoswipe.css',
+            array(),
+            $photoswipe_version
+        );
+
+        wp_enqueue_script(
+            'photoswipe',
+            $photoswipe_base . '/photoswipe.umd.min.js',
+            array(),
+            $photoswipe_version,
+            true
+        );
+
+        wp_enqueue_script(
+            'photoswipe-lightbox',
+            $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
+            array( 'photoswipe' ),
+            $photoswipe_version,
+            true
+        );
+
+        wp_enqueue_script(
+            'rytkoset-photoswipe-init',
+            get_template_directory_uri() . '/assets/js/photoswipe-init.js',
+            array( 'photoswipe-lightbox' ),
+            $theme_version,
+            true
+        );
+    }
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
 
