@@ -76,7 +76,7 @@
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1000px) {
   .site-header {
     padding: 1.25rem 0 1.5rem;
   }
@@ -235,7 +235,7 @@
   }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1265px) {
   .site-nav {
     display: block;
   }
