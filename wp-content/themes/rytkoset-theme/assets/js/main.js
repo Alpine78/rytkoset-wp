@@ -375,31 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const root = document.documentElement;
   const storageKey = 'rytkoset-theme';
 
-  const createThemeToggle = () => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'theme-toggle';
-    btn.setAttribute('aria-pressed', 'false');
-    btn.innerHTML = `
-      <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
-      <span class="theme-toggle__label">Teema</span>
-    `;
-    return btn;
-  };
-
-  const ensureMenuToggles = () => {
-    const submenus = document.querySelectorAll('.account-nav .sub-menu');
-    submenus.forEach((submenu) => {
-      if (submenu.querySelector('.theme-toggle')) return;
-      const li = document.createElement('li');
-      li.className = 'menu-item theme-toggle-item';
-      li.appendChild(createThemeToggle());
-      submenu.appendChild(li);
-    });
-  };
-
-  ensureMenuToggles();
-
   const toggles = Array.from(document.querySelectorAll('.theme-toggle'));
   if (!toggles.length) return;
 
