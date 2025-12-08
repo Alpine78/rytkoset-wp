@@ -203,30 +203,136 @@ document.addEventListener('DOMContentLoaded', () => {
   shareBlocks.forEach((share) => {
     const status = share.querySelector('[data-share-status]');
     const copyButton = share.querySelector('[data-share-copy]');
+    const trigger = share.querySelector('[data-share-trigger]');
+    const menu = share.querySelector('[data-share-menu]');
+    const nativeButton = share.querySelector('[data-share-native]');
+    const supportsNativeShare = Boolean(navigator && navigator.share);
 
-    if (!copyButton) return;
+    let isMenuOpen = false;
+    let outsideListener = null;
 
-    copyButton.addEventListener('click', async () => {
-      const url = copyButton.getAttribute('data-share-copy');
-      if (!url) return;
+    const getShareData = () => {
+      const url = trigger?.getAttribute('data-share-url') || share.dataset.shareUrl || window.location.href;
+      const title = trigger?.getAttribute('data-share-title') || share.dataset.shareTitle || document.title;
+      const text = trigger?.getAttribute('data-share-text') || share.dataset.shareText || title;
+
+      return { title, text, url };
+    };
+
+    const showStatus = (message) => {
+      if (!status || !message) return;
+      status.textContent = message;
+      status.hidden = false;
+      window.setTimeout(() => {
+        status.hidden = true;
+      }, 2500);
+    };
+
+    const closeMenu = () => {
+      if (menu) {
+        menu.hidden = true;
+        share.classList.remove('share--open');
+      }
+      isMenuOpen = false;
+      if (outsideListener) {
+        document.removeEventListener('click', outsideListener, true);
+        outsideListener = null;
+      }
+    };
+
+    const openMenu = () => {
+      if (!menu) return;
+      menu.hidden = false;
+      share.classList.add('share--open');
+      isMenuOpen = true;
+
+      outsideListener = (event) => {
+        if (!share.contains(event.target)) {
+          closeMenu();
+        }
+      };
+
+      document.addEventListener('click', outsideListener, true);
+    };
+
+    const tryNativeShare = async () => {
+      if (!navigator?.share) {
+        return false;
+      }
+
+      const shareData = getShareData();
+
+      if (navigator.canShare && !navigator.canShare(shareData)) {
+        return false;
+      }
 
       try {
-        await navigator.clipboard.writeText(url);
-        if (status) {
-          status.textContent = copyButton.dataset.shareSuccess || 'Linkki kopioitu leikepöydälle';
-          status.hidden = false;
-
-          window.setTimeout(() => {
-            status.hidden = true;
-          }, 2500);
-        }
+        await navigator.share(shareData);
+        return true;
       } catch (error) {
-        if (status) {
-          status.textContent = copyButton.dataset.shareError || 'Linkin kopiointi ei onnistunut';
-          status.hidden = false;
+        if (error && error.name === 'AbortError') {
+          return true;
         }
+        return false;
       }
-    });
+    };
+
+    if (trigger) {
+      trigger.addEventListener('click', async () => {
+        if (isMenuOpen) {
+          closeMenu();
+        } else {
+          openMenu();
+        }
+      });
+
+      trigger.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+        }
+      });
+    }
+
+    if (menu) {
+      menu.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMenu();
+          trigger?.focus();
+        }
+      });
+    }
+
+    if (nativeButton) {
+      if (!supportsNativeShare) {
+        nativeButton.hidden = true;
+        nativeButton.setAttribute('aria-hidden', 'true');
+        nativeButton.setAttribute('tabindex', '-1');
+      } else {
+        nativeButton.addEventListener('click', async () => {
+          const shared = await tryNativeShare();
+          if (shared) {
+            showStatus(nativeButton.dataset.shareSuccess);
+            closeMenu();
+          } else {
+            showStatus(nativeButton.dataset.shareError || 'Jakaminen ei onnistunut');
+          }
+        });
+      }
+    }
+
+    if (copyButton) {
+      copyButton.addEventListener('click', async () => {
+        const url = copyButton.getAttribute('data-share-copy');
+        if (!url) return;
+
+        try {
+          await navigator.clipboard.writeText(url);
+          showStatus(copyButton.dataset.shareSuccess || 'Linkki kopioitu leikepöydälle');
+        } catch (error) {
+          showStatus(copyButton.dataset.shareError || 'Linkin kopiointi ei onnistunut');
+        }
+      });
+    }
   });
 });
 
@@ -268,31 +374,6 @@ document.addEventListener('DOMContentLoaded', () => {
 (function () {
   const root = document.documentElement;
   const storageKey = 'rytkoset-theme';
-
-  const createThemeToggle = () => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'theme-toggle';
-    btn.setAttribute('aria-pressed', 'false');
-    btn.innerHTML = `
-      <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
-      <span class="theme-toggle__label">Teema</span>
-    `;
-    return btn;
-  };
-
-  const ensureMenuToggles = () => {
-    const submenus = document.querySelectorAll('.account-nav .sub-menu');
-    submenus.forEach((submenu) => {
-      if (submenu.querySelector('.theme-toggle')) return;
-      const li = document.createElement('li');
-      li.className = 'menu-item theme-toggle-item';
-      li.appendChild(createThemeToggle());
-      submenu.appendChild(li);
-    });
-  };
-
-  ensureMenuToggles();
 
   const toggles = Array.from(document.querySelectorAll('.theme-toggle'));
   if (!toggles.length) return;
