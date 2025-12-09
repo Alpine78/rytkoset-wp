@@ -388,8 +388,11 @@
         loadDynamicCaptionPlugin().then(function (DynamicCaption) {
             if (DynamicCaption) {
                 new DynamicCaption(lightbox, {
-                    type: 'below',
-                    mobileLayoutBreakpoint: 640,
+                    type: 'auto',
+                    // Treat landscape mobile like desktop so captions can sit aside.
+                    mobileLayoutBreakpoint: function () {
+                        return window.innerWidth < 640 && window.innerWidth <= window.innerHeight;
+                    },
                     captionContent: function (slide) {
                         if (slide && slide.data && slide.data.caption) {
                             return slide.data.caption;
