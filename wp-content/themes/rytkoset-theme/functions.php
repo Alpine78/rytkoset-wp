@@ -176,7 +176,7 @@ function rytkoset_theme_account_menu_logged_out_fallback() {
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
-    $theme_version = wp_get_theme()->get( 'Version' );
+	$theme_version = wp_get_theme()->get( 'Version' );
 
     // Teeman päätyyli (style.css) – WordPress hoitaa tämän usein automaattisesti, mutta tehdään eksplisiittisesti.
     wp_enqueue_style(
@@ -195,7 +195,13 @@ function rytkoset_theme_scripts() {
         true // footer
     );
 
-    if ( is_post_type_archive( 'gallery_album' ) || is_singular( 'gallery_album' ) ) {
+    // Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
+    if (
+        is_post_type_archive( 'gallery_album' )
+        || is_singular( 'gallery_album' )
+        || get_query_var( 'gallery_album' )
+        || 'gallery_album' === get_query_var( 'post_type' )
+    ) {
         $photoswipe_version = '5.4.4';
         $photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
 
@@ -239,6 +245,27 @@ function rytkoset_theme_scripts() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
+
+/**
+ * Disable WordPress core image lightbox to avoid conflicts with PhotoSwipe.
+ */
+add_filter(
+	'wp_image_lightbox_enabled',
+	function () {
+		return false;
+	}
+);
+
+add_action(
+	'wp_enqueue_scripts',
+	function () {
+		wp_dequeue_script( 'wp-lightbox' );
+		wp_deregister_script( 'wp-lightbox' );
+		wp_dequeue_style( 'wp-lightbox' );
+		wp_deregister_style( 'wp-lightbox' );
+	},
+	20
+);
 
 /**
  * Open Graph + Twitter Card meta.

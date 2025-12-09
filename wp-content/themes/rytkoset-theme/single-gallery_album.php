@@ -74,20 +74,25 @@ get_header();
                                                                 continue;
                                                         }
 
-                                                        $full = wp_get_attachment_image_src( $image['ID'], 'full' );
+                                                        $full  = wp_get_attachment_image_src( $image['ID'], 'full' );
+                                                        $thumb = wp_get_attachment_image_src( $image['ID'], 'large' );
 
                                                         if ( ! $full ) {
                                                                 continue;
                                                         }
 
                                                         $gallery_items[] = array(
-                                                                'type'    => 'image',
-                                                                'src'     => $full[0],
-                                                                'width'   => isset( $full[1] ) ? (int) $full[1] : 0,
-                                                                'height'  => isset( $full[2] ) ? (int) $full[2] : 0,
-                                                                'alt'     => isset( $image['alt'] ) ? $image['alt'] : '',
-                                                                'srcset'  => wp_get_attachment_image_srcset( $image['ID'], 'large' ),
-                                                                'sizes'   => '(min-width: 960px) 25vw, 90vw',
+                                                                'type'        => 'image',
+                                                                'src'         => $full[0],
+                                                                'width'       => isset( $full[1] ) ? (int) $full[1] : 0,
+                                                                'height'      => isset( $full[2] ) ? (int) $full[2] : 0,
+                                                                'alt'         => isset( $image['alt'] ) ? $image['alt'] : '',
+                                                                'srcset'      => wp_get_attachment_image_srcset( $image['ID'], 'large' ),
+                                                                'sizes'       => '(min-width: 960px) 25vw, 90vw',
+                                                                'thumb_src'   => $thumb ? $thumb[0] : $full[0],
+                                                                'thumb_srcset' => wp_get_attachment_image_srcset( $image['ID'], 'large' ),
+                                                                'pswp_srcset' => wp_get_attachment_image_srcset( $image['ID'], 'full' ),
+                                                                'pswp_sizes'  => '100vw',
                                                         );
                                                 }
                                         }
@@ -108,13 +113,17 @@ get_header();
                                                         $thumbnail_meta = $thumbnail ? wp_get_attachment_image_src( $thumbnail, 'full' ) : array( 1280, 720 );
 
                                                         $gallery_items[] = array(
-                                                                'type'      => 'video',
-                                                                'video_src' => $embed_url,
-                                                                'poster'    => $thumbnail_src,
-                                                                'srcset'    => $thumbnail_set,
-                                                                'alt'       => $thumbnail_alt,
-                                                                'width'     => isset( $thumbnail_meta[1] ) ? (int) $thumbnail_meta[1] : 1280,
-                                                                'height'    => isset( $thumbnail_meta[2] ) ? (int) $thumbnail_meta[2] : 720,
+                                                                'type'             => 'video',
+                                                                'video_src'        => $embed_url,
+                                                                'poster'           => $thumbnail_src,
+                                                                'srcset'           => $thumbnail_set,
+                                                                'alt'              => $thumbnail_alt,
+                                                                'width'            => isset( $thumbnail_meta[1] ) ? (int) $thumbnail_meta[1] : 1280,
+                                                                'height'           => isset( $thumbnail_meta[2] ) ? (int) $thumbnail_meta[2] : 720,
+                                                                'pswp_srcset'      => $thumbnail ? wp_get_attachment_image_srcset( $thumbnail, 'full' ) : '',
+                                                                'pswp_sizes'       => '100vw',
+                                                                'thumb_src'        => $thumbnail_src,
+                                                                'thumb_srcset'     => $thumbnail_set,
                                                         );
                                                 }
                                         }
@@ -133,12 +142,14 @@ get_header();
                                                                                         data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
                                                                                         data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
                                                                                         <?php if ( ! empty( $item['poster'] ) ) : ?>data-poster="<?php echo esc_url( $item['poster'] ); ?>"<?php endif; ?>
+                                                                                        <?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
+                                                                                        <?php if ( ! empty( $item['pswp_sizes'] ) ) : ?>data-pswp-sizes="<?php echo esc_attr( $item['pswp_sizes'] ); ?>"<?php endif; ?>
                                                                                 >
-                                                                                        <?php if ( ! empty( $item['poster'] ) ) : ?>
+                                                                                        <?php if ( ! empty( $item['thumb_src'] ) ) : ?>
                                                                                                 <img
                                                                                                         class="gallery-grid__image"
-                                                                                                        src="<?php echo esc_url( $item['poster'] ); ?>"
-                                                                                                        <?php if ( ! empty( $item['srcset'] ) ) : ?>srcset="<?php echo esc_attr( $item['srcset'] ); ?>"<?php endif; ?>
+                                                                                                        src="<?php echo esc_url( $item['thumb_src'] ); ?>"
+                                                                                                        <?php if ( ! empty( $item['thumb_srcset'] ) ) : ?>srcset="<?php echo esc_attr( $item['thumb_srcset'] ); ?>"<?php endif; ?>
                                                                                                         sizes="(min-width: 960px) 25vw, 90vw"
                                                                                                         alt="<?php echo esc_attr( $item['alt'] ); ?>"
                                                                                                 />
@@ -156,11 +167,13 @@ get_header();
                                                                                         href="<?php echo esc_url( $item['src'] ); ?>"
                                                                                         data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
                                                                                         data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
+                                                                                        <?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
+                                                                                        <?php if ( ! empty( $item['pswp_sizes'] ) ) : ?>data-pswp-sizes="<?php echo esc_attr( $item['pswp_sizes'] ); ?>"<?php endif; ?>
                                                                                 >
                                                                                         <img
                                                                                                 class="gallery-grid__image"
-                                                                                                src="<?php echo esc_url( $item['src'] ); ?>"
-                                                                                                <?php if ( ! empty( $item['srcset'] ) ) : ?>srcset="<?php echo esc_attr( $item['srcset'] ); ?>"<?php endif; ?>
+                                                                                                src="<?php echo esc_url( $item['thumb_src'] ); ?>"
+                                                                                                <?php if ( ! empty( $item['thumb_srcset'] ) ) : ?>srcset="<?php echo esc_attr( $item['thumb_srcset'] ); ?>"<?php endif; ?>
                                                                                                 sizes="<?php echo esc_attr( $item['sizes'] ); ?>"
                                                                                                 alt="<?php echo esc_attr( $item['alt'] ); ?>"
                                                                                         />
