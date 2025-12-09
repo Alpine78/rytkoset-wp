@@ -117,7 +117,8 @@
                 var scale = (containerWidth - gapsTotal) / widthSum;
 
                 if (isLast) {
-                    scale = Math.min(scale, 1); // don't stretch the last row beyond natural width
+                    var maxUpscale = 3; // allow final row to fill width even if single item
+                    scale = Math.min(Math.max(scale, 1), maxUpscale);
                 }
 
                 var rowHeight = targetHeight * scale;
