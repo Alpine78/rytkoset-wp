@@ -208,6 +208,11 @@
     border: 0;
 }
 
+.pswp__dynamic-caption--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 @media (min-width: 640px) {
     .gallery-grid {
         --thumb-height: 210px;

@@ -240,6 +240,35 @@
         relayoutAll();
     };
 
+    var loadDynamicCaptionPlugin = function () {
+        if (window.PhotoSwipeDynamicCaption) {
+            return Promise.resolve(window.PhotoSwipeDynamicCaption);
+        }
+
+        if (loadDynamicCaptionPlugin._promise) {
+            return loadDynamicCaptionPlugin._promise;
+        }
+
+        if (!document.querySelector('link[data-pswp-dyncap]')) {
+            var css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = '/wp-content/themes/rytkoset-theme/assets/vendor/photoswipe/photoswipe-dynamic-caption-plugin.css';
+            css.dataset.pswpDyncap = '1';
+            document.head.appendChild(css);
+        }
+
+        loadDynamicCaptionPlugin._promise = import('/wp-content/themes/rytkoset-theme/assets/vendor/photoswipe/photoswipe-dynamic-caption-plugin.esm.js')
+            .then(function (mod) {
+                return (mod && (mod.default || mod.PhotoSwipeDynamicCaption)) ? (mod.default || mod.PhotoSwipeDynamicCaption) : null;
+            })
+            .catch(function (err) {
+                console.warn('PhotoSwipe dynamic caption plugin failed to load', err);
+                return null;
+            });
+
+        return loadDynamicCaptionPlugin._promise;
+    };
+
     var initLightbox = function () {
         // Normalize all images so they have anchors + width/height data.
         document.querySelectorAll('.wp-block-gallery img, .wp-block-image img, .js-gallery-grid img').forEach(function (img) {
@@ -274,6 +303,8 @@
         lightbox.addFilter('itemData', function (itemData) {
             var trigger = itemData.element;
             var img = trigger ? trigger.querySelector('img') : null;
+            var figure = trigger ? trigger.closest('figure') : null;
+            var figcaption = figure ? figure.querySelector('figcaption') : null;
 
             if (!trigger) {
                 return itemData;
@@ -301,6 +332,18 @@
 
             if (!itemData.alt && img && img.getAttribute('alt')) {
                 itemData.alt = img.getAttribute('alt');
+            }
+
+            if (!itemData.caption) {
+                var captionText = '';
+                if (figcaption && figcaption.textContent) {
+                    captionText = figcaption.textContent.trim();
+                } else if (itemData.alt) {
+                    captionText = itemData.alt;
+                }
+                if (captionText) {
+                    itemData.caption = captionText;
+                }
             }
 
             if (!itemData.srcset && img && img.srcset) {
@@ -342,7 +385,43 @@
             e.content.state = 'loaded';
         });
 
-        lightbox.init();
+        loadDynamicCaptionPlugin().then(function (DynamicCaption) {
+            if (DynamicCaption) {
+                new DynamicCaption(lightbox, {
+                    type: 'below',
+                    mobileLayoutBreakpoint: 640,
+                    captionContent: function (slide) {
+                        if (slide && slide.data && slide.data.caption) {
+                            return slide.data.caption;
+                        }
+                        var el = slide && slide.data && slide.data.element;
+                        var fig = el ? el.closest('figure') : null;
+                        var figcap = fig ? fig.querySelector('figcaption') : null;
+                        if (figcap && figcap.textContent) {
+                            return figcap.textContent.trim();
+                        }
+                        var img = el ? el.querySelector('img') : null;
+                        return img && img.getAttribute('alt') ? img.getAttribute('alt') : '';
+                    },
+                });
+            }
+
+            var toggleZoomHide = function () {
+                var pswp = lightbox.pswp;
+                var slide = pswp && pswp.currSlide;
+                var captionEl = slide && slide.dynamicCaption && slide.dynamicCaption.element;
+                if (!captionEl) {
+                    return;
+                }
+                var shouldHide = pswp.viewportSize && pswp.viewportSize.x >= 900 && pswp.currZoomLevel > 1.02;
+                captionEl.classList.toggle('pswp__dynamic-caption--hidden', !!shouldHide);
+            };
+
+            lightbox.on('zoomPanUpdate', toggleZoomHide);
+            lightbox.on('change', toggleZoomHide);
+
+            lightbox.init();
+        });
         initMasonryGrids();
     };
 
