@@ -93,6 +93,86 @@
         if (!grid) return;
 
         var style = window.getComputedStyle(grid);
+
+        // If layout is flex (horizontal rows), size items by target thumb height and aspect ratio,
+        // and justify each row to the container width.
+        if (style.display === 'flex') {
+            var flexItems = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
+            var targetHeight = parseFloat(style.getPropertyValue('--thumb-height')) || 200;
+            var targetWidthFallback = targetHeight * 1.5;
+            var gap = parseFloat(style.getPropertyValue('column-gap') || style.getPropertyValue('gap')) || 0;
+            var paddingLeft = parseFloat(style.paddingLeft) || 0;
+            var paddingRight = parseFloat(style.paddingRight) || 0;
+            var containerWidth = grid.clientWidth - paddingLeft - paddingRight;
+
+            var currentRow = [];
+            var widthSum = 0;
+
+            var flushRow = function (isLast) {
+                if (!currentRow.length || containerWidth <= 0 || widthSum <= 0) {
+                    return;
+                }
+
+                var gapsTotal = gap * Math.max(0, currentRow.length - 1);
+                var scale = (containerWidth - gapsTotal) / widthSum;
+
+                if (isLast) {
+                    scale = Math.min(scale, 1); // don't stretch the last row beyond natural width
+                }
+
+                var rowHeight = targetHeight * scale;
+
+                currentRow.forEach(function (entry) {
+                    var width = Math.max(60, entry.width * scale);
+                    var item = entry.item;
+                    var img = entry.img;
+
+                    item.style.gridRowEnd = '';
+                    item.style.height = rowHeight + 'px';
+                    item.style.width = Math.round(width) + 'px';
+                    item.style.flex = '0 0 auto';
+
+                    if (img) {
+                        img.style.height = rowHeight + 'px';
+                        img.style.width = 'auto';
+                    }
+                });
+            };
+
+            flexItems.forEach(function (item) {
+                var img = item.querySelector('img');
+                var ratio = 0;
+
+                if (img && img.naturalWidth && img.naturalHeight) {
+                    ratio = img.naturalWidth ? img.naturalHeight / img.naturalWidth : 0;
+                }
+
+                if (!ratio) {
+                    var dataW = parseInt(item.getAttribute('data-pswp-width'), 10) || parseInt(item.getAttribute('data-width'), 10);
+                    var dataH = parseInt(item.getAttribute('data-pswp-height'), 10) || parseInt(item.getAttribute('data-height'), 10);
+                    if (dataW && dataH) {
+                        ratio = dataH / dataW;
+                    }
+                }
+
+                var width = ratio ? (targetHeight / ratio) : targetWidthFallback;
+                var tentativeWidth = widthSum + width;
+                var gapsSoFar = gap * Math.max(0, currentRow.length);
+
+                if (currentRow.length && (tentativeWidth + gapsSoFar) > containerWidth) {
+                    flushRow(false);
+                    currentRow = [];
+                    widthSum = 0;
+                }
+
+                currentRow.push({ item: item, img: img, width: width });
+                widthSum += width;
+            });
+
+            flushRow(true);
+            return;
+        }
+
         var rowHeight = parseFloat(style.getPropertyValue('--masonry-row-height')) || 2;
         var gap = parseFloat(style.getPropertyValue('row-gap') || style.getPropertyValue('grid-row-gap')) || parseFloat(style.getPropertyValue('gap')) || 0;
 
