@@ -1,7 +1,5 @@
 (function () {
-    if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') {
-        return;
-    }
+    var hasPhotoSwipe = typeof PhotoSwipeLightbox !== 'undefined' && typeof PhotoSwipe !== 'undefined';
 
     var computeDimensions = function (img) {
         if (!img) return null;
@@ -101,6 +99,8 @@
             var targetHeight = parseFloat(style.getPropertyValue('--thumb-height')) || 200;
             var targetWidthFallback = targetHeight * 1.5;
             var gap = parseFloat(style.getPropertyValue('column-gap') || style.getPropertyValue('gap')) || 0;
+            var maxLastRowScale = parseFloat(style.getPropertyValue('--masonry-last-row-max-scale')) || 1.75;
+            var minLastRowScale = parseFloat(style.getPropertyValue('--masonry-last-row-min-scale')) || 0.9;
             var paddingLeft = parseFloat(style.paddingLeft) || 0;
             var paddingRight = parseFloat(style.paddingRight) || 0;
             var containerWidth = grid.clientWidth - paddingLeft - paddingRight;
@@ -117,8 +117,8 @@
                 var scale = (containerWidth - gapsTotal) / widthSum;
 
                 if (isLast) {
-                    var maxUpscale = 3; // allow final row to fill width even if single item
-                    scale = Math.min(Math.max(scale, 1), maxUpscale);
+                    // Keep the last row at the target height (no up/down scaling).
+                    scale = 1;
                 }
 
                 var rowHeight = targetHeight * scale;
@@ -144,13 +144,26 @@
                 var img = item.querySelector('img');
                 var ratio = 0;
 
+                // 1) Yritä luonnollisista mitoista (kun kuva on ladattu)
                 if (img && img.naturalWidth && img.naturalHeight) {
-                    ratio = img.naturalWidth ? img.naturalHeight / img.naturalWidth : 0;
+                    ratio = img.naturalHeight / img.naturalWidth;
                 }
 
+                // 2) Jos kuva ei ole vielä ladattu → käytä width/height -attribuutteja
+                if (!ratio && img) {
+                    var attrW = parseInt(img.getAttribute('width'), 10);
+                    var attrH = parseInt(img.getAttribute('height'), 10);
+                    if (attrW && attrH) {
+                        ratio = attrH / attrW;
+                    }
+                }
+
+                // 3) Viimeinen fallback: data-* attribuutit (esim. custom-grid)
                 if (!ratio) {
-                    var dataW = parseInt(item.getAttribute('data-pswp-width'), 10) || parseInt(item.getAttribute('data-width'), 10);
-                    var dataH = parseInt(item.getAttribute('data-pswp-height'), 10) || parseInt(item.getAttribute('data-height'), 10);
+                    var dataW = parseInt(item.getAttribute('data-pswp-width'), 10) ||
+                                parseInt(item.getAttribute('data-width'), 10);
+                    var dataH = parseInt(item.getAttribute('data-pswp-height'), 10) ||
+                                parseInt(item.getAttribute('data-height'), 10);
                     if (dataW && dataH) {
                         ratio = dataH / dataW;
                     }
@@ -207,17 +220,26 @@
         });
     };
 
+    var relayoutAllGrids = function () {
+        var grids = Array.prototype.slice.call(document.querySelectorAll('.js-gallery-grid, .album .wp-block-gallery.has-nested-images'));
+        if (!grids.length) {
+            return;
+        }
+        grids.forEach(relayoutMasonryGrid);
+    };
+
     var initMasonryGrids = function () {
         var grids = Array.prototype.slice.call(document.querySelectorAll('.js-gallery-grid, .album .wp-block-gallery.has-nested-images'));
         if (!grids.length) {
             return;
         }
 
-        var relayoutAll = function () {
-            grids.forEach(relayoutMasonryGrid);
-        };
-
         grids.forEach(function (grid) {
+            if (grid._rytkosetMasonryInit) {
+                return;
+            }
+            grid._rytkosetMasonryInit = true;
+
             grid.querySelectorAll('img').forEach(function (img) {
                 var onLoad = function () {
                     relayoutMasonryGrid(grid);
@@ -234,10 +256,15 @@
 
         window.addEventListener('resize', function () {
             clearTimeout(initMasonryGrids._resizeTimer);
-            initMasonryGrids._resizeTimer = setTimeout(relayoutAll, 120);
+            initMasonryGrids._resizeTimer = setTimeout(relayoutAllGrids, 120);
         });
 
-        relayoutAll();
+        window.addEventListener('load', relayoutAllGrids, { once: true });
+        window.addEventListener('pageshow', relayoutAllGrids, { once: true });
+
+        relayoutAllGrids();
+        setTimeout(relayoutAllGrids, 180);
+        setTimeout(relayoutAllGrids, 420);
     };
 
     var loadDynamicCaptionPlugin = function () {
@@ -283,6 +310,11 @@
                 img.addEventListener('error', normalize, { once: true });
             }
         });
+
+        if (!hasPhotoSwipe) {
+            initMasonryGrids();
+            return;
+        }
 
         // Remove WordPress core lightbox overlays so PhotoSwipe can take over.
         document.querySelectorAll('.wp-lightbox-overlay').forEach(function (overlay) {
@@ -428,9 +460,23 @@
         initMasonryGrids();
     };
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initLightbox);
-    } else {
+    // Ajetaan kaikki vasta kun koko sivu (CSS + kuvat) on ladattu,
+    // jotta gallerian leveys ja display-tyyli ovat varmasti oikeat.
+    var start = function () {
         initLightbox();
+        initMasonryGrids();
+
+        // Varmuuden vuoksi muutama ylimääräinen relayout,
+        // jos fontit / lazyload-kuvat muuttavat mittoja hieman myöhemmin.
+        setTimeout(relayoutAllGrids, 0);
+        setTimeout(relayoutAllGrids, 200);
+        setTimeout(relayoutAllGrids, 600);
+    };
+
+    if (document.readyState === 'complete') {
+        // Sivun "hard refresh" voi olla jo complete tässä kohtaa
+        start();
+    } else {
+        window.addEventListener('load', start, { once: true });
     }
 })();

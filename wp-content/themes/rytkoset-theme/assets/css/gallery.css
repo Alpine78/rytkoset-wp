@@ -131,10 +131,16 @@
 .gallery-grid {
     --masonry-gap: 1rem;
     --thumb-height: 200px;
+    --masonry-last-row-max-scale: 2.1;
+    --masonry-last-row-min-scale: 0.9;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
     display: flex;
     flex-wrap: wrap;
     gap: var(--masonry-gap);
     align-items: flex-start;
+    justify-content: center;
 }
 
 .gallery-grid__item {
