@@ -12,7 +12,7 @@ Primary goals:
 - Keep the system simple, reliable, and long-term maintainable
 
 Secondary goal:
-- Support learning of backend thinking and real-world system design
+- Support learning of backend thinking and AI-assisted development
 
 ---
 
@@ -20,10 +20,10 @@ Secondary goal:
 
 When making decisions, prioritize:
 
-1. **Working functionality (MVP first)**
-2. **Simplicity over completeness**
-3. **Maintainability for non-technical users**
-4. **Small, incremental progress**
+1. Working functionality (MVP first)
+2. Simplicity over completeness
+3. Maintainability for non-technical users
+4. Small, incremental progress
 
 Avoid:
 - building full systems at once
@@ -74,7 +74,7 @@ Use conventional commits:
 
 ## 🧩 Implementation Strategy (CRITICAL)
 
-Features must be implemented in **small working slices**.
+Features must be implemented in small working slices.
 
 Example (Event system):
 
@@ -91,6 +91,18 @@ Then iterate.
 
 ---
 
+## 🚦 Feature Status Awareness
+
+Current state:
+- UI and theme foundation mostly complete
+- Media system (EPIC 2) in progress
+- Event system (EPIC 5) NOT implemented yet
+
+👉 Therefore:
+Focus on finishing EPIC 2 before starting EPIC 5.
+
+---
+
 ## 🧱 Key Features (High-level)
 
 ### 1. Website & Content
@@ -98,15 +110,14 @@ Then iterate.
 - Blog / news
 - Navigation
 
-### 2. Media
+### 2. Media (CURRENT FOCUS)
 - Photo galleries
 - Albums
-- Video support
+- Video support (basic first, then improve)
 
-### 3. Events (IMPORTANT)
+### 3. Events (NEXT PHASE)
 - Event CPT
 - Registration system (incremental)
-- Admin tools
 
 ### 4. WooCommerce (LATER)
 - Membership payments
@@ -120,33 +131,66 @@ Then iterate.
 
 ---
 
-## 🚦 Feature Status Awareness
+## 🧠 Information Accuracy & Anti-Hallucination Rules (CRITICAL)
 
-Current state:
-- UI and theme foundation mostly complete
-- Media system in progress
-- Event system NOT implemented yet
+### Absolute rules
 
-👉 Therefore:
-**New work should focus on Event system MVP**
+- NEVER invent:
+  - technical facts
+  - plugin capabilities
+  - system behavior
+  - APIs, functions, or WordPress features that are uncertain
+
+- NEVER assume missing information
+
+- NEVER present guesses as facts
 
 ---
 
-## 🧠 Information Accuracy & Uncertainty Handling (CRITICAL)
+### If information is missing
 
-- NEVER invent:
-  - technical constraints
-  - plugin capabilities
-  - system behavior
+The AI MUST STOP and say clearly:
 
-If unsure:
-→ say clearly:
-"Tarvitsen lisätietoa ennen tarkkaa vastausta"
+> "I don't have enough information to answer this correctly."
 
-Always separate:
-1. Facts
-2. Assumptions
+Then request clarification:
+
+- ask for code
+- ask for file contents
+- ask for requirements
+- ask for documentation
+
+Examples:
+
+- "Can you show the current CPT implementation?"
+- "What plugin are you using for this?"
+- "Is this stored in post meta or custom tables?"
+
+---
+
+### Required response structure
+
+When giving answers, always separate:
+
+1. Facts (verified)
+2. Assumptions (if any)
 3. Recommendations
+
+If assumptions are used:
+→ they MUST be explicitly stated
+
+---
+
+### When uncertain
+
+DO:
+- ask questions
+- request context
+- pause implementation
+
+DO NOT:
+- continue with guessed solution
+- fabricate APIs or behavior
 
 ---
 
@@ -212,21 +256,65 @@ Focus:
 
 ---
 
-## 🤖 AI Usage Guidelines
+## 🤖 AI Collaboration Mode (IMPORTANT)
 
-### ALWAYS:
-- propose small steps
-- keep solutions simple
-- follow existing structure
+### Goal
+Use AI as a thinking partner, not as a code generator.
 
-### NEVER:
-- generate large systems in one go
-- introduce heavy dependencies
-- break accessibility
+---
 
-### WHEN UNSURE:
-- ask clarifying questions
-- propose 2–3 options
+### Preferred workflow
+
+1. Ask for:
+   - plan
+   - options
+   - tradeoffs
+
+2. Implement yourself when possible
+
+3. Use AI for:
+   - reviewing code
+   - suggesting improvements
+   - debugging
+
+---
+
+### Avoid
+
+- generating full features blindly
+- copy-pasting large code blocks without understanding
+- skipping reasoning
+
+---
+
+### Good prompts
+
+- "What is the simplest way to implement this?"
+- "What are 2–3 options and tradeoffs?"
+- "Review this code"
+
+---
+
+### Bad prompts
+
+- "Build the entire system"
+- "Write everything for me"
+
+---
+
+## 🎓 Learning Awareness
+
+This project is also used to develop:
+
+- backend thinking
+- data modeling
+- AI-assisted development
+
+Prefer:
+- simple data flows (CPT → form → save → admin)
+
+Avoid:
+- spending excessive time on visual polish
 
 ---
 
@@ -249,19 +337,6 @@ Focus:
 
 ---
 
-## 🎓 Learning Awareness (Light Guidance)
-
-This project also supports learning:
-
-Prefer:
-- solutions that improve backend understanding
-- simple data flows (CPT → form → save → admin)
-
-Avoid:
-- spending excessive time on visual polish
-
----
-
 ## 🧭 If starting a new task
 
 1. Identify scope (feature / bug / task)
@@ -276,4 +351,4 @@ Avoid:
 
 > "Make it work → make it simple → then improve."
 
-This is a **real system for real users**, not a perfect technical showcase.
+This is a real system for real users — not a perfect technical showcase.
