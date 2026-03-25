@@ -1,5 +1,10 @@
 (function () {
     var hasPhotoSwipe = typeof PhotoSwipeLightbox !== 'undefined' && typeof PhotoSwipe !== 'undefined';
+    var photoSwipeConfig = window.rytkosetPhotoSwipe || {};
+    var gallerySelector = '.js-gallery-grid, .album .wp-block-gallery, .album figure.pswp-standalone-gallery';
+    var galleryImageSelector = '.js-gallery-grid img, .album .wp-block-gallery img, .album figure.wp-block-image img';
+    var galleryChildrenSelector = 'a.pswp-link, .js-gallery-item, figure > a, .blocks-gallery-item > a';
+    var masonryGridSelector = '.js-gallery-grid, .album .wp-block-gallery.has-nested-images';
 
     var computeDimensions = function (img) {
         if (!img) return null;
@@ -221,7 +226,7 @@
     };
 
     var relayoutAllGrids = function () {
-        var grids = Array.prototype.slice.call(document.querySelectorAll('.js-gallery-grid, .album .wp-block-gallery.has-nested-images'));
+        var grids = Array.prototype.slice.call(document.querySelectorAll(masonryGridSelector));
         if (!grids.length) {
             return;
         }
@@ -229,7 +234,7 @@
     };
 
     var initMasonryGrids = function () {
-        var grids = Array.prototype.slice.call(document.querySelectorAll('.js-gallery-grid, .album .wp-block-gallery.has-nested-images'));
+        var grids = Array.prototype.slice.call(document.querySelectorAll(masonryGridSelector));
         if (!grids.length) {
             return;
         }
@@ -276,15 +281,19 @@
             return loadDynamicCaptionPlugin._promise;
         }
 
-        if (!document.querySelector('link[data-pswp-dyncap]')) {
+        if (photoSwipeConfig.dynamicCaptionCssUrl && !document.querySelector('link[data-pswp-dyncap]')) {
             var css = document.createElement('link');
             css.rel = 'stylesheet';
-            css.href = '/wp-content/themes/rytkoset-theme/assets/vendor/photoswipe/photoswipe-dynamic-caption-plugin.css';
+            css.href = photoSwipeConfig.dynamicCaptionCssUrl;
             css.dataset.pswpDyncap = '1';
             document.head.appendChild(css);
         }
 
-        loadDynamicCaptionPlugin._promise = import('/wp-content/themes/rytkoset-theme/assets/vendor/photoswipe/photoswipe-dynamic-caption-plugin.esm.js')
+        if (!photoSwipeConfig.dynamicCaptionJsUrl) {
+            return Promise.resolve(null);
+        }
+
+        loadDynamicCaptionPlugin._promise = import(photoSwipeConfig.dynamicCaptionJsUrl)
             .then(function (mod) {
                 return (mod && (mod.default || mod.PhotoSwipeDynamicCaption)) ? (mod.default || mod.PhotoSwipeDynamicCaption) : null;
             })
@@ -296,10 +305,38 @@
         return loadDynamicCaptionPlugin._promise;
     };
 
+    var getCaptionHTML = function (trigger, itemData) {
+        if (!trigger) {
+            return '';
+        }
+
+        var hiddenCaption = trigger.querySelector('.pswp-caption-content');
+        if (hiddenCaption && hiddenCaption.innerHTML) {
+            return hiddenCaption.innerHTML.trim();
+        }
+
+        var figure = trigger.closest('figure');
+        var figcaption = figure ? figure.querySelector('figcaption') : null;
+        if (figcaption && figcaption.innerHTML) {
+            return figcaption.innerHTML.trim();
+        }
+
+        if (itemData && itemData.alt) {
+            return itemData.alt;
+        }
+
+        var img = trigger.querySelector('img');
+        return img && img.getAttribute('alt') ? img.getAttribute('alt') : '';
+    };
+
     var initLightbox = function () {
         // Normalize all images so they have anchors + width/height data.
-        document.querySelectorAll('.wp-block-gallery img, .wp-block-image img, .js-gallery-grid img').forEach(function (img) {
+        document.querySelectorAll(galleryImageSelector).forEach(function (img) {
             var normalize = function () {
+                var figure = img.closest('figure.wp-block-image');
+                if (figure && !figure.closest('.wp-block-gallery')) {
+                    figure.classList.add('pswp-standalone-gallery');
+                }
                 normalizeImageLink(img);
             };
 
@@ -325,8 +362,8 @@
         });
 
         var lightbox = new PhotoSwipeLightbox({
-            gallery: 'body',
-            children: 'a.pswp-link, .js-gallery-item, .wp-block-gallery figure > a, .wp-block-gallery .blocks-gallery-item > a, .wp-block-image > a',
+            gallery: gallerySelector,
+            children: galleryChildrenSelector,
             showHideAnimationType: 'zoom',
             loop: false, // disable infinite looping; first/last arrows will be disabled
             pswpModule: PhotoSwipe,
@@ -335,9 +372,6 @@
         lightbox.addFilter('itemData', function (itemData) {
             var trigger = itemData.element;
             var img = trigger ? trigger.querySelector('img') : null;
-            var figure = trigger ? trigger.closest('figure') : null;
-            var figcaption = figure ? figure.querySelector('figcaption') : null;
-
             if (!trigger) {
                 return itemData;
             }
@@ -367,12 +401,7 @@
             }
 
             if (!itemData.caption) {
-                var captionText = '';
-                if (figcaption && figcaption.textContent) {
-                    captionText = figcaption.textContent.trim();
-                } else if (itemData.alt) {
-                    captionText = itemData.alt;
-                }
+                var captionText = getCaptionHTML(trigger, itemData);
                 if (captionText) {
                     itemData.caption = captionText;
                 }
@@ -430,13 +459,7 @@
                             return slide.data.caption;
                         }
                         var el = slide && slide.data && slide.data.element;
-                        var fig = el ? el.closest('figure') : null;
-                        var figcap = fig ? fig.querySelector('figcaption') : null;
-                        if (figcap && figcap.textContent) {
-                            return figcap.textContent.trim();
-                        }
-                        var img = el ? el.querySelector('img') : null;
-                        return img && img.getAttribute('alt') ? img.getAttribute('alt') : '';
+                        return getCaptionHTML(el, slide && slide.data ? slide.data : null);
                     },
                 });
             }

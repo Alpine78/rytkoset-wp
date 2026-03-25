@@ -242,6 +242,17 @@ function rytkoset_theme_scripts() {
             $theme_version,
             true
         );
+
+        wp_add_inline_script(
+            'rytkoset-photoswipe-init',
+            'window.rytkosetPhotoSwipe = ' . wp_json_encode(
+                array(
+                    'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
+                    'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
+                )
+            ) . ';',
+            'before'
+        );
     }
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
