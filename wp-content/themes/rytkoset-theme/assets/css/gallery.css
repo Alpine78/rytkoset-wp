@@ -167,6 +167,18 @@
     transform: scale(1.03);
 }
 
+.gallery-grid__caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 1rem 1rem 0.85rem;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.22) 72%, transparent);
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+}
+
 .gallery-grid__badge {
     position: absolute;
     top: 10px;
@@ -217,6 +229,35 @@
 .pswp__dynamic-caption--hidden {
     opacity: 0;
     pointer-events: none;
+}
+
+.gallery-grid__caption .pswp-caption-content__caption,
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption .pswp-caption-content__caption,
+.pswp__dynamic-caption .pswp-caption-content__caption,
+.pswp__dynamic-caption .pswp-caption-content__description,
+.pswp__dynamic-caption .pswp-caption-content__description p {
+    margin: 0;
+}
+
+.gallery-grid__caption .pswp-caption-content__caption,
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption .pswp-caption-content__caption,
+.pswp__dynamic-caption .pswp-caption-content__caption {
+    font-size: 1.05rem;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    color: #fff;
+}
+
+.pswp__dynamic-caption .pswp-caption-content__description {
+    margin-top: 0.5rem;
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.pswp__dynamic-caption .pswp-caption-content__description p + p {
+    margin-top: 0.5rem;
 }
 
 @media (min-width: 640px) {

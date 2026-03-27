@@ -94,6 +94,7 @@ get_header();
                                                                 'pswp_srcset'  => wp_get_attachment_image_srcset( $image['ID'], 'full' ),
                                                                 'pswp_sizes'   => '100vw',
                                                                 'caption_html' => rytkoset_theme_get_attachment_caption_html( $image['ID'] ),
+                                                                'visible_caption_html' => rytkoset_theme_get_attachment_visible_caption_html( $image['ID'] ),
                                                         );
                                                 }
                                         }
@@ -126,6 +127,7 @@ get_header();
                                                                 'thumb_src'        => $thumbnail_src,
                                                                 'thumb_srcset'     => $thumbnail_set,
                                                                 'caption_html'     => $thumbnail ? rytkoset_theme_get_attachment_caption_html( $thumbnail ) : '',
+                                                                'visible_caption_html' => $thumbnail ? rytkoset_theme_get_attachment_visible_caption_html( $thumbnail ) : '',
                                                         );
                                                 }
                                         }
@@ -158,7 +160,10 @@ get_header();
                                                                                                 />
                                                                                         <?php else : ?>
                                                                                                 <span class="gallery-grid__placeholder">Video</span>
-                                                                                        <?php endif; ?>
+																						<?php endif; ?>
+																						<?php if ( ! empty( $item['visible_caption_html'] ) ) : ?>
+																								<div class="gallery-grid__caption"><?php echo wp_kses_post( $item['visible_caption_html'] ); ?></div>
+																						<?php endif; ?>
 																						<span class="gallery-grid__badge">
                                                                                                 <span aria-hidden="true">▶</span>
                                                                                                 <span><?php esc_html_e( 'Video', 'rytkoset-theme' ); ?></span>
@@ -178,9 +183,12 @@ get_header();
                                                                                                 class="gallery-grid__image"
                                                                                                 src="<?php echo esc_url( $item['thumb_src'] ); ?>"
                                                                                                 <?php if ( ! empty( $item['thumb_srcset'] ) ) : ?>srcset="<?php echo esc_attr( $item['thumb_srcset'] ); ?>"<?php endif; ?>
-                                                                                                sizes="<?php echo esc_attr( $item['sizes'] ); ?>"
-                                                                                                alt="<?php echo esc_attr( $item['alt'] ); ?>"
-                                                                                        />
+																								sizes="<?php echo esc_attr( $item['sizes'] ); ?>"
+																								alt="<?php echo esc_attr( $item['alt'] ); ?>"
+																						/>
+																						<?php if ( ! empty( $item['visible_caption_html'] ) ) : ?>
+																								<div class="gallery-grid__caption"><?php echo wp_kses_post( $item['visible_caption_html'] ); ?></div>
+																						<?php endif; ?>
 																				</a>
                                                                         <?php endif; ?>
                                                                 <?php endforeach; ?>

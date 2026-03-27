@@ -11,6 +11,47 @@ require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 
+if ( ! function_exists( 'rytkoset_theme_get_attachment_display_caption_text' ) ) {
+	/**
+	 * Returns the short display caption for an attachment.
+	 *
+	 * Prefers the media caption field and falls back to the attachment title.
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_attachment_display_caption_text( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$title   = trim( (string) get_the_title( $attachment_id ) );
+		$caption = trim( (string) wp_get_attachment_caption( $attachment_id ) );
+
+		return '' !== $caption ? $caption : $title;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_attachment_visible_caption_html' ) ) {
+	/**
+	 * Builds the short visible caption HTML for grid thumbnails and Gutenberg figcaptions.
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_attachment_visible_caption_html( $attachment_id ) {
+		$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
+
+		if ( '' === $display_caption ) {
+			return '';
+		}
+
+		return '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
+	}
+}
+
 if ( ! function_exists( 'rytkoset_theme_get_attachment_caption_html' ) ) {
 	/**
 	 * Builds PhotoSwipe caption HTML from attachment metadata.
@@ -25,17 +66,12 @@ if ( ! function_exists( 'rytkoset_theme_get_attachment_caption_html' ) ) {
 			return '';
 		}
 
-		$title       = trim( (string) get_the_title( $attachment_id ) );
-		$caption     = trim( (string) wp_get_attachment_caption( $attachment_id ) );
-		$description = trim( (string) get_post_field( 'post_content', $attachment_id ) );
-		$parts       = array();
+		$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
+		$description     = trim( (string) get_post_field( 'post_content', $attachment_id ) );
+		$parts           = array();
 
-		if ( '' !== $title ) {
-			$parts[] = '<strong class="pswp-caption-content__title">' . esc_html( $title ) . '</strong>';
-		}
-
-		if ( '' !== $caption ) {
-			$parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $caption ) . '</p>';
+		if ( '' !== $display_caption ) {
+			$parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
 		}
 
 		if ( '' !== $description ) {
@@ -316,18 +352,48 @@ if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
 			return $block_content;
 		}
 
-		$attachment_id = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
-		$caption_html  = rytkoset_theme_get_attachment_caption_html( $attachment_id );
+		$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+		$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
+		$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
 
 		if ( '' === $caption_html ) {
 			return $block_content;
 		}
 
-		return preg_replace_callback(
+		$block_content = preg_replace_callback(
 			'/<figure\b/',
 			static function ( $matches ) use ( $caption_html ) {
 				return '<figure data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
 			},
+			$block_content,
+			1
+		);
+
+		if ( preg_match( '/<figcaption\b[^>]*>/i', $block_content ) ) {
+			if ( '' === $visible_caption_html ) {
+				return preg_replace(
+					'/<figcaption\b[^>]*>.*?<\/figcaption>/is',
+					'',
+					$block_content,
+					1
+				);
+			}
+
+			return preg_replace(
+				'/(<figcaption\b[^>]*>).*?(<\/figcaption>)/is',
+				'$1' . wp_kses_post( $visible_caption_html ) . '$2',
+				$block_content,
+				1
+			);
+		}
+
+		if ( '' === $visible_caption_html ) {
+			return $block_content;
+		}
+
+		return preg_replace(
+			'/<\/figure>\s*$/',
+			'<figcaption class="wp-element-caption">' . wp_kses_post( $visible_caption_html ) . '</figcaption></figure>',
 			$block_content,
 			1
 		);
