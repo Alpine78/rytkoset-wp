@@ -129,9 +129,18 @@
 }
 
 .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
+    --masonry-gap: 1rem;
+    --thumb-height: 200px;
+    --masonry-last-row-max-scale: 2.1;
+    --masonry-last-row-min-scale: 0.9;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--masonry-gap);
+    align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .gallery-grid__item {
@@ -140,21 +149,34 @@
     border-radius: 12px;
     background: #f5f5f5;
     display: block;
-    min-height: 180px;
+    flex: 0 0 auto;
     text-decoration: none;
     color: inherit;
 }
 
 .gallery-grid__image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: var(--thumb-height);
+    width: auto;
     display: block;
+    object-fit: contain !important;
+    object-position: center;
     transition: transform 250ms ease;
 }
 
 .gallery-grid__item:hover .gallery-grid__image {
     transform: scale(1.03);
+}
+
+.gallery-grid__caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 1rem 1rem 0.85rem;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.22) 72%, transparent);
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
 }
 
 .gallery-grid__badge {
@@ -204,8 +226,124 @@
     border: 0;
 }
 
+.pswp__dynamic-caption--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gallery-grid__caption .pswp-caption-content__caption,
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption .pswp-caption-content__caption,
+.pswp__dynamic-caption .pswp-caption-content__caption,
+.pswp__dynamic-caption .pswp-caption-content__description,
+.pswp__dynamic-caption .pswp-caption-content__description p {
+    margin: 0;
+}
+
+.gallery-grid__caption .pswp-caption-content__caption,
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption .pswp-caption-content__caption,
+.pswp__dynamic-caption .pswp-caption-content__caption {
+    font-size: 1.05rem;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
+    color: #fff;
+}
+
+.pswp__dynamic-caption .pswp-caption-content__description {
+    margin-top: 0.5rem;
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.pswp__dynamic-caption .pswp-caption-content__description p + p {
+    margin-top: 0.5rem;
+}
+
+@media (min-width: 640px) {
+    .gallery-grid {
+        --thumb-height: 210px;
+    }
+}
+
 @media (min-width: 960px) {
+    .gallery-grid {
+        --thumb-height: 230px;
+        --masonry-gap: 1.25rem;
+    }
+
     .album__videos {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1280px) {
+    .gallery-grid {
+        --thumb-height: 240px;
+    }
+}
+
+/* Gutenberg gallery: uniform height thumbnails, flexible widths */
+.album .wp-block-gallery.has-nested-images.is-cropped {
+    --masonry-gap: 1rem;
+    --thumb-height: 200px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--masonry-gap);
+    align-items: flex-start;
+    justify-content: flex-start;
+}
+
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image,
+.album .wp-block-gallery.has-nested-images.is-cropped .blocks-gallery-item {
+    margin: 0;
+    overflow: hidden;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    -moz-column-break-inside: avoid;
+    width: auto !important;
+    display: block;
+    flex: 0 0 auto;
+}
+
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image > a {
+    display: block;
+    line-height: 0;
+}
+
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image img,
+.album .wp-block-gallery.has-nested-images.is-cropped .blocks-gallery-item img {
+    height: var(--thumb-height);
+    width: auto;
+    max-width: 100%;
+    object-fit: contain !important;
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .album .wp-block-gallery.has-nested-images.is-cropped {
+        --thumb-height: 180px;
+    }
+}
+
+@media (min-width: 640px) {
+    .album .wp-block-gallery.has-nested-images.is-cropped {
+        --thumb-height: 200px;
+    }
+}
+
+@media (min-width: 960px) {
+    .album .wp-block-gallery.has-nested-images.is-cropped {
+        --thumb-height: 220px;
+        --masonry-gap: 1.25rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .album .wp-block-gallery.has-nested-images.is-cropped {
+        --thumb-height: 230px;
     }
 }
