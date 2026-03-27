@@ -140,7 +140,7 @@
     flex-wrap: wrap;
     gap: var(--masonry-gap);
     align-items: flex-start;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .gallery-grid__item {
@@ -246,10 +246,14 @@
 .album .wp-block-gallery.has-nested-images.is-cropped {
     --masonry-gap: 1rem;
     --thumb-height: 200px;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
     display: flex;
     flex-wrap: wrap;
     gap: var(--masonry-gap);
     align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image,
@@ -262,6 +266,11 @@
     width: auto !important;
     display: block;
     flex: 0 0 auto;
+}
+
+.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image > a {
+    display: block;
+    line-height: 0;
 }
 
 .album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image img,

@@ -68,33 +68,6 @@ get_header();
                                         <?php
                                         $gallery_items = array();
 
-                                        $build_media_caption_html = static function ( $attachment_id ) {
-                                                $attachment_id = (int) $attachment_id;
-
-                                                if ( $attachment_id <= 0 ) {
-                                                        return '';
-                                                }
-
-                                                $title       = trim( (string) get_the_title( $attachment_id ) );
-                                                $caption     = trim( (string) wp_get_attachment_caption( $attachment_id ) );
-                                                $description = trim( (string) get_post_field( 'post_content', $attachment_id ) );
-                                                $parts       = array();
-
-                                                if ( '' !== $title ) {
-                                                        $parts[] = '<strong class="pswp-caption-content__title">' . esc_html( $title ) . '</strong>';
-                                                }
-
-                                                if ( '' !== $caption ) {
-                                                        $parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $caption ) . '</p>';
-                                                }
-
-                                                if ( '' !== $description ) {
-                                                        $parts[] = '<div class="pswp-caption-content__description">' . wp_kses_post( wpautop( $description ) ) . '</div>';
-                                                }
-
-                                                return implode( '', $parts );
-                                        };
-
                                         if ( ! empty( $gallery_images ) ) {
                                                 foreach ( $gallery_images as $image ) {
                                                         if ( empty( $image['ID'] ) ) {
@@ -120,7 +93,7 @@ get_header();
                                                                 'thumb_srcset' => wp_get_attachment_image_srcset( $image['ID'], 'large' ),
                                                                 'pswp_srcset'  => wp_get_attachment_image_srcset( $image['ID'], 'full' ),
                                                                 'pswp_sizes'   => '100vw',
-                                                                'caption_html' => $build_media_caption_html( $image['ID'] ),
+                                                                'caption_html' => rytkoset_theme_get_attachment_caption_html( $image['ID'] ),
                                                         );
                                                 }
                                         }
@@ -152,7 +125,7 @@ get_header();
                                                                 'pswp_sizes'       => '100vw',
                                                                 'thumb_src'        => $thumbnail_src,
                                                                 'thumb_srcset'     => $thumbnail_set,
-                                                                'caption_html'     => $thumbnail ? $build_media_caption_html( $thumbnail ) : '',
+                                                                'caption_html'     => $thumbnail ? rytkoset_theme_get_attachment_caption_html( $thumbnail ) : '',
                                                         );
                                                 }
                                         }
@@ -165,15 +138,16 @@ get_header();
                                                                 <?php foreach ( $gallery_items as $item ) : ?>
                                                                         <?php if ( 'video' === $item['type'] ) : ?>
                                                                                 <a
-                                                                                        class="gallery-grid__item js-gallery-item"
-                                                                                        href="<?php echo esc_url( $item['video_src'] ); ?>"
-                                                                                        data-video-src="<?php echo esc_url( $item['video_src'] ); ?>"
-                                                                                        data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
-                                                                                        data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
-                                                                                        <?php if ( ! empty( $item['poster'] ) ) : ?>data-poster="<?php echo esc_url( $item['poster'] ); ?>"<?php endif; ?>
-                                                                                        <?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
-                                                                                        <?php if ( ! empty( $item['pswp_sizes'] ) ) : ?>data-pswp-sizes="<?php echo esc_attr( $item['pswp_sizes'] ); ?>"<?php endif; ?>
-                                                                                >
+																				class="gallery-grid__item js-gallery-item"
+																				href="<?php echo esc_url( $item['video_src'] ); ?>"
+																				data-video-src="<?php echo esc_url( $item['video_src'] ); ?>"
+																				data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
+																				data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
+																				<?php if ( ! empty( $item['poster'] ) ) : ?>data-poster="<?php echo esc_url( $item['poster'] ); ?>"<?php endif; ?>
+																				<?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
+																				<?php if ( ! empty( $item['pswp_sizes'] ) ) : ?>data-pswp-sizes="<?php echo esc_attr( $item['pswp_sizes'] ); ?>"<?php endif; ?>
+																				<?php if ( ! empty( $item['caption_html'] ) ) : ?>data-pswp-caption-html="<?php echo esc_attr( $item['caption_html'] ); ?>"<?php endif; ?>
+																		>
                                                                                         <?php if ( ! empty( $item['thumb_src'] ) ) : ?>
                                                                                                 <img
                                                                                                         class="gallery-grid__image"
@@ -185,23 +159,21 @@ get_header();
                                                                                         <?php else : ?>
                                                                                                 <span class="gallery-grid__placeholder">Video</span>
                                                                                         <?php endif; ?>
-                                                                                        <?php if ( ! empty( $item['caption_html'] ) ) : ?>
-                                                                                                <div class="pswp-caption-content" hidden><?php echo wp_kses_post( $item['caption_html'] ); ?></div>
-                                                                                        <?php endif; ?>
-                                                                                        <span class="gallery-grid__badge">
+																						<span class="gallery-grid__badge">
                                                                                                 <span aria-hidden="true">▶</span>
                                                                                                 <span><?php esc_html_e( 'Video', 'rytkoset-theme' ); ?></span>
                                                                                         </span>
                                                                                 </a>
                                                                         <?php else : ?>
                                                                                 <a
-                                                                                        class="gallery-grid__item js-gallery-item"
-                                                                                        href="<?php echo esc_url( $item['src'] ); ?>"
-                                                                                        data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
-                                                                                        data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
-                                                                                        <?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
-                                                                                        <?php if ( ! empty( $item['pswp_sizes'] ) ) : ?>data-pswp-sizes="<?php echo esc_attr( $item['pswp_sizes'] ); ?>"<?php endif; ?>
-                                                                                >
+																				class="gallery-grid__item js-gallery-item"
+																				href="<?php echo esc_url( $item['src'] ); ?>"
+																				data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
+																				data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
+																				<?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
+																				<?php if ( ! empty( $item['pswp_sizes'] ) ) : ?>data-pswp-sizes="<?php echo esc_attr( $item['pswp_sizes'] ); ?>"<?php endif; ?>
+																				<?php if ( ! empty( $item['caption_html'] ) ) : ?>data-pswp-caption-html="<?php echo esc_attr( $item['caption_html'] ); ?>"<?php endif; ?>
+																		>
                                                                                         <img
                                                                                                 class="gallery-grid__image"
                                                                                                 src="<?php echo esc_url( $item['thumb_src'] ); ?>"
@@ -209,10 +181,7 @@ get_header();
                                                                                                 sizes="<?php echo esc_attr( $item['sizes'] ); ?>"
                                                                                                 alt="<?php echo esc_attr( $item['alt'] ); ?>"
                                                                                         />
-                                                                                        <?php if ( ! empty( $item['caption_html'] ) ) : ?>
-                                                                                                <div class="pswp-caption-content" hidden><?php echo wp_kses_post( $item['caption_html'] ); ?></div>
-                                                                                        <?php endif; ?>
-                                                                                </a>
+																				</a>
                                                                         <?php endif; ?>
                                                                 <?php endforeach; ?>
                                                         </div>

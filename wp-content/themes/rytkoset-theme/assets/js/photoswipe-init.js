@@ -310,13 +310,27 @@
             return '';
         }
 
-        var hiddenCaption = trigger.querySelector('.pswp-caption-content');
+        var directCaption = trigger.getAttribute('data-pswp-caption-html');
+        if (directCaption) {
+            return directCaption.trim();
+        }
+
+        var hiddenCaption = trigger.querySelector('.pswp-caption-source');
         if (hiddenCaption && hiddenCaption.innerHTML) {
             return hiddenCaption.innerHTML.trim();
         }
 
         var figure = trigger.closest('figure');
+        var figureCaption = figure ? figure.getAttribute('data-pswp-caption-html') : '';
+        if (figureCaption) {
+            return figureCaption.trim();
+        }
+
+        var figureHiddenCaption = figure ? figure.querySelector('.pswp-caption-source') : null;
         var figcaption = figure ? figure.querySelector('figcaption') : null;
+        if (figureHiddenCaption && figureHiddenCaption.innerHTML) {
+            return figureHiddenCaption.innerHTML.trim();
+        }
         if (figcaption && figcaption.innerHTML) {
             return figcaption.innerHTML.trim();
         }

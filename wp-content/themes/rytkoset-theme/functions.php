@@ -11,6 +11,41 @@ require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 
+if ( ! function_exists( 'rytkoset_theme_get_attachment_caption_html' ) ) {
+	/**
+	 * Builds PhotoSwipe caption HTML from attachment metadata.
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_attachment_caption_html( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$title       = trim( (string) get_the_title( $attachment_id ) );
+		$caption     = trim( (string) wp_get_attachment_caption( $attachment_id ) );
+		$description = trim( (string) get_post_field( 'post_content', $attachment_id ) );
+		$parts       = array();
+
+		if ( '' !== $title ) {
+			$parts[] = '<strong class="pswp-caption-content__title">' . esc_html( $title ) . '</strong>';
+		}
+
+		if ( '' !== $caption ) {
+			$parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $caption ) . '</p>';
+		}
+
+		if ( '' !== $description ) {
+			$parts[] = '<div class="pswp-caption-content__description">' . wp_kses_post( wpautop( $description ) ) . '</div>';
+		}
+
+		return implode( '', $parts );
+	}
+}
+
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
 	add_theme_support( 'title-tag' );
@@ -256,6 +291,49 @@ function rytkoset_theme_scripts() {
     }
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
+
+if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
+	/**
+	 * Adds up-to-date attachment caption metadata to Gutenberg image blocks.
+	 *
+	 * Visible figcaptions in post content may be stale, because Gutenberg stores them in post_content.
+	 * PhotoSwipe reads this data attribute first so media library edits take effect without rewriting content.
+	 *
+	 * @param string $block_content Rendered block HTML.
+	 * @param array  $block         Parsed block data.
+	 * @return string
+	 */
+	function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) {
+		if ( is_admin() || ! is_singular( 'gallery_album' ) ) {
+			return $block_content;
+		}
+
+		if ( empty( $block['blockName'] ) || 'core/image' !== $block['blockName'] ) {
+			return $block_content;
+		}
+
+		if ( false !== strpos( $block_content, 'data-pswp-caption-html=' ) ) {
+			return $block_content;
+		}
+
+		$attachment_id = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+		$caption_html  = rytkoset_theme_get_attachment_caption_html( $attachment_id );
+
+		if ( '' === $caption_html ) {
+			return $block_content;
+		}
+
+		return preg_replace_callback(
+			'/<figure\b/',
+			static function ( $matches ) use ( $caption_html ) {
+				return '<figure data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
+			},
+			$block_content,
+			1
+		);
+	}
+}
+add_filter( 'render_block', 'rytkoset_theme_inject_image_caption_metadata', 10, 2 );
 
 /**
  * Disable WordPress core image lightbox to avoid conflicts with PhotoSwipe.
