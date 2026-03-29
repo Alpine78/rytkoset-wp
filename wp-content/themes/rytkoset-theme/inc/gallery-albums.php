@@ -35,7 +35,7 @@ if ( ! function_exists( 'rytkoset_theme_register_gallery_album_cpt' ) ) {
                         'has_archive'        => true,
                         'menu_icon'          => 'dashicons-format-gallery',
                         'show_in_rest'       => true,
-                        'supports'           => array( 'title', 'editor', 'thumbnail', 'comments' ),
+                        'supports'           => array( 'title', 'editor', 'excerpt', 'thumbnail', 'comments' ),
                         'rewrite'            => array(
                                 'slug'       => 'albumit',
                                 'with_front' => false,
@@ -61,6 +61,16 @@ if ( ! function_exists( 'rytkoset_theme_register_gallery_fields' ) ) {
                                 'key'      => 'group_rytkoset_gallery_album',
                                 'title'    => __( 'Albumin media', 'rytkoset-theme' ),
                                 'fields'   => array(
+                                        array(
+                                                'key'           => 'field_gallery_event_date',
+                                                'label'         => __( 'Tapahtumapäivä', 'rytkoset-theme' ),
+                                                'name'          => 'event_date',
+                                                'type'          => 'date_picker',
+                                                'instructions'  => __( 'Näytetään albumin päiväyksenä ja käytetään albumien lajitteluun. Jos jätät tyhjäksi, käytetään julkaisupäivää.', 'rytkoset-theme' ),
+                                                'display_format'=> 'd.m.Y',
+                                                'return_format' => 'Ymd',
+                                                'first_day'     => 1,
+                                        ),
                                         array(
                                                 'key'           => 'field_gallery_images',
                                                 'label'         => __( 'Albumin kuvat', 'rytkoset-theme' ),
@@ -114,6 +124,93 @@ if ( ! function_exists( 'rytkoset_theme_register_gallery_fields' ) ) {
         }
 }
 add_action( 'acf/init', 'rytkoset_theme_register_gallery_fields' );
+
+if ( ! function_exists( 'rytkoset_theme_get_album_event_date_raw' ) ) {
+        /**
+         * Returns the raw album event date meta value in Ymd format.
+         *
+         * @param int $post_id Album post ID.
+         * @return string
+         */
+        function rytkoset_theme_get_album_event_date_raw( $post_id ) {
+                $post_id    = (int) $post_id;
+                $event_date = (string) get_post_meta( $post_id, 'event_date', true );
+
+                if ( preg_match( '/^\d{8}$/', $event_date ) ) {
+                        return $event_date;
+                }
+
+                return '';
+        }
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_album_display_date' ) ) {
+        /**
+         * Returns the album date shown to users.
+         *
+         * Prefers the event date field and falls back to the post publish date.
+         *
+         * @param int $post_id Album post ID.
+         * @return string
+         */
+        function rytkoset_theme_get_album_display_date( $post_id ) {
+                $post_id    = (int) $post_id;
+                $event_date = rytkoset_theme_get_album_event_date_raw( $post_id );
+
+                if ( '' === $event_date ) {
+                        return get_the_date( '', $post_id );
+                }
+
+                $date = DateTimeImmutable::createFromFormat( '!Ymd', $event_date, wp_timezone() );
+
+                if ( false === $date ) {
+                        return get_the_date( '', $post_id );
+                }
+
+                return wp_date( get_option( 'date_format' ), $date->getTimestamp(), wp_timezone() );
+        }
+}
+
+if ( ! function_exists( 'rytkoset_theme_sort_gallery_album_archive_by_event_date' ) ) {
+        /**
+         * Sorts the album archive by event date, newest first.
+         *
+         * Albums without an event date fall back behind dated albums and then use publish date.
+         *
+         * @param WP_Query $query Query instance.
+         * @return void
+         */
+        function rytkoset_theme_sort_gallery_album_archive_by_event_date( $query ) {
+                if ( is_admin() || ! $query->is_main_query() || ! $query->is_post_type_archive( 'gallery_album' ) ) {
+                        return;
+                }
+
+                $query->set(
+                        'meta_query',
+                        array(
+                                'relation'           => 'OR',
+                                'event_date_clause'  => array(
+                                        'key'     => 'event_date',
+                                        'compare' => 'EXISTS',
+                                        'type'    => 'NUMERIC',
+                                ),
+                                'event_date_missing' => array(
+                                        'key'     => 'event_date',
+                                        'compare' => 'NOT EXISTS',
+                                ),
+                        )
+                );
+
+                $query->set(
+                        'orderby',
+                        array(
+                                'event_date_clause' => 'DESC',
+                                'date'              => 'DESC',
+                        )
+                );
+        }
+}
+add_action( 'pre_get_posts', 'rytkoset_theme_sort_gallery_album_archive_by_event_date' );
 
 if ( ! function_exists( 'rytkoset_theme_get_video_embed_url' ) ) {
         /**
