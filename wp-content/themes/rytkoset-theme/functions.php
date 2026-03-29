@@ -348,26 +348,44 @@ if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
 			return $block_content;
 		}
 
-		if ( false !== strpos( $block_content, 'data-pswp-caption-html=' ) ) {
+		$has_caption_attr = false !== strpos( $block_content, 'data-pswp-caption-html=' );
+		$has_item_id_attr = false !== strpos( $block_content, 'data-pswp-item-id=' );
+
+		if ( $has_caption_attr && $has_item_id_attr ) {
 			return $block_content;
 		}
 
 		$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+		$item_id               = $attachment_id > 0 ? (string) $attachment_id : '';
 		$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
 		$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
 
-		if ( '' === $caption_html ) {
+		if ( '' === $caption_html && '' === $item_id ) {
 			return $block_content;
 		}
 
 		$block_content = preg_replace_callback(
 			'/<figure\b/',
-			static function ( $matches ) use ( $caption_html ) {
-				return '<figure data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
+			static function ( $matches ) use ( $caption_html, $item_id, $has_caption_attr, $has_item_id_attr ) {
+				$attributes = '';
+
+				if ( ! $has_caption_attr && '' !== $caption_html ) {
+					$attributes .= ' data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
+				}
+
+				if ( ! $has_item_id_attr && '' !== $item_id ) {
+					$attributes .= ' data-pswp-item-id="' . esc_attr( $item_id ) . '"';
+				}
+
+				return '<figure' . $attributes;
 			},
 			$block_content,
 			1
 		);
+
+		if ( '' === $caption_html ) {
+			return $block_content;
+		}
 
 		if ( preg_match( '/<figcaption\b[^>]*>/i', $block_content ) ) {
 			if ( '' === $visible_caption_html ) {

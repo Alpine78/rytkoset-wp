@@ -110,6 +110,7 @@ if ( have_posts() ) :
 
 								$gallery_items[] = array(
 									'type'                 => 'image',
+									'item_id'              => (string) $image['ID'],
 									'src'                  => $full[0],
 									'width'                => isset( $full[1] ) ? (int) $full[1] : 0,
 									'height'               => isset( $full[2] ) ? (int) $full[2] : 0,
@@ -143,6 +144,7 @@ if ( have_posts() ) :
 
 								$gallery_items[] = array(
 									'type'                 => 'video',
+									'item_id'              => 'video-' . substr( md5( $embed_url ), 0, 12 ),
 									'video_src'            => $embed_url,
 									'poster'               => $thumbnail_src,
 									'srcset'               => $thumbnail_set,
@@ -170,6 +172,7 @@ if ( have_posts() ) :
 												class="gallery-grid__item js-gallery-item"
 												href="<?php echo esc_url( $item['video_src'] ); ?>"
 												data-video-src="<?php echo esc_url( $item['video_src'] ); ?>"
+												data-pswp-item-id="<?php echo esc_attr( $item['item_id'] ); ?>"
 												data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
 												data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
 												<?php if ( ! empty( $item['poster'] ) ) : ?>data-poster="<?php echo esc_url( $item['poster'] ); ?>"<?php endif; ?>
@@ -200,6 +203,7 @@ if ( have_posts() ) :
 											<a
 												class="gallery-grid__item js-gallery-item"
 												href="<?php echo esc_url( $item['src'] ); ?>"
+												data-pswp-item-id="<?php echo esc_attr( $item['item_id'] ); ?>"
 												data-pswp-width="<?php echo esc_attr( $item['width'] ); ?>"
 												data-pswp-height="<?php echo esc_attr( $item['height'] ); ?>"
 												<?php if ( ! empty( $item['pswp_srcset'] ) ) : ?>data-pswp-srcset="<?php echo esc_attr( $item['pswp_srcset'] ); ?>"<?php endif; ?>
