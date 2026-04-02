@@ -48,6 +48,16 @@
         replaceUrlHash(nextHash);
     };
 
+    var getShareUrlForItemId = function (itemId) {
+        if (!itemId) {
+            return window.location.href;
+        }
+
+        var origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+
+        return origin + window.location.pathname + window.location.search + '#' + galleryHashParam + '=' + encodeURIComponent(itemId);
+    };
+
     var restorePreviousUrlHash = function () {
         if (window.location.hash === urlSyncState.previousHash) {
             return;
@@ -112,6 +122,78 @@
         return getAllGalleryTriggers().find(function (trigger) {
             return getItemIdFromNode(trigger) === itemId;
         }) || null;
+    };
+
+    var fallbackCopyToClipboard = function (text) {
+        var textarea = document.createElement('textarea');
+
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+
+        try {
+            return document.execCommand('copy');
+        } catch (error) {
+            return false;
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    };
+
+    var copyToClipboard = function (text) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function' && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise(function (resolve, reject) {
+            if (fallbackCopyToClipboard(text)) {
+                resolve();
+                return;
+            }
+
+            reject(new Error('clipboard_unavailable'));
+        });
+    };
+
+    var showCopyPrompt = function (text) {
+        window.prompt(photoSwipeConfig.copyLinkPrompt || 'Kopioi linkki tähän kuvaan:', text);
+    };
+
+    var showCopyToast = function (pswp, message) {
+        var toastMessage = message || photoSwipeConfig.copyLinkToast || photoSwipeConfig.copyLinkSuccess || 'Linkki kopioitu';
+        var root = pswp && pswp.element;
+        var toastEl;
+
+        if (!root) {
+            return;
+        }
+
+        toastEl = root.querySelector('.pswp__copy-toast');
+
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.className = 'pswp__copy-toast';
+            toastEl.setAttribute('role', 'status');
+            toastEl.setAttribute('aria-live', 'polite');
+            root.appendChild(toastEl);
+        }
+
+        toastEl.textContent = toastMessage;
+        toastEl.classList.add('is-visible');
+
+        if (toastEl._hideTimeout) {
+            window.clearTimeout(toastEl._hideTimeout);
+        }
+
+        toastEl._hideTimeout = window.setTimeout(function () {
+            toastEl.classList.remove('is-visible');
+        }, 1800);
     };
 
     var computeDimensions = function (img) {
@@ -577,6 +659,54 @@
 
             e.content.element = wrapper;
             e.content.state = 'loaded';
+        });
+
+        lightbox.on('uiRegister', function () {
+            lightbox.pswp.ui.registerElement({
+                name: 'copy-link',
+                order: 18,
+                isButton: true,
+                title: photoSwipeConfig.copyLinkLabel || 'Kopioi linkki tähän kuvaan',
+                ariaLabel: photoSwipeConfig.copyLinkLabel || 'Kopioi linkki tähän kuvaan',
+                html: '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" class="pswp__icn"><path d="M13.4 22.7a5 5 0 0 1 0-7.1l3.9-3.9a5 5 0 0 1 7.1 7.1l-1.9 1.9-1.6-1.6 1.9-1.9a2.8 2.8 0 0 0-4-4l-3.9 3.9a2.8 2.8 0 1 0 4 4l1-1 1.6 1.6-1 1a5 5 0 0 1-7.1 0Zm-5.8-2.3a5 5 0 0 1 0-7.1l1-1 1.6 1.6-1 1a2.8 2.8 0 0 0 4 4l3.9-3.9a2.8 2.8 0 1 0-4-4l-1.9 1.9-1.6-1.6 1.9-1.9a5 5 0 0 1 7.1 7.1l-3.9 3.9a5 5 0 0 1-7.1 0Z" fill="currentColor"/></svg>',
+                onInit: function (el) {
+                    el._copyLinkDefaultHtml = el.innerHTML;
+                    el._copyLinkDefaultLabel = photoSwipeConfig.copyLinkLabel || 'Kopioi linkki tähän kuvaan';
+                    el._copyLinkSuccessLabel = photoSwipeConfig.copyLinkSuccess || 'Linkki kopioitu';
+                },
+                onClick: function (event, el, pswp) {
+                    var slide = pswp && pswp.currSlide;
+                    var itemId = slide && slide.data ? slide.data.itemId : '';
+                    var shareUrl = getShareUrlForItemId(itemId);
+                    var copiedHtml = '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" class="pswp__icn"><path d="m13.7 21.7-5.4-5.3 1.6-1.6 3.8 3.8 8.4-8.4 1.6 1.6-10 9.9Z" fill="currentColor"/></svg>';
+
+                    if (!shareUrl) {
+                        return;
+                    }
+
+                    copyToClipboard(shareUrl).then(function () {
+                        if (el._copyLinkResetTimeout) {
+                            window.clearTimeout(el._copyLinkResetTimeout);
+                        }
+
+                        el.classList.add('is-copied');
+                        el.innerHTML = copiedHtml;
+                        el.setAttribute('title', el._copyLinkSuccessLabel);
+                        el.setAttribute('aria-label', el._copyLinkSuccessLabel);
+
+                        el._copyLinkResetTimeout = window.setTimeout(function () {
+                            el.classList.remove('is-copied');
+                            el.innerHTML = el._copyLinkDefaultHtml;
+                            el.setAttribute('title', el._copyLinkDefaultLabel);
+                            el.setAttribute('aria-label', el._copyLinkDefaultLabel);
+                        }, 1600);
+
+                        showCopyToast(pswp, photoSwipeConfig.copyLinkToast);
+                    }).catch(function () {
+                        showCopyPrompt(shareUrl);
+                    });
+                }
+            });
         });
 
         loadDynamicCaptionPlugin().then(function (DynamicCaption) {

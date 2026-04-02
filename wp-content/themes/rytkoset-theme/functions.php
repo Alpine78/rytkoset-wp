@@ -320,6 +320,10 @@ function rytkoset_theme_scripts() {
                 array(
                     'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
                     'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
+                    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
+                    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
+                    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
+                    'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
                 )
             ) . ';',
             'before'
