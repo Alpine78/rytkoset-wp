@@ -82,6 +82,98 @@ if ( ! function_exists( 'rytkoset_theme_get_attachment_caption_html' ) ) {
 	}
 }
 
+if ( ! function_exists( 'rytkoset_theme_get_image_iptc_text_fields' ) ) {
+	/**
+	 * Reads raw IPTC headline and description fields from an image file.
+	 *
+	 * @param string $file Absolute image file path.
+	 * @return array{headline:string,description:string}
+	 */
+	function rytkoset_theme_get_image_iptc_text_fields( $file ) {
+		$fields = array(
+			'headline'    => '',
+			'description' => '',
+		);
+
+		if ( ! is_string( $file ) || '' === $file || ! file_exists( $file ) || ! is_callable( 'iptcparse' ) ) {
+			return $fields;
+		}
+
+		$info       = array();
+		$image_size = wp_getimagesize( $file, $info );
+
+		if ( false === $image_size || empty( $info['APP13'] ) ) {
+			return $fields;
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && ! defined( 'WP_RUN_CORE_TESTS' ) ) {
+			$iptc = iptcparse( $info['APP13'] );
+		} else {
+			// Silencing notice and warning is intentional, same as WordPress core.
+			$iptc = @iptcparse( $info['APP13'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		if ( ! is_array( $iptc ) ) {
+			return $fields;
+		}
+
+		if ( ! empty( $iptc['2#105'][0] ) ) {
+			$fields['headline'] = trim( (string) $iptc['2#105'][0] );
+		}
+
+		if ( ! empty( $iptc['2#120'][0] ) ) {
+			$fields['description'] = trim( (string) $iptc['2#120'][0] );
+		}
+
+		return $fields;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_sync_attachment_iptc_text_fields' ) ) {
+	/**
+	 * Maps IPTC Headline and Description to attachment caption and description on upload.
+	 *
+	 * Headline -> post_excerpt (WordPress media caption)
+	 * Description -> post_content (WordPress media description)
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return void
+	 */
+	function rytkoset_theme_sync_attachment_iptc_text_fields( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+
+		if ( $attachment_id <= 0 || ! wp_attachment_is_image( $attachment_id ) ) {
+			return;
+		}
+
+		$file = get_attached_file( $attachment_id );
+
+		if ( ! is_string( $file ) || '' === $file ) {
+			return;
+		}
+
+		$iptc_fields = rytkoset_theme_get_image_iptc_text_fields( $file );
+		$post_update = array(
+			'ID' => $attachment_id,
+		);
+
+		if ( '' !== $iptc_fields['headline'] ) {
+			$post_update['post_excerpt'] = $iptc_fields['headline'];
+		}
+
+		if ( '' !== $iptc_fields['description'] ) {
+			$post_update['post_content'] = $iptc_fields['description'];
+		}
+
+		if ( 1 === count( $post_update ) ) {
+			return;
+		}
+
+		wp_update_post( wp_slash( $post_update ) );
+	}
+}
+add_action( 'add_attachment', 'rytkoset_theme_sync_attachment_iptc_text_fields' );
+
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
 	add_theme_support( 'title-tag' );
@@ -320,6 +412,10 @@ function rytkoset_theme_scripts() {
                 array(
                     'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
                     'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
+                    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
+                    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
+                    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
+                    'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
                 )
             ) . ';',
             'before'
@@ -348,22 +444,36 @@ if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
 			return $block_content;
 		}
 
-		if ( false !== strpos( $block_content, 'data-pswp-caption-html=' ) ) {
+		$has_caption_attr = false !== strpos( $block_content, 'data-pswp-caption-html=' );
+		$has_item_id_attr = false !== strpos( $block_content, 'data-pswp-item-id=' );
+
+		if ( $has_caption_attr && $has_item_id_attr ) {
 			return $block_content;
 		}
 
 		$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+		$item_id               = $attachment_id > 0 ? (string) $attachment_id : '';
 		$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
 		$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
 
-		if ( '' === $caption_html ) {
+		if ( '' === $caption_html && '' === $item_id ) {
 			return $block_content;
 		}
 
 		$block_content = preg_replace_callback(
 			'/<figure\b/',
-			static function ( $matches ) use ( $caption_html ) {
-				return '<figure data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
+			static function ( $matches ) use ( $caption_html, $item_id, $has_caption_attr, $has_item_id_attr ) {
+				$attributes = '';
+
+				if ( ! $has_caption_attr && '' !== $caption_html ) {
+					$attributes .= ' data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
+				}
+
+				if ( ! $has_item_id_attr && '' !== $item_id ) {
+					$attributes .= ' data-pswp-item-id="' . esc_attr( $item_id ) . '"';
+				}
+
+				return '<figure' . $attributes;
 			},
 			$block_content,
 			1
@@ -371,12 +481,7 @@ if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
 
 		if ( preg_match( '/<figcaption\b[^>]*>/i', $block_content ) ) {
 			if ( '' === $visible_caption_html ) {
-				return preg_replace(
-					'/<figcaption\b[^>]*>.*?<\/figcaption>/is',
-					'',
-					$block_content,
-					1
-				);
+				return $block_content;
 			}
 
 			return preg_replace(

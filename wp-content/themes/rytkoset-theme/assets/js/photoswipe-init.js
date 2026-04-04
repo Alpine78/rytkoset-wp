@@ -5,6 +5,196 @@
     var galleryImageSelector = '.js-gallery-grid img, .album .wp-block-gallery img, .album figure.wp-block-image img';
     var galleryChildrenSelector = 'a.pswp-link, .js-gallery-item, figure > a, .blocks-gallery-item > a';
     var masonryGridSelector = '.js-gallery-grid, .album .wp-block-gallery.has-nested-images';
+    var galleryHashParam = 'kuva';
+    var urlSyncState = {
+        previousHash: ''
+    };
+
+    var getGalleryHashItemId = function (hash) {
+        var rawHash = typeof hash === 'string' ? hash : window.location.hash;
+        if (!rawHash) {
+            return '';
+        }
+
+        var params = new URLSearchParams(rawHash.replace(/^#/, ''));
+        var itemId = params.get(galleryHashParam);
+
+        return itemId ? itemId.trim() : '';
+    };
+
+    var isPhotoSwipeHash = function (hash) {
+        return '' !== getGalleryHashItemId(hash);
+    };
+
+    var replaceUrlHash = function (hash) {
+        if (!window.history || typeof window.history.replaceState !== 'function') {
+            return;
+        }
+
+        var nextUrl = window.location.pathname + window.location.search + (hash || '');
+        window.history.replaceState(window.history.state, '', nextUrl);
+    };
+
+    var updateUrlForItemId = function (itemId) {
+        if (!itemId) {
+            return;
+        }
+
+        var nextHash = '#' + galleryHashParam + '=' + encodeURIComponent(itemId);
+        if (window.location.hash === nextHash) {
+            return;
+        }
+
+        replaceUrlHash(nextHash);
+    };
+
+    var getShareUrlForItemId = function (itemId) {
+        if (!itemId) {
+            return window.location.href;
+        }
+
+        var origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
+
+        return origin + window.location.pathname + window.location.search + '#' + galleryHashParam + '=' + encodeURIComponent(itemId);
+    };
+
+    var restorePreviousUrlHash = function () {
+        if (window.location.hash === urlSyncState.previousHash) {
+            return;
+        }
+
+        replaceUrlHash(urlSyncState.previousHash || '');
+    };
+
+    var getItemIdFromNode = function (node) {
+        if (!node) {
+            return '';
+        }
+
+        if (node.getAttribute) {
+            var directId = node.getAttribute('data-pswp-item-id');
+            if (directId) {
+                return directId.trim();
+            }
+
+            var legacyId = node.getAttribute('data-id');
+            if (legacyId) {
+                return legacyId.trim();
+            }
+        }
+
+        var figure = node.closest ? node.closest('figure') : null;
+        if (figure && figure !== node) {
+            var figureId = getItemIdFromNode(figure);
+            if (figureId) {
+                return figureId;
+            }
+        }
+
+        var img = node.tagName === 'IMG' ? node : (node.querySelector ? node.querySelector('img') : null);
+        if (img) {
+            var imageId = img.getAttribute('data-id');
+            if (imageId) {
+                return imageId.trim();
+            }
+
+            var className = img.getAttribute('class') || '';
+            var classMatch = className.match(/\bwp-image-(\d+)\b/);
+            if (classMatch && classMatch[1]) {
+                return classMatch[1];
+            }
+        }
+
+        return '';
+    };
+
+    var getAllGalleryTriggers = function () {
+        return Array.prototype.slice.call(
+            document.querySelectorAll('.js-gallery-grid .js-gallery-item, .album .wp-block-gallery a.pswp-link, .album figure.pswp-standalone-gallery > a.pswp-link')
+        );
+    };
+
+    var findGalleryTriggerByItemId = function (itemId) {
+        if (!itemId) {
+            return null;
+        }
+
+        return getAllGalleryTriggers().find(function (trigger) {
+            return getItemIdFromNode(trigger) === itemId;
+        }) || null;
+    };
+
+    var fallbackCopyToClipboard = function (text) {
+        var textarea = document.createElement('textarea');
+
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+
+        try {
+            return document.execCommand('copy');
+        } catch (error) {
+            return false;
+        } finally {
+            document.body.removeChild(textarea);
+        }
+    };
+
+    var copyToClipboard = function (text) {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function' && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise(function (resolve, reject) {
+            if (fallbackCopyToClipboard(text)) {
+                resolve();
+                return;
+            }
+
+            reject(new Error('clipboard_unavailable'));
+        });
+    };
+
+    var showCopyPrompt = function (text) {
+        window.prompt(photoSwipeConfig.copyLinkPrompt || 'Kopioi linkki tähän kuvaan:', text);
+    };
+
+    var showCopyToast = function (pswp, message) {
+        var toastMessage = message || photoSwipeConfig.copyLinkToast || photoSwipeConfig.copyLinkSuccess || 'Linkki kopioitu';
+        var root = pswp && pswp.element;
+        var toastEl;
+
+        if (!root) {
+            return;
+        }
+
+        toastEl = root.querySelector('.pswp__copy-toast');
+
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.className = 'pswp__copy-toast';
+            toastEl.setAttribute('role', 'status');
+            toastEl.setAttribute('aria-live', 'polite');
+            root.appendChild(toastEl);
+        }
+
+        toastEl.textContent = toastMessage;
+        toastEl.classList.add('is-visible');
+
+        if (toastEl._hideTimeout) {
+            window.clearTimeout(toastEl._hideTimeout);
+        }
+
+        toastEl._hideTimeout = window.setTimeout(function () {
+            toastEl.classList.remove('is-visible');
+        }, 1800);
+    };
 
     var computeDimensions = function (img) {
         if (!img) return null;
@@ -86,6 +276,13 @@
 
         if (!link.dataset.pswpType) {
             link.dataset.pswpType = 'image';
+        }
+
+        if (!link.dataset.pswpItemId) {
+            var itemId = getItemIdFromNode(link) || getItemIdFromNode(figure) || getItemIdFromNode(img);
+            if (itemId) {
+                link.dataset.pswpItemId = itemId;
+            }
         }
 
         link.classList.add('pswp-link');
@@ -354,9 +551,9 @@
                 normalizeImageLink(img);
             };
 
-            if (img.complete) {
-                normalize();
-            } else {
+            normalize();
+
+            if (!img.complete) {
                 img.addEventListener('load', normalize, { once: true });
                 img.addEventListener('error', normalize, { once: true });
             }
@@ -429,6 +626,10 @@
                 itemData.msrc = img.currentSrc;
             }
 
+            if (!itemData.itemId) {
+                itemData.itemId = getItemIdFromNode(trigger) || getItemIdFromNode(img);
+            }
+
             return itemData;
         });
 
@@ -460,6 +661,54 @@
             e.content.state = 'loaded';
         });
 
+        lightbox.on('uiRegister', function () {
+            lightbox.pswp.ui.registerElement({
+                name: 'copy-link',
+                order: 18,
+                isButton: true,
+                title: photoSwipeConfig.copyLinkLabel || 'Kopioi linkki tähän kuvaan',
+                ariaLabel: photoSwipeConfig.copyLinkLabel || 'Kopioi linkki tähän kuvaan',
+                html: '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" class="pswp__icn"><path d="M13.4 22.7a5 5 0 0 1 0-7.1l3.9-3.9a5 5 0 0 1 7.1 7.1l-1.9 1.9-1.6-1.6 1.9-1.9a2.8 2.8 0 0 0-4-4l-3.9 3.9a2.8 2.8 0 1 0 4 4l1-1 1.6 1.6-1 1a5 5 0 0 1-7.1 0Zm-5.8-2.3a5 5 0 0 1 0-7.1l1-1 1.6 1.6-1 1a2.8 2.8 0 0 0 4 4l3.9-3.9a2.8 2.8 0 1 0-4-4l-1.9 1.9-1.6-1.6 1.9-1.9a5 5 0 0 1 7.1 7.1l-3.9 3.9a5 5 0 0 1-7.1 0Z" fill="currentColor"/></svg>',
+                onInit: function (el) {
+                    el._copyLinkDefaultHtml = el.innerHTML;
+                    el._copyLinkDefaultLabel = photoSwipeConfig.copyLinkLabel || 'Kopioi linkki tähän kuvaan';
+                    el._copyLinkSuccessLabel = photoSwipeConfig.copyLinkSuccess || 'Linkki kopioitu';
+                },
+                onClick: function (event, el, pswp) {
+                    var slide = pswp && pswp.currSlide;
+                    var itemId = slide && slide.data ? slide.data.itemId : '';
+                    var shareUrl = getShareUrlForItemId(itemId);
+                    var copiedHtml = '<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" class="pswp__icn"><path d="m13.7 21.7-5.4-5.3 1.6-1.6 3.8 3.8 8.4-8.4 1.6 1.6-10 9.9Z" fill="currentColor"/></svg>';
+
+                    if (!shareUrl) {
+                        return;
+                    }
+
+                    copyToClipboard(shareUrl).then(function () {
+                        if (el._copyLinkResetTimeout) {
+                            window.clearTimeout(el._copyLinkResetTimeout);
+                        }
+
+                        el.classList.add('is-copied');
+                        el.innerHTML = copiedHtml;
+                        el.setAttribute('title', el._copyLinkSuccessLabel);
+                        el.setAttribute('aria-label', el._copyLinkSuccessLabel);
+
+                        el._copyLinkResetTimeout = window.setTimeout(function () {
+                            el.classList.remove('is-copied');
+                            el.innerHTML = el._copyLinkDefaultHtml;
+                            el.setAttribute('title', el._copyLinkDefaultLabel);
+                            el.setAttribute('aria-label', el._copyLinkDefaultLabel);
+                        }, 1600);
+
+                        showCopyToast(pswp, photoSwipeConfig.copyLinkToast);
+                    }).catch(function () {
+                        showCopyPrompt(shareUrl);
+                    });
+                }
+            });
+        });
+
         loadDynamicCaptionPlugin().then(function (DynamicCaption) {
             if (DynamicCaption) {
                 new DynamicCaption(lightbox, {
@@ -489,10 +738,43 @@
                 captionEl.classList.toggle('pswp__dynamic-caption--hidden', !!shouldHide);
             };
 
+            var syncSlideUrl = function () {
+                var pswp = lightbox.pswp;
+                var slide = pswp && pswp.currSlide;
+                var itemId = slide && slide.data ? slide.data.itemId : '';
+
+                if (itemId) {
+                    updateUrlForItemId(itemId);
+                }
+            };
+
+            var openFromHash = function () {
+                var itemId = getGalleryHashItemId();
+                var trigger;
+
+                if (!itemId) {
+                    return;
+                }
+
+                trigger = findGalleryTriggerByItemId(itemId);
+                if (!trigger) {
+                    return;
+                }
+
+                trigger.click();
+            };
+
+            lightbox.on('beforeOpen', function () {
+                urlSyncState.previousHash = isPhotoSwipeHash(window.location.hash) ? '' : window.location.hash;
+            });
+
             lightbox.on('zoomPanUpdate', toggleZoomHide);
             lightbox.on('change', toggleZoomHide);
+            lightbox.on('change', syncSlideUrl);
+            lightbox.on('destroy', restorePreviousUrlHash);
 
             lightbox.init();
+            openFromHash();
         });
         initMasonryGrids();
     };

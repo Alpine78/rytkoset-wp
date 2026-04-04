@@ -36,7 +36,7 @@ get_header();
                                                         </div>
 
                                                         <div class="album-card__body">
-                                                                <p class="album-card__meta"><?php echo esc_html( get_the_date() ); ?></p>
+                                                                <p class="album-card__meta"><?php echo esc_html( rytkoset_theme_get_album_display_date( get_the_ID() ) ); ?></p>
                                                                 <h2 class="album-card__title"><?php the_title(); ?></h2>
                                                                 <p class="album-card__excerpt"><?php echo esc_html( wp_trim_words( get_the_excerpt(), 26 ) ); ?></p>
                                                         </div>
