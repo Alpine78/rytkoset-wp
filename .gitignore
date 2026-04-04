@@ -40,6 +40,9 @@ wp-config.php
 # Log files
 *.log
 
+# Codex local browser/profile artifacts
+.codex-artifacts/
+
 # htaccess
 /.htaccess
 

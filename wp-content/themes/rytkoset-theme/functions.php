@@ -9,6 +9,170 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
+require_once get_template_directory() . '/inc/gallery-albums.php';
+
+if ( ! function_exists( 'rytkoset_theme_get_attachment_display_caption_text' ) ) {
+	/**
+	 * Returns the short display caption for an attachment.
+	 *
+	 * Prefers the media caption field and falls back to the attachment title.
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_attachment_display_caption_text( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$title   = trim( (string) get_the_title( $attachment_id ) );
+		$caption = trim( (string) wp_get_attachment_caption( $attachment_id ) );
+
+		return '' !== $caption ? $caption : $title;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_attachment_visible_caption_html' ) ) {
+	/**
+	 * Builds the short visible caption HTML for grid thumbnails and Gutenberg figcaptions.
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_attachment_visible_caption_html( $attachment_id ) {
+		$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
+
+		if ( '' === $display_caption ) {
+			return '';
+		}
+
+		return '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_attachment_caption_html' ) ) {
+	/**
+	 * Builds PhotoSwipe caption HTML from attachment metadata.
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_attachment_caption_html( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
+		$description     = trim( (string) get_post_field( 'post_content', $attachment_id ) );
+		$parts           = array();
+
+		if ( '' !== $display_caption ) {
+			$parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
+		}
+
+		if ( '' !== $description ) {
+			$parts[] = '<div class="pswp-caption-content__description">' . wp_kses_post( wpautop( $description ) ) . '</div>';
+		}
+
+		return implode( '', $parts );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_image_iptc_text_fields' ) ) {
+	/**
+	 * Reads raw IPTC headline and description fields from an image file.
+	 *
+	 * @param string $file Absolute image file path.
+	 * @return array{headline:string,description:string}
+	 */
+	function rytkoset_theme_get_image_iptc_text_fields( $file ) {
+		$fields = array(
+			'headline'    => '',
+			'description' => '',
+		);
+
+		if ( ! is_string( $file ) || '' === $file || ! file_exists( $file ) || ! is_callable( 'iptcparse' ) ) {
+			return $fields;
+		}
+
+		$info       = array();
+		$image_size = wp_getimagesize( $file, $info );
+
+		if ( false === $image_size || empty( $info['APP13'] ) ) {
+			return $fields;
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && ! defined( 'WP_RUN_CORE_TESTS' ) ) {
+			$iptc = iptcparse( $info['APP13'] );
+		} else {
+			// Silencing notice and warning is intentional, same as WordPress core.
+			$iptc = @iptcparse( $info['APP13'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		}
+
+		if ( ! is_array( $iptc ) ) {
+			return $fields;
+		}
+
+		if ( ! empty( $iptc['2#105'][0] ) ) {
+			$fields['headline'] = trim( (string) $iptc['2#105'][0] );
+		}
+
+		if ( ! empty( $iptc['2#120'][0] ) ) {
+			$fields['description'] = trim( (string) $iptc['2#120'][0] );
+		}
+
+		return $fields;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_sync_attachment_iptc_text_fields' ) ) {
+	/**
+	 * Maps IPTC Headline and Description to attachment caption and description on upload.
+	 *
+	 * Headline -> post_excerpt (WordPress media caption)
+	 * Description -> post_content (WordPress media description)
+	 *
+	 * @param int $attachment_id Attachment post ID.
+	 * @return void
+	 */
+	function rytkoset_theme_sync_attachment_iptc_text_fields( $attachment_id ) {
+		$attachment_id = (int) $attachment_id;
+
+		if ( $attachment_id <= 0 || ! wp_attachment_is_image( $attachment_id ) ) {
+			return;
+		}
+
+		$file = get_attached_file( $attachment_id );
+
+		if ( ! is_string( $file ) || '' === $file ) {
+			return;
+		}
+
+		$iptc_fields = rytkoset_theme_get_image_iptc_text_fields( $file );
+		$post_update = array(
+			'ID' => $attachment_id,
+		);
+
+		if ( '' !== $iptc_fields['headline'] ) {
+			$post_update['post_excerpt'] = $iptc_fields['headline'];
+		}
+
+		if ( '' !== $iptc_fields['description'] ) {
+			$post_update['post_content'] = $iptc_fields['description'];
+		}
+
+		if ( 1 === count( $post_update ) ) {
+			return;
+		}
+
+		wp_update_post( wp_slash( $post_update ) );
+	}
+}
+add_action( 'add_attachment', 'rytkoset_theme_sync_attachment_iptc_text_fields' );
 
 function rytkoset_theme_setup() {
 	// Otsikkotagi WP:n hallintaan
@@ -175,7 +339,7 @@ function rytkoset_theme_account_menu_logged_out_fallback() {
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
-    $theme_version = wp_get_theme()->get( 'Version' );
+	$theme_version = wp_get_theme()->get( 'Version' );
 
     // Teeman päätyyli (style.css) – WordPress hoitaa tämän usein automaattisesti, mutta tehdään eksplisiittisesti.
     wp_enqueue_style(
@@ -193,8 +357,175 @@ function rytkoset_theme_scripts() {
         $theme_version,
         true // footer
     );
+
+    // Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
+    if (
+        is_post_type_archive( 'gallery_album' )
+        || is_singular( 'gallery_album' )
+        || get_query_var( 'gallery_album' )
+        || 'gallery_album' === get_query_var( 'post_type' )
+    ) {
+        $photoswipe_version = '5.4.4';
+        $photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
+
+        wp_enqueue_style(
+            'rytkoset-theme-gallery',
+            get_template_directory_uri() . '/assets/css/gallery.css',
+            array( 'rytkoset-theme-style' ),
+            $theme_version
+        );
+
+        wp_enqueue_style(
+            'photoswipe',
+            $photoswipe_base . '/photoswipe.css',
+            array(),
+            $photoswipe_version
+        );
+
+        wp_enqueue_script(
+            'photoswipe',
+            $photoswipe_base . '/photoswipe.umd.min.js',
+            array(),
+            $photoswipe_version,
+            true
+        );
+
+        wp_enqueue_script(
+            'photoswipe-lightbox',
+            $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
+            array( 'photoswipe' ),
+            $photoswipe_version,
+            true
+        );
+
+        wp_enqueue_script(
+            'rytkoset-photoswipe-init',
+            get_template_directory_uri() . '/assets/js/photoswipe-init.js',
+            array( 'photoswipe-lightbox' ),
+            $theme_version,
+            true
+        );
+
+        wp_add_inline_script(
+            'rytkoset-photoswipe-init',
+            'window.rytkosetPhotoSwipe = ' . wp_json_encode(
+                array(
+                    'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
+                    'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
+                    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
+                    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
+                    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
+                    'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
+                )
+            ) . ';',
+            'before'
+        );
+    }
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
+
+if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
+	/**
+	 * Adds up-to-date attachment caption metadata to Gutenberg image blocks.
+	 *
+	 * Visible figcaptions in post content may be stale, because Gutenberg stores them in post_content.
+	 * PhotoSwipe reads this data attribute first so media library edits take effect without rewriting content.
+	 *
+	 * @param string $block_content Rendered block HTML.
+	 * @param array  $block         Parsed block data.
+	 * @return string
+	 */
+	function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) {
+		if ( is_admin() || ! is_singular( 'gallery_album' ) ) {
+			return $block_content;
+		}
+
+		if ( empty( $block['blockName'] ) || 'core/image' !== $block['blockName'] ) {
+			return $block_content;
+		}
+
+		$has_caption_attr = false !== strpos( $block_content, 'data-pswp-caption-html=' );
+		$has_item_id_attr = false !== strpos( $block_content, 'data-pswp-item-id=' );
+
+		if ( $has_caption_attr && $has_item_id_attr ) {
+			return $block_content;
+		}
+
+		$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+		$item_id               = $attachment_id > 0 ? (string) $attachment_id : '';
+		$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
+		$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
+
+		if ( '' === $caption_html && '' === $item_id ) {
+			return $block_content;
+		}
+
+		$block_content = preg_replace_callback(
+			'/<figure\b/',
+			static function ( $matches ) use ( $caption_html, $item_id, $has_caption_attr, $has_item_id_attr ) {
+				$attributes = '';
+
+				if ( ! $has_caption_attr && '' !== $caption_html ) {
+					$attributes .= ' data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
+				}
+
+				if ( ! $has_item_id_attr && '' !== $item_id ) {
+					$attributes .= ' data-pswp-item-id="' . esc_attr( $item_id ) . '"';
+				}
+
+				return '<figure' . $attributes;
+			},
+			$block_content,
+			1
+		);
+
+		if ( preg_match( '/<figcaption\b[^>]*>/i', $block_content ) ) {
+			if ( '' === $visible_caption_html ) {
+				return $block_content;
+			}
+
+			return preg_replace(
+				'/(<figcaption\b[^>]*>).*?(<\/figcaption>)/is',
+				'$1' . wp_kses_post( $visible_caption_html ) . '$2',
+				$block_content,
+				1
+			);
+		}
+
+		if ( '' === $visible_caption_html ) {
+			return $block_content;
+		}
+
+		return preg_replace(
+			'/<\/figure>\s*$/',
+			'<figcaption class="wp-element-caption">' . wp_kses_post( $visible_caption_html ) . '</figcaption></figure>',
+			$block_content,
+			1
+		);
+	}
+}
+add_filter( 'render_block', 'rytkoset_theme_inject_image_caption_metadata', 10, 2 );
+
+/**
+ * Disable WordPress core image lightbox to avoid conflicts with PhotoSwipe.
+ */
+add_filter(
+	'wp_image_lightbox_enabled',
+	function () {
+		return false;
+	}
+);
+
+add_action(
+	'wp_enqueue_scripts',
+	function () {
+		wp_dequeue_script( 'wp-lightbox' );
+		wp_deregister_script( 'wp-lightbox' );
+		wp_dequeue_style( 'wp-lightbox' );
+		wp_deregister_style( 'wp-lightbox' );
+	},
+	20
+);
 
 /**
  * Open Graph + Twitter Card meta.
