@@ -293,11 +293,29 @@
         if (!grid) return;
 
         var style = window.getComputedStyle(grid);
+        var flexItems = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
+
+        if (style.display === 'flex' && style.flexDirection === 'column') {
+            flexItems.forEach(function (item) {
+                var img = item.querySelector('img');
+
+                item.style.gridRowEnd = '';
+                item.style.height = '';
+                item.style.width = '';
+                item.style.flex = '';
+
+                if (img) {
+                    img.style.height = '';
+                    img.style.width = '';
+                }
+            });
+
+            return;
+        }
 
         // If layout is flex (horizontal rows), size items by target thumb height and aspect ratio,
         // and justify each row to the container width.
         if (style.display === 'flex') {
-            var flexItems = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
             var targetHeight = parseFloat(style.getPropertyValue('--thumb-height')) || 200;
             var targetWidthFallback = targetHeight * 1.5;
             var gap = parseFloat(style.getPropertyValue('column-gap') || style.getPropertyValue('gap')) || 0;
