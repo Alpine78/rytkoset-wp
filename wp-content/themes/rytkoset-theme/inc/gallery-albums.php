@@ -183,24 +183,6 @@ if ( ! function_exists( 'rytkoset_theme_get_youtube_video_id' ) ) {
         }
 }
 
-if ( ! function_exists( 'rytkoset_theme_get_video_thumbnail_url' ) ) {
-        /**
-         * Returns a default YouTube thumbnail URL.
-         *
-         * @param string $url Video URL.
-         * @return string
-         */
-        function rytkoset_theme_get_video_thumbnail_url( $url ) {
-                $video_id = rytkoset_theme_get_youtube_video_id( $url );
-
-                if ( '' === $video_id ) {
-                        return '';
-                }
-
-                return esc_url_raw( 'https://i.ytimg.com/vi/' . rawurlencode( $video_id ) . '/hqdefault.jpg' );
-        }
-}
-
 if ( ! function_exists( 'rytkoset_theme_make_gallery_video_field_acf_free_friendly' ) ) {
         /**
          * Converts the video field to a simple textarea when repeater support is unavailable.
@@ -245,7 +227,7 @@ if ( ! function_exists( 'rytkoset_theme_render_gallery_video_field_helper' ) ) {
                         return;
                 }
 
-                echo '<p class="description" style="margin-top:10px;">' . esc_html__( 'Riittää, että liität videolinkit kenttään yksi per rivi. Videon pikkukuva haetaan automaattisesti YouTubesta.', 'rytkoset-theme' ) . '</p>';
+                echo '<p class="description" style="margin-top:10px;">' . esc_html__( 'Riittää, että liität videolinkit kenttään yksi per rivi. Erillistä nappia ei tarvitse käyttää.', 'rytkoset-theme' ) . '</p>';
         }
 }
 add_action( 'acf/render_field/key=field_gallery_videos', 'rytkoset_theme_render_gallery_video_field_helper' );

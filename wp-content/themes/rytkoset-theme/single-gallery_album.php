@@ -26,33 +26,15 @@ if ( have_posts() ) :
 
 		if ( ! empty( $gallery_videos ) ) {
 			foreach ( $gallery_videos as $video ) {
-				$video_url  = isset( $video['video_url'] ) ? $video['video_url'] : '';
-				$embed_url  = rytkoset_theme_get_video_embed_url( $video_url );
-				$embed_html = $video_url ? wp_oembed_get( $video_url ) : '';
+				$video_url = isset( $video['video_url'] ) ? $video['video_url'] : '';
+				$embed_url = rytkoset_theme_get_video_embed_url( $video_url );
 
-				if ( empty( $embed_url ) && empty( $embed_html ) ) {
+				if ( empty( $embed_url ) ) {
 					continue;
 				}
 
-				$thumbnail      = isset( $video['video_thumbnail_id'] ) ? (int) $video['video_thumbnail_id'] : 0;
-				$thumbnail_src  = $thumbnail ? wp_get_attachment_image_url( $thumbnail, 'large' ) : rytkoset_theme_get_video_thumbnail_url( $video_url );
-				$thumbnail_set  = $thumbnail ? wp_get_attachment_image_srcset( $thumbnail, 'large' ) : '';
-				$thumbnail_alt  = $thumbnail ? get_post_meta( $thumbnail, '_wp_attachment_image_alt', true ) : '';
-				$thumbnail_meta = $thumbnail ? wp_get_attachment_image_src( $thumbnail, 'full' ) : array( $thumbnail_src, 480, 360 );
-
 				$album_videos[] = array(
-					'video_url'             => $video_url,
-					'embed_url'             => $embed_url,
-					'embed_html'            => $embed_html,
-					'thumbnail_id'          => $thumbnail,
-					'thumbnail_src'         => $thumbnail_src,
-					'thumbnail_srcset'      => $thumbnail_set,
-					'thumbnail_alt'         => $thumbnail_alt,
-					'thumbnail_width'       => isset( $thumbnail_meta[1] ) ? (int) $thumbnail_meta[1] : 1280,
-					'thumbnail_height'      => isset( $thumbnail_meta[2] ) ? (int) $thumbnail_meta[2] : 720,
-					'caption_html'          => $thumbnail ? rytkoset_theme_get_attachment_caption_html( $thumbnail ) : '',
-					'visible_caption_html'  => $thumbnail ? rytkoset_theme_get_attachment_visible_caption_html( $thumbnail ) : '',
-					'item_id'               => 'video-' . substr( md5( $embed_url ), 0, 12 ),
+					'embed_url' => $embed_url,
 				);
 			}
 		}
@@ -102,15 +84,13 @@ if ( have_posts() ) :
 								<?php foreach ( $album_videos as $video ) : ?>
 									<div class="album__video">
 										<div class="album__video-embed">
-											<?php
-											if ( ! empty( $video['embed_html'] ) ) {
-												echo $video['embed_html']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-											} else {
-												?>
-												<iframe src="<?php echo esc_url( $video['embed_url'] ); ?>" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>
-												<?php
-											}
-											?>
+											<iframe
+												src="<?php echo esc_url( $video['embed_url'] ); ?>"
+												allow="autoplay; encrypted-media; picture-in-picture"
+												allowfullscreen
+												loading="lazy"
+												referrerpolicy="strict-origin-when-cross-origin"
+											></iframe>
 										</div>
 									</div>
 								<?php endforeach; ?>
