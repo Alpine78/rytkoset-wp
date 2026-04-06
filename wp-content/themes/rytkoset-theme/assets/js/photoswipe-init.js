@@ -293,11 +293,29 @@
         if (!grid) return;
 
         var style = window.getComputedStyle(grid);
+        var flexItems = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
+
+        if (style.display === 'flex' && style.flexDirection === 'column') {
+            flexItems.forEach(function (item) {
+                var img = item.querySelector('img');
+
+                item.style.gridRowEnd = '';
+                item.style.height = '';
+                item.style.width = '';
+                item.style.flex = '';
+
+                if (img) {
+                    img.style.height = '';
+                    img.style.width = '';
+                }
+            });
+
+            return;
+        }
 
         // If layout is flex (horizontal rows), size items by target thumb height and aspect ratio,
         // and justify each row to the container width.
         if (style.display === 'flex') {
-            var flexItems = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
             var targetHeight = parseFloat(style.getPropertyValue('--thumb-height')) || 200;
             var targetWidthFallback = targetHeight * 1.5;
             var gap = parseFloat(style.getPropertyValue('column-gap') || style.getPropertyValue('gap')) || 0;
@@ -587,16 +605,6 @@
                 return itemData;
             }
 
-            var videoSrc = trigger.getAttribute('data-video-src');
-
-            if (videoSrc) {
-                itemData.videoSrc = videoSrc;
-                itemData.type = 'video';
-                itemData.poster = trigger.getAttribute('data-poster') || '';
-                itemData.width = parseInt(trigger.getAttribute('data-pswp-width'), 10) || 1280;
-                itemData.height = parseInt(trigger.getAttribute('data-pswp-height'), 10) || 720;
-            }
-
             // Fallbacks for core/gallery (Gutenberg) items.
             if (!itemData.src && trigger.getAttribute('href')) {
                 itemData.src = trigger.getAttribute('href');
@@ -631,34 +639,6 @@
             }
 
             return itemData;
-        });
-
-        lightbox.on('contentLoad', function (e) {
-            var slide = e && e.slide ? e.slide : null;
-            if (!slide || !slide.data) {
-                return;
-            }
-
-            if (slide.data.type !== 'video' || !slide.data.videoSrc) {
-                return;
-            }
-
-            e.preventDefault();
-
-            var wrapper = document.createElement('div');
-            wrapper.className = 'pswp__video';
-
-            var iframe = document.createElement('iframe');
-            iframe.src = slide.data.videoSrc;
-            iframe.loading = 'lazy';
-            iframe.allowFullscreen = true;
-            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-            iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
-
-            wrapper.appendChild(iframe);
-
-            e.content.element = wrapper;
-            e.content.state = 'loaded';
         });
 
         lightbox.on('uiRegister', function () {

@@ -90,28 +90,29 @@ if ( ! function_exists( 'rytkoset_theme_register_gallery_fields' ) ) {
                                                 'preview_size'  => 'medium',
                                                 'library'       => 'all',
                                         ),
-                                        array(
-                                                'key'           => 'field_gallery_videos',
-                                                'label'         => __( 'Videot', 'rytkoset-theme' ),
-                                                'name'          => 'gallery_videos',
-                                                'type'          => 'repeater',
-                                                'instructions'  => __( 'YouTube-linkit, jotka näytetään albumisivun yläosassa ja gallerian yhteydessä.', 'rytkoset-theme' ),
-                                                'layout'        => 'row',
-                                                'button_label'  => __( 'Lisää video', 'rytkoset-theme' ),
-                                                'sub_fields'    => array(
+										array(
+												'key'           => 'field_gallery_videos',
+												'label'         => __( 'Videot', 'rytkoset-theme' ),
+												'name'          => 'gallery_videos',
+												'type'          => 'repeater',
+												'instructions'  => __( 'Liitä yksi YouTube-linkki per rivi. Videot näytetään albumisivun yläosan Videot-osiossa.', 'rytkoset-theme' ),
+												'layout'        => 'row',
+												'button_label'  => __( 'Lisää YouTube-video', 'rytkoset-theme' ),
+												'sub_fields'    => array(
                                                         array(
                                                                 'key'          => 'field_gallery_video_url',
                                                                 'label'        => __( 'Video-URL', 'rytkoset-theme' ),
                                                                 'name'         => 'video_url',
                                                                 'type'         => 'url',
                                                                 'placeholder'  => 'https://www.youtube.com/watch?v=abcd1234',
-                                                                'instructions' => __( 'Liitä YouTube-linkki tai jakolinkki.', 'rytkoset-theme' ),
+                                                                'instructions' => __( 'Liitä YouTube-linkki. Tuettuja muotoja ovat esimerkiksi watch-, youtu.be-, embed- ja shorts-linkit.', 'rytkoset-theme' ),
                                                         ),
                                                         array(
                                                                 'key'           => 'field_gallery_video_thumbnail',
                                                                 'label'         => __( 'Videon pikkukuva', 'rytkoset-theme' ),
                                                                 'name'          => 'video_thumbnail',
                                                                 'type'          => 'image',
+                                                                'instructions'  => __( 'Valinnainen. Käytetään videon pikkukuvana galleriassa ja lightboxissa.', 'rytkoset-theme' ),
                                                                 'return_format' => 'array',
                                                                 'preview_size'  => 'medium',
                                                                 'library'       => 'all',
@@ -133,6 +134,175 @@ if ( ! function_exists( 'rytkoset_theme_register_gallery_fields' ) ) {
         }
 }
 add_action( 'acf/init', 'rytkoset_theme_register_gallery_fields' );
+
+if ( ! function_exists( 'rytkoset_theme_get_youtube_video_id' ) ) {
+        /**
+         * Returns a normalized YouTube video ID from a supported URL.
+         *
+         * @param string $url Video URL.
+         * @return string
+         */
+        function rytkoset_theme_get_youtube_video_id( $url ) {
+                if ( empty( $url ) ) {
+                        return '';
+                }
+
+                $parsed = wp_parse_url( $url );
+
+                if ( empty( $parsed['host'] ) ) {
+                        return '';
+                }
+
+                $host      = strtolower( (string) $parsed['host'] );
+                $path      = isset( $parsed['path'] ) ? trim( (string) $parsed['path'], '/' ) : '';
+                $query     = isset( $parsed['query'] ) ? (string) $parsed['query'] : '';
+                $video_id  = '';
+                $query_var = array();
+
+                if ( false === strpos( $host, 'youtu.be' ) && false === strpos( $host, 'youtube.com' ) ) {
+                        return '';
+                }
+
+                if ( '' !== $query ) {
+                        parse_str( $query, $query_var );
+                }
+
+                if ( ! empty( $query_var['v'] ) ) {
+                        $video_id = (string) $query_var['v'];
+                } elseif ( 0 === strpos( $path, 'embed/' ) ) {
+                        $video_id = substr( $path, 6 );
+                } elseif ( 0 === strpos( $path, 'shorts/' ) ) {
+                        $video_id = substr( $path, 7 );
+                } elseif ( '' !== $path ) {
+                        $video_id = $path;
+                }
+
+                $video_id = preg_replace( '/[^A-Za-z0-9_-]/', '', (string) $video_id );
+
+                return is_string( $video_id ) ? $video_id : '';
+        }
+}
+
+if ( ! function_exists( 'rytkoset_theme_make_gallery_video_field_acf_free_friendly' ) ) {
+        /**
+         * Converts the video field to a simple textarea when repeater support is unavailable.
+         *
+         * @param array $field ACF field config.
+         * @return array
+         */
+        function rytkoset_theme_make_gallery_video_field_acf_free_friendly( $field ) {
+                if ( class_exists( 'acf_field_repeater' ) ) {
+                        return $field;
+                }
+
+                $field['type']         = 'textarea';
+                $field['instructions'] = __( 'Liitä yksi YouTube-linkki per rivi. Tuettuja muotoja ovat esimerkiksi watch-, youtu.be-, embed- ja shorts-linkit.', 'rytkoset-theme' );
+                $field['rows']         = 4;
+                $field['new_lines']    = '';
+                $field['placeholder']  = "https://www.youtube.com/watch?v=abcd1234\nhttps://youtu.be/abcd1234";
+
+                unset(
+                        $field['sub_fields'],
+                        $field['layout'],
+                        $field['button_label'],
+                        $field['min'],
+                        $field['max'],
+                        $field['collapsed']
+                );
+
+                return $field;
+        }
+}
+add_filter( 'acf/load_field/key=field_gallery_videos', 'rytkoset_theme_make_gallery_video_field_acf_free_friendly' );
+
+if ( ! function_exists( 'rytkoset_theme_render_gallery_video_field_helper' ) ) {
+        /**
+         * Renders a helper note for the textarea-based video field.
+         *
+         * @param array $field ACF field config.
+         * @return void
+         */
+        function rytkoset_theme_render_gallery_video_field_helper( $field ) {
+                if ( class_exists( 'acf_field_repeater' ) ) {
+                        return;
+                }
+
+                echo '<p class="description" style="margin-top:10px;">' . esc_html__( 'Riittää, että liität videolinkit kenttään yksi per rivi. Erillistä nappia ei tarvitse käyttää.', 'rytkoset-theme' ) . '</p>';
+        }
+}
+add_action( 'acf/render_field/key=field_gallery_videos', 'rytkoset_theme_render_gallery_video_field_helper' );
+
+if ( ! function_exists( 'rytkoset_theme_get_gallery_album_video_rows' ) ) {
+        /**
+         * Returns normalized gallery album video rows.
+         *
+         * Supports both the legacy repeater meta and the textarea fallback.
+         *
+         * @param int $post_id Album post ID.
+         * @return array<int, array<string, mixed>>
+         */
+        function rytkoset_theme_get_gallery_album_video_rows( $post_id ) {
+                $post_id = (int) $post_id;
+                $videos  = array();
+                $seen    = array();
+
+                $append_video = static function ( $video_url, $thumbnail_id = 0 ) use ( &$videos, &$seen ) {
+                        $video_url = esc_url_raw( trim( (string) $video_url ) );
+
+                        if ( '' === $video_url || '' === rytkoset_theme_get_youtube_video_id( $video_url ) || in_array( $video_url, $seen, true ) ) {
+                                return;
+                        }
+
+                        $seen[]   = $video_url;
+                        $videos[] = array(
+                                'video_url'          => $video_url,
+                                'video_thumbnail_id' => (int) $thumbnail_id,
+                        );
+                };
+
+                $video_urls = function_exists( 'get_field' ) ? get_field( 'gallery_videos', $post_id ) : get_post_meta( $post_id, 'gallery_videos', true );
+
+                if ( is_string( $video_urls ) && '' !== trim( $video_urls ) ) {
+                        $video_urls = preg_split( '/\r\n|\r|\n/', $video_urls );
+                }
+
+                if ( is_array( $video_urls ) ) {
+                        foreach ( $video_urls as $video_url ) {
+                                if ( is_string( $video_url ) ) {
+                                        $append_video( $video_url );
+                                        continue;
+                                }
+
+                                if ( ! is_array( $video_url ) ) {
+                                        continue;
+                                }
+
+                                $thumbnail_id = 0;
+
+                                if ( isset( $video_url['video_thumbnail']['ID'] ) ) {
+                                        $thumbnail_id = (int) $video_url['video_thumbnail']['ID'];
+                                } elseif ( isset( $video_url['video_thumbnail'] ) ) {
+                                        $thumbnail_id = (int) $video_url['video_thumbnail'];
+                                }
+
+                                $append_video( isset( $video_url['video_url'] ) ? $video_url['video_url'] : '', $thumbnail_id );
+                        }
+                }
+
+                $legacy_row_count = (int) get_post_meta( $post_id, 'gallery_videos', true );
+
+                if ( $legacy_row_count > 0 ) {
+                        for ( $index = 0; $index < $legacy_row_count; $index++ ) {
+                                $append_video(
+                                        get_post_meta( $post_id, 'gallery_videos_' . $index . '_video_url', true ),
+                                        (int) get_post_meta( $post_id, 'gallery_videos_' . $index . '_video_thumbnail', true )
+                                );
+                        }
+                }
+
+                return $videos;
+        }
+}
 
 if ( ! function_exists( 'rytkoset_theme_get_album_event_date_raw' ) ) {
         /**
@@ -381,28 +551,29 @@ add_action( 'post_submitbox_misc_actions', 'rytkoset_theme_gallery_album_submitb
 
 if ( ! function_exists( 'rytkoset_theme_enqueue_gallery_album_editor_assets' ) ) {
         /**
-         * Hides block-level image captions in the album editor.
+         * Tweaks the gallery album block editor UI.
          *
          * Final album image captions come from the media library, not from Gutenberg block captions.
          *
          * @return void
          */
-        function rytkoset_theme_enqueue_gallery_album_editor_assets() {
-                $screen = get_current_screen();
+		function rytkoset_theme_enqueue_gallery_album_editor_assets() {
+				$screen = get_current_screen();
 
                 if ( ! $screen || 'gallery_album' !== $screen->post_type ) {
                         return;
                 }
 
-                $message = __(
-                        'Albumikuvien kuvatekstit tulevat mediakirjastosta. Muokkaa kuvan caption ja description Media-kirjastossa, ei albumin lohkoeditorissa.',
-                        'rytkoset-theme'
-                );
+				$message = __(
+						'Albumikuvien kuvatekstit tulevat mediakirjastosta. Muokkaa kuvan caption ja description Media-kirjastossa, ei albumin lohkoeditorissa.',
+						'rytkoset-theme'
+				);
+				$hide_video_helper = ! class_exists( 'acf_field_repeater' );
 
-                $script = '( function( wp ) {
-                        if ( ! wp || ! wp.domReady || ! wp.data ) {
-                                return;
-                        }
+				$script = '( function( wp ) {
+						if ( ! wp || ! wp.domReady || ! wp.data ) {
+								return;
+						}
 
                         function lockCaptionsInDocument( doc ) {
                                 if ( ! doc ) {
@@ -434,8 +605,8 @@ if ( ! function_exists( 'rytkoset_theme_enqueue_gallery_album_editor_assets' ) )
                                 } );
                         }
 
-                        function lockCaptions() {
-                                lockCaptionsInDocument( document );
+						function lockCaptions() {
+								lockCaptionsInDocument( document );
 
                                 document.querySelectorAll( "iframe[name=\'editor-canvas\']" ).forEach( function( frame ) {
                                         try {
@@ -443,11 +614,27 @@ if ( ! function_exists( 'rytkoset_theme_enqueue_gallery_album_editor_assets' ) )
                                         } catch ( error ) {
                                                 // Ignore cross-document access errors.
                                         }
-                                } );
-                        }
+								} );
+						}
 
-                        wp.domReady( function() {
-                                var noticeStore = wp.data.dispatch( "core/notices" );
+						function cleanupVideoFieldHelpers( doc ) {
+								if ( ! doc ) {
+										return;
+								}
+
+								doc.querySelectorAll( "[data-key=\'field_gallery_videos\'] .acf-actions, [data-key=\'field_gallery_videos\'] .rytkoset-video-field-helper" ).forEach( function( element ) {
+										element.remove();
+								} );
+
+								doc.querySelectorAll( "[data-key=\'field_gallery_videos\'] button, [data-key=\'field_gallery_videos\'] a.button, [data-key=\'field_gallery_videos\'] .button" ).forEach( function( element ) {
+										if ( element.textContent && -1 !== element.textContent.indexOf( "YouTube-linkki" ) ) {
+												element.remove();
+										}
+								} );
+						}
+
+						wp.domReady( function() {
+								var noticeStore = wp.data.dispatch( "core/notices" );
 
                                 if ( noticeStore && noticeStore.createNotice ) {
                                         noticeStore.createNotice(
@@ -458,19 +645,31 @@ if ( ! function_exists( 'rytkoset_theme_enqueue_gallery_album_editor_assets' ) )
                                                         isDismissible: true
                                                 }
                                         );
-                                }
+								}
 
-                                lockCaptions();
+								lockCaptions();
+' . ( $hide_video_helper ? '
+								cleanupVideoFieldHelpers( document );
+' : '' ) . '
 
-                                if ( window.MutationObserver ) {
-                                        var observer = new MutationObserver( lockCaptions );
-                                        observer.observe( document.body, { childList: true, subtree: true } );
-                                }
+								if ( window.MutationObserver ) {
+										var observer = new MutationObserver( function() {
+												lockCaptions();
+' . ( $hide_video_helper ? '
+												cleanupVideoFieldHelpers( document );
+' : '' ) . '
+										} );
+										observer.observe( document.body, { childList: true, subtree: true } );
+								}
 
-                                window.setTimeout( lockCaptions, 250 );
-                                window.setTimeout( lockCaptions, 1000 );
-                        } );
-                } )( window.wp );';
+								window.setTimeout( lockCaptions, 250 );
+								window.setTimeout( lockCaptions, 1000 );
+' . ( $hide_video_helper ? '
+								window.setTimeout( function() { cleanupVideoFieldHelpers( document ); }, 250 );
+								window.setTimeout( function() { cleanupVideoFieldHelpers( document ); }, 1000 );
+' : '' ) . '
+						} );
+				} )( window.wp );';
 
                 wp_add_inline_script( 'wp-edit-post', $script, 'after' );
         }
@@ -537,44 +736,17 @@ if ( ! function_exists( 'rytkoset_theme_get_video_embed_url' ) ) {
                         return '';
                 }
 
-                $parsed = wp_parse_url( $url );
+                $video_id = rytkoset_theme_get_youtube_video_id( $url );
 
-                if ( empty( $parsed['host'] ) ) {
-                        return esc_url_raw( $url );
-                }
+                if ( '' !== $video_id ) {
+                        $params = array(
+                                'autoplay'        => 1,
+                                'rel'             => 0,
+                                'modestbranding'  => 1,
+                                'playsinline'     => 1,
+                        );
 
-                $host = $parsed['host'];
-
-                if ( false !== strpos( $host, 'youtu.be' ) || false !== strpos( $host, 'youtube.com' ) ) {
-                        $path      = isset( $parsed['path'] ) ? trim( $parsed['path'], '/' ) : '';
-                        $query     = isset( $parsed['query'] ) ? $parsed['query'] : '';
-                        $video_id  = '';
-                        $query_var = array();
-
-                        if ( ! empty( $query ) ) {
-                                parse_str( $query, $query_var );
-                        }
-
-                        if ( ! empty( $query_var['v'] ) ) {
-                                $video_id = $query_var['v'];
-                        } elseif ( 0 === strpos( $path, 'embed/' ) ) {
-                                $video_id = substr( $path, 6 );
-                        } elseif ( 0 === strpos( $path, 'shorts/' ) ) {
-                                $video_id = substr( $path, 7 );
-                        } elseif ( ! empty( $path ) ) {
-                                $video_id = $path;
-                        }
-
-                        if ( ! empty( $video_id ) ) {
-                                $params = array(
-                                        'autoplay'        => 1,
-                                        'rel'             => 0,
-                                        'modestbranding'  => 1,
-                                        'playsinline'     => 1,
-                                );
-
-                                return add_query_arg( $params, 'https://www.youtube.com/embed/' . rawurlencode( $video_id ) );
-                        }
+                        return add_query_arg( $params, 'https://www.youtube.com/embed/' . rawurlencode( $video_id ) );
                 }
 
                 return esc_url_raw( $url );
