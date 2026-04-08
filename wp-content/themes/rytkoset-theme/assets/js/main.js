@@ -407,3 +407,39 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 })();
+
+(function () {
+  const config = window.rytkosetCheckoutConfig;
+
+  if (!config || !config.showMembershipNote || !config.membershipNoteHtml) {
+    return;
+  }
+
+  const insertMembershipNote = () => {
+    const checkoutRoot = document.querySelector('.wp-block-woocommerce-checkout, .wc-block-checkout');
+
+    if (!checkoutRoot || document.querySelector('.rytkoset-checkout-note')) {
+      return false;
+    }
+
+    checkoutRoot.insertAdjacentHTML('beforebegin', config.membershipNoteHtml);
+    return true;
+  };
+
+  if (insertMembershipNote()) {
+    return;
+  }
+
+  const observer = new MutationObserver(() => {
+    if (insertMembershipNote()) {
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+
+  window.setTimeout(() => observer.disconnect(), 10000);
+})();

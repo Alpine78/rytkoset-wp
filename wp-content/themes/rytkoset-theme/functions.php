@@ -358,6 +358,19 @@ function rytkoset_theme_scripts() {
         true // footer
     );
 
+	if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+		wp_add_inline_script(
+			'rytkoset-theme-main',
+			'window.rytkosetCheckoutConfig = ' . wp_json_encode(
+				array(
+					'showMembershipNote' => rytkoset_theme_cart_requires_member_names(),
+					'membershipNoteHtml' => rytkoset_theme_get_membership_checkout_notice_markup(),
+				)
+			) . ';',
+			'before'
+		);
+	}
+
     // Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
     if (
         is_post_type_archive( 'gallery_album' )
@@ -818,4 +831,51 @@ function rytkoset_theme_login_backlink_text() {
 	<?php
 }
 add_action( 'login_footer', 'rytkoset_theme_login_backlink_text' );
+
+/**
+ * Returns true when the current cart contains a membership product
+ * that requires member names in the order note.
+ *
+ * @return bool
+ */
+function rytkoset_theme_cart_requires_member_names() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return false;
+	}
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( ! $product instanceof WC_Product ) {
+			continue;
+		}
+
+		$requires_member_names = $product->get_meta( '_rytkoset_member_names_required', true );
+
+		if ( 'yes' === $requires_member_names ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Builds the checkout notice shown for membership payments.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_checkout_notice_markup() {
+	$notice_text = html_entity_decode(
+		'<strong>J&auml;sen- ja perhej&auml;senmaksu:</strong> Kirjoita kaikkien j&auml;senten nimet kassalla Lis&auml;tietoja-kentt&auml;&auml;n, jotta tiedot voidaan kirjata j&auml;senrekisteriin.',
+		ENT_QUOTES,
+		'UTF-8'
+	);
+
+	return sprintf(
+		'<div class="rytkoset-checkout-note" role="note"><p>%s</p></div>',
+		wp_kses_post( $notice_text )
+	);
+}
+
 

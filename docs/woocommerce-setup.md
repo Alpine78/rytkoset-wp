@@ -15,11 +15,13 @@ Tama dokumentti kuvaa ensimmaisen WooCommerce-slicen paikallisessa Docker-ympari
 - Kaupan perusasetukset varmistettu:
   - valuutta `EUR`
   - maa `FI`
+- Kaupan osoitetiedot taydennetty wp-adminissa.
 - Sahkopostin minimiasetukset varmistettu:
   - lahettajan nimi `Rytkosten sukuseura`
   - lahettajan osoite `ilkka@rytkoset.net`
 - Ensimmainen maksutapa otettu kayttoon:
   - `Tilisiirto`
+- Tilisiirron pankkitiedot taydennetty wp-adminissa.
 - Tuotekategoriat luotu:
   - `Sukulehdet`
   - `Sukukirjat`
@@ -36,24 +38,17 @@ Tama dokumentti kuvaa ensimmaisen WooCommerce-slicen paikallisessa Docker-ympari
 
 ## Jatetaan seuraaviin tiketteihin
 
-- Kaupan katuosoite, kaupunki ja postinumero.
-  Osoite on asetetettu wp-administa.
-- Tilisiirron oikeat pankkitiedot on asetettu:
-  - tilinomistaja
-  - IBAN
-  - BIC
-  - mahdollinen viitenumerokaytanto
 - Lasku maksutapana, jos se halutaan erillisena vaihtoehtona.
 - Tuotepohjat ja WooCommerce-layoutin sovitus teemaan.
 - Oikeat tuotteet:
-  - jasenmaksut
   - sukulehdet
   - sukukirjat
   - digitaaliset tuotteet
+- Jasenmaksutuotteet on dokumentoitu erikseen tiedostossa `docs/woocommerce-membership-products.md`.
 - Checkoutin sisallollinen ja saavutettava hienosaato.
 - Sahkopostien sisallon ja ulkoasun tarkempi viimeistely.
 - Verot, toimitukset ja muut myyntilogiikan asetukset.
 
 ## Huomio
 
-`Tilisiirto` on otettu kayttoon minimikonfiguraatiolla, mutta sita ei voi ottaa oikeaan tuotantokayttoon ennen pankkitietojen taydentamista.
+`Tilisiirto` on nyt kaytossa paikallisessa ymparistossa. Ennen tuotantokayttoa asetukset ja pankkitiedot on viela tarkistettava dev- ja tuotantoymparistoissa erikseen.
