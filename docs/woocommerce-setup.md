@@ -1,12 +1,12 @@
 # WooCommerce: peruskonfiguraatio
 
-Tama dokumentti kuvaa ensimmaisen WooCommerce-slicen paikallisessa Docker-ymparistossa.
+Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ympäristössä.
 
 ## Tehty nyt
 
 - WooCommercen perussivut tarkistettu ja roolit sidottu asetuksiin.
 - Kaupan sivuksi asetettu olemassa oleva `Kauppa`-sivu.
-- WooCommercen automaattisesti luoma erillinen `Shop`-sivu poistettu kaytosta asettamalla se luonnokseksi.
+- WooCommercen automaattisesti luoma erillinen `Shop`-sivu poistettu käytöstä asettamalla se luonnokseksi.
 - Perussivut lokalisoitu suomeksi:
   - `Kauppa` -> `/kauppa/`
   - `Ostoskori` -> `/ostoskori/`
@@ -15,13 +15,13 @@ Tama dokumentti kuvaa ensimmaisen WooCommerce-slicen paikallisessa Docker-ympari
 - Kaupan perusasetukset varmistettu:
   - valuutta `EUR`
   - maa `FI`
-- Kaupan osoitetiedot taydennetty wp-adminissa.
-- Sahkopostin minimiasetukset varmistettu:
-  - lahettajan nimi `Rytkosten sukuseura`
-  - lahettajan osoite `ilkka@rytkoset.net`
-- Ensimmainen maksutapa otettu kayttoon:
+- Kaupan osoitetiedot täydennetty wp-adminissa.
+- Sähköpostin minimiasetukset varmistettu:
+  - lähettäjän nimi `Rytkösten sukuseura`
+  - lähettäjän osoite `ilkka@rytkoset.net`
+- Ensimmäinen maksutapa otettu käyttöön:
   - `Tilisiirto`
-- Tilisiirron pankkitiedot taydennetty wp-adminissa.
+- Tilisiirron pankkitiedot täydennetty wp-adminissa.
 - Tuotekategoriat luotu:
   - `Sukulehdet`
   - `Sukukirjat`
@@ -29,26 +29,26 @@ Tama dokumentti kuvaa ensimmaisen WooCommerce-slicen paikallisessa Docker-ympari
 
 ## Testattu nyt
 
-- Etusivu vastaa ilman PHP-virhetta.
+- Etusivu vastaa ilman PHP-virhettä.
 - WooCommercen cart Store API toimii.
-- Ostoskoriin voitiin lisata valiaikainen virtuaalituote smoke-testia varten.
+- Ostoskoriin voitiin lisätä väliaikainen virtuaalituote smoke-testiä varten.
 - `Kassa`-sivu vastaa HTTP 200.
-- `Tilisiirto`-gateway on aktiivinen WooCommercen sisaisessa gateway-listassa.
-- Valiaikainen smoke-testituote poistettiin testin jalkeen.
+- `Tilisiirto`-gateway on aktiivinen WooCommercen sisäisessä gateway-listassa.
+- Väliaikainen smoke-testituote poistettiin testin jälkeen.
 
-## Jatetaan seuraaviin tiketteihin
+## Jätetään seuraaviin tiketteihin
 
-- Lasku maksutapana, jos se halutaan erillisena vaihtoehtona.
+- Lasku maksutapana, jos se halutaan erillisenä vaihtoehtona.
 - Tuotepohjat ja WooCommerce-layoutin sovitus teemaan.
 - Oikeat tuotteet:
   - sukulehdet
   - sukukirjat
   - digitaaliset tuotteet
-- Jasenmaksutuotteet on dokumentoitu erikseen tiedostossa `docs/woocommerce-membership-products.md`.
-- Checkoutin sisallollinen ja saavutettava hienosaato.
-- Sahkopostien sisallon ja ulkoasun tarkempi viimeistely.
+- Jäsenmaksutuotteet on dokumentoitu erikseen tiedostossa `docs/woocommerce-membership-products.md`.
+- Checkoutin sisällöllinen ja saavutettava hienosäätö.
+- Sähköpostien sisällön ja ulkoasun tarkempi viimeistely.
 - Verot, toimitukset ja muut myyntilogiikan asetukset.
 
 ## Huomio
 
-`Tilisiirto` on nyt kaytossa paikallisessa ymparistossa. Ennen tuotantokayttoa asetukset ja pankkitiedot on viela tarkistettava dev- ja tuotantoymparistoissa erikseen.
+`Tilisiirto` on nyt käytössä paikallisessa ympäristössä. Ennen tuotantokäyttöä asetukset ja pankkitiedot on vielä tarkistettava dev- ja tuotantoympäristöissä erikseen.
