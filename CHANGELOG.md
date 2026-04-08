@@ -10,6 +10,7 @@ Kaikki merkittavat muutokset tahan projektiin kirjataan tahan tiedostoon.
 - Dokumentaatio WooCommercen ensimmaisesta peruskonfiguraatiosta: `docs/woocommerce-setup.md`
 - Dokumentaatio WooCommercen jasenmaksutuotteista: `docs/woocommerce-membership-products.md`
 - WooCommerceen vuosijasenmaksutuotteet `Yksityishenkilo` ja `Perhe`
+- WooCommerceen `Ainaisjasenmaksu`, 100 EUR
 - Kassalle jasenmaksuohje silloin, kun korissa on jasenmaksutuote
 
 ---
