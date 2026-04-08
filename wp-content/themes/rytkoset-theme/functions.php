@@ -381,6 +381,18 @@ function rytkoset_theme_scripts() {
         $photoswipe_version = '5.4.4';
         $photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
 
+        // WooCommerce registers PhotoSwipe 4 under legacy handles that clash
+        // with the theme gallery. Remove them on album pages so the theme can
+        // load PhotoSwipe 5 consistently.
+        wp_dequeue_script( 'wc-photoswipe' );
+        wp_deregister_script( 'wc-photoswipe' );
+        wp_dequeue_script( 'wc-photoswipe-ui-default' );
+        wp_deregister_script( 'wc-photoswipe-ui-default' );
+        wp_dequeue_style( 'photoswipe' );
+        wp_deregister_style( 'photoswipe' );
+        wp_dequeue_style( 'photoswipe-default-skin' );
+        wp_deregister_style( 'photoswipe-default-skin' );
+
         wp_enqueue_style(
             'rytkoset-theme-gallery',
             get_template_directory_uri() . '/assets/css/gallery.css',
@@ -389,14 +401,14 @@ function rytkoset_theme_scripts() {
         );
 
         wp_enqueue_style(
-            'photoswipe',
+            'rytkoset-photoswipe-style',
             $photoswipe_base . '/photoswipe.css',
             array(),
             $photoswipe_version
         );
 
         wp_enqueue_script(
-            'photoswipe',
+            'rytkoset-photoswipe-core',
             $photoswipe_base . '/photoswipe.umd.min.js',
             array(),
             $photoswipe_version,
@@ -404,9 +416,9 @@ function rytkoset_theme_scripts() {
         );
 
         wp_enqueue_script(
-            'photoswipe-lightbox',
+            'rytkoset-photoswipe-lightbox',
             $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
-            array( 'photoswipe' ),
+            array( 'rytkoset-photoswipe-core' ),
             $photoswipe_version,
             true
         );
@@ -414,7 +426,7 @@ function rytkoset_theme_scripts() {
         wp_enqueue_script(
             'rytkoset-photoswipe-init',
             get_template_directory_uri() . '/assets/js/photoswipe-init.js',
-            array( 'photoswipe-lightbox' ),
+            array( 'rytkoset-photoswipe-lightbox' ),
             $theme_version,
             true
         );

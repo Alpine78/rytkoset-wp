@@ -13,6 +13,10 @@ Kaikki merkittavat muutokset tahan projektiin kirjataan tahan tiedostoon.
 - WooCommerceen `Ainaisjasenmaksu`, 100 EUR
 - Kassalle jasenmaksuohje silloin, kun korissa on jasenmaksutuote
 
+### Fixed
+- Albumisivujen PhotoSwipe-lightbox käyttää nyt teeman omaa PhotoSwipe 5 -pakettia ilman WooCommercen legacy-konfliktia
+- Albumisivujen YouTube-upotukset eivat kaynnisty automaattisesti
+
 ---
 
 ## [0.3.0] - 2025-11-26
