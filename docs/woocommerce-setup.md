@@ -45,6 +45,7 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
   - sukukirjat
   - digitaaliset tuotteet
 - Jäsenmaksutuotteet on dokumentoitu erikseen tiedostossa `docs/woocommerce-membership-products.md`.
+- Tampere 2026 -osallistumismaksutuote on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-product.md`.
 - Checkoutin sisällöllinen ja saavutettava hienosäätö.
 - Sähköpostien sisällön ja ulkoasun tarkempi viimeistely.
 - Verot, toimitukset ja muut myyntilogiikan asetukset.
