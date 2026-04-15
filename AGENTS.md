@@ -70,6 +70,11 @@ Use conventional commits:
 - `fix: improve mobile navigation`
 - `chore: update styles`
 
+### Commit workflow
+- Do not create commits automatically after implementation.
+- When a ticket looks complete, summarize what was done and suggest a commit message.
+- Let the user review the changes in the editor before any commit is made.
+
 ---
 
 ## 🧩 Implementation Strategy (CRITICAL)
