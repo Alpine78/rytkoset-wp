@@ -740,7 +740,6 @@ if ( ! function_exists( 'rytkoset_theme_get_video_embed_url' ) ) {
 
                 if ( '' !== $video_id ) {
                         $params = array(
-                                'autoplay'        => 1,
                                 'rel'             => 0,
                                 'modestbranding'  => 1,
                                 'playsinline'     => 1,

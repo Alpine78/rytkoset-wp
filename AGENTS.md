@@ -71,9 +71,9 @@ Use conventional commits:
 - `chore: update styles`
 
 ### Commit workflow
-- Do not create commits automatically after implementation.
-- When a ticket looks complete, summarize what was done and suggest a commit message.
-- Let the user review the changes in the editor before any commit is made.
+- Do not create commits automatically when a task appears complete
+- First report that the ticket requirements are implemented
+- Then suggest a commit message so the user can review changes in the editor before committing
 
 ---
 

@@ -88,6 +88,18 @@
   gap: 1rem;
 }
 
+.rytkoset-checkout-note {
+  margin: 0 0 1.5rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-alt);
+}
+
+.rytkoset-checkout-note p {
+  margin: 0;
+}
+
 /* Share */
 .share {
   border-top: 1px solid var(--color-border-neutral);

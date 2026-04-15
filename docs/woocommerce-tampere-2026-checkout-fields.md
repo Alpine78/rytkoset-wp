@@ -1,6 +1,6 @@
 # WooCommerce: Tampere 2026 checkout-kentät
 
-Tämä dokumentti kuvaa Tampere 2026 -ilmoittautumisen checkout-mallin.
+Tämä dokumentti kuvaa tiketin `#140` toteutusmallin.
 
 ## Tavoite
 
@@ -37,5 +37,22 @@ Jokaiselle osallistujalle kerätään:
 - Kenttien määrä perustuu Tampere 2026 -tuotteen kappalemäärään.
 - Tunnistus tehdään ensisijaisesti tuotteen SKU:lla `tampere-2026-osallistumismaksu`.
 - Kentät tallentuvat tilauksen lisäkentiksiin order-metana.
-- Osallistujatiedot näytetään WooCommerce-adminissa tilauksen yhteydessä.
+- Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä.
 - Kenttien autocomplete on tarkoituksella rajattu pois, jotta selaimen autofill ei kirjoita nimiä ruokarajoitekenttiin.
+
+## Rajaus tässä vaiheessa
+
+- ei osallistujakohtaista jäsenmaksun tilaa
+- ei avec-kenttää erillisenä käsitteenä
+- ei illallisen tai majoituksen lisävalintoja
+- ei erillistä osallistujaraporttia
+- ei erillistä tapahtumarekisteriä
+
+## Testaus
+
+- Lisää Tampere 2026 -tuotetta ostoskoriin 2 kappaletta
+- Varmista, että kassalla näkyy 2 osallistujan kentät
+- Täytä molempien osallistujien nimet
+- Lisää toiselle ruokarajoite
+- Tee testitilaus loppuun
+- Varmista administa, että molemmat osallistujat näkyvät tilauksella luettavasti

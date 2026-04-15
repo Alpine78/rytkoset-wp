@@ -358,6 +358,19 @@ function rytkoset_theme_scripts() {
         true // footer
     );
 
+	if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+		wp_add_inline_script(
+			'rytkoset-theme-main',
+			'window.rytkosetCheckoutConfig = ' . wp_json_encode(
+				array(
+					'showMembershipNote' => rytkoset_theme_cart_requires_member_names(),
+					'membershipNoteHtml' => rytkoset_theme_get_membership_checkout_notice_markup(),
+				)
+			) . ';',
+			'before'
+		);
+	}
+
     // Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
     if (
         is_post_type_archive( 'gallery_album' )
@@ -368,6 +381,18 @@ function rytkoset_theme_scripts() {
         $photoswipe_version = '5.4.4';
         $photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
 
+        // WooCommerce registers PhotoSwipe 4 under legacy handles that clash
+        // with the theme gallery. Remove them on album pages so the theme can
+        // load PhotoSwipe 5 consistently.
+        wp_dequeue_script( 'wc-photoswipe' );
+        wp_deregister_script( 'wc-photoswipe' );
+        wp_dequeue_script( 'wc-photoswipe-ui-default' );
+        wp_deregister_script( 'wc-photoswipe-ui-default' );
+        wp_dequeue_style( 'photoswipe' );
+        wp_deregister_style( 'photoswipe' );
+        wp_dequeue_style( 'photoswipe-default-skin' );
+        wp_deregister_style( 'photoswipe-default-skin' );
+
         wp_enqueue_style(
             'rytkoset-theme-gallery',
             get_template_directory_uri() . '/assets/css/gallery.css',
@@ -376,14 +401,14 @@ function rytkoset_theme_scripts() {
         );
 
         wp_enqueue_style(
-            'photoswipe',
+            'rytkoset-photoswipe-style',
             $photoswipe_base . '/photoswipe.css',
             array(),
             $photoswipe_version
         );
 
         wp_enqueue_script(
-            'photoswipe',
+            'rytkoset-photoswipe-core',
             $photoswipe_base . '/photoswipe.umd.min.js',
             array(),
             $photoswipe_version,
@@ -391,9 +416,9 @@ function rytkoset_theme_scripts() {
         );
 
         wp_enqueue_script(
-            'photoswipe-lightbox',
+            'rytkoset-photoswipe-lightbox',
             $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
-            array( 'photoswipe' ),
+            array( 'rytkoset-photoswipe-core' ),
             $photoswipe_version,
             true
         );
@@ -401,7 +426,7 @@ function rytkoset_theme_scripts() {
         wp_enqueue_script(
             'rytkoset-photoswipe-init',
             get_template_directory_uri() . '/assets/js/photoswipe-init.js',
-            array( 'photoswipe-lightbox' ),
+            array( 'rytkoset-photoswipe-lightbox' ),
             $theme_version,
             true
         );
@@ -820,6 +845,51 @@ function rytkoset_theme_login_backlink_text() {
 add_action( 'login_footer', 'rytkoset_theme_login_backlink_text' );
 
 /**
+ * Returns true when the current cart contains a membership product
+ * that requires member names in the order note.
+ *
+ * @return bool
+ */
+function rytkoset_theme_cart_requires_member_names() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return false;
+	}
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( ! $product instanceof WC_Product ) {
+			continue;
+		}
+
+		$requires_member_names = $product->get_meta( '_rytkoset_member_names_required', true );
+
+		if ( 'yes' === $requires_member_names ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Builds the checkout notice shown for membership payments.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_checkout_notice_markup() {
+	$notice_text = html_entity_decode(
+		'<strong>J&auml;sen- ja perhej&auml;senmaksu:</strong> Kirjoita kaikkien j&auml;senten nimet kassalla Lis&auml;tietoja-kentt&auml;&auml;n, jotta tiedot voidaan kirjata j&auml;senrekisteriin.',
+		ENT_QUOTES,
+		'UTF-8'
+	);
+
+	return sprintf(
+		'<div class="rytkoset-checkout-note" role="note"><p>%s</p></div>',
+		wp_kses_post( $notice_text )
+	);
+}
+/**
  * Returns the SKU used to identify the Tampere 2026 registration product.
  *
  * @return string
@@ -1171,7 +1241,6 @@ function rytkoset_theme_is_tampere_2026_registration_order( $order ) {
 
 	return false;
 }
-
 /**
  * Returns an order object from a meta box callback parameter.
  *
@@ -1270,7 +1339,6 @@ function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or
 
 	echo '</ol>';
 }
-
 /**
  * Returns the option name used for Tampere 2026 organizer notification recipients.
  *
