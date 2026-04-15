@@ -12,6 +12,7 @@ Tämä dokumentti kuvaa tiketin `#139` tavoitetilan ja toteutusmallin paikallise
 ## Tuotemalli
 
 - Tuotteen nimi: `Tampere 2026 osallistumismaksu`
+- Suositeltu SKU: `tampere-2026-osallistumismaksu`
 - Tuotetyyppi: `Simple product`
 - Virtuaalituote: `Kyllä`
 - Ladattava tuote: `Ei`
@@ -24,6 +25,7 @@ Tämä dokumentti kuvaa tiketin `#139` tavoitetilan ja toteutusmallin paikallise
 - Samalla tilauksella voidaan ostaa useampi kappale
 - Tuotteen kappalemäärä kertoo osallistujien lukumäärän
 - Maksutapana riittää tässä vaiheessa nykyinen `Tilisiirto`
+- Checkoutin osallistujakentät tunnistavat tuotteen ensisijaisesti SKU:lla `tampere-2026-osallistumismaksu`
 
 ## Tuotekuvauksen minimitiedot
 
