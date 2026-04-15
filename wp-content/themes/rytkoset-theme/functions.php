@@ -890,4 +890,434 @@ function rytkoset_theme_get_membership_checkout_notice_markup() {
 	);
 }
 
+/**
+ * Returns the SKU used to identify the Tampere 2026 registration product.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_registration_sku() {
+	return 'tampere-2026-osallistumismaksu';
+}
+
+/**
+ * Returns true when a product is the Tampere 2026 registration product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return bool
+ */
+function rytkoset_theme_is_tampere_2026_registration_product( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return false;
+	}
+
+	$registration_mode = $product->get_meta( '_rytkoset_registration_mode', true );
+
+	if ( 'tampere_2026' === $registration_mode ) {
+		return true;
+	}
+
+	return rytkoset_theme_get_tampere_2026_registration_sku() === (string) $product->get_sku();
+}
+
+/**
+ * Returns the Tampere 2026 participant count from the current cart.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_tampere_2026_participant_count() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return 0;
+	}
+
+	$participant_count = 0;
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+			continue;
+		}
+
+		$participant_count += isset( $cart_item['quantity'] ) ? (int) $cart_item['quantity'] : 0;
+	}
+
+	return max( 0, $participant_count );
+}
+
+/**
+ * Returns the maximum number of Tampere 2026 participants supported in one order.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_tampere_2026_max_participants() {
+	return 10;
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when the Tampere 2026 product is in cart.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_tampere_2026_cart_presence_schema() {
+	$product_id = wc_get_product_id_by_sku( rytkoset_theme_get_tampere_2026_registration_sku() );
+
+	if ( ! $product_id ) {
+		return array(
+			'type' => 'object',
+			'not'  => array(),
+		);
+	}
+
+	return array(
+		'type'       => 'object',
+		'properties' => array(
+			'cart' => array(
+				'properties' => array(
+					'items' => array(
+						'contains' => array(
+							'const' => (int) $product_id,
+						),
+					),
+				),
+			),
+		),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when the Tampere 2026 product is not in cart.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_tampere_2026_cart_absence_schema() {
+	return array(
+		'not' => rytkoset_theme_get_tampere_2026_cart_presence_schema(),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when cart item count is at least the given threshold.
+ *
+ * This MVP assumes the Tampere registration product is purchased on its own,
+ * so total cart quantity is used as the participant count.
+ *
+ * @param int $minimum Minimum item count.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_cart_items_count_minimum_schema( $minimum ) {
+	return array(
+		'type'       => 'object',
+		'properties' => array(
+			'cart' => array(
+				'properties' => array(
+					'items_count' => array(
+						'minimum' => (int) $minimum,
+					),
+				),
+			),
+		),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when cart item count is below the given threshold.
+ *
+ * @param int $minimum Minimum item count expected for the field to be relevant.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_cart_items_count_below_schema( $minimum ) {
+	return array(
+		'type'       => 'object',
+		'properties' => array(
+			'cart' => array(
+				'properties' => array(
+					'items_count' => array(
+						'maximum' => max( 0, (int) $minimum - 1 ),
+					),
+				),
+			),
+		),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when the participant field should be required.
+ *
+ * @param int $index Participant index starting from 1.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_tampere_2026_participant_required_schema( $index ) {
+	return array(
+		'allOf' => array(
+			rytkoset_theme_get_tampere_2026_cart_presence_schema(),
+			rytkoset_theme_get_cart_items_count_minimum_schema( $index ),
+		),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when the participant field should be hidden.
+ *
+ * @param int $index Participant index starting from 1.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ) {
+	return array(
+		'anyOf' => array(
+			rytkoset_theme_get_tampere_2026_cart_absence_schema(),
+			rytkoset_theme_get_cart_items_count_below_schema( $index ),
+		),
+	);
+}
+
+/**
+ * Registers participant fields for the Tampere 2026 registration checkout flow.
+ *
+ * Uses WooCommerce Blocks' additional checkout fields API so the fields are
+ * always registered for Store API submissions and then conditionally shown.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_tampere_2026_checkout_fields() {
+	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
+		return;
+	}
+
+	$product_id = wc_get_product_id_by_sku( rytkoset_theme_get_tampere_2026_registration_sku() );
+
+	if ( ! $product_id ) {
+		return;
+	}
+
+	for ( $index = 1; $index <= rytkoset_theme_get_tampere_2026_max_participants(); $index++ ) {
+		$name_field_id = sprintf( 'rytkoset/participant_%d_name', $index );
+		$diet_field_id = sprintf( 'rytkoset/participant_%d_diet', $index );
+
+		woocommerce_register_additional_checkout_field(
+			array(
+				'id'                => $name_field_id,
+				'label'             => sprintf( __( 'Osallistuja %d: nimi', 'rytkoset-theme' ), $index ),
+				'location'          => 'order',
+				'type'              => 'text',
+				'required'          => rytkoset_theme_get_tampere_2026_participant_required_schema( $index ),
+				'hidden'            => rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ),
+				'sanitize_callback' => 'sanitize_text_field',
+				'attributes'        => array(
+					'autocomplete'   => sprintf( 'section-participant-%d-name new-password', $index ),
+					'data-lpignore'  => 'true',
+					'data-1p-ignore' => 'true',
+					'maxLength'      => 200,
+				),
+			)
+		);
+
+		woocommerce_register_additional_checkout_field(
+			array(
+				'id'                => $diet_field_id,
+				'label'             => sprintf( __( 'Osallistuja %d: ruokarajoitteet tai allergiat', 'rytkoset-theme' ), $index ),
+				'optionalLabel'     => sprintf( __( 'Osallistuja %d: ruokarajoitteet tai allergiat (valinnainen)', 'rytkoset-theme' ), $index ),
+				'location'          => 'order',
+				'type'              => 'text',
+				'required'          => false,
+				'hidden'            => rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ),
+				'sanitize_callback' => 'sanitize_text_field',
+				'attributes'        => array(
+					'autocomplete'   => sprintf( 'section-participant-%d-diet new-password', $index ),
+					'data-lpignore'  => 'true',
+					'data-1p-ignore' => 'true',
+					'maxLength'      => 200,
+				),
+			)
+		);
+	}
+}
+add_action( 'woocommerce_init', 'rytkoset_theme_register_tampere_2026_checkout_fields' );
+
+/**
+ * Reads an additional checkout field value from an order.
+ *
+ * @param WC_Order $order    WooCommerce order object.
+ * @param string   $field_id Additional checkout field ID.
+ * @return string
+ */
+function rytkoset_theme_get_order_additional_checkout_field_value( $order, $field_id ) {
+	if ( ! $order instanceof WC_Order ) {
+		return '';
+	}
+
+	if (
+		class_exists( '\Automattic\WooCommerce\Blocks\Package' )
+		&& class_exists( '\Automattic\WooCommerce\Blocks\Domain\Services\CheckoutFields' )
+	) {
+		$checkout_fields = \Automattic\WooCommerce\Blocks\Package::container()->get(
+			\Automattic\WooCommerce\Blocks\Domain\Services\CheckoutFields::class
+		);
+
+		if ( is_object( $checkout_fields ) && method_exists( $checkout_fields, 'get_all_fields_from_object' ) ) {
+			$fields = $checkout_fields->get_all_fields_from_object( $order, 'other', true );
+
+			if ( isset( $fields[ $field_id ] ) ) {
+				return (string) $fields[ $field_id ];
+			}
+		}
+	}
+
+	return (string) $order->get_meta( '_wc_other/' . $field_id, true );
+}
+
+/**
+ * Returns Tampere 2026 participant data saved on an order.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return array<int, array<string, string>>
+ */
+function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return array();
+	}
+
+	$participant_count = 0;
+
+	foreach ( $order->get_items() as $item ) {
+		$product = $item->get_product();
+
+		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+			continue;
+		}
+
+		$participant_count += (int) $item->get_quantity();
+	}
+
+	if ( $participant_count < 1 ) {
+		return array();
+	}
+
+	$participants = array();
+
+	for ( $index = 1; $index <= $participant_count; $index++ ) {
+		$name = trim(
+			rytkoset_theme_get_order_additional_checkout_field_value(
+				$order,
+				sprintf( 'rytkoset/participant_%d_name', $index )
+			)
+		);
+		$diet = trim(
+			rytkoset_theme_get_order_additional_checkout_field_value(
+				$order,
+				sprintf( 'rytkoset/participant_%d_diet', $index )
+			)
+		);
+
+		if ( '' === $name && '' === $diet ) {
+			continue;
+		}
+
+		$participants[] = array(
+			'name' => $name,
+			'diet' => $diet,
+		);
+	}
+
+	return $participants;
+}
+
+/**
+ * Returns an order object from a meta box callback parameter.
+ *
+ * @param mixed $post_or_order_object Either a WP_Post or WC_Order.
+ * @return WC_Order|false
+ */
+function rytkoset_theme_get_order_from_admin_screen_object( $post_or_order_object ) {
+	if ( $post_or_order_object instanceof WC_Order ) {
+		return $post_or_order_object;
+	}
+
+	if ( $post_or_order_object instanceof WP_Post ) {
+		return wc_get_order( $post_or_order_object->ID );
+	}
+
+	return false;
+}
+
+/**
+ * Registers the Tampere 2026 participants metabox for order admin screens.
+ *
+ * Uses a dedicated metabox so the participant list is visible in both legacy
+ * and HPOS order editors.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_tampere_2026_order_metabox() {
+	if ( ! function_exists( 'wc_get_page_screen_id' ) || ! function_exists( 'wc_get_container' ) ) {
+		add_meta_box(
+			'rytkoset-tampere-2026-participants',
+			__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
+			'rytkoset_theme_render_tampere_2026_order_participants_metabox',
+			'shop_order',
+			'side',
+			'default'
+		);
+
+		return;
+	}
+
+	$screen = 'shop_order';
+
+	if ( class_exists( '\Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController' ) ) {
+		$controller = wc_get_container()->get( \Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController::class );
+		$screen     = $controller->custom_orders_table_usage_is_enabled()
+			? wc_get_page_screen_id( 'shop-order' )
+			: 'shop_order';
+	}
+
+	add_meta_box(
+		'rytkoset-tampere-2026-participants',
+		__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
+		'rytkoset_theme_render_tampere_2026_order_participants_metabox',
+		$screen,
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes', 'rytkoset_theme_register_tampere_2026_order_metabox' );
+
+/**
+ * Renders participant details inside the order admin metabox.
+ *
+ * @param mixed $post_or_order_object Either a WP_Post or WC_Order.
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or_order_object ) {
+	$order = rytkoset_theme_get_order_from_admin_screen_object( $post_or_order_object );
+
+	if ( ! $order instanceof WC_Order ) {
+		echo '<p>' . esc_html__( 'Tilausta ei voitu lukea.', 'rytkoset-theme' ) . '</p>';
+		return;
+	}
+
+	$participants = rytkoset_theme_get_tampere_2026_order_participants( $order );
+
+	if ( empty( $participants ) ) {
+		echo '<p>' . esc_html__( 'Tälle tilaukselle ei löytynyt osallistujatietoja.', 'rytkoset-theme' ) . '</p>';
+		return;
+	}
+
+	echo '<p><strong>' . esc_html__( 'Osallistujia:', 'rytkoset-theme' ) . '</strong> ' . esc_html( (string) count( $participants ) ) . '</p>';
+	echo '<ol>';
+
+	foreach ( $participants as $participant ) {
+		echo '<li>';
+		echo '<strong>' . esc_html( $participant['name'] ) . '</strong>';
+
+		if ( '' !== $participant['diet'] ) {
+			echo '<br>';
+			echo esc_html__( 'Ruokarajoitteet / allergiat:', 'rytkoset-theme' ) . ' ' . esc_html( $participant['diet'] );
+		}
+
+		echo '</li>';
+	}
+
+	echo '</ol>';
+}
+
 
