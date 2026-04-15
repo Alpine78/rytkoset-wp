@@ -32,12 +32,13 @@ Jokaiselle osallistujalle kerätään:
 
 ## Tekninen toteutus
 
-- Checkout-kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla
-- Kentät aktivoituvat vain, jos ostoskorissa on Tampere 2026 -tuote
-- Kenttien määrä perustuu Tampere 2026 -tuotteen kappalemäärään
-- Tunnistus tehdään ensisijaisesti tuotteen SKU:lla `tampere-2026-osallistumismaksu`
-- Kentät tallentuvat tilauksen lisäkentiksiin order-metana
-- Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä
+- Checkout-kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla.
+- Kentät aktivoituvat vain, jos ostoskorissa on Tampere 2026 -tuote.
+- Kenttien määrä perustuu Tampere 2026 -tuotteen kappalemäärään.
+- Tunnistus tehdään ensisijaisesti tuotteen SKU:lla `tampere-2026-osallistumismaksu`.
+- Kentät tallentuvat tilauksen lisäkentiksiin order-metana.
+- Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä.
+- Kenttien autocomplete on tarkoituksella rajattu pois, jotta selaimen autofill ei kirjoita nimiä ruokarajoitekenttiin.
 
 ## Rajaus tässä vaiheessa
 

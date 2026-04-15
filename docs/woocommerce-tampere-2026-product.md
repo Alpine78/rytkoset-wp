@@ -25,7 +25,7 @@ Tämä dokumentti kuvaa tiketin `#139` tavoitetilan ja toteutusmallin paikallise
 - Samalla tilauksella voidaan ostaa useampi kappale
 - Tuotteen kappalemäärä kertoo osallistujien lukumäärän
 - Maksutapana riittää tässä vaiheessa nykyinen `Tilisiirto`
-- Checkoutin osallistujakentät tunnistavat tuotteen ensisijaisesti SKU:lla `tampere-2026-osallistumismaksu`
+- Checkoutin osallistujakentät ja ilmoituslogiikka tunnistavat tuotteen ensisijaisesti SKU:lla `tampere-2026-osallistumismaksu`
 
 ## Tuotekuvauksen minimitiedot
 
