@@ -48,6 +48,7 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - Tampere 2026 -osallistumismaksutuote on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-product.md`.
 - Tampere 2026 -checkout-kentät on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-checkout-fields.md`.
 - Tampere 2026 -osallistujalista adminissa on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-participants-admin.md`.
+- Tampere 2026 -osallistujalistan CSV-vienti on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-participants-csv-export.md`.
 - Tampere 2026 -järjestäjäilmoitukset on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-notifications.md`.
 - Checkoutin sisällöllinen ja saavutettava hienosäätö.
 - Sähköpostien sisällön ja ulkoasun tarkempi viimeistely.

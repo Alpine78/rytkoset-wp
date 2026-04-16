@@ -1477,6 +1477,98 @@ function rytkoset_theme_render_tampere_2026_participants_filter_form( $selected_
 }
 
 /**
+ * Renders the CSV export form for the Tampere 2026 participants admin page.
+ *
+ * @param string $selected_status Selected order status filter.
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_participants_export_form( $selected_status ) {
+	?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="alignleft actions">
+		<input type="hidden" name="action" value="rytkoset_export_tampere_2026_participants_csv" />
+		<input type="hidden" name="order_status" value="<?php echo esc_attr( $selected_status ); ?>" />
+		<?php wp_nonce_field( 'rytkoset_export_tampere_2026_participants_csv', 'rytkoset_tampere_2026_csv_nonce' ); ?>
+		<?php submit_button( __( 'Vie CSV', 'rytkoset-theme' ), 'secondary', '', false ); ?>
+	</form>
+	<?php
+}
+
+/**
+ * Sends the Tampere 2026 participant list as a CSV download.
+ *
+ * @return void
+ */
+function rytkoset_theme_export_tampere_2026_participants_csv() {
+	if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		wp_die( esc_html__( 'Sinulla ei ole oikeutta viedä osallistujalistaa.', 'rytkoset-theme' ) );
+	}
+
+	check_admin_referer( 'rytkoset_export_tampere_2026_participants_csv', 'rytkoset_tampere_2026_csv_nonce' );
+
+	$status_filter = isset( $_POST['order_status'] ) ? sanitize_key( wp_unslash( $_POST['order_status'] ) ) : '';
+
+	if ( '' !== $status_filter && ! in_array( $status_filter, rytkoset_theme_get_supported_order_statuses(), true ) ) {
+		$status_filter = '';
+	}
+
+	$rows     = rytkoset_theme_get_tampere_2026_participant_rows( $status_filter );
+	$filename = 'tampere-2026-osallistujat';
+
+	if ( '' !== $status_filter ) {
+		$filename .= '-' . $status_filter;
+	}
+
+	$filename .= '.csv';
+
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $filename ) . '"' );
+	header( 'X-Content-Type-Options: nosniff' );
+
+	$output = fopen( 'php://output', 'w' );
+
+	if ( false === $output ) {
+		wp_die( esc_html__( 'CSV-viennin alustaminen epäonnistui.', 'rytkoset-theme' ) );
+	}
+
+	echo "\xEF\xBB\xBF";
+
+	fputcsv(
+		$output,
+		array(
+			__( 'Osallistuja', 'rytkoset-theme' ),
+			__( 'Ruokarajoitteet / allergiat', 'rytkoset-theme' ),
+			__( 'Yhteyshenkilö', 'rytkoset-theme' ),
+			__( 'Sähköposti', 'rytkoset-theme' ),
+			__( 'Puhelin', 'rytkoset-theme' ),
+			__( 'Tilausnumero', 'rytkoset-theme' ),
+			__( 'Tilauksen status', 'rytkoset-theme' ),
+		),
+		';'
+	);
+
+	foreach ( $rows as $row ) {
+		fputcsv(
+			$output,
+			array(
+				(string) $row['participant_name'],
+				(string) $row['diet'],
+				(string) $row['contact_name'],
+				(string) $row['contact_email'],
+				(string) $row['contact_phone'],
+				(string) $row['order_number'],
+				wc_get_order_status_name( (string) $row['order_status'] ),
+			),
+			';'
+		);
+	}
+
+	fclose( $output );
+	exit;
+}
+add_action( 'admin_post_rytkoset_export_tampere_2026_participants_csv', 'rytkoset_theme_export_tampere_2026_participants_csv' );
+
+/**
  * Renders the Tampere 2026 participants admin page.
  *
  * @return void
@@ -1493,10 +1585,10 @@ function rytkoset_theme_render_tampere_2026_participants_admin_page() {
 		<h1><?php esc_html_e( 'Tampere 2026 osallistujat', 'rytkoset-theme' ); ?></h1>
 		<p><?php esc_html_e( 'Lista kokoaa Tampere 2026 -tilauksille tallennetut osallistujat riveiksi järjestelytoimikunnan käyttöön.', 'rytkoset-theme' ); ?></p>
 
-		<?php rytkoset_theme_render_tampere_2026_participants_filter_form( $selected_status ); ?>
-
 		<div class="tablenav top">
-			<div class="alignleft actions">
+			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+				<?php rytkoset_theme_render_tampere_2026_participants_filter_form( $selected_status ); ?>
+				<?php rytkoset_theme_render_tampere_2026_participants_export_form( $selected_status ); ?>
 				<p class="description">
 					<?php
 					echo esc_html(
