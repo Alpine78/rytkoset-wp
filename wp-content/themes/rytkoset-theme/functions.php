@@ -1339,6 +1339,237 @@ function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or
 
 	echo '</ol>';
 }
+
+/**
+ * Returns the list of supported order statuses without the wc- prefix.
+ *
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_supported_order_statuses() {
+	$statuses = array_keys( wc_get_order_statuses() );
+
+	return array_values(
+		array_map(
+			static function ( $status ) {
+				$status = (string) $status;
+
+				return 0 === strpos( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
+			},
+			$statuses
+		)
+	);
+}
+
+/**
+ * Returns the selected order status filter for the Tampere 2026 participants view.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_participants_admin_status_filter() {
+	$status = isset( $_GET['order_status'] ) ? sanitize_key( wp_unslash( $_GET['order_status'] ) ) : '';
+
+	if ( '' === $status ) {
+		return '';
+	}
+
+	return in_array( $status, rytkoset_theme_get_supported_order_statuses(), true ) ? $status : '';
+}
+
+/**
+ * Returns Tampere 2026 participant rows for the admin listing.
+ *
+ * @param string $status_filter Optional order status filter.
+ * @return array<int, array<string, string|int>>
+ */
+function rytkoset_theme_get_tampere_2026_participant_rows( $status_filter = '' ) {
+	$order_query = array(
+		'limit'   => -1,
+		'orderby' => 'date',
+		'order'   => 'DESC',
+		'return'  => 'objects',
+		'status'  => rytkoset_theme_get_supported_order_statuses(),
+	);
+
+	$rows   = array();
+	$orders = wc_get_orders( $order_query );
+
+	foreach ( $orders as $order ) {
+		if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+			continue;
+		}
+
+		if ( '' !== $status_filter && $status_filter !== $order->get_status() ) {
+			continue;
+		}
+
+		$participants = rytkoset_theme_get_tampere_2026_order_participants( $order );
+
+		if ( empty( $participants ) ) {
+			continue;
+		}
+
+		$contact_name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
+
+		if ( '' === $contact_name ) {
+			$contact_name = __( 'Nimi puuttuu', 'rytkoset-theme' );
+		}
+
+		foreach ( $participants as $participant ) {
+			$rows[] = array(
+				'participant_name' => '' !== $participant['name'] ? $participant['name'] : __( 'Nimi puuttuu', 'rytkoset-theme' ),
+				'diet'             => $participant['diet'],
+				'contact_name'     => $contact_name,
+				'contact_email'    => (string) $order->get_billing_email(),
+				'contact_phone'    => (string) $order->get_billing_phone(),
+				'order_id'         => $order->get_id(),
+				'order_number'     => $order->get_order_number(),
+				'order_status'     => $order->get_status(),
+			);
+		}
+	}
+
+	return $rows;
+}
+
+/**
+ * Adds the Tampere 2026 participants admin page under WooCommerce.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_tampere_2026_participants_admin_page() {
+	add_submenu_page(
+		'woocommerce',
+		__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
+		__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
+		'manage_woocommerce',
+		'rytkoset-tampere-2026-participants',
+		'rytkoset_theme_render_tampere_2026_participants_admin_page'
+	);
+}
+add_action( 'admin_menu', 'rytkoset_theme_register_tampere_2026_participants_admin_page' );
+
+/**
+ * Renders the status filter form for the Tampere 2026 participants admin page.
+ *
+ * @param string $selected_status Selected order status filter.
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_participants_filter_form( $selected_status ) {
+	$statuses = wc_get_order_statuses();
+	?>
+	<form method="get" class="alignleft actions">
+		<input type="hidden" name="page" value="rytkoset-tampere-2026-participants" />
+		<label class="screen-reader-text" for="rytkoset-tampere-2026-order-status">
+			<?php esc_html_e( 'Suodata tilauksen statuksella', 'rytkoset-theme' ); ?>
+		</label>
+		<select name="order_status" id="rytkoset-tampere-2026-order-status">
+			<option value=""><?php esc_html_e( 'Kaikki statukset', 'rytkoset-theme' ); ?></option>
+			<?php foreach ( $statuses as $status_key => $status_label ) : ?>
+				<?php $status_value = 0 === strpos( $status_key, 'wc-' ) ? substr( $status_key, 3 ) : $status_key; ?>
+				<option value="<?php echo esc_attr( $status_value ); ?>" <?php selected( $selected_status, $status_value ); ?>>
+					<?php echo esc_html( $status_label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php submit_button( __( 'Suodata', 'rytkoset-theme' ), 'secondary', '', false ); ?>
+	</form>
+	<?php
+}
+
+/**
+ * Renders the Tampere 2026 participants admin page.
+ *
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_participants_admin_page() {
+	if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		wp_die( esc_html__( 'Sinulla ei ole oikeutta tarkastella tätä sivua.', 'rytkoset-theme' ) );
+	}
+
+	$selected_status = rytkoset_theme_get_tampere_2026_participants_admin_status_filter();
+	$rows            = rytkoset_theme_get_tampere_2026_participant_rows( $selected_status );
+	?>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Tampere 2026 osallistujat', 'rytkoset-theme' ); ?></h1>
+		<p><?php esc_html_e( 'Lista kokoaa Tampere 2026 -tilauksille tallennetut osallistujat riveiksi järjestelytoimikunnan käyttöön.', 'rytkoset-theme' ); ?></p>
+
+		<?php rytkoset_theme_render_tampere_2026_participants_filter_form( $selected_status ); ?>
+
+		<div class="tablenav top">
+			<div class="alignleft actions">
+				<p class="description">
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %d: participant row count. */
+							_n( '%d osallistujarivi', '%d osallistujariviä', count( $rows ), 'rytkoset-theme' ),
+							count( $rows )
+						)
+					);
+					?>
+				</p>
+			</div>
+			<br class="clear" />
+		</div>
+
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th scope="col"><?php esc_html_e( 'Osallistuja', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Ruokarajoitteet / allergiat', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Yhteyshenkilö', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Puhelin', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Tilaus', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Status', 'rytkoset-theme' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php if ( empty( $rows ) ) : ?>
+					<tr>
+						<td colspan="7"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
+					</tr>
+				<?php else : ?>
+					<?php foreach ( $rows as $row ) : ?>
+						<tr>
+							<td><?php echo esc_html( (string) $row['participant_name'] ); ?></td>
+							<td>
+								<?php
+								echo '' !== (string) $row['diet']
+									? esc_html( (string) $row['diet'] )
+									: '&mdash;';
+								?>
+							</td>
+							<td><?php echo esc_html( (string) $row['contact_name'] ); ?></td>
+							<td>
+								<?php if ( '' !== (string) $row['contact_email'] ) : ?>
+									<a href="mailto:<?php echo esc_attr( (string) $row['contact_email'] ); ?>"><?php echo esc_html( (string) $row['contact_email'] ); ?></a>
+								<?php else : ?>
+									&mdash;
+								<?php endif; ?>
+							</td>
+							<td>
+								<?php if ( '' !== (string) $row['contact_phone'] ) : ?>
+									<a href="tel:<?php echo esc_attr( preg_replace( '/\s+/', '', (string) $row['contact_phone'] ) ); ?>"><?php echo esc_html( (string) $row['contact_phone'] ); ?></a>
+								<?php else : ?>
+									&mdash;
+								<?php endif; ?>
+							</td>
+							<td>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=wc-orders&action=edit&id=' . (int) $row['order_id'] ) ); ?>">
+									<?php echo esc_html( '#' . (string) $row['order_number'] ); ?>
+								</a>
+							</td>
+							<td><?php echo esc_html( wc_get_order_status_name( (string) $row['order_status'] ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+			</tbody>
+		</table>
+	</div>
+	<?php
+}
+
 /**
  * Returns the option name used for Tampere 2026 organizer notification recipients.
  *
