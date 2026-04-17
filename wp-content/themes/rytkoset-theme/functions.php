@@ -919,6 +919,229 @@ function rytkoset_theme_is_tampere_2026_registration_product( $product ) {
 }
 
 /**
+ * Returns the product meta key used for the Tampere 2026 registration deadline.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() {
+	return '_rytkoset_registration_deadline';
+}
+
+/**
+ * Returns the default registration deadline date for Tampere 2026.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_registration_default_deadline() {
+	return '2026-07-30';
+}
+
+/**
+ * Normalizes a registration deadline date into Y-m-d format.
+ *
+ * @param string $raw_date Raw date value.
+ * @return string
+ */
+function rytkoset_theme_normalize_registration_deadline_date( $raw_date ) {
+	$raw_date = trim( (string) $raw_date );
+
+	if ( '' === $raw_date ) {
+		return '';
+	}
+
+	$date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $raw_date, wp_timezone() );
+
+	if ( ! $date ) {
+		return '';
+	}
+
+	return $date->format( 'Y-m-d' );
+}
+
+/**
+ * Returns the registration deadline date for the Tampere 2026 product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_registration_deadline( $product ) {
+	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return '';
+	}
+
+	$stored_deadline = $product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true );
+	$deadline        = rytkoset_theme_normalize_registration_deadline_date( (string) $stored_deadline );
+
+	if ( '' !== $deadline ) {
+		return $deadline;
+	}
+
+	return rytkoset_theme_get_tampere_2026_registration_default_deadline();
+}
+
+/**
+ * Returns the deadline cutoff timestamp for the Tampere 2026 product.
+ *
+ * The product remains purchasable until the end of the configured day.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return DateTimeImmutable|null
+ */
+function rytkoset_theme_get_tampere_2026_registration_deadline_cutoff( $product ) {
+	$deadline = rytkoset_theme_get_tampere_2026_registration_deadline( $product );
+
+	if ( '' === $deadline ) {
+		return null;
+	}
+
+	$date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $deadline, wp_timezone() );
+
+	if ( ! $date ) {
+		return null;
+	}
+
+	return $date->modify( '+1 day' )->setTime( 0, 0, 0 );
+}
+
+/**
+ * Returns true when the Tampere 2026 registration deadline has passed.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return bool
+ */
+function rytkoset_theme_is_tampere_2026_registration_deadline_passed( $product ) {
+	$cutoff = rytkoset_theme_get_tampere_2026_registration_deadline_cutoff( $product );
+
+	if ( ! $cutoff instanceof \DateTimeImmutable ) {
+		return false;
+	}
+
+	return current_datetime() >= $cutoff;
+}
+
+/**
+ * Returns true when the Tampere 2026 registration product is full.
+ *
+ * Capacity is based on WooCommerce stock quantity.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return bool
+ */
+function rytkoset_theme_is_tampere_2026_registration_full( $product ) {
+	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return false;
+	}
+
+	if ( $product->backorders_allowed() ) {
+		return false;
+	}
+
+	return ! $product->is_in_stock();
+}
+
+/**
+ * Returns the current unavailability reason for the Tampere 2026 product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $product ) {
+	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return '';
+	}
+
+	if ( rytkoset_theme_is_tampere_2026_registration_deadline_passed( $product ) ) {
+		return 'deadline';
+	}
+
+	if ( rytkoset_theme_is_tampere_2026_registration_full( $product ) ) {
+		return 'full';
+	}
+
+	return '';
+}
+
+/**
+ * Returns the customer-facing unavailability message for the Tampere 2026 product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product ) {
+	$reason = rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $product );
+
+	if ( 'deadline' === $reason ) {
+		return __( 'Ilmoittautuminen on päättynyt.', 'rytkoset-theme' );
+	}
+
+	if ( 'full' === $reason ) {
+		return __( 'Ilmoittautuminen on täynnä.', 'rytkoset-theme' );
+	}
+
+	return '';
+}
+
+/**
+ * Adds Tampere 2026 management fields to the WooCommerce product inventory tab.
+ *
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_product_management_fields() {
+	global $post;
+
+	if ( ! $post instanceof WP_Post || 'product' !== $post->post_type ) {
+		return;
+	}
+
+	$product = wc_get_product( $post->ID );
+
+	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return;
+	}
+
+	echo '<div class="options_group">';
+
+	woocommerce_wp_text_input(
+		array(
+			'id'          => rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(),
+			'label'       => __( 'Ilmoittautumisen määräpäivä', 'rytkoset-theme' ),
+			'description' => __( 'Kapasiteetti tulee tämän tuotteen varastosaldosta. Ota varastonhallinta käyttöön, aseta osallistujapaikkojen määrä Stock quantity -kenttään ja pidä backorders pois päältä.', 'rytkoset-theme' ),
+			'desc_tip'    => false,
+			'type'        => 'date',
+			'value'       => rytkoset_theme_get_tampere_2026_registration_deadline( $product ),
+		),
+		$product
+	);
+
+	echo '</div>';
+}
+add_action( 'woocommerce_product_options_inventory_product_data', 'rytkoset_theme_render_tampere_2026_product_management_fields' );
+
+/**
+ * Saves Tampere 2026 product management settings.
+ *
+ * @param WC_Product $product WooCommerce product object.
+ * @return void
+ */
+function rytkoset_theme_save_tampere_2026_product_management_fields( $product ) {
+	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return;
+	}
+
+	$raw_deadline = isset( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] )
+		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] ) )
+		: '';
+	$deadline     = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
+
+	if ( '' === $deadline ) {
+		$deadline = rytkoset_theme_get_tampere_2026_registration_default_deadline();
+	}
+
+	$product->update_meta_data( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), $deadline );
+}
+add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_tampere_2026_product_management_fields' );
+
+/**
  * Returns the Tampere 2026 participant count from the current cart.
  *
  * @return int
@@ -942,6 +1165,131 @@ function rytkoset_theme_get_tampere_2026_participant_count() {
 
 	return max( 0, $participant_count );
 }
+
+/**
+ * Filters purchasability for the Tampere 2026 registration product.
+ *
+ * @param bool            $is_purchasable Current purchasable state.
+ * @param WC_Product|null $product        WooCommerce product object.
+ * @return bool
+ */
+function rytkoset_theme_filter_tampere_2026_product_purchasability( $is_purchasable, $product ) {
+	if ( ! $is_purchasable || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return $is_purchasable;
+	}
+
+	return '' === rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $product );
+}
+add_filter( 'woocommerce_is_purchasable', 'rytkoset_theme_filter_tampere_2026_product_purchasability', 10, 2 );
+
+/**
+ * Filters availability text for the Tampere 2026 registration product.
+ *
+ * @param string          $availability Availability text.
+ * @param WC_Product|null $product      WooCommerce product object.
+ * @return string
+ */
+function rytkoset_theme_filter_tampere_2026_product_availability_text( $availability, $product ) {
+	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return $availability;
+	}
+
+	$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+
+	return '' !== $message ? $message : $availability;
+}
+add_filter( 'woocommerce_get_availability_text', 'rytkoset_theme_filter_tampere_2026_product_availability_text', 10, 2 );
+
+/**
+ * Renders an explicit status message on the Tampere 2026 product page when needed.
+ *
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_product_page_notice() {
+	if ( ! is_product() ) {
+		return;
+	}
+
+	global $product;
+
+	if ( ! $product instanceof WC_Product ) {
+		return;
+	}
+
+	$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+
+	if ( '' === $message ) {
+		return;
+	}
+
+	printf(
+		'<div class="woocommerce-info rytkoset-tampere-2026-product-notice">%s</div>',
+		esc_html( $message )
+	);
+}
+add_action( 'woocommerce_single_product_summary', 'rytkoset_theme_render_tampere_2026_product_page_notice', 25 );
+
+/**
+ * Prevents adding unavailable Tampere 2026 registrations to the cart.
+ *
+ * @param bool $passed     Whether add to cart should proceed.
+ * @param int  $product_id Product ID.
+ * @return bool
+ */
+function rytkoset_theme_validate_tampere_2026_add_to_cart( $passed, $product_id ) {
+	$product = wc_get_product( $product_id );
+
+	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		return $passed;
+	}
+
+	$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+
+	if ( '' === $message ) {
+		return $passed;
+	}
+
+	if ( ! wc_has_notice( $message, 'error' ) ) {
+		wc_add_notice( $message, 'error' );
+	}
+
+	return false;
+}
+add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_tampere_2026_add_to_cart', 10, 2 );
+
+/**
+ * Validates Tampere 2026 registrations already present in cart or checkout.
+ *
+ * @return void
+ */
+function rytkoset_theme_validate_tampere_2026_cart_items() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return;
+	}
+
+	$messages = array();
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+			continue;
+		}
+
+		$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+
+		if ( '' !== $message ) {
+			$messages[ $message ] = true;
+		}
+	}
+
+	foreach ( array_keys( $messages ) as $message ) {
+		if ( ! wc_has_notice( $message, 'error' ) ) {
+			wc_add_notice( $message, 'error' );
+		}
+	}
+}
+add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_tampere_2026_cart_items' );
 
 /**
  * Returns the maximum number of Tampere 2026 participants supported in one order.
@@ -1260,6 +1608,32 @@ function rytkoset_theme_get_order_from_admin_screen_object( $post_or_order_objec
 }
 
 /**
+ * Returns the participant quantity purchased on a Tampere 2026 order.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return int
+ */
+function rytkoset_theme_get_tampere_2026_order_participant_quantity( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return 0;
+	}
+
+	$participant_quantity = 0;
+
+	foreach ( $order->get_items() as $item ) {
+		$product = $item->get_product();
+
+		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+			continue;
+		}
+
+		$participant_quantity += (int) $item->get_quantity();
+	}
+
+	return max( 0, $participant_quantity );
+}
+
+/**
  * Registers the Tampere 2026 participants metabox for order admin screens.
  *
  * Uses a dedicated metabox so the participant list is visible in both legacy
@@ -1339,6 +1713,82 @@ function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or
 
 	echo '</ol>';
 }
+
+/**
+ * Adds the Tampere 2026 column to WooCommerce order lists.
+ *
+ * @param array<string, mixed> $columns Existing order list columns.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_add_tampere_2026_orders_column( $columns ) {
+	$new_columns = array();
+
+	foreach ( $columns as $column_name => $column_label ) {
+		$new_columns[ $column_name ] = $column_label;
+
+		if ( 'order_status' === $column_name ) {
+			$new_columns['rytkoset_tampere_2026'] = __( 'Tampere 2026', 'rytkoset-theme' );
+		}
+	}
+
+	if ( ! isset( $new_columns['rytkoset_tampere_2026'] ) ) {
+		$new_columns['rytkoset_tampere_2026'] = __( 'Tampere 2026', 'rytkoset-theme' );
+	}
+
+	return $new_columns;
+}
+add_filter( 'manage_edit-shop_order_columns', 'rytkoset_theme_add_tampere_2026_orders_column' );
+add_filter( 'manage_woocommerce_page_wc-orders_columns', 'rytkoset_theme_add_tampere_2026_orders_column' );
+
+/**
+ * Renders the Tampere 2026 order list column value.
+ *
+ * @param string   $column_name Column name.
+ * @param WC_Order $order       WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_orders_column( $column_name, $order ) {
+	if ( 'rytkoset_tampere_2026' !== $column_name ) {
+		return;
+	}
+
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+		echo '&mdash;';
+		return;
+	}
+
+	$participant_quantity = rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+
+	if ( $participant_quantity < 1 ) {
+		echo '&mdash;';
+		return;
+	}
+
+	echo esc_html(
+		sprintf(
+			_n( '%d osallistuja', '%d osallistujaa', $participant_quantity, 'rytkoset-theme' ),
+			$participant_quantity
+		)
+	);
+}
+
+/**
+ * Legacy renderer wrapper for the Tampere 2026 order list column.
+ *
+ * @param string $column_name Column name.
+ * @return void
+ */
+function rytkoset_theme_render_tampere_2026_orders_column_legacy( $column_name ) {
+	global $the_order;
+
+	if ( ! $the_order instanceof WC_Order ) {
+		return;
+	}
+
+	rytkoset_theme_render_tampere_2026_orders_column( $column_name, $the_order );
+}
+add_action( 'manage_shop_order_posts_custom_column', 'rytkoset_theme_render_tampere_2026_orders_column_legacy', 25, 1 );
+add_action( 'manage_woocommerce_page_wc-orders_custom_column', 'rytkoset_theme_render_tampere_2026_orders_column', 25, 2 );
 
 /**
  * Returns the list of supported order statuses without the wc- prefix.
