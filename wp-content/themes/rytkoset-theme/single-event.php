@@ -34,6 +34,8 @@ get_header();
 						<?php the_content(); ?>
 					</div>
 
+					<?php rytkoset_theme_render_event_product_cta( get_the_ID() ); ?>
+
 					<?php
 					rytkoset_theme_share_buttons(
 						array(
