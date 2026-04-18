@@ -86,7 +86,7 @@ if ( have_posts() ) :
 										<div class="album__video-embed">
 											<iframe
 												src="<?php echo esc_url( $video['embed_url'] ); ?>"
-												allow="autoplay; encrypted-media; picture-in-picture"
+												allow="encrypted-media; picture-in-picture"
 												allowfullscreen
 												loading="lazy"
 												referrerpolicy="strict-origin-when-cross-origin"
