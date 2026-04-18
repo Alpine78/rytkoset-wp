@@ -29,12 +29,67 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 
 ## Tekniset huomiot
 
-- Jäsenmaksutuotteet on merkitty omalla tuotemetadata-lipulla:
+- Jäsenmaksutuotteet merkitään omalla tuotemetadata-lipulla:
+  - `_rytkoset_membership_product = yes`
+- Jäsenmaksun tyyppi tallennetaan tuotemetadataan:
+  - `_rytkoset_membership_type = annual_individual`
+  - `_rytkoset_membership_type = annual_family`
+  - `_rytkoset_membership_type = lifetime`
+- Vuosijäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
+  - `_rytkoset_membership_period = 2023-2026`
+- Kassalla näytettävä nimiohje määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
-- Metadata on käytössä vain vuosijäsenmaksutuotteilla.
+- Nimiohjeen metadata on käytössä vain vuosijäsenmaksutuotteilla.
 - Teema näyttää kassaohjeen vain silloin, kun korissa on tuote, jolla tuo metadata on käytössä.
 - `Ainaisjäsenmaksu` ei näytä vuosijäsenmaksujen lisätieto-ohjetta kassalla.
 - Kassaohjeen renderöinti tehdään teemassa, koska WooCommerce Block Checkout ei näyttänyt luotettavasti normaalia sivusisältöä nykyisessä teemassa.
+
+## Jäsenmaksutilausten käsittelymalli
+
+Jäsenmaksutilaukset käsitellään toistaiseksi manuaalisesti WooCommerce-adminin tietojen perusteella.
+
+WooCommerce Orders -listaan lisätään sarake:
+
+- `Jäsenmaksu`
+
+Sarake näyttää jäsenmaksutilauksille jäsenmaksun tyypin ja vuosijäsenmaksuilla myös jäsenkauden, esimerkiksi:
+
+- `Vuosijäsen: Yksityishenkilö, 2023-2026`
+- `Vuosijäsen: Perhe, 2023-2026`
+- `Ainaisjäsen`
+
+Yksittäisen tilauksen admin-näkymään lisätään `Jäsenmaksu`-laatikko. Se näyttää:
+
+- jäsenmaksun tyypin
+- jäsenkauden
+- tilauksen tilan
+- yhteyshenkilön nimen, sähköpostin ja puhelinnumeron
+- asiakkaan kirjoittamat lisätiedot
+- ylläpidon käsittelyohjeen
+
+Vuosijäsenmaksuissa lisätietokentästä poimitaan jäsenen tai perheenjäsenten nimet manuaalista jäsenrekisteriin vientiä varten. Jos lisätietokenttä on tyhjä, tilausnäkymä näyttää ylläpidolle huomion.
+
+## Uuden jäsenkauden käyttöönotto
+
+Sukukokouksen jälkeen uusi jäsenkausi, esimerkiksi `2026-2029`, tehdään uusina WooCommerce-tuotteina.
+
+Vanhoja `2023-2026` tuotteita ei muokata uuteen kauteen, koska niitä tarvitaan tilaushistoriaa varten.
+
+Suositeltu toimintamalli:
+
+1. Kloonaa vanhat vuosijäsenmaksutuotteet.
+2. Vaihda tuotteiden nimet ja kuvaukset uudelle kaudelle.
+3. Anna uusille tuotteille uudet SKU:t:
+   - `JASEN-2026-2029-YKSITYINEN`
+   - `JASEN-2026-2029-PERHE`
+4. Aseta jäsenmaksumetadatat:
+   - `_rytkoset_membership_product = yes`
+   - `_rytkoset_membership_type = annual_individual` tai `annual_family`
+   - `_rytkoset_membership_period = 2026-2029`
+   - `_rytkoset_member_names_required = yes`
+5. Piilota vanhat `2023-2026` tuotteet kaupasta, kun niitä ei enää myydä.
+6. Päivitä jäsenyyssivun linkit uusiin tuotteisiin.
+7. Tee testitilaus ennen julkaisua.
 
 ## Testattu nyt
 
@@ -47,11 +102,15 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Kassasivulle syötetään teeman kautta jäsenmaksuohje oikeassa sessiossa.
 - `Ainaisjäsenmaksu` voidaan lisätä ostoskoriin ja `Kassa`-sivu latautuu oikein.
 - `Ainaisjäsenmaksu` ei aktivoi vuosijäsenmaksujen kassaohjetta.
+- Jäsenmaksutuotteet tunnistetaan adminissa jäsenmaksumetadatan perusteella.
+- WooCommerce Orders -lista näyttää jäsenmaksutilauksille `Jäsenmaksu`-sarakkeen arvon.
+- Jäsenmaksutilauksen admin-näkymässä näkyy käsittelyyn tarkoitettu `Jäsenmaksu`-laatikko.
 
 ## Jätetään seuraaviin tiketteihin
 
 - Jäsenyyden uusintalogiikka
-- Mahdollinen jäsenkategoria tai oma tuoteryhmä jäsenmaksuille
 - Jäsenrekisteri-integraatio
-- Automaattiset merkinnät tai käsittelysäännöt tilauksille
+- Automaattiset jäsenyyden voimassaolomerkinnät
+- WordPress-käyttäjään sidottu jäsenyyden tila
+- Cron-pohjainen jäsenyyden vanheneminen
 - Mahdollinen erillinen kuittaus- tai sähköpostiviesti jäsenmaksuille
