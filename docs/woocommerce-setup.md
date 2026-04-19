@@ -53,9 +53,10 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - Tampere 2026 -osallistujalistan CSV-vienti on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-participants-csv-export.md`.
 - Tampere 2026 -järjestäjäilmoitukset on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-notifications.md`.
 - Mollie-maksutapojen paikallinen testikäyttöönotto on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-payments.md`.
+- Fyysisten tuotteiden perustuki on dokumentoitu erikseen tiedostossa `docs/woocommerce-physical-products.md`.
 - Checkoutin sisällöllinen ja saavutettava hienosäätö.
 - Sähköpostien sisällön ja ulkoasun tarkempi viimeistely.
-- Verot, toimitukset ja muut myyntilogiikan asetukset.
+- Verot, painoperusteiset toimitukset ja muut tarkemmat myyntilogiikan asetukset.
 
 ## Huomio
 
