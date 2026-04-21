@@ -110,9 +110,10 @@ Paikallisessa ympäristössä 19.4.2026 varmistettiin:
 
 ## Jatko
 
+`Rytkösten sukulainen nro 9` -ennakkotilaustuote on dokumentoitu erikseen tiedostossa `docs/woocommerce-rytkosten-sukulainen-product.md`.
+
 Myöhempiin tiketteihin jäävät:
 
-- oikea `Rytkösten sukulainen` -lehden tilaustuote
 - postikulun vahvistaminen oikeiden tuotteiden perusteella
 - mahdolliset tuotevariantit, kuten t-paitojen koot ja värit
 - tuotekohtainen varastosaldo, jos tuotteita on rajattu määrä
