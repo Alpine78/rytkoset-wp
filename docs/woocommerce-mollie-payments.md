@@ -2,6 +2,8 @@
 
 Tämä dokumentti kuvaa #145-tiketin paikallisen Mollie-käyttöönoton ja testimallin.
 
+Varsinainen dev-live käyttöönotto ja oikeiden hyväksymistestien malli on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-go-live.md`.
+
 ## Rajaus
 
 Tässä vaiheessa Mollie otetaan käyttöön vain paikallisessa/testimoodin käyttöönotossa.
