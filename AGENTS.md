@@ -75,6 +75,13 @@ Use conventional commits:
 - First report that the ticket requirements are implemented
 - Then suggest a commit message so the user can review changes in the editor before committing
 
+### Tool approval discipline
+- Minimize permission prompts.
+- Batch related local test actions into one command when practical.
+- For Playwright testing, prefer one `playwright-cli.cmd run-code` script over many separate `fill` / `click` commands.
+- If escalation is required for safe local testing, request one reasonably scoped persistent prefix instead of repeated one-off approvals.
+- Never use broader approval for destructive commands, production actions, secret handling, or Git history rewriting.
+
 ---
 
 ## 🧩 Implementation Strategy (CRITICAL)
