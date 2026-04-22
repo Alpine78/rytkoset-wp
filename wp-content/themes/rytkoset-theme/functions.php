@@ -827,6 +827,47 @@ function rytkoset_theme_login_finnish_strings( $translated, $original, $domain )
 add_filter( 'gettext', 'rytkoset_theme_login_finnish_strings', 10, 3 );
 
 /**
+ * Kääntää valitut Mollie WooCommerce -tekstit suomeksi.
+ *
+ * @param string $translated Alkuperäinen käännös.
+ * @param string $original   Lähdeteksti.
+ * @param string $domain     Tekstidomain.
+ * @return string
+ */
+function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain ) {
+	if ( 'mollie-payments-for-woocommerce' !== $domain ) {
+		return $translated;
+	}
+
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	if ( 0 !== strpos( (string) $locale, 'fi' ) ) {
+		return $translated;
+	}
+
+	$map = array(
+		', payment pending.' => ', maksu odottaa vahvistusta.',
+		'Please complete your payment by transferring the total amount to the following bank account:' => 'Viimeistele maksu siirtämällä koko summa seuraavalle pankkitilille:',
+		'Beneficiary: %s' => 'Saaja: %s',
+		'Payment reference: %s' => 'Viite: %s',
+		'Please provide the payment reference <strong>%s</strong>' => 'Käytä maksussa viitettä <strong>%s</strong>',
+		'The payment will expire on <strong>%s</strong>.' => 'Maksu vanhenee <strong>%s</strong>.',
+		'The payment will expire on <strong>%s</strong>. Please make sure you transfer the total amount before this date.' => 'Maksu vanhenee <strong>%s</strong>. Varmista, että siirrät koko summan ennen tätä päivää.',
+		'Payment completed by <strong>%1$s</strong> (IBAN (last 4 digits): %2$s, BIC: %3$s)' => 'Maksu suoritettu tililtä <strong>%1$s</strong> (IBAN, 4 viimeistä merkkiä: %2$s, BIC: %3$s)',
+		'%1$s payment pending (%2$s).' => '%1$s: maksu odottaa vahvistusta (%2$s).',
+		'%1$s payment still pending (%2$s) but customer already returned to the store. Status should be updated automatically in the future, if it doesn\'t this might indicate a communication issue between the site and Mollie.' => '%1$s: maksu odottaa edelleen vahvistusta (%2$s), vaikka asiakas on jo palannut kauppaan. Tilan pitäisi päivittyä automaattisesti myöhemmin. Jos näin ei käy, sivuston ja Mollien välillä voi olla yhteysongelma.',
+		'test mode' => 'testitila',
+	);
+
+	if ( isset( $map[ $original ] ) ) {
+		return $map[ $original ];
+	}
+
+	return $translated;
+}
+add_filter( 'gettext', 'rytkoset_theme_mollie_finnish_strings', 10, 3 );
+
+/**
  * Varmistetaan, että back-linkki on suomeksi, vaikka gettext ei osuisi.
  */
 function rytkoset_theme_login_backlink_text() {
