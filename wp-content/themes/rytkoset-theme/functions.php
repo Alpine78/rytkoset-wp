@@ -868,6 +868,214 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 add_filter( 'gettext', 'rytkoset_theme_mollie_finnish_strings', 10, 3 );
 
 /**
+ * Returns true when the order uses a Mollie payment method with RF instructions.
+ *
+ * @param WC_Order|mixed $order WooCommerce order object.
+ * @return bool
+ */
+function rytkoset_theme_is_mollie_rf_reference_order( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	return in_array(
+		$order->get_payment_method(),
+		array(
+			'mollie_wc_gateway_banktransfer',
+			'mollie_wc_gateway_paybybank',
+		),
+		true
+	);
+}
+
+/**
+ * Normalizes RF references shown in Mollie payment instructions.
+ *
+ * Some bank UIs reject RFC 11649 references when Mollie formats them with separators.
+ * Keep the IBAN grouped, but show the payment reference as plain alphanumeric text.
+ *
+ * @param string $text Instruction text or rendered markup.
+ * @return string
+ */
+function rytkoset_theme_normalize_mollie_rf_references( $text ) {
+	if ( ! is_string( $text ) || '' === $text || false === stripos( $text, 'RF' ) ) {
+		return $text;
+	}
+
+	return preg_replace_callback(
+		'/\bRF\d{2}(?:[-\s]?[A-Z0-9]{4})+\b/i',
+		static function ( $matches ) {
+			return strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $matches[0] ) );
+		},
+		$text
+	);
+}
+
+/**
+ * Stores normalized Mollie instruction text for later admin views.
+ *
+ * @param WC_Order|mixed $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_normalize_saved_mollie_payment_instructions( $order ) {
+	if ( ! rytkoset_theme_is_mollie_rf_reference_order( $order ) ) {
+		return;
+	}
+
+	$instructions = $order->get_meta( '_mollie_payment_instructions', true );
+
+	if ( ! is_string( $instructions ) || '' === $instructions ) {
+		return;
+	}
+
+	$normalized = rytkoset_theme_normalize_mollie_rf_references( $instructions );
+
+	if ( $normalized === $instructions ) {
+		return;
+	}
+
+	$order->update_meta_data( '_mollie_payment_instructions', $normalized );
+	$order->save();
+}
+
+/**
+ * Starts output buffering around Mollie instruction rendering hooks.
+ *
+ * @param string         $context Unique context key.
+ * @param WC_Order|mixed $order   WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_start_mollie_instruction_buffer( $context, $order ) {
+	global $rytkoset_theme_mollie_instruction_buffers;
+
+	if ( ! rytkoset_theme_is_mollie_rf_reference_order( $order ) ) {
+		return;
+	}
+
+	if ( ! is_array( $rytkoset_theme_mollie_instruction_buffers ) ) {
+		$rytkoset_theme_mollie_instruction_buffers = array();
+	}
+
+	$buffer_key = $context . ':' . $order->get_id();
+
+	if ( ! empty( $rytkoset_theme_mollie_instruction_buffers[ $buffer_key ] ) ) {
+		return;
+	}
+
+	ob_start();
+	$rytkoset_theme_mollie_instruction_buffers[ $buffer_key ] = true;
+}
+
+/**
+ * Ends output buffering around Mollie instruction rendering hooks.
+ *
+ * @param string         $context Unique context key.
+ * @param WC_Order|mixed $order   WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_end_mollie_instruction_buffer( $context, $order ) {
+	global $rytkoset_theme_mollie_instruction_buffers;
+
+	if ( ! rytkoset_theme_is_mollie_rf_reference_order( $order ) || ! is_array( $rytkoset_theme_mollie_instruction_buffers ) ) {
+		return;
+	}
+
+	$buffer_key = $context . ':' . $order->get_id();
+
+	if ( empty( $rytkoset_theme_mollie_instruction_buffers[ $buffer_key ] ) ) {
+		return;
+	}
+
+	unset( $rytkoset_theme_mollie_instruction_buffers[ $buffer_key ] );
+
+	$output = ob_get_clean();
+
+	if ( false === $output ) {
+		return;
+	}
+
+	echo rytkoset_theme_normalize_mollie_rf_references( $output ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	rytkoset_theme_normalize_saved_mollie_payment_instructions( $order );
+}
+
+/**
+ * Starts buffering for Mollie thank-you page instructions.
+ *
+ * @param int $order_id WooCommerce order ID.
+ * @return void
+ */
+function rytkoset_theme_start_mollie_thankyou_instruction_buffer( $order_id ) {
+	rytkoset_theme_start_mollie_instruction_buffer( 'thankyou', wc_get_order( $order_id ) );
+}
+
+/**
+ * Ends buffering for Mollie thank-you page instructions.
+ *
+ * @param int $order_id WooCommerce order ID.
+ * @return void
+ */
+function rytkoset_theme_end_mollie_thankyou_instruction_buffer( $order_id ) {
+	rytkoset_theme_end_mollie_instruction_buffer( 'thankyou', wc_get_order( $order_id ) );
+}
+
+/**
+ * Starts buffering for Mollie order details instructions.
+ *
+ * @param WC_Order|mixed $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_start_mollie_order_details_instruction_buffer( $order ) {
+	rytkoset_theme_start_mollie_instruction_buffer( 'order-details', $order );
+}
+
+/**
+ * Ends buffering for Mollie order details instructions.
+ *
+ * @param WC_Order|mixed $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_end_mollie_order_details_instruction_buffer( $order ) {
+	rytkoset_theme_end_mollie_instruction_buffer( 'order-details', $order );
+}
+
+/**
+ * Starts buffering for Mollie email instructions.
+ *
+ * @param WC_Order|mixed $order         WooCommerce order object.
+ * @param bool           $sent_to_admin Whether the email targets admin.
+ * @param bool           $plain_text    Whether the email is plain text.
+ * @return void
+ */
+function rytkoset_theme_start_mollie_email_instruction_buffer( $order, $sent_to_admin, $plain_text ) {
+	unset( $sent_to_admin, $plain_text );
+	rytkoset_theme_start_mollie_instruction_buffer( 'email', $order );
+}
+
+/**
+ * Ends buffering for Mollie email instructions.
+ *
+ * @param WC_Order|mixed $order         WooCommerce order object.
+ * @param bool           $sent_to_admin Whether the email targets admin.
+ * @param bool           $plain_text    Whether the email is plain text.
+ * @return void
+ */
+function rytkoset_theme_end_mollie_email_instruction_buffer( $order, $sent_to_admin, $plain_text ) {
+	unset( $sent_to_admin, $plain_text );
+	rytkoset_theme_end_mollie_instruction_buffer( 'email', $order );
+}
+
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_start_mollie_thankyou_instruction_buffer', 9 );
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_end_mollie_thankyou_instruction_buffer', 11 );
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_start_mollie_thankyou_instruction_buffer', 9 );
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_end_mollie_thankyou_instruction_buffer', 11 );
+add_action( 'woocommerce_order_details_after_order_table', 'rytkoset_theme_start_mollie_order_details_instruction_buffer', 9 );
+add_action( 'woocommerce_order_details_after_order_table', 'rytkoset_theme_end_mollie_order_details_instruction_buffer', 11 );
+add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_start_mollie_email_instruction_buffer', 9, 3 );
+add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_end_mollie_email_instruction_buffer', 11, 3 );
+add_action( 'woocommerce_email_order_meta', 'rytkoset_theme_start_mollie_email_instruction_buffer', 9, 3 );
+add_action( 'woocommerce_email_order_meta', 'rytkoset_theme_end_mollie_email_instruction_buffer', 11, 3 );
+
+/**
  * Varmistetaan, että back-linkki on suomeksi, vaikka gettext ei osuisi.
  */
 function rytkoset_theme_login_backlink_text() {
