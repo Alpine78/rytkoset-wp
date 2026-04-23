@@ -43,6 +43,9 @@ wp-config.php
 # Codex local browser/profile artifacts
 .codex-artifacts/
 
+# Playwright CLI local snapshots/logs
+.playwright-cli/
+
 # htaccess
 /.htaccess
 
