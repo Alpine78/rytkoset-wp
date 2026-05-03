@@ -76,6 +76,12 @@
   }
 }
 
+@media (max-width: 1264px) {
+  .account-nav-wrapper {
+    display: none;
+  }
+}
+
 @media (max-width: 1000px) {
   .site-header {
     padding: 1.25rem 0 1.5rem;
@@ -105,10 +111,20 @@
     gap: 0.6rem;
   }
 
-  .mobile-menu-toggle {
+  .site-header__mobile-actions {
     width: min(100%, 540px);
-    justify-content: center;
     margin: 0 auto;
+    justify-content: center;
+  }
+
+  .mobile-menu-toggle {
+    flex: 1 1 auto;
+    width: auto;
+    justify-content: center;
+  }
+
+  .site-cart-link--mobile {
+    flex: 0 0 auto;
   }
 
   .account-menu__user > a,
@@ -230,14 +246,27 @@
 }
 
 @media (max-width: 480px) {
-  .mobile-menu-toggle {
+  .site-header__mobile-actions {
     width: min(100%, 420px);
+  }
+
+  .site-cart-link {
+    padding-inline: 0.65rem;
   }
 }
 
 @media (min-width: 1265px) {
   .site-nav {
     display: block;
+  }
+
+  .site-cart-link--desktop {
+    display: inline-flex;
+  }
+
+  .site-cart-link--mobile,
+  .site-header__mobile-actions {
+    display: none;
   }
 
   .mobile-menu-toggle {

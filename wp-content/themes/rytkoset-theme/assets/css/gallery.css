@@ -19,6 +19,12 @@
     transition: transform 150ms ease, box-shadow 150ms ease;
 }
 
+.album-card:only-child {
+    justify-self: start;
+    width: 100%;
+    max-width: calc((1200px - 1.75rem) / 2);
+}
+
 .album-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
