@@ -211,6 +211,60 @@ function rytkoset_theme_setup() {
 }
 add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
 
+if ( ! function_exists( 'rytkoset_theme_get_cart_link_markup' ) ) {
+	/**
+	 * Builds a safe WooCommerce cart link for the site navigation.
+	 *
+	 * @param array $args Markup options.
+	 * @return string
+	 */
+	function rytkoset_theme_get_cart_link_markup( $args = array() ) {
+		if ( ! function_exists( 'wc_get_cart_url' ) ) {
+			return '';
+		}
+
+		$defaults = array(
+			'class' => 'site-cart-link',
+		);
+
+		$args     = wp_parse_args( $args, $defaults );
+		$cart_url = wc_get_cart_url();
+
+		if ( '' === $cart_url ) {
+			return '';
+		}
+
+		$item_count = 0;
+
+		if ( function_exists( 'WC' ) && WC() && WC()->cart ) {
+			$item_count = (int) WC()->cart->get_cart_contents_count();
+		}
+
+		$label      = __( 'Ostoskori', 'rytkoset-theme' );
+		$aria_label = $label;
+
+		if ( $item_count > 0 ) {
+			$aria_label = sprintf(
+				/* translators: %d: Number of products in cart. */
+				_n( 'Ostoskori, %d tuote', 'Ostoskori, %d tuotetta', $item_count, 'rytkoset-theme' ),
+				$item_count
+			);
+		}
+
+		ob_start();
+		?>
+		<a class="<?php echo esc_attr( trim( $args['class'] ) ); ?>" href="<?php echo esc_url( $cart_url ); ?>" aria-label="<?php echo esc_attr( $aria_label ); ?>">
+			<span class="site-cart-link__label"><?php echo esc_html( $label ); ?></span>
+			<?php if ( $item_count > 0 ) : ?>
+				<span class="site-cart-link__count" aria-hidden="true"><?php echo esc_html( (string) $item_count ); ?></span>
+			<?php endif; ?>
+		</a>
+		<?php
+
+		return trim( ob_get_clean() );
+	}
+}
+
 /**
  * Palauttaa logon HTML:n wrapper-luokkineen.
  *

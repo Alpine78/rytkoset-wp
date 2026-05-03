@@ -35,14 +35,14 @@
   <!-- KOLME NOSTOA -->
   <section class="section">
     <div class="container grid grid--3">
-      <!-- Valokuvat -->
+      <!-- Albumit -->
       <article class="card">
-        <h3 class="card__title">Valokuvat</h3>
+        <h3 class="card__title">Albumit</h3>
         <p class="card__text">
           Katso kuvagalleriasta tunnelmia sukujuhlista ja tapaamisista eri vuosilta.
         </p>
-        <a href="<?php echo esc_url( home_url('/valokuvat') ); ?>" class="card__link">
-          Siirry valokuviin &rarr;
+        <a href="<?php echo esc_url( home_url('/albumit') ); ?>" class="card__link">
+          Siirry albumeihin &rarr;
         </a>
       </article>
 
