@@ -88,6 +88,20 @@
   gap: 1rem;
 }
 
+.article-list {
+  display: grid;
+  gap: 2rem;
+}
+
+.event-archive-section {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.event-archive-section + .event-archive-section {
+  margin-top: 2.5rem;
+}
+
 .rytkoset-checkout-note {
   margin: 0 0 1.5rem;
   padding: 1rem 1.25rem;
