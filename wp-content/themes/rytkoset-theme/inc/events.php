@@ -46,6 +46,175 @@ if ( ! function_exists( 'rytkoset_theme_register_event_cpt' ) ) {
 }
 add_action( 'init', 'rytkoset_theme_register_event_cpt' );
 
+if ( ! function_exists( 'rytkoset_theme_get_event_date_meta_key' ) ) {
+	/**
+	 * Returns the meta key used for the event date.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_event_date_meta_key() {
+		return '_rytkoset_event_date';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_is_valid_event_date' ) ) {
+	/**
+	 * Checks whether an event date uses the expected YYYY-MM-DD format.
+	 *
+	 * @param string $date Event date.
+	 * @return bool
+	 */
+	function rytkoset_theme_is_valid_event_date( $date ) {
+		if ( ! is_string( $date ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ) {
+			return false;
+		}
+
+		$date_parts = array_map( 'absint', explode( '-', $date ) );
+
+		if ( 3 !== count( $date_parts ) ) {
+			return false;
+		}
+
+		return checkdate( $date_parts[1], $date_parts[2], $date_parts[0] );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_event_date_raw' ) ) {
+	/**
+	 * Returns a validated event date in YYYY-MM-DD format.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_event_date_raw( $event_id ) {
+		$date = get_post_meta( $event_id, rytkoset_theme_get_event_date_meta_key(), true );
+
+		if ( ! is_string( $date ) || ! rytkoset_theme_is_valid_event_date( $date ) ) {
+			return '';
+		}
+
+		return $date;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_event_date_display' ) ) {
+	/**
+	 * Returns a localized display date for an event.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return string
+	 */
+	function rytkoset_theme_get_event_date_display( $event_id ) {
+		$date = rytkoset_theme_get_event_date_raw( $event_id );
+
+		if ( '' === $date ) {
+			return '';
+		}
+
+		$datetime = DateTimeImmutable::createFromFormat( '!Y-m-d', $date, wp_timezone() );
+
+		if ( false === $datetime ) {
+			return '';
+		}
+
+		return wp_date( get_option( 'date_format' ), $datetime->getTimestamp() );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_register_event_date_metabox' ) ) {
+	/**
+	 * Adds the event date metabox.
+	 */
+	function rytkoset_theme_register_event_date_metabox() {
+		add_meta_box(
+			'rytkoset_event_date',
+			__( 'Tapahtumapäivä', 'rytkoset-theme' ),
+			'rytkoset_theme_render_event_date_metabox',
+			'event',
+			'side',
+			'high'
+		);
+	}
+}
+add_action( 'add_meta_boxes_event', 'rytkoset_theme_register_event_date_metabox' );
+
+if ( ! function_exists( 'rytkoset_theme_render_event_date_metabox' ) ) {
+	/**
+	 * Renders the event date metabox.
+	 *
+	 * @param WP_Post $post Event post object.
+	 */
+	function rytkoset_theme_render_event_date_metabox( $post ) {
+		$date = rytkoset_theme_get_event_date_raw( $post->ID );
+
+		wp_nonce_field( 'rytkoset_save_event_date', 'rytkoset_event_date_nonce' );
+		?>
+		<p>
+			<label for="rytkoset_event_date_field">
+				<?php esc_html_e( 'Päivämäärä', 'rytkoset-theme' ); ?>
+			</label>
+		</p>
+		<input
+			type="date"
+			id="rytkoset_event_date_field"
+			name="rytkoset_event_date"
+			value="<?php echo esc_attr( $date ); ?>"
+			class="widefat"
+		/>
+		<p class="description">
+			<?php esc_html_e( 'Käytetään tapahtuma-arkiston järjestämiseen. Muoto tallennuksessa on YYYY-MM-DD.', 'rytkoset-theme' ); ?>
+		</p>
+		<?php
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_save_event_date' ) ) {
+	/**
+	 * Saves the event date.
+	 *
+	 * @param int $post_id Event post ID.
+	 */
+	function rytkoset_theme_save_event_date( $post_id ) {
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		if ( wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		if ( ! isset( $_POST['rytkoset_event_date_nonce'] ) ) {
+			return;
+		}
+
+		$nonce = sanitize_text_field( wp_unslash( $_POST['rytkoset_event_date_nonce'] ) );
+
+		if ( ! wp_verify_nonce( $nonce, 'rytkoset_save_event_date' ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$date = isset( $_POST['rytkoset_event_date'] )
+			? sanitize_text_field( wp_unslash( $_POST['rytkoset_event_date'] ) )
+			: '';
+
+		if ( '' === $date ) {
+			delete_post_meta( $post_id, rytkoset_theme_get_event_date_meta_key() );
+			return;
+		}
+
+		if ( ! rytkoset_theme_is_valid_event_date( $date ) ) {
+			return;
+		}
+
+		update_post_meta( $post_id, rytkoset_theme_get_event_date_meta_key(), $date );
+	}
+}
+add_action( 'save_post_event', 'rytkoset_theme_save_event_date' );
+
 if ( ! function_exists( 'rytkoset_theme_get_event_product_meta_key' ) ) {
 	/**
 	 * Returns the meta key used to link an event to a WooCommerce product.
@@ -136,6 +305,7 @@ if ( ! function_exists( 'rytkoset_theme_print_event_admin_styles' ) ) {
 		}
 		?>
 		<style>
+			#rytkoset_event_date_field,
 			#rytkoset_event_product_id {
 				box-sizing: border-box;
 				max-width: calc(100% - 12px);
@@ -147,6 +317,121 @@ if ( ! function_exists( 'rytkoset_theme_print_event_admin_styles' ) ) {
 }
 add_action( 'admin_head-post.php', 'rytkoset_theme_print_event_admin_styles' );
 add_action( 'admin_head-post-new.php', 'rytkoset_theme_print_event_admin_styles' );
+
+if ( ! function_exists( 'rytkoset_theme_event_admin_columns' ) ) {
+	/**
+	 * Adds event-specific columns to the admin list.
+	 *
+	 * @param array $columns Admin columns.
+	 * @return array
+	 */
+	function rytkoset_theme_event_admin_columns( $columns ) {
+		$updated_columns = array();
+
+		foreach ( $columns as $key => $label ) {
+			$updated_columns[ $key ] = $label;
+
+			if ( 'title' === $key ) {
+				$updated_columns['rytkoset_event_date'] = __( 'Tapahtumapäivä', 'rytkoset-theme' );
+			}
+		}
+
+		return $updated_columns;
+	}
+}
+add_filter( 'manage_event_posts_columns', 'rytkoset_theme_event_admin_columns' );
+
+if ( ! function_exists( 'rytkoset_theme_event_admin_column_content' ) ) {
+	/**
+	 * Renders event-specific admin column content.
+	 *
+	 * @param string $column  Column key.
+	 * @param int    $post_id Event post ID.
+	 */
+	function rytkoset_theme_event_admin_column_content( $column, $post_id ) {
+		if ( 'rytkoset_event_date' !== $column ) {
+			return;
+		}
+
+		$date_display = rytkoset_theme_get_event_date_display( $post_id );
+
+		if ( '' === $date_display ) {
+			echo '&mdash;';
+			return;
+		}
+
+		printf(
+			'<time datetime="%1$s">%2$s</time>',
+			esc_attr( rytkoset_theme_get_event_date_raw( $post_id ) ),
+			esc_html( $date_display )
+		);
+	}
+}
+add_action( 'manage_event_posts_custom_column', 'rytkoset_theme_event_admin_column_content', 10, 2 );
+
+if ( ! function_exists( 'rytkoset_theme_event_sortable_columns' ) ) {
+	/**
+	 * Makes the event date column sortable.
+	 *
+	 * @param array $columns Sortable columns.
+	 * @return array
+	 */
+	function rytkoset_theme_event_sortable_columns( $columns ) {
+		$columns['rytkoset_event_date'] = 'rytkoset_event_date';
+
+		return $columns;
+	}
+}
+add_filter( 'manage_edit-event_sortable_columns', 'rytkoset_theme_event_sortable_columns' );
+
+if ( ! function_exists( 'rytkoset_theme_sort_event_admin_by_event_date' ) ) {
+	/**
+	 * Sorts the event admin list by event date when requested.
+	 *
+	 * @param WP_Query $query Current query.
+	 */
+	function rytkoset_theme_sort_event_admin_by_event_date( $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+
+		$post_type = $query->get( 'post_type' );
+
+		if ( 'event' !== $post_type ) {
+			return;
+		}
+
+		if ( 'rytkoset_event_date' !== $query->get( 'orderby' ) ) {
+			return;
+		}
+
+		$order = 'ASC' === strtoupper( (string) $query->get( 'order' ) ) ? 'ASC' : 'DESC';
+
+		$query->set(
+			'meta_query',
+			array(
+				'relation'          => 'OR',
+				'event_date_clause' => array(
+					'key'     => rytkoset_theme_get_event_date_meta_key(),
+					'compare' => 'EXISTS',
+					'type'    => 'DATE',
+				),
+				'event_date_missing_clause' => array(
+					'key'     => rytkoset_theme_get_event_date_meta_key(),
+					'compare' => 'NOT EXISTS',
+				),
+			)
+		);
+		$query->set(
+			'orderby',
+			array(
+				'event_date_clause' => $order,
+				'date'              => 'DESC',
+			)
+		);
+	}
+}
+add_action( 'pre_get_posts', 'rytkoset_theme_sort_event_admin_by_event_date' );
 
 if ( ! function_exists( 'rytkoset_theme_render_event_product_metabox' ) ) {
 	/**

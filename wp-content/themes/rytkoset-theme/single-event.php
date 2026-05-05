@@ -22,6 +22,15 @@ get_header();
 				<article <?php post_class( 'article' ); ?>>
 					<header class="article__header">
 						<h1 class="article__title"><?php the_title(); ?></h1>
+						<?php
+						$event_date_raw     = rytkoset_theme_get_event_date_raw( get_the_ID() );
+						$event_date_display = rytkoset_theme_get_event_date_display( get_the_ID() );
+						?>
+						<?php if ( '' !== $event_date_display ) : ?>
+							<p class="article__meta">
+								<time datetime="<?php echo esc_attr( $event_date_raw ); ?>"><?php echo esc_html( $event_date_display ); ?></time>
+							</p>
+						<?php endif; ?>
 					</header>
 
 					<?php if ( has_post_thumbnail() ) : ?>
