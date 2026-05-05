@@ -15,7 +15,7 @@ Tässä vaiheessa ei toteuteta:
 - kirjanpitointegraatioita
 - omia maksulogiikoita virallisen Mollie-lisäosan ohi
 
-`MobilePay` kuuluu erilliseen tikettiin `#156`.
+`MobilePay` kuuluu erilliseen tikettiin `#156` ja on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-mobilepay.md`.
 
 ## Lähtötila
 
@@ -167,3 +167,5 @@ Kun WordPress siirretään osoitteeseen `rytkoset.net`, tee erillinen viimeinen 
   https://docs.mollie.com/docs/woo-set-up-payment-options
 - Mollie go-live checklist  
   https://docs.mollie.com/docs/go-live-checklist
+- Mollie MobilePay
+  https://docs.mollie.com/docs/mobilepay
