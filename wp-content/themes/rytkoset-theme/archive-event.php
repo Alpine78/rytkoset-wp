@@ -83,6 +83,7 @@ $render_event_list = static function ( WP_Query $event_query ) {
 			$event_query->the_post();
 			$event_date_raw     = rytkoset_theme_get_event_date_raw( get_the_ID() );
 			$event_date_display = rytkoset_theme_get_event_date_display( get_the_ID() );
+			$event_location     = rytkoset_theme_get_event_location( get_the_ID() );
 			?>
 			<article <?php post_class( 'article' ); ?>>
 				<?php if ( has_post_thumbnail() ) : ?>
@@ -92,9 +93,17 @@ $render_event_list = static function ( WP_Query $event_query ) {
 				<?php endif; ?>
 
 				<header class="article__header">
-					<?php if ( '' !== $event_date_display ) : ?>
+					<?php if ( '' !== $event_date_display || '' !== $event_location ) : ?>
 						<p class="article__meta">
-							<time datetime="<?php echo esc_attr( $event_date_raw ); ?>"><?php echo esc_html( $event_date_display ); ?></time>
+							<?php if ( '' !== $event_date_display ) : ?>
+								<time datetime="<?php echo esc_attr( $event_date_raw ); ?>"><?php echo esc_html( $event_date_display ); ?></time>
+							<?php endif; ?>
+							<?php if ( '' !== $event_date_display && '' !== $event_location ) : ?>
+								<span aria-hidden="true"> &middot; </span>
+							<?php endif; ?>
+							<?php if ( '' !== $event_location ) : ?>
+								<span class="article__meta-location"><?php echo esc_html( $event_location ); ?></span>
+							<?php endif; ?>
 						</p>
 					<?php endif; ?>
 					<h3 class="article__title">
