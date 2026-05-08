@@ -15,7 +15,7 @@ Tässä vaiheessa ei toteuteta:
 - kirjanpitointegraatioita
 - omia maksulogiikoita virallisen Mollie-lisäosan ohi
 
-`MobilePay` kuuluu erilliseen tikettiin `#156`.
+`MobilePay` kuuluu erilliseen tikettiin `#156` ja on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-mobilepay.md`.
 
 ## Lähtötila
 
@@ -92,14 +92,51 @@ Varmista jokaisessa testissä:
 
 Kirjaa devissä vähintään nämä tiedot:
 
-| Testi | Maksutapa | Tulos | WooCommerce-tilaus | Mollie payment ID | Huomio |
-| --- | --- | --- | --- | --- | --- |
-| Onnistunut maksu 1 | Pay by Bank | Pending |  |  |  |
-| Onnistunut maksu 2 | Kortti / Google Pay | Pending |  |  |  |
-| Peruttu maksu | Valittu maksutapa | Pending |  |  |  |
-| Refund | Alkuperäinen maksutapa | Pending |  |  |  |
+| Testi              | Maksutapa              | Tulos   | WooCommerce-tilaus | Mollie payment ID | Huomio |
+| ------------------ | ---------------------- | ------- | ------------------ | ----------------- | ------ |
+| Onnistunut maksu 1 | Pay by Bank            | Pending |                    |                   |        |
+| Onnistunut maksu 2 | Kortti / Google Pay    | Pending |                    |                   |        |
+| Peruttu maksu      | Valittu maksutapa      | Pending |                    |                   |        |
+| Refund             | Alkuperäinen maksutapa | Pending |                    |                   |        |
 
 Merkitse `Pending`-arvon tilalle toteutunut tulos vasta oikean testin jälkeen.
+
+## Toteutuneet dev-live testit 23.4.2026
+
+Devissä toteutettiin oikeita live-maksutestejä ja varmistettiin seuraavat:
+
+- Mollien live-API on käytössä devissä.
+- Mollien payout-tili on lisätty ja vahvistettu yhdistyksen yritystilille.
+- `Pay by Bank` onnistui oikealla maksulla.
+- Korttimaksu onnistui oikealla maksulla.
+- Korttimaksulle tehtiin hyvitys onnistuneesti.
+- `Apple Pay` näkyi käytettävissä pankkitilin vahvistuksen jälkeen ja vaikutti toimivalta, mutta ensimmäisestä epäonnistuneesta yrityksestä ei jäänyt talteen tarkkaa virheilmoitusta.
+- `Tilisiirto` jäi fallback-maksutavaksi.
+
+Varmistetut havainnot:
+
+- onnistunut `Pay by Bank` -tilaus: `#821`
+- onnistunut korttitilaus: tehty devissä
+- refund korttitilaukselle: tehty devissä
+
+## SEPA-tilisiirron huomio
+
+Dev-testissä havaittiin, että Mollien SEPA-tilisiirron RF-viite oli aluksi näytetty käyttäjälle väliviivoilla ryhmiteltynä, esimerkiksi muodossa `RF42-2671-9596-2636`.
+
+Vaikka RF-viite oli teknisesti validi, ainakin OP ja POP Pankki hylkäsivät tämän muodon maksun viitekentässä.
+
+Tämän vuoksi teemaan lisättiin rajattu korjaus, joka normalisoi Mollien maksuojeissa näkyvät RF-viitteet muotoon ilman väliviivoja ja välilyöntejä, esimerkiksi:
+
+- `RF42267195962636`
+
+Korjaus koskee:
+
+- kiitossivun Mollie-ohjeita
+- tilaussivun maksuojeita
+- Mollien lähettämiä WooCommerce-sähköposteja
+- tallennettua `_mollie_payment_instructions`-order-metaa
+
+IBAN ryhmitellään edelleen luettavuuden vuoksi normaalisti. Vain RF-viite näytetään pankkien syöttökenttiä varten puhtaana aakkosnumeerisena merkkijonona.
 
 ## Apple Pay ja Google Pay
 
@@ -130,3 +167,5 @@ Kun WordPress siirretään osoitteeseen `rytkoset.net`, tee erillinen viimeinen 
   https://docs.mollie.com/docs/woo-set-up-payment-options
 - Mollie go-live checklist  
   https://docs.mollie.com/docs/go-live-checklist
+- Mollie MobilePay
+  https://docs.mollie.com/docs/mobilepay
