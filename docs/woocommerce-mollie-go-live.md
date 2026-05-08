@@ -15,7 +15,7 @@ Tässä vaiheessa ei toteuteta:
 - kirjanpitointegraatioita
 - omia maksulogiikoita virallisen Mollie-lisäosan ohi
 
-`MobilePay` kuuluu erilliseen tikettiin `#156`.
+`MobilePay` kuuluu erilliseen tikettiin `#156` ja on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-mobilepay.md`.
 
 ## Lähtötila
 
@@ -92,12 +92,12 @@ Varmista jokaisessa testissä:
 
 Kirjaa devissä vähintään nämä tiedot:
 
-| Testi | Maksutapa | Tulos | WooCommerce-tilaus | Mollie payment ID | Huomio |
-| --- | --- | --- | --- | --- | --- |
-| Onnistunut maksu 1 | Pay by Bank | Pending |  |  |  |
-| Onnistunut maksu 2 | Kortti / Google Pay | Pending |  |  |  |
-| Peruttu maksu | Valittu maksutapa | Pending |  |  |  |
-| Refund | Alkuperäinen maksutapa | Pending |  |  |  |
+| Testi              | Maksutapa              | Tulos   | WooCommerce-tilaus | Mollie payment ID | Huomio |
+| ------------------ | ---------------------- | ------- | ------------------ | ----------------- | ------ |
+| Onnistunut maksu 1 | Pay by Bank            | Pending |                    |                   |        |
+| Onnistunut maksu 2 | Kortti / Google Pay    | Pending |                    |                   |        |
+| Peruttu maksu      | Valittu maksutapa      | Pending |                    |                   |        |
+| Refund             | Alkuperäinen maksutapa | Pending |                    |                   |        |
 
 Merkitse `Pending`-arvon tilalle toteutunut tulos vasta oikean testin jälkeen.
 
@@ -167,3 +167,5 @@ Kun WordPress siirretään osoitteeseen `rytkoset.net`, tee erillinen viimeinen 
   https://docs.mollie.com/docs/woo-set-up-payment-options
 - Mollie go-live checklist  
   https://docs.mollie.com/docs/go-live-checklist
+- Mollie MobilePay
+  https://docs.mollie.com/docs/mobilepay

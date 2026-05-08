@@ -4,6 +4,8 @@ Tämä dokumentti kuvaa #145-tiketin paikallisen Mollie-käyttöönoton ja testi
 
 Varsinainen dev-live käyttöönotto ja oikeiden hyväksymistestien malli on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-go-live.md`.
 
+MobilePayn erillinen käyttöönotto ja mahdolliset Mollie-tilikohtaiset blockerit on dokumentoitu tiedostossa `docs/woocommerce-mollie-mobilepay.md`.
+
 ## Rajaus
 
 Tässä vaiheessa Mollie otetaan käyttöön vain paikallisessa/testimoodin käyttöönotossa.
@@ -16,7 +18,7 @@ Ei tehdä tässä tiketissä:
 - tuotantodomainin Apple Pay -validointia
 - omaa maksupalveluintegraatiota virallisen Mollie-lisäosan ohi
 
-MobilePay käsitellään erillisessä tiketissä #156. Tuotantokäyttöönotto ja oikeat maksut käsitellään erillisessä tiketissä #157.
+MobilePay käsitellään erillisessä tiketissä #156 ja dokumentissa `docs/woocommerce-mollie-mobilepay.md`. Tuotantokäyttöönotto ja oikeat maksut käsitellään erillisessä tiketissä #157.
 
 ## Asennus
 

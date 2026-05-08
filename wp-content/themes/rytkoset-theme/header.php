@@ -79,6 +79,16 @@
             </nav>
 
             <?php
+            echo wp_kses_post(
+                rytkoset_theme_get_cart_link_markup(
+                    array(
+                        'class' => 'site-cart-link site-cart-link--desktop',
+                    )
+                )
+            );
+            ?>
+
+            <?php
             $social_links = rytkoset_theme_get_social_links();
 
             if ( ! empty( $social_links ) ) :
@@ -102,18 +112,30 @@
                 </div>
             <?php endif; ?>
 
-            <!-- Mobiilivalikon placeholder -->
-            <button class="mobile-menu-toggle"
-                    type="button"
-                    aria-expanded="false"
-                    aria-controls="mobile-menu"
-                    aria-haspopup="true"
-                    data-submenu-label="<?php esc_attr_e( 'Avaa alavalikko', 'rytkoset-theme' ); ?>">
-                <span class="mobile-menu-toggle__icon" aria-hidden="true"><span></span></span>
-                <span class="mobile-menu-toggle__label">
-                    <?php esc_html_e( 'Valikko', 'rytkoset-theme' ); ?>
-                </span>
-            </button>
+            <div class="site-header__mobile-actions">
+                <!-- Mobiilivalikon placeholder -->
+                <button class="mobile-menu-toggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="mobile-menu"
+                        aria-haspopup="true"
+                        data-submenu-label="<?php esc_attr_e( 'Avaa alavalikko', 'rytkoset-theme' ); ?>">
+                    <span class="mobile-menu-toggle__icon" aria-hidden="true"><span></span></span>
+                    <span class="mobile-menu-toggle__label">
+                        <?php esc_html_e( 'Valikko', 'rytkoset-theme' ); ?>
+                    </span>
+                </button>
+
+                <?php
+                echo wp_kses_post(
+                    rytkoset_theme_get_cart_link_markup(
+                        array(
+                            'class' => 'site-cart-link site-cart-link--mobile',
+                        )
+                    )
+                );
+                ?>
+            </div>
 
             <div class="account-nav-wrapper">
                 <?php if ( is_user_logged_in() ) : ?>

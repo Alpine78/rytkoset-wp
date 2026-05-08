@@ -1,46 +1,63 @@
-# Ensisijaisen valikon päivitys (Appearance → Menus)
+# Ensisijaisen valikon rakenne
 
-Tämän ohjeen avulla päivität teeman päävalikon ("Primary menu") vaatimusten mukaiseen rakenteeseen ja varmistat, että sama rakenne näkyy sekä desktop- että mobiilinavigaatiossa.
+Tämä ohje kuvaa Rytköset-sivuston päävalikon tavoiterakenteen. Valikko ylläpidetään WordPressin adminissa, koska navigaation kohteet ovat WordPressin tietokantasisältöä eivätkä teeman versionoitua koodia.
 
-> **Huom.** Sivusto on yksikielinen (suomi). Älä luo kieliversiokohtaisia valikoita tai käytä monikielisyyslisäosia tämän valikon kanssa.
+## Päätason järjestys
 
-## 1) Avaa päävalikko
-1. Kirjaudu WordPressin ylläpitoon.
-2. Siirry kohtaan **Appearance → Menus**.
-3. Valitse **Primary menu** (tai vastaava päävalikko), ja varmista, että valinta **Display location → Primary menu** on päällä.
+Päävalikon suositeltu järjestys:
 
-## 2) Rakenna valikko vaatimusten mukaan
-Lisää alla oleva perusrakenne ja täydennä linkit sivuihin/tuotekategorioihin, jotka vastaavat projektin vaatimuslistaa.
+1. Sukuseura
+2. Albumit
+3. Tapahtumat
+4. Kauppa
+5. Foorumi
+6. Blogi
 
-- **Etusivu** – linkitä etusivulle (`/`).
-- **Sukuseura** (alavalikko)
-  - *Sukuseuran esittely* (esim. `/sukuseura/sukuseura`)
-  - *Jäsenyys* (esim. `/sukuseura/jaesenyys`)
-  - *Tapahtumat* (esim. `/sukuseura/tapahtumat`)
-- **Valokuvat** (alavalikko)
-  - *Galleria/albumit* (esim. `/valokuvat` tai albumikohtaiset sivut)
-  - *Sukukokousvuodet* (lisää jokaiselle vuodelle oma lapsikohde tarpeen mukaan)
-- **Kauppa** (alavalikko)
-  - *Jäsenmaksut* (WooCommerce-tuote tai kategoria)
-  - *Tuotteet* (pääkategoria tai erilliset tuoteryhmät)
-- **Blogi / Ajankohtaista** – linkitä uutis- tai blogilistaukseen (esim. `/kategoriat/ajankohtaista`).
-- **Yhteystiedot** – linkitä yhteydenotto-/hallitus-sivuun.
+## Kauppa-valikon alasivut
 
-> Täydennä mahdolliset lisäkohteet vaatimuslistan perusteella. Yllä olevat alavalikot ovat minimissään käytössä Sukuseura-, Valokuvat- ja Kauppa-osioissa.
+`Kauppa` toimii alasivullisena valikkokohtana. Lisää sen alle vähintään:
 
-### Lapsikohteiden luominen
-1. Lisää uusi menu item **Add menu items** -paneelista.
-2. Vedä kohde hieman sisennettynä sen yläpuolisen valikkokohteen alle → WordPress luo alavalikon.
-3. Toista, kunnes kaikki alavalikot on rakennettu.
+- Kauppa: `/kauppa/`
+- Ostoskori: `/ostoskori/`
+- Kassa: `/kassa/`
+- Oma tili: `/oma-tili/`
 
-## 3) Tallenna ja julkaise
-1. Napsauta **Save Menu**.
-2. Varmista, että valikko on edelleen julkaistu **Primary menu** -sijaintiin.
+Lisää WooCommercen tuoteryhmät mukaan, kun niiden julkiset polut ovat devissä ja tuotannossa valmiit:
 
-## 4) Testaa näkyminen desktop- ja mobiilinäkymissä
-- **Desktop:** avaa sivusto selaimessa, tarkista, että päävalikko näkyy headerissa ja että alavalikot avautuvat hoverilla/fokuksella.
-- **Mobiili:** avaa sivusto kapealla selaimella tai devtoolsin mobiilitilassa, avaa **Valikko**-painike ja varmista, että samat kohteet ja alavalikot ovat näkyvissä ja avautuvat.
-- Jos valikko ei näy mobiilissa, tarkista, että Primary-valikkoon on liitetty sisältöä; mobiilivalikko käyttää samaa `primary`-sijaintia kuin desktop (`header.php`).
+- Sukulehdet
+- Sukukirjat
+- Muut tuotteet
 
-## 5) Dokumentoi tehdyt muutokset
-Kirjaa muutoksesi projektin muistiinpanoihin tai tikettiin (esim. mitä kohteita lisättiin/muutettiin), jotta muut näkevät, miten valikko vastaa vaatimuslistaa.
+## Albumit ja tapahtumat
+
+- `Albumit` ohjaa valokuva-albumien arkistoon: `/albumit/`
+- `Tapahtumat` ohjaa tapahtuma-arkistoon: `/tapahtumat/`
+
+Älä käytä julkisessa valikossa enää `Valokuvat`-otsikkoa, koska sivuston kuvakokonaisuus on albumipohjainen.
+
+## Ostoskorin pikalinkki
+
+Teema näyttää erillisen `Ostoskori`-pikalinkin headerissa, jos WooCommerce on käytössä.
+
+- Desktopissa pikalinkki näkyy päävalikon vieressä.
+- Mobiilissa pikalinkki näkyy `Valikko`-painikkeen rinnalla.
+- Tuotemäärä näkyy badgena sivun latauksen jälkeen, jos ostoskorissa on tuotteita.
+
+Pikalinkki ei korvaa `Kauppa`-alasivun `Ostoskori`-linkkiä, vaan varmistaa, että ostoskori löytyy nopeasti myös mobiilissa.
+
+## Päivitys WordPress Adminissa
+
+1. Avaa `Ulkoasu -> Valikot`.
+2. Valitse päävalikko ja varmista, että sen sijainti on `Päävalikko`.
+3. Järjestä päätason kohteet yllä olevan järjestyksen mukaisesti.
+4. Nimeä vanha `Valokuvat`-kohde muotoon `Albumit` ja osoita se `/albumit/`-arkistoon.
+5. Lisää `Tapahtumat` ja osoita se `/tapahtumat/`-arkistoon.
+6. Tee `Kauppa`-kohdasta alasivullinen ja lisää kaupan keskeiset polut sen alle.
+7. Tallenna valikko.
+
+## Testaus
+
+- Desktopissa alavalikot avautuvat hoverilla ja näppäimistöfokuksella.
+- Mobiilissa sama valikkorakenne näkyy `Valikko`-paneelissa.
+- `Ostoskori`-pikalinkki näkyy mobiiliheaderissa ja vie `/ostoskori/`-sivulle.
+- `Albumit`, `Tapahtumat`, `Kauppa`, `Ostoskori`, `Kassa` ja `Oma tili` avautuvat ilman 404-virheitä.

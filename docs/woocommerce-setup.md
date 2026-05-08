@@ -54,8 +54,10 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - Tampere 2026 -järjestäjäilmoitukset on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-notifications.md`.
 - Mollie-maksutapojen paikallinen testikäyttöönotto on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-payments.md`.
 - Mollien dev-live käyttöönotto ja hyväksymistestaus on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-go-live.md`.
+- Mollie MobilePay -käyttöönotto ja mahdolliset tilikohtaiset blockerit on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-mobilepay.md`.
 - Fyysisten tuotteiden perustuki on dokumentoitu erikseen tiedostossa `docs/woocommerce-physical-products.md`.
 - `Rytkösten sukulainen nro 9` -ennakkotilaustuote on dokumentoitu erikseen tiedostossa `docs/woocommerce-rytkosten-sukulainen-product.md`.
+- Kaupan, tapahtumien, albumien ja ostoskorin valikkorakenne on dokumentoitu erikseen tiedostossa `docs/menu-structure.md`.
 - Checkoutin sisällöllinen ja saavutettava hienosäätö.
 - Sähköpostien sisällön ja ulkoasun tarkempi viimeistely.
 - Verot, painoperusteiset toimitukset ja muut tarkemmat myyntilogiikan asetukset.
