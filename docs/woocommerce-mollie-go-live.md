@@ -92,12 +92,12 @@ Varmista jokaisessa testissä:
 
 Kirjaa devissä vähintään nämä tiedot:
 
-| Testi | Maksutapa | Tulos | WooCommerce-tilaus | Mollie payment ID | Huomio |
-| --- | --- | --- | --- | --- | --- |
-| Onnistunut maksu 1 | Pay by Bank | Pending |  |  |  |
-| Onnistunut maksu 2 | Kortti / Google Pay | Pending |  |  |  |
-| Peruttu maksu | Valittu maksutapa | Pending |  |  |  |
-| Refund | Alkuperäinen maksutapa | Pending |  |  |  |
+| Testi              | Maksutapa              | Tulos   | WooCommerce-tilaus | Mollie payment ID | Huomio |
+| ------------------ | ---------------------- | ------- | ------------------ | ----------------- | ------ |
+| Onnistunut maksu 1 | Pay by Bank            | Pending |                    |                   |        |
+| Onnistunut maksu 2 | Kortti / Google Pay    | Pending |                    |                   |        |
+| Peruttu maksu      | Valittu maksutapa      | Pending |                    |                   |        |
+| Refund             | Alkuperäinen maksutapa | Pending |                    |                   |        |
 
 Merkitse `Pending`-arvon tilalle toteutunut tulos vasta oikean testin jälkeen.
 
