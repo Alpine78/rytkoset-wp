@@ -255,6 +255,7 @@ if ( ! function_exists( 'rytkoset_theme_get_cart_link_markup' ) ) {
 		ob_start();
 		?>
 		<a class="<?php echo esc_attr( trim( $args['class'] ) ); ?>" href="<?php echo esc_url( $cart_url ); ?>" aria-label="<?php echo esc_attr( $aria_label ); ?>">
+			<span class="site-cart-link__icon" aria-hidden="true"></span>
 			<span class="site-cart-link__label"><?php echo esc_html( $label ); ?></span>
 			<?php if ( $item_count > 0 ) : ?>
 				<span class="site-cart-link__count" aria-hidden="true"><?php echo esc_html( (string) $item_count ); ?></span>
