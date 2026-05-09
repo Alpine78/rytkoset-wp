@@ -77,24 +77,35 @@ $has_event_sections = $upcoming_events->have_posts() || $past_events->have_posts
 
 $render_event_list = static function ( WP_Query $event_query ) {
 	?>
-	<div class="article-list">
+	<div class="event-archive-grid">
 		<?php
 		while ( $event_query->have_posts() ) :
 			$event_query->the_post();
 			$event_date_raw     = rytkoset_theme_get_event_date_raw( get_the_ID() );
 			$event_date_display = rytkoset_theme_get_event_date_display( get_the_ID() );
 			$event_location     = rytkoset_theme_get_event_location( get_the_ID() );
-			?>
-			<article <?php post_class( 'article' ); ?>>
-				<?php if ( has_post_thumbnail() ) : ?>
-					<a href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr( get_the_title() ); ?>">
-						<?php the_post_thumbnail( 'large' ); ?>
-					</a>
-				<?php endif; ?>
+			$event_excerpt      = trim( get_the_excerpt() );
+			$has_product_link   = function_exists( 'rytkoset_theme_get_event_product_url' )
+				&& '' !== rytkoset_theme_get_event_product_url( get_the_ID() );
 
-				<header class="article__header">
+			if ( '' === $event_excerpt ) {
+				$event_excerpt = wp_strip_all_tags( get_the_content() );
+			}
+			?>
+			<article <?php post_class( 'event-card' ); ?>>
+				<a class="event-card__media" href="<?php the_permalink(); ?>" aria-label="<?php echo esc_attr( get_the_title() ); ?>">
+					<?php if ( has_post_thumbnail() ) : ?>
+						<?php the_post_thumbnail( 'large' ); ?>
+					<?php else : ?>
+						<span class="event-card__media-placeholder" aria-hidden="true">
+							<?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?>
+						</span>
+					<?php endif; ?>
+				</a>
+
+				<div class="event-card__body">
 					<?php if ( '' !== $event_date_display || '' !== $event_location ) : ?>
-						<p class="article__meta">
+						<p class="event-card__meta">
 							<?php if ( '' !== $event_date_display ) : ?>
 								<time datetime="<?php echo esc_attr( $event_date_raw ); ?>"><?php echo esc_html( $event_date_display ); ?></time>
 							<?php endif; ?>
@@ -106,13 +117,22 @@ $render_event_list = static function ( WP_Query $event_query ) {
 							<?php endif; ?>
 						</p>
 					<?php endif; ?>
-					<h3 class="article__title">
+					<h3 class="event-card__title">
 						<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 					</h3>
-				</header>
 
-				<div class="article__content">
-					<p><?php echo esc_html( wp_trim_words( get_the_excerpt(), 32 ) ); ?></p>
+					<?php if ( '' !== $event_excerpt ) : ?>
+						<p class="event-card__excerpt"><?php echo esc_html( wp_trim_words( $event_excerpt, 32 ) ); ?></p>
+					<?php endif; ?>
+
+					<div class="event-card__actions">
+						<a class="btn btn--light event-card__link" href="<?php the_permalink(); ?>">
+							<?php esc_html_e( 'Katso tapahtuma', 'rytkoset-theme' ); ?>
+						</a>
+						<?php if ( $has_product_link ) : ?>
+							<span class="event-card__badge"><?php esc_html_e( 'Ilmoittautuminen avoinna', 'rytkoset-theme' ); ?></span>
+						<?php endif; ?>
+					</div>
 				</div>
 			</article>
 			<?php
@@ -125,7 +145,7 @@ $render_event_list = static function ( WP_Query $event_query ) {
 ?>
 
 <section class="section">
-	<div class="container section__narrow">
+	<div class="container">
 		<header class="section__header">
 			<h1 class="section__title"><?php post_type_archive_title(); ?></h1>
 			<?php if ( get_the_archive_description() ) : ?>
