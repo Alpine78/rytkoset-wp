@@ -3,7 +3,7 @@ name: Deploy theme to dev.rytkoset.net
 on:
   push:
     branches:
-      - main
+      - dev
     paths:
       - 'wp-content/themes/rytkoset-theme/**'
 
