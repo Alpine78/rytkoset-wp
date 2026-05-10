@@ -135,6 +135,150 @@ if ( ! function_exists( 'rytkoset_theme_register_gallery_fields' ) ) {
 }
 add_action( 'acf/init', 'rytkoset_theme_register_gallery_fields' );
 
+if ( ! function_exists( 'rytkoset_theme_get_gallery_image_attachment_id' ) ) {
+        /**
+         * Gets an attachment ID from an ACF gallery image value.
+         *
+         * @param mixed $image ACF image array or attachment ID.
+         * @return int
+         */
+        function rytkoset_theme_get_gallery_image_attachment_id( $image ) {
+                if ( is_numeric( $image ) ) {
+                        return absint( $image );
+                }
+
+                if ( ! is_array( $image ) ) {
+                        return 0;
+                }
+
+                if ( ! empty( $image['ID'] ) ) {
+                        return absint( $image['ID'] );
+                }
+
+                if ( ! empty( $image['id'] ) ) {
+                        return absint( $image['id'] );
+                }
+
+                return 0;
+        }
+}
+
+if ( ! function_exists( 'rytkoset_theme_sort_gallery_images_by_filename' ) ) {
+        /**
+         * Sorts ACF gallery images by attachment post_title (derived from filename) ascending.
+         *
+         * Uses a single get_posts() call so MySQL handles the ordering, avoiding any
+         * ambiguity from PHP-level sort key lookups via attachment meta.
+         *
+         * @param array $images ACF gallery image values (arrays or attachment IDs).
+         * @return array
+         */
+        function rytkoset_theme_sort_gallery_images_by_filename( array $images ) {
+                if ( count( $images ) <= 1 ) {
+                        return $images;
+                }
+
+                $id_map = array();
+                $no_id  = array();
+
+                foreach ( $images as $image ) {
+                        $id = rytkoset_theme_get_gallery_image_attachment_id( $image );
+                        if ( $id ) {
+                                $id_map[ $id ] = $image;
+                        } else {
+                                $no_id[] = $image;
+                        }
+                }
+
+                if ( empty( $id_map ) ) {
+                        return $images;
+                }
+
+                $sorted_posts = get_posts(
+                        array(
+                                'post_type'      => 'attachment',
+                                'post_status'    => 'inherit',
+                                'post__in'       => array_keys( $id_map ),
+                                'posts_per_page' => -1,
+                                'orderby'        => 'title',
+                                'order'          => 'ASC',
+                                'no_found_rows'  => true,
+                        )
+                );
+
+                $sorted = array();
+                foreach ( $sorted_posts as $post ) {
+                        if ( isset( $id_map[ $post->ID ] ) ) {
+                                $sorted[] = $id_map[ $post->ID ];
+                        }
+                }
+
+                return array_merge( $sorted, $no_id );
+        }
+}
+
+if ( ! function_exists( 'rytkoset_theme_sort_gallery_block_by_filename' ) ) {
+        /**
+         * Sorts core/gallery innerBlocks by attachment post_title on gallery_album pages.
+         *
+         * Runs via render_block_data so the sort happens before WordPress renders the
+         * block HTML. Reordering innerBlocks is safe because WordPress iterates them in
+         * order to fill the null slots in innerContent.
+         *
+         * @param array $block Parsed block data.
+         * @return array
+         */
+        function rytkoset_theme_sort_gallery_block_by_filename( $block ) {
+                if ( ! is_singular( 'gallery_album' ) ) {
+                        return $block;
+                }
+
+                if ( 'core/gallery' !== $block['blockName'] || empty( $block['innerBlocks'] ) ) {
+                        return $block;
+                }
+
+                $id_map = array();
+                $no_id  = array();
+
+                foreach ( $block['innerBlocks'] as $inner ) {
+                        $id = isset( $inner['attrs']['id'] ) ? (int) $inner['attrs']['id'] : 0;
+                        if ( $id ) {
+                                $id_map[ $id ] = $inner;
+                        } else {
+                                $no_id[] = $inner;
+                        }
+                }
+
+                if ( empty( $id_map ) ) {
+                        return $block;
+                }
+
+                $sorted_posts = get_posts(
+                        array(
+                                'post_type'      => 'attachment',
+                                'post_status'    => 'inherit',
+                                'post__in'       => array_keys( $id_map ),
+                                'posts_per_page' => -1,
+                                'orderby'        => 'title',
+                                'order'          => 'ASC',
+                                'no_found_rows'  => true,
+                        )
+                );
+
+                $sorted = array();
+                foreach ( $sorted_posts as $post ) {
+                        if ( isset( $id_map[ $post->ID ] ) ) {
+                                $sorted[] = $id_map[ $post->ID ];
+                        }
+                }
+
+                $block['innerBlocks'] = array_merge( $sorted, $no_id );
+
+                return $block;
+        }
+}
+add_filter( 'render_block_data', 'rytkoset_theme_sort_gallery_block_by_filename' );
+
 if ( ! function_exists( 'rytkoset_theme_get_youtube_video_id' ) ) {
         /**
          * Returns a normalized YouTube video ID from a supported URL.
