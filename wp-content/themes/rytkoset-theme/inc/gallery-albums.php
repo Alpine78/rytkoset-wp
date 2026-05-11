@@ -279,6 +279,210 @@ if ( ! function_exists( 'rytkoset_theme_sort_gallery_block_by_filename' ) ) {
 }
 add_filter( 'render_block_data', 'rytkoset_theme_sort_gallery_block_by_filename' );
 
+if ( ! function_exists( 'rytkoset_theme_format_css_number' ) ) {
+        /**
+         * Formats a float as a CSS-safe decimal string (locale-independent).
+         *
+         * @param float $value Numeric value.
+         * @return string
+         */
+        function rytkoset_theme_format_css_number( $value ) {
+                $formatted = number_format( (float) $value, 4, '.', '' );
+                $formatted = rtrim( rtrim( $formatted, '0' ), '.' );
+
+                return '' === $formatted ? '0' : $formatted;
+        }
+}
+
+if ( ! function_exists( 'rytkoset_theme_render_album_gallery_block' ) ) {
+        /**
+         * Renders core/gallery blocks on gallery_album pages as a server-side
+         * justified flex gallery.
+         *
+         * Row composition and aspect ratios are baked into the HTML based on
+         * attachment metadata. The browser receives a finished layout: rows
+         * use CSS aspect-ratio so heights scale with the container, and items
+         * use flex-grow proportional to their aspect ratio so widths fill each
+         * row. No JS layout pass is needed and lazy images cannot cause
+         * relayout flicker because the layout does not depend on naturalWidth.
+         *
+         * @param string $block_content Default block content.
+         * @param array  $block         Parsed block data.
+         * @return string
+         */
+        function rytkoset_theme_render_album_gallery_block( $block_content, $block ) {
+                if ( ! is_singular( 'gallery_album' ) ) {
+                        return $block_content;
+                }
+
+                if ( empty( $block['blockName'] ) || 'core/gallery' !== $block['blockName'] ) {
+                        return $block_content;
+                }
+
+                if ( empty( $block['innerBlocks'] ) ) {
+                        return $block_content;
+                }
+
+                $target_height = 230;
+                $gap           = 16;
+                $max_width     = 1400;
+
+                $items = array();
+
+                foreach ( $block['innerBlocks'] as $inner ) {
+                        if ( empty( $inner['blockName'] ) || 'core/image' !== $inner['blockName'] ) {
+                                continue;
+                        }
+
+                        $image_id = isset( $inner['attrs']['id'] ) ? (int) $inner['attrs']['id'] : 0;
+                        if ( $image_id <= 0 ) {
+                                continue;
+                        }
+
+                        $full = wp_get_attachment_image_src( $image_id, 'full' );
+                        if ( empty( $full ) ) {
+                                continue;
+                        }
+
+                        $width  = isset( $full[1] ) ? (int) $full[1] : 0;
+                        $height = isset( $full[2] ) ? (int) $full[2] : 0;
+                        if ( $width <= 0 || $height <= 0 ) {
+                                continue;
+                        }
+
+                        $thumb = wp_get_attachment_image_src( $image_id, 'large' );
+
+                        $items[] = array(
+                                'id'                   => $image_id,
+                                'full_src'             => $full[0],
+                                'full_width'           => $width,
+                                'full_height'          => $height,
+                                'full_srcset'          => (string) wp_get_attachment_image_srcset( $image_id, 'full' ),
+                                'thumb_src'            => $thumb ? $thumb[0] : $full[0],
+                                'thumb_srcset'         => (string) wp_get_attachment_image_srcset( $image_id, 'large' ),
+                                'alt'                  => (string) get_post_meta( $image_id, '_wp_attachment_image_alt', true ),
+                                'caption_html'         => rytkoset_theme_get_attachment_caption_html( $image_id ),
+                                'visible_caption_html' => rytkoset_theme_get_attachment_visible_caption_html( $image_id ),
+                                'aspect_ratio'         => $width / $height,
+                        );
+                }
+
+                if ( empty( $items ) ) {
+                        return $block_content;
+                }
+
+                $rows        = array();
+                $current_row = array();
+                $row_width   = 0.0;
+
+                foreach ( $items as $item ) {
+                        $item_natural_width = $target_height * $item['aspect_ratio'];
+
+                        if ( ! empty( $current_row ) ) {
+                                $gaps_after_add = $gap * count( $current_row );
+                                if ( ( $row_width + $item_natural_width + $gaps_after_add ) > $max_width ) {
+                                        $rows[]      = $current_row;
+                                        $current_row = array();
+                                        $row_width   = 0.0;
+                                }
+                        }
+
+                        $current_row[] = $item;
+                        $row_width    += $item_natural_width;
+                }
+
+                if ( ! empty( $current_row ) ) {
+                        $rows[] = $current_row;
+                }
+
+                $full_row_aspect_sum = $max_width / $target_height;
+                $last_row_index      = count( $rows ) - 1;
+                $gallery_id          = 'album-' . (int) get_the_ID();
+
+                $html  = '<div class="wp-block-gallery album-gallery-flex" data-pswp-gallery="' . esc_attr( $gallery_id ) . '">';
+
+                foreach ( $rows as $row_index => $row ) {
+                        $is_last_row = ( $row_index === $last_row_index );
+                        $aspect_sum  = 0.0;
+                        foreach ( $row as $item ) {
+                                $aspect_sum += $item['aspect_ratio'];
+                        }
+
+                        // Stretch the last row only if it would not need extreme scaling.
+                        // 0.7 threshold keeps a single leftover image at its natural width.
+                        $stretch_last_row = $aspect_sum >= ( $full_row_aspect_sum * 0.7 );
+                        $is_natural_row   = $is_last_row && ! $stretch_last_row;
+
+                        if ( $is_natural_row ) {
+                                $row_attrs = ' class="album-gallery-flex__row album-gallery-flex__row--natural"';
+                        } else {
+                                $row_attrs = ' class="album-gallery-flex__row" style="--row-ar:' . rytkoset_theme_format_css_number( $aspect_sum ) . ';"';
+                        }
+
+                        $html .= '<div' . $row_attrs . '>';
+
+                        foreach ( $row as $item ) {
+                                $item_classes = array( 'album-gallery-flex__item', 'pswp-link' );
+                                if ( $is_natural_row ) {
+                                        $item_classes[] = 'album-gallery-flex__item--natural';
+                                }
+
+                                $item_style = '--ar:' . rytkoset_theme_format_css_number( $item['aspect_ratio'] );
+
+                                $caption_attr = '';
+                                if ( '' !== $item['caption_html'] ) {
+                                        $caption_attr = ' data-pswp-caption-html="' . esc_attr( $item['caption_html'] ) . '"';
+                                }
+
+                                $srcset_attr = '';
+                                if ( '' !== $item['full_srcset'] ) {
+                                        $srcset_attr = ' data-pswp-srcset="' . esc_attr( $item['full_srcset'] ) . '"';
+                                }
+
+                                $html .= '<a class="' . esc_attr( implode( ' ', $item_classes ) ) . '"'
+                                        . ' href="' . esc_url( $item['full_src'] ) . '"'
+                                        . ' data-pswp-width="' . (int) $item['full_width'] . '"'
+                                        . ' data-pswp-height="' . (int) $item['full_height'] . '"'
+                                        . ' data-pswp-item-id="' . (int) $item['id'] . '"'
+                                        . $srcset_attr
+                                        . ' data-pswp-sizes="100vw"'
+                                        . $caption_attr
+                                        . ' style="' . esc_attr( $item_style ) . '"'
+                                        . '>';
+
+                                $img_srcset_attr = '';
+                                if ( '' !== $item['thumb_srcset'] ) {
+                                        $img_srcset_attr = ' srcset="' . esc_attr( $item['thumb_srcset'] ) . '"';
+                                }
+
+                                $html .= '<img'
+                                        . ' src="' . esc_url( $item['thumb_src'] ) . '"'
+                                        . $img_srcset_attr
+                                        . ' sizes="(min-width: 1200px) 33vw, (min-width: 640px) 50vw, 100vw"'
+                                        . ' width="' . (int) $item['full_width'] . '"'
+                                        . ' height="' . (int) $item['full_height'] . '"'
+                                        . ' alt="' . esc_attr( $item['alt'] ) . '"'
+                                        . ' loading="lazy"'
+                                        . ' decoding="async"'
+                                        . ' />';
+
+                                if ( '' !== $item['visible_caption_html'] ) {
+                                        $html .= '<div class="album-gallery-flex__caption">' . wp_kses_post( $item['visible_caption_html'] ) . '</div>';
+                                }
+
+                                $html .= '</a>';
+                        }
+
+                        $html .= '</div>';
+                }
+
+                $html .= '</div>';
+
+                return $html;
+        }
+}
+add_filter( 'render_block', 'rytkoset_theme_render_album_gallery_block', 10, 2 );
+
 if ( ! function_exists( 'rytkoset_theme_get_youtube_video_id' ) ) {
         /**
          * Returns a normalized YouTube video ID from a supported URL.
