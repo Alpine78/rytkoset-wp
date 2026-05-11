@@ -24,6 +24,8 @@ if ( have_posts() ) :
 		$album_body_content = trim( (string) get_post_field( 'post_content', get_the_ID() ) );
 		$album_videos       = array();
 
+		$gallery_images = rytkoset_theme_sort_gallery_images_by_filename( $gallery_images );
+
 		if ( ! empty( $gallery_videos ) ) {
 			foreach ( $gallery_videos as $video ) {
 				$video_url = isset( $video['video_url'] ) ? $video['video_url'] : '';
@@ -102,12 +104,14 @@ if ( have_posts() ) :
 
 						if ( ! empty( $gallery_images ) ) {
 							foreach ( $gallery_images as $image ) {
-								if ( empty( $image['ID'] ) ) {
+								$image_id = rytkoset_theme_get_gallery_image_attachment_id( $image );
+
+								if ( ! $image_id ) {
 									continue;
 								}
 
-								$full  = wp_get_attachment_image_src( $image['ID'], 'full' );
-								$thumb = wp_get_attachment_image_src( $image['ID'], 'large' );
+								$full  = wp_get_attachment_image_src( $image_id, 'full' );
+								$thumb = wp_get_attachment_image_src( $image_id, 'large' );
 
 								if ( ! $full ) {
 									continue;
@@ -115,19 +119,19 @@ if ( have_posts() ) :
 
 								$gallery_items[] = array(
 									'type'                 => 'image',
-									'item_id'              => (string) $image['ID'],
+									'item_id'              => (string) $image_id,
 									'src'                  => $full[0],
 									'width'                => isset( $full[1] ) ? (int) $full[1] : 0,
 									'height'               => isset( $full[2] ) ? (int) $full[2] : 0,
-									'alt'                  => isset( $image['alt'] ) ? $image['alt'] : '',
-									'srcset'               => wp_get_attachment_image_srcset( $image['ID'], 'large' ),
+									'alt'                  => is_array( $image ) && isset( $image['alt'] ) ? $image['alt'] : '',
+									'srcset'               => wp_get_attachment_image_srcset( $image_id, 'large' ),
 									'sizes'                => '(min-width: 960px) 25vw, 90vw',
 									'thumb_src'            => $thumb ? $thumb[0] : $full[0],
-									'thumb_srcset'         => wp_get_attachment_image_srcset( $image['ID'], 'large' ),
-									'pswp_srcset'          => wp_get_attachment_image_srcset( $image['ID'], 'full' ),
+									'thumb_srcset'         => wp_get_attachment_image_srcset( $image_id, 'large' ),
+									'pswp_srcset'          => wp_get_attachment_image_srcset( $image_id, 'full' ),
 									'pswp_sizes'           => '100vw',
-									'caption_html'         => rytkoset_theme_get_attachment_caption_html( $image['ID'] ),
-									'visible_caption_html' => rytkoset_theme_get_attachment_visible_caption_html( $image['ID'] ),
+									'caption_html'         => rytkoset_theme_get_attachment_caption_html( $image_id ),
+									'visible_caption_html' => rytkoset_theme_get_attachment_visible_caption_html( $image_id ),
 								);
 							}
 						}
