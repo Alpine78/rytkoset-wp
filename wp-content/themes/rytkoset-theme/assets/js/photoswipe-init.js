@@ -4,7 +4,6 @@
     var gallerySelector = '.js-gallery-grid, .album .wp-block-gallery, .album figure.pswp-standalone-gallery';
     var galleryImageSelector = '.js-gallery-grid img, .album .wp-block-gallery img, .album figure.wp-block-image img';
     var galleryChildrenSelector = 'a.pswp-link, .js-gallery-item, figure > a, .blocks-gallery-item > a';
-    var masonryGridSelector = '.js-gallery-grid, .album .wp-block-gallery.has-nested-images';
     var galleryHashParam = 'kuva';
     var urlSyncState = {
         previousHash: ''
@@ -289,204 +288,6 @@
         return link;
     };
 
-    var relayoutMasonryGrid = function (grid) {
-        if (!grid) return;
-
-        var style = window.getComputedStyle(grid);
-        var flexItems = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
-
-        if (style.display === 'flex' && style.flexDirection === 'column') {
-            flexItems.forEach(function (item) {
-                var img = item.querySelector('img');
-
-                item.style.gridRowEnd = '';
-                item.style.height = '';
-                item.style.width = '';
-                item.style.flex = '';
-
-                if (img) {
-                    img.style.height = '';
-                    img.style.width = '';
-                }
-            });
-
-            return;
-        }
-
-        // If layout is flex (horizontal rows), size items by target thumb height and aspect ratio,
-        // and justify each row to the container width.
-        if (style.display === 'flex') {
-            var targetHeight = parseFloat(style.getPropertyValue('--thumb-height')) || 200;
-            var targetWidthFallback = targetHeight * 1.5;
-            var gap = parseFloat(style.getPropertyValue('column-gap') || style.getPropertyValue('gap')) || 0;
-            var maxLastRowScale = parseFloat(style.getPropertyValue('--masonry-last-row-max-scale')) || 1.75;
-            var minLastRowScale = parseFloat(style.getPropertyValue('--masonry-last-row-min-scale')) || 0.9;
-            var paddingLeft = parseFloat(style.paddingLeft) || 0;
-            var paddingRight = parseFloat(style.paddingRight) || 0;
-            var containerWidth = grid.clientWidth - paddingLeft - paddingRight;
-
-            var currentRow = [];
-            var widthSum = 0;
-
-            var flushRow = function (isLast) {
-                if (!currentRow.length || containerWidth <= 0 || widthSum <= 0) {
-                    return;
-                }
-
-                var gapsTotal = gap * Math.max(0, currentRow.length - 1);
-                var scale = (containerWidth - gapsTotal) / widthSum;
-
-                if (isLast) {
-                    // Keep the last row at the target height (no up/down scaling).
-                    scale = 1;
-                }
-
-                var rowHeight = targetHeight * scale;
-
-                currentRow.forEach(function (entry) {
-                    var width = Math.max(60, entry.width * scale);
-                    var item = entry.item;
-                    var img = entry.img;
-
-                    item.style.gridRowEnd = '';
-                    item.style.height = rowHeight + 'px';
-                    item.style.width = Math.round(width) + 'px';
-                    item.style.flex = '0 0 auto';
-
-                    if (img) {
-                        img.style.height = rowHeight + 'px';
-                        img.style.width = 'auto';
-                    }
-                });
-            };
-
-            flexItems.forEach(function (item) {
-                var img = item.querySelector('img');
-                var ratio = 0;
-
-                // 1) Yritä luonnollisista mitoista (kun kuva on ladattu)
-                if (img && img.naturalWidth && img.naturalHeight) {
-                    ratio = img.naturalHeight / img.naturalWidth;
-                }
-
-                // 2) Jos kuva ei ole vielä ladattu → käytä width/height -attribuutteja
-                if (!ratio && img) {
-                    var attrW = parseInt(img.getAttribute('width'), 10);
-                    var attrH = parseInt(img.getAttribute('height'), 10);
-                    if (attrW && attrH) {
-                        ratio = attrH / attrW;
-                    }
-                }
-
-                // 3) Viimeinen fallback: data-* attribuutit (esim. custom-grid)
-                if (!ratio) {
-                    var dataW = parseInt(item.getAttribute('data-pswp-width'), 10) ||
-                                parseInt(item.getAttribute('data-width'), 10);
-                    var dataH = parseInt(item.getAttribute('data-pswp-height'), 10) ||
-                                parseInt(item.getAttribute('data-height'), 10);
-                    if (dataW && dataH) {
-                        ratio = dataH / dataW;
-                    }
-                }
-
-                var width = ratio ? (targetHeight / ratio) : targetWidthFallback;
-                var tentativeWidth = widthSum + width;
-                var gapsSoFar = gap * Math.max(0, currentRow.length);
-
-                if (currentRow.length && (tentativeWidth + gapsSoFar) > containerWidth) {
-                    flushRow(false);
-                    currentRow = [];
-                    widthSum = 0;
-                }
-
-                currentRow.push({ item: item, img: img, width: width });
-                widthSum += width;
-            });
-
-            flushRow(true);
-            return;
-        }
-
-        var rowHeight = parseFloat(style.getPropertyValue('--masonry-row-height')) || 2;
-        var gap = parseFloat(style.getPropertyValue('row-gap') || style.getPropertyValue('grid-row-gap')) || parseFloat(style.getPropertyValue('gap')) || 0;
-
-        var items = grid.querySelectorAll('.gallery-grid__item, figure.wp-block-image, .blocks-gallery-item');
-
-        items.forEach(function (item) {
-            var img = item.querySelector('img');
-            var ratio = 0;
-
-            if (img && img.naturalWidth && img.naturalHeight) {
-                ratio = img.naturalHeight / img.naturalWidth;
-            }
-
-            if (!ratio) {
-                var dataW = parseInt(item.getAttribute('data-pswp-width'), 10);
-                var dataH = parseInt(item.getAttribute('data-pswp-height'), 10);
-                if (dataW && dataH) {
-                    ratio = dataH / dataW;
-                }
-            }
-
-            var width = item.getBoundingClientRect().width;
-            if (!width || !ratio) {
-                return;
-            }
-
-            var height = width * ratio;
-            var span = Math.max(1, Math.ceil((height + gap) / (rowHeight + gap)));
-            item.style.gridRowEnd = 'span ' + span;
-            item.style.height = Math.ceil(height) + 'px';
-        });
-    };
-
-    var relayoutAllGrids = function () {
-        var grids = Array.prototype.slice.call(document.querySelectorAll(masonryGridSelector));
-        if (!grids.length) {
-            return;
-        }
-        grids.forEach(relayoutMasonryGrid);
-    };
-
-    var initMasonryGrids = function () {
-        var grids = Array.prototype.slice.call(document.querySelectorAll(masonryGridSelector));
-        if (!grids.length) {
-            return;
-        }
-
-        grids.forEach(function (grid) {
-            if (grid._rytkosetMasonryInit) {
-                return;
-            }
-            grid._rytkosetMasonryInit = true;
-
-            grid.querySelectorAll('img').forEach(function (img) {
-                var onLoad = function () {
-                    relayoutMasonryGrid(grid);
-                };
-
-                if (img.complete) {
-                    onLoad();
-                } else {
-                    img.addEventListener('load', onLoad, { once: true });
-                    img.addEventListener('error', onLoad, { once: true });
-                }
-            });
-        });
-
-        window.addEventListener('resize', function () {
-            clearTimeout(initMasonryGrids._resizeTimer);
-            initMasonryGrids._resizeTimer = setTimeout(relayoutAllGrids, 120);
-        });
-
-        window.addEventListener('load', relayoutAllGrids, { once: true });
-        window.addEventListener('pageshow', relayoutAllGrids, { once: true });
-
-        relayoutAllGrids();
-        setTimeout(relayoutAllGrids, 180);
-        setTimeout(relayoutAllGrids, 420);
-    };
-
     var loadDynamicCaptionPlugin = function () {
         if (window.PhotoSwipeDynamicCaption) {
             return Promise.resolve(window.PhotoSwipeDynamicCaption);
@@ -578,7 +379,6 @@
         });
 
         if (!hasPhotoSwipe) {
-            initMasonryGrids();
             return;
         }
 
@@ -756,26 +556,11 @@
             lightbox.init();
             openFromHash();
         });
-        initMasonryGrids();
-    };
-
-    // Ajetaan kaikki vasta kun koko sivu (CSS + kuvat) on ladattu,
-    // jotta gallerian leveys ja display-tyyli ovat varmasti oikeat.
-    var start = function () {
-        initLightbox();
-        initMasonryGrids();
-
-        // Varmuuden vuoksi muutama ylimääräinen relayout,
-        // jos fontit / lazyload-kuvat muuttavat mittoja hieman myöhemmin.
-        setTimeout(relayoutAllGrids, 0);
-        setTimeout(relayoutAllGrids, 200);
-        setTimeout(relayoutAllGrids, 600);
     };
 
     if (document.readyState === 'complete') {
-        // Sivun "hard refresh" voi olla jo complete tässä kohtaa
-        start();
+        initLightbox();
     } else {
-        window.addEventListener('load', start, { once: true });
+        window.addEventListener('load', initLightbox, { once: true });
     }
 })();

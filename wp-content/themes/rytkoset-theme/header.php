@@ -158,7 +158,7 @@
                 <?php endif; ?>
 
                 <button class="theme-toggle desktop-theme-toggle" type="button" aria-pressed="false">
-                    <span class="theme-toggle__icon" aria-hidden="true">ÐYOT</span>
+                    <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
                     <span class="screen-reader-text"><?php esc_html_e( 'Vaihda teema', 'rytkoset-theme' ); ?></span>
                 </button>
 
@@ -198,7 +198,7 @@
                     </p>
                     <div class="mobile-menu__theme">
                         <button class="theme-toggle" type="button" aria-pressed="false">
-                            <span class="theme-toggle__icon" aria-hidden="true">ðŸŒ™</span>
+                            <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
                             <span class="theme-toggle__label"><?php esc_html_e( 'Teema', 'rytkoset-theme' ); ?></span>
                         </button>
                     </div>

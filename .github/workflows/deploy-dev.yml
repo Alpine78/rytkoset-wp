@@ -3,7 +3,7 @@ name: Deploy theme to dev.rytkoset.net
 on:
   push:
     branches:
-      - main
+      - dev
     paths:
       - 'wp-content/themes/rytkoset-theme/**'
 
@@ -13,10 +13,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}

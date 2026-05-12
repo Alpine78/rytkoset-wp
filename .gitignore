@@ -63,3 +63,6 @@ wp-content/ai1wm-backups/
 # Note: If you wish to whitelist themes,
 # uncomment the next line
 #/wp-content/themes
+
+# Claude Code local settings
+.claude/settings.local.json
