@@ -110,6 +110,110 @@
   margin-top: 2.5rem;
 }
 
+.event-archive-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.event-card {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-alt);
+  box-shadow: var(--shadow-card);
+}
+
+.event-card__media {
+  display: block;
+  aspect-ratio: 16 / 9;
+  min-height: 11rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.12), rgba(251, 191, 36, 0.2));
+}
+
+.event-card__media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  object-fit: cover;
+}
+
+.event-card__media-placeholder {
+  display: grid;
+  min-height: 11rem;
+  height: 100%;
+  place-items: center;
+  color: var(--color-primary);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.event-card__body {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.25rem;
+}
+
+.event-card__meta {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  opacity: 0.72;
+}
+
+.event-card__title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2vw, 1.75rem);
+}
+
+.event-card__excerpt {
+  margin: 0;
+}
+
+.event-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.event-card__link {
+  border-color: var(--color-border-neutral);
+}
+
+.event-card__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: rgba(251, 191, 36, 0.22);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+@media (min-width: 64rem) {
+  .event-card {
+    grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.2fr);
+  }
+
+  .event-card__media {
+    aspect-ratio: auto;
+  }
+
+  .event-card__media,
+  .event-card__media img,
+  .event-card__media-placeholder {
+    min-height: 100%;
+  }
+}
+
 .event-details {
   display: grid;
   gap: 0.75rem;

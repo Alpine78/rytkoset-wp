@@ -304,7 +304,7 @@
 }
 
 .gallery-grid__caption,
-.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption {
+.album .wp-block-gallery.has-nested-images figure.wp-block-image figcaption {
     position: absolute;
     right: 0;
     bottom: 0;
@@ -355,7 +355,7 @@
 }
 
 .gallery-grid__caption .pswp-caption-content__caption,
-.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption .pswp-caption-content__caption,
+.album .wp-block-gallery.has-nested-images figure.wp-block-image figcaption .pswp-caption-content__caption,
 .pswp__dynamic-caption .pswp-caption-content__caption,
 .pswp__dynamic-caption .pswp-caption-content__description,
 .pswp__dynamic-caption .pswp-caption-content__description p {
@@ -363,7 +363,7 @@
 }
 
 .gallery-grid__caption .pswp-caption-content__caption,
-.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image figcaption .pswp-caption-content__caption {
+.album .wp-block-gallery.has-nested-images figure.wp-block-image figcaption .pswp-caption-content__caption {
     display: -webkit-box;
     overflow: hidden;
     max-width: min(100%, 24ch);
@@ -451,80 +451,109 @@
     }
 }
 
-/* Gutenberg gallery: uniform height thumbnails, flexible widths */
-.album .wp-block-gallery.has-nested-images.is-cropped {
-    --masonry-gap: 1rem;
-    --thumb-height: 200px;
+/* Album gallery: server-side justified flex layout.
+ *
+ * Each row is a flex container whose CSS aspect-ratio equals the sum of its
+ * items' aspect ratios (set inline via --row-ar). The row's height therefore
+ * scales with the container width while preserving the natural proportions of
+ * its images. Items use flex-grow proportional to their aspect ratio (--ar),
+ * so widths distribute exactly to fill the row. No JS layout is required and
+ * lazy image loading cannot cause layout shifts.
+ */
+.album-gallery-flex {
     width: 100%;
     max-width: 1400px;
     margin: 0 auto;
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--masonry-gap);
-    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.album-gallery-flex__row {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    aspect-ratio: var(--row-ar, auto);
+}
+
+.album-gallery-flex__row--natural {
+    aspect-ratio: auto;
+    height: 230px;
     justify-content: flex-start;
 }
 
-.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image,
-.album .wp-block-gallery.has-nested-images.is-cropped .blocks-gallery-item {
-    margin: 0;
+.album-gallery-flex__item {
+    position: relative;
     overflow: hidden;
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    -moz-column-break-inside: avoid;
-    width: auto !important;
+    border-radius: 12px;
+    background: #f5f5f5;
     display: block;
-    flex: 0 0 auto;
+    text-decoration: none;
+    color: inherit;
+    height: 100%;
+    min-width: 0;
+    flex: var(--ar, 1) 0 0;
 }
 
-.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image > a {
-    display: block;
-    line-height: 0;
+.album-gallery-flex__item--natural {
+    flex: 0 0 calc(var(--ar, 1) * 230px);
 }
 
-.album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image img,
-.album .wp-block-gallery.has-nested-images.is-cropped .blocks-gallery-item img {
-    height: var(--thumb-height);
-    width: auto;
-    max-width: 100%;
-    object-fit: contain !important;
+.album-gallery-flex__item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     display: block;
+    transition: transform 250ms ease;
 }
 
-@media (max-width: 640px) {
-    .album .wp-block-gallery.has-nested-images.is-cropped {
-        --thumb-height: 180px;
+.album-gallery-flex__item:hover img {
+    transform: scale(1.03);
+}
+
+.album-gallery-flex__caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding: 0.75rem 0.85rem 0.7rem;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.4) 48%, rgba(0, 0, 0, 0) 100%);
+    color: #fff;
+    text-align: left;
+    pointer-events: none;
+}
+
+.album-gallery-flex__caption .pswp-caption-content__caption {
+    display: -webkit-box;
+    overflow: hidden;
+    max-width: min(100%, 24ch);
+    margin: 0;
+    font-size: clamp(0.78rem, 0.72rem + 0.22vw, 0.92rem);
+    font-weight: 620;
+    line-height: 1.22;
+    letter-spacing: 0;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+@media (max-width: 639px) {
+    .album-gallery-flex__row,
+    .album-gallery-flex__row--natural {
         flex-direction: column;
-        align-items: stretch;
-    }
-
-    .album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image,
-    .album .wp-block-gallery.has-nested-images.is-cropped .blocks-gallery-item {
-        width: 100% !important;
-    }
-
-    .album .wp-block-gallery.has-nested-images.is-cropped figure.wp-block-image img,
-    .album .wp-block-gallery.has-nested-images.is-cropped .blocks-gallery-item img {
-        width: 100%;
+        aspect-ratio: auto;
         height: auto;
     }
-}
 
-@media (min-width: 640px) {
-    .album .wp-block-gallery.has-nested-images.is-cropped {
-        --thumb-height: 200px;
-    }
-}
-
-@media (min-width: 960px) {
-    .album .wp-block-gallery.has-nested-images.is-cropped {
-        --thumb-height: 220px;
-        --masonry-gap: 1.25rem;
-    }
-}
-
-@media (min-width: 1280px) {
-    .album .wp-block-gallery.has-nested-images.is-cropped {
-        --thumb-height: 230px;
+    .album-gallery-flex__item,
+    .album-gallery-flex__item--natural {
+        flex: 0 0 auto;
+        width: 100%;
+        aspect-ratio: var(--ar, 1);
+        height: auto;
     }
 }
