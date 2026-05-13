@@ -42,6 +42,8 @@ get_header();
                         endwhile;
                 endif;
                 ?>
+
+		<?php comments_template(); ?>
         </div>
 </section>
 
