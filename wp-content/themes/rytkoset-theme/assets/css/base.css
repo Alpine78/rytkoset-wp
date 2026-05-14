@@ -12,6 +12,7 @@
   /* Brändivärit (sukuseuran teema) */
   --color-primary: #0f4c81;
   --color-primary-dark: #0b315b;
+  --color-primary-deeper: #08254a;
   --color-primary-light: #3b76a8;
   --color-nav-border: rgba(255, 255, 255, 0.14);
   --color-nav-hover: rgba(255, 255, 255, 0.12);
@@ -25,7 +26,12 @@
   /* Rajaukset ja varjot */
   --color-border-light: rgba(255, 255, 255, 0.6);
   --color-border-neutral: rgba(0, 0, 0, 0.1);
+  --color-text-mute: #5b6577;
+  --footer-bg: #111827;
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-card-hover: 0 12px 28px rgba(8, 37, 74, 0.12);
+  --shadow-dropdown: 0 1px 0 rgba(15, 23, 42, 0.04),
+                     0 18px 40px rgba(8, 37, 74, 0.18);
 
   /* Fontit */
   --font-body: system-ui, -apple-system, BlinkMacSystemFont,
@@ -36,6 +42,8 @@
   --radius-small: 4px;
   --radius-medium: 8px;
   --radius-pill: 999px;
+  --radius-m: 10px;
+  --radius-l: 14px;
   --radius-nav: var(--radius-small);
   --radius-nav-pill: 12px;
 
@@ -45,6 +53,8 @@
   --transition-hover: 0.2s ease;
 
   /* Nav helperit */
+  --header-utility-bg: #1f4277;
+  --header-primary-bg: #3b82f6;
   --nav-bg: var(--color-primary-dark);
   --nav-border: var(--color-nav-border);
   --nav-hover-bg: var(--color-nav-hover);
@@ -64,6 +74,7 @@
 
   --color-primary: #3b82f6;
   --color-primary-dark: #1f4277;
+  --color-primary-deeper: #08254a;
   --color-primary-light: #4f8de8;
 
   --color-accent: #fbbf24;
@@ -72,8 +83,15 @@
 
   --color-border-light: rgba(255, 255, 255, 0.25);
   --color-border-neutral: rgba(255, 255, 255, 0.12);
+  --color-text-mute: #a7b0bf;
+  --footer-bg: #111827;
   --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.32);
+  --shadow-card-hover: 0 16px 34px rgba(0, 0, 0, 0.38);
+  --shadow-dropdown: 0 1px 0 rgba(255, 255, 255, 0.06),
+                     0 18px 40px rgba(0, 0, 0, 0.34);
 
+  --header-utility-bg: #0b315b;
+  --header-primary-bg: #0f4c81;
   --nav-bg: #0b1b36;
   --nav-border: rgba(255, 255, 255, 0.16);
   --nav-hover-bg: rgba(255, 255, 255, 0.1);
@@ -141,16 +159,18 @@ a:hover {
 
 /* Yleinen focus-tyyli linkeille ja nappeille */
 
-a:focus-visible,
-button:focus-visible,
-[role="button"]:focus-visible {
+:where(a, button, [role="button"], [tabindex]):focus-visible {
   outline: 3px solid var(--color-accent);
-  outline-offset: 2px;
+  outline-offset: 3px;
   color: inherit;
+  border-radius: 6px;
 }
 
-.btn:focus-visible {
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.6);
+.btn--primary:focus-visible,
+.account-nav__list > li + li:last-child > a:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--color-accent);
 }
 
 :root[data-theme="dark"] .skip-link {
