@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- Dokumentaatio tapahtumakokonaisuuden toteutuksesta, käyttöönotosta ja ylläpidon toimintamallista: `docs/events.md`
 - Dokumentaatio WooCommercen ensimmäisestä peruskonfiguraatiosta: `docs/woocommerce-setup.md`
 - Dokumentaatio WooCommercen jäsenmaksutuotteista: `docs/woocommerce-membership-products.md`
 - WooCommerceen vuosijäsenmaksutuotteet `Yksityishenkilö` ja `Perhe`
