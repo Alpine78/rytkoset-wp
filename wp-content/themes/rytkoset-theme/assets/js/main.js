@@ -416,14 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-
-      if (item.classList.contains('is-open')) {
-        closeItem(item);
-      } else {
-        openItem(item);
-      }
+    link.addEventListener('click', () => {
+      closeAll();
     });
   });
 
