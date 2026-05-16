@@ -12,6 +12,7 @@ require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 require_once get_template_directory() . '/inc/media-library.php';
 require_once get_template_directory() . '/inc/events.php';
+require_once get_template_directory() . '/inc/digital-magazines.php';
 
 if ( ! function_exists( 'rytkoset_theme_get_attachment_display_caption_text' ) ) {
 	/**
@@ -414,6 +415,15 @@ function rytkoset_theme_scripts() {
         $theme_version,
         true // footer
     );
+
+	if ( is_post_type_archive( 'digital_magazine' ) || is_singular( 'digital_magazine' ) ) {
+		wp_enqueue_style(
+			'rytkoset-theme-digital-magazine',
+			get_template_directory_uri() . '/assets/css/digital-magazine.css',
+			array( 'rytkoset-theme-style' ),
+			$theme_version
+		);
+	}
 
 	if ( function_exists( 'is_checkout' ) && is_checkout() ) {
 		wp_add_inline_script(
