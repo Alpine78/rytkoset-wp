@@ -426,3 +426,110 @@ if ( ! function_exists( 'rytkoset_theme_event_registration_column_content' ) ) {
 	}
 }
 add_action( 'manage_event_registration_posts_custom_column', 'rytkoset_theme_event_registration_column_content', 10, 2 );
+
+if ( ! function_exists( 'rytkoset_theme_event_can_show_free_registration_form' ) ) {
+	/**
+	 * Checks whether an event can show the free registration form.
+	 *
+	 * @param int $event_id Event post ID.
+	 * @return bool
+	 */
+	function rytkoset_theme_event_can_show_free_registration_form( $event_id ) {
+		$event_id = absint( $event_id );
+
+		if ( $event_id <= 0 || 'event' !== get_post_type( $event_id ) ) {
+			return false;
+		}
+
+		if ( ! function_exists( 'rytkoset_theme_get_event_fee_type' ) || 'free' !== rytkoset_theme_get_event_fee_type( $event_id ) ) {
+			return false;
+		}
+
+		if (
+			function_exists( 'rytkoset_theme_get_event_product_meta_key' )
+			&& absint( get_post_meta( $event_id, rytkoset_theme_get_event_product_meta_key(), true ) ) > 0
+		) {
+			return false;
+		}
+
+		if ( function_exists( 'rytkoset_theme_get_event_product_url' ) && '' !== rytkoset_theme_get_event_product_url( $event_id ) ) {
+			return false;
+		}
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) ) {
+	/**
+	 * Renders the free event registration form UI.
+	 *
+	 * The form handler is implemented in a later ticket.
+	 *
+	 * @param int $event_id Event post ID.
+	 */
+	function rytkoset_theme_render_free_event_registration_form( $event_id ) {
+		$event_id = absint( $event_id );
+
+		if ( ! rytkoset_theme_event_can_show_free_registration_form( $event_id ) ) {
+			return;
+		}
+
+		$form_id        = 'event-registration-form-' . $event_id;
+		$description_id = 'event-registration-description-' . $event_id;
+		?>
+		<section class="event-registration" aria-labelledby="<?php echo esc_attr( $form_id . '-title' ); ?>">
+			<h2 id="<?php echo esc_attr( $form_id . '-title' ); ?>" class="event-registration__title">
+				<?php esc_html_e( 'Ilmoittaudu tapahtumaan', 'rytkoset-theme' ); ?>
+			</h2>
+			<p id="<?php echo esc_attr( $description_id ); ?>" class="event-registration__description">
+				<?php esc_html_e( 'Tällä lomakkeella voit ilmoittautua maksuttomaan tapahtumaan.', 'rytkoset-theme' ); ?>
+			</p>
+
+			<form id="<?php echo esc_attr( $form_id ); ?>" class="event-registration__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" aria-describedby="<?php echo esc_attr( $description_id ); ?>">
+				<input type="hidden" name="action" value="rytkoset_submit_event_registration" />
+				<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>" />
+				<?php wp_nonce_field( 'rytkoset_submit_event_registration', 'rytkoset_event_registration_submit_nonce' ); ?>
+
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-name' ); ?>">
+						<?php esc_html_e( 'Osallistujan nimi', 'rytkoset-theme' ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
+					<input id="<?php echo esc_attr( $form_id . '-name' ); ?>" name="registration_name" type="text" autocomplete="name" required />
+				</div>
+
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-email' ); ?>">
+						<?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
+					<input id="<?php echo esc_attr( $form_id . '-email' ); ?>" name="registration_email" type="email" autocomplete="email" required />
+				</div>
+
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-diet' ); ?>">
+						<?php esc_html_e( 'Ruokarajoitteet tai allergiat', 'rytkoset-theme' ); ?>
+					</label>
+					<textarea id="<?php echo esc_attr( $form_id . '-diet' ); ?>" name="registration_diet" rows="3"></textarea>
+				</div>
+
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-notes' ); ?>">
+						<?php esc_html_e( 'Lisätieto', 'rytkoset-theme' ); ?>
+					</label>
+					<textarea id="<?php echo esc_attr( $form_id . '-notes' ); ?>" name="registration_notes" rows="4"></textarea>
+				</div>
+
+				<p class="event-registration__required-note">
+					<?php esc_html_e( '* Pakollinen kenttä', 'rytkoset-theme' ); ?>
+				</p>
+
+				<button type="submit" class="btn btn--primary event-registration__submit">
+					<?php esc_html_e( 'Lähetä ilmoittautuminen', 'rytkoset-theme' ); ?>
+				</button>
+			</form>
+		</section>
+		<?php
+	}
+}
