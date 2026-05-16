@@ -77,6 +77,9 @@ if ( ! function_exists( 'rytkoset_theme_register_event_registration_cpt' ) ) {
 			'hierarchical'        => false,
 			'menu_icon'           => 'dashicons-id',
 			'supports'            => false,
+			'capability_type'     => function_exists( 'rytkoset_theme_get_event_registration_capability_type' )
+				? rytkoset_theme_get_event_registration_capability_type()
+				: array( 'event_registration', 'event_registrations' ),
 			'map_meta_cap'        => true,
 		);
 

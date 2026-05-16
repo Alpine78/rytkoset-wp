@@ -11,6 +11,7 @@ require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 require_once get_template_directory() . '/inc/media-library.php';
+require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/event-registrations.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
