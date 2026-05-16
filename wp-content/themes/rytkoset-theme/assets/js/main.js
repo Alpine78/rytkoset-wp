@@ -337,8 +337,173 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 (function () {
+  const nav = document.querySelector('.site-nav');
+  if (!nav) return;
+
+  const submenuItems = Array.from(nav.querySelectorAll('.site-nav__list > .menu-item-has-children'));
+  if (!submenuItems.length) return;
+
+  let activeItem = null;
+  let suppressFocusOpen = false;
+  let closeTimer = null;
+
+  const clearCloseTimer = () => {
+    if (!closeTimer) return;
+    window.clearTimeout(closeTimer);
+    closeTimer = null;
+  };
+
+  const closeItem = (item) => {
+    const link = item.querySelector(':scope > a');
+    if (!link) return;
+
+    item.classList.remove('is-open');
+    link.setAttribute('aria-expanded', 'false');
+
+    if (activeItem === item) {
+      activeItem = null;
+    }
+  };
+
+  const closeAll = (except = null) => {
+    clearCloseTimer();
+    submenuItems.forEach((item) => {
+      if (item !== except) {
+        closeItem(item);
+      }
+    });
+  };
+
+  const openItem = (item) => {
+    const link = item.querySelector(':scope > a');
+    if (!link) return;
+
+    clearCloseTimer();
+    closeAll(item);
+    item.classList.add('is-open');
+    link.setAttribute('aria-expanded', 'true');
+    activeItem = item;
+  };
+
+  const scheduleClose = (item) => {
+    clearCloseTimer();
+    closeTimer = window.setTimeout(() => {
+      closeItem(item);
+      closeTimer = null;
+    }, 180);
+  };
+
+  submenuItems.forEach((item) => {
+    const link = item.querySelector(':scope > a');
+    const submenu = item.querySelector(':scope > .sub-menu');
+
+    if (!link || !submenu) return;
+
+    link.setAttribute('aria-haspopup', 'true');
+    link.setAttribute('aria-expanded', 'false');
+
+    item.addEventListener('mouseenter', () => openItem(item));
+    item.addEventListener('mouseleave', () => scheduleClose(item));
+
+    link.addEventListener('focus', () => {
+      if (suppressFocusOpen) return;
+      openItem(item);
+    });
+
+    item.addEventListener('focusout', (event) => {
+      if (!item.contains(event.relatedTarget)) {
+        closeItem(item);
+      }
+    });
+
+    link.addEventListener('click', () => {
+      closeAll();
+    });
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!nav.contains(event.target)) {
+      closeAll();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !activeItem) return;
+
+    const link = activeItem.querySelector(':scope > a');
+    suppressFocusOpen = true;
+    closeItem(activeItem);
+    link?.focus();
+    window.setTimeout(() => {
+      suppressFocusOpen = false;
+    }, 0);
+  });
+})();
+
+(function () {
+  const search = document.querySelector('.site-header__search');
+  if (!search) return;
+
+  const toggle = search.querySelector('.site-search-toggle');
+  const form = search.querySelector('.site-header__search-form');
+  const input = search.querySelector('.site-header__search-input');
+
+  if (!toggle || !form || !input) return;
+
+  const openLabel = toggle.getAttribute('data-label-open') || 'Avaa haku';
+  const closeLabel = toggle.getAttribute('data-label-close') || 'Sulje haku';
+
+  const openSearch = () => {
+    search.classList.add('is-open');
+    form.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', closeLabel);
+    window.requestAnimationFrame(() => input.focus());
+  };
+
+  const closeSearch = (returnFocus = false) => {
+    search.classList.remove('is-open');
+    form.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', openLabel);
+
+    if (returnFocus) {
+      toggle.focus();
+    }
+  };
+
+  toggle.addEventListener('click', () => {
+    if (search.classList.contains('is-open')) {
+      closeSearch();
+    } else {
+      openSearch();
+    }
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!search.contains(event.target)) {
+      closeSearch();
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && search.classList.contains('is-open')) {
+      closeSearch(true);
+    }
+  });
+})();
+
+(function () {
   const accountItems = document.querySelectorAll('.account-menu__user');
   if (!accountItems.length) return;
+
+  let closeTimer = null;
+
+  const clearCloseTimer = () => {
+    if (!closeTimer) return;
+    window.clearTimeout(closeTimer);
+    closeTimer = null;
+  };
 
   const closeItem = (item) => {
     const trigger = item.querySelector('.account-menu__user-trigger');
@@ -348,6 +513,23 @@ document.addEventListener('DOMContentLoaded', () => {
     trigger.setAttribute('aria-expanded', 'false');
   };
 
+  const openItem = (item) => {
+    const trigger = item.querySelector('.account-menu__user-trigger');
+    const submenu = item.querySelector(':scope > .sub-menu');
+    if (!trigger || !submenu) return;
+    clearCloseTimer();
+    item.classList.add('submenu-open');
+    trigger.setAttribute('aria-expanded', 'true');
+  };
+
+  const scheduleClose = (item) => {
+    clearCloseTimer();
+    closeTimer = window.setTimeout(() => {
+      closeItem(item);
+      closeTimer = null;
+    }, 180);
+  };
+
   accountItems.forEach((item) => {
     const trigger = item.querySelector('.account-menu__user-trigger');
     const submenu = item.querySelector(':scope > .sub-menu');
@@ -355,8 +537,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeItem(item);
 
+    item.addEventListener('mouseenter', () => openItem(item));
+    item.addEventListener('mouseleave', () => scheduleClose(item));
+
     trigger.addEventListener('click', (event) => {
       event.preventDefault();
+      clearCloseTimer();
       const isOpen = item.classList.toggle('submenu-open');
       trigger.setAttribute('aria-expanded', String(isOpen));
     });
@@ -385,10 +571,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const icon = btn.querySelector('.theme-toggle__icon');
       const label = btn.querySelector('.theme-toggle__label');
       if (icon) {
-        icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        icon.textContent = theme === 'dark' ? '🌙' : '☀️';
       }
       if (label) {
-        label.textContent = theme === 'dark' ? 'Teema: tumma' : 'Teema: vaalea';
+        label.textContent = theme === 'dark' ? 'Tumma' : 'Vaalea';
       }
     });
   };

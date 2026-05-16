@@ -1,64 +1,207 @@
 # Tapahtumat
 
-Sivuston tapahtumat ylläpidetään WordPressin `Tapahtumat`-sisältötyypillä.
+Tämä dokumentti kokoaa tapahtumakokonaisuuden nykyisen toteutuksen, käyttöönoton ja ylläpidon toimintamallin.
 
-## Tapahtumapäivä
+## Nykyinen rajaus
 
-Tapahtuman muokkausnäkymässä on kenttä `Tapahtumapäivä`.
+Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 
-- Päivämäärä tallennetaan post metaan avaimella `_rytkoset_event_date`.
-- Tallennusmuoto on `YYYY-MM-DD`, esimerkiksi `2026-08-29`.
-- Kenttä kannattaa täyttää sekä tuleville että menneille tapahtumille.
-- Jos päivämäärä puuttuu, tapahtuma jää näkyviin, mutta se näytetään arkiston päivämäärättömien tapahtumien osiossa.
+- tapahtumat ovat WordPressin oma `event`-sisältötyyppi
+- tapahtuman perustiedot tallennetaan post metaan
+- tapahtuman julkinen sisältö kirjoitetaan WordPress-editorissa
+- maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
+- Tampere 2026 -osallistujien hallinta tehdään WooCommerce-tilausten ja erillisen osallistujalista-adminin kautta
 
-## Tapahtuman tiedot
+Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta, ja WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
 
-Tapahtuman muokkausnäkymän oikeassa sivupalkissa on lisäksi metabox `Tapahtuman tiedot`.
+## Tekninen perusrakenne
 
-Kentät ovat:
+Tapahtumat rekisteröidään teemassa tiedostossa `wp-content/themes/rytkoset-theme/inc/events.php`.
 
-- `Alkamisaika`: tallennetaan post metaan `_rytkoset_event_start_time`, kiinteässä 24 tunnin muodossa `HH:MM`.
-- `Päättymisaika`: tallennetaan post metaan `_rytkoset_event_end_time`, kiinteässä 24 tunnin muodossa `HH:MM`. Kenttä on valinnainen.
-- `Paikka`: tallennetaan post metaan `_rytkoset_event_location`, esimerkiksi `Hotelli Rosendahl, Pyynikintie 13, Tampere`.
-- `Maksullisuus`: tallennetaan post metaan `_rytkoset_event_fee_type`. Arvot ovat `free`, `paid` tai tyhjä.
-- `Hintateksti`: tallennetaan post metaan `_rytkoset_event_price_text`, esimerkiksi `49 € / henkilö`.
+### Sisältötyyppi
 
-Kellonajat syötetään tekstikenttiin kiinteässä 24 tunnin muodossa, esimerkiksi `11:30` ja `18:00`. Virheellistä aikaa ei tallenneta. Tyhjä kenttä poistaa vastaavan metatiedon.
+- Post type: `event`
+- Julkinen arkisto: `/tapahtumat/`
+- URL-rakenne: `/tapahtumat/{tapahtuman-polku}/`
+- REST-tuki on käytössä, jotta tapahtumia voi muokata lohkoeditorilla.
+- Tuetut WordPress-ominaisuudet:
+  - otsikko
+  - sisältö
+  - ote
+  - artikkelikuva
+  - custom fields
 
-## Näkyminen sivustolla
+Tapahtumien yksittäinen näkymä tulee tiedostosta `single-event.php` ja arkisto tiedostosta `archive-event.php`.
 
-Yksittäisellä tapahtumasivulla näytetään täytetyt perustiedot tapahtuman otsikon jälkeen:
+### Metakentät
+
+Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
+
+| Kenttä ylläpidossa | Meta-avain | Muoto / arvot | Käyttö |
+| --- | --- | --- | --- |
+| Tapahtumapäivä | `_rytkoset_event_date` | `YYYY-MM-DD`, esim. `2026-08-29` | Arkiston järjestys ja julkinen päivämäärä |
+| Alkamisaika | `_rytkoset_event_start_time` | `HH:MM`, esim. `11:30` | Julkinen tapahtumatieto |
+| Päättymisaika | `_rytkoset_event_end_time` | `HH:MM`, esim. `18:00` | Julkinen tapahtumatieto, valinnainen |
+| Paikka | `_rytkoset_event_location` | vapaa teksti | Julkinen tapahtumatieto |
+| Maksullisuus | `_rytkoset_event_fee_type` | `free`, `paid` tai tyhjä | Julkinen hintatieto |
+| Hintateksti | `_rytkoset_event_price_text` | vapaa teksti, esim. `49 € / henkilö` | Julkinen hintatieto |
+| Maksutuote | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID | Linkki ilmoittautumis-/maksutuotteeseen |
+
+Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
+
+### Julkinen näkyminen
+
+Yksittäisellä tapahtumasivulla näytetään:
+
+- tapahtuman artikkelikuva ja otsikko
+- editoriin kirjoitettu sisältö
+- sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
+- jakopainikkeet
+
+Yhteenvetokortissa näytetään täytetyt perustiedot:
 
 - päivämäärä
 - kellonaika tai aikaväli
 - paikka
-- maksullisuus ja hintateksti
+- hinta
+- `Ilmoittaudu ja maksa` -painike, jos tapahtumaan on linkitetty maksutuote
 
-Tapahtuma-arkistossa `/tapahtumat/` näytetään vähintään päivämäärä, jos se on asetettu. Jos tapahtumalle on asetettu paikka, se näytetään arkistolistauksessa päivämäärän rinnalla.
-
-## Tapahtuma-arkiston järjestys
-
-Tapahtuma-arkisto `/tapahtumat/` jakaa tapahtumat kolmeen osioon:
+Tapahtuma-arkistossa `/tapahtumat/` tapahtumat jaetaan kolmeen osioon:
 
 1. Tulevat tapahtumat
 2. Menneet tapahtumat
 3. Päivämäärättömät tapahtumat
 
-Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Menneet tapahtumat näytetään uusimmasta vanhimpaan.
+Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Menneet tapahtumat näytetään uusimmasta vanhimpaan. Päivämäärätön tapahtuma jää näkyviin, mutta se siirtyy päivämäärättömien tapahtumien osioon.
 
-## Maksulliset tapahtumat
+## Uuden tapahtuman luominen ylläpidossa
 
-Tapahtuman maksullisuus ja hintateksti ovat informatiivisia kenttiä. Varsinainen maksaminen hoidetaan edelleen WooCommerce-tuotteella, joka voidaan linkittää tapahtumaan erillisellä `Maksutuote`-kentällä.
+1. Avaa WordPress-adminissa `Tapahtumat`.
+2. Valitse `Lisää uusi`.
+3. Kirjoita tapahtuman otsikko.
+4. Kirjoita varsinainen tapahtumakuvaus editoriin.
+5. Lisää tarvittaessa ote ja artikkelikuva.
+6. Täytä sivupalkin `Tapahtumapäivä`-kenttä.
+7. Täytä sivupalkin `Tapahtuman tiedot` -laatikosta tarvittavat kentät:
+   - alkamisaika
+   - päättymisaika
+   - paikka
+   - maksullisuus
+   - hintateksti
+8. Jos tapahtumaan liittyy ilmoittautuminen tai maksu, valitse sivupalkin `Maksutuote`-laatikosta oikea WooCommerce-tuote.
+9. Julkaise tai päivitä tapahtuma.
+10. Tarkista julkinen tapahtumasivu ja tapahtuma-arkisto.
 
-Tämä tarkoittaa:
+### Suositeltu minimitieto
 
-- tapahtuman hintateksti ei muuta WooCommerce-tuotteen hintaa
-- maksullisuus ei luo tuotetta automaattisesti
-- ilmoittautuminen ja maksaminen kulkevat WooCommerce-tuotesivun ja kassan kautta
+Jokaiselle tapahtumalle kannattaa täyttää vähintään:
+
+- otsikko
+- kuvaus
+- tapahtumapäivä
+- paikka, jos tiedossa
+
+Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
+
+- maksullisuus: `Maksullinen`
+- hintateksti, esimerkiksi `49 € / henkilö`
+- maksutuote, jos ilmoittautuminen tehdään WooCommercen kautta
+
+## Ilmoittautumisten hallinta
+
+### Yleinen malli
+
+Tällä hetkellä tapahtuman oma `event`-sisältötyyppi ei tallenna ilmoittautumisia itse.
+
+Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
+
+1. ylläpitäjä luo WooCommerce-tuotteen
+2. ylläpitäjä linkittää tuotteen tapahtumaan `Maksutuote`-kentällä
+3. tapahtumasivulle tulee `Ilmoittaudu ja maksa` -painike
+4. käyttäjä siirtyy WooCommerce-tuotesivulle ja ostaa tuotteen
+5. ilmoittautumistiedot tallentuvat WooCommerce-tilaukselle
+
+Tapahtuman ja WooCommerce-tuotteen välinen linkitys on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-event-product-link.md`.
+
+### Tampere 2026
+
+Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle erillisinä MVP-osina:
+
+- osallistumismaksutuote: `docs/woocommerce-tampere-2026-product.md`
+- checkoutin osallistujakentät: `docs/woocommerce-tampere-2026-checkout-fields.md`
+- määräpäivä ja kapasiteetti: `docs/woocommerce-tampere-2026-management.md`
+- osallistujalista adminissa: `docs/woocommerce-tampere-2026-participants-admin.md`
+- osallistujien CSV-vienti: `docs/woocommerce-tampere-2026-participants-csv-export.md`
+- järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
+
+Ylläpidon kannalta tärkein näkymä on:
+
+- `WooCommerce > Tampere 2026 osallistujat`
+
+Siellä osallistujat näkyvät riveinä. Näkymä käyttää WooCommerce-tilauksille tallennettuja osallistujatietoja eikä luo erillistä tapahtumarekisteritaulua.
+
+### Mitä ylläpitäjä tekee ilmoittautumisille
+
+1. Avaa `WooCommerce > Tampere 2026 osallistujat`.
+2. Tarkista osallistujat, yhteyshenkilöt ja tilauksen tila.
+3. Avaa tarvittaessa tilaus linkistä, jos maksun tai asiakkaan tietoja pitää tarkistaa.
+4. Suodata osallistujia tilauksen statuksen mukaan, jos haluat erottaa aktiiviset ja perutut ilmoittautumiset.
+5. Vie osallistujat CSV-tiedostoon, jos osallistujalista tarvitaan taulukkolaskentaan.
+
+Jos tilaus perutaan tai hyvitetään, tarkista WooCommerce-tuotteen varastosaldo. Kapasiteetti perustuu WooCommercen varastoon, ei tapahtuman omaan laskuriin.
+
+## Käyttöönoton muistilista
+
+Kun uusi maksullinen tapahtuma otetaan käyttöön:
+
+1. Luo tai tarkista tapahtuman WordPress-sivu kohdassa `Tapahtumat`.
+2. Luo WooCommerce-tuote, jos ilmoittautuminen tai maksu tarvitaan.
+3. Aseta tuotteelle hinta, varasto ja muut myyntiasetukset.
+4. Linkitä tuote tapahtuman `Maksutuote`-kentässä.
+5. Testaa julkiselta tapahtumasivulta, että painike vie oikealle tuotteelle.
+6. Testaa ostoskori ja kassa.
+7. Tarkista, että ilmoittautumistiedot näkyvät WooCommerce-tilauksella ja mahdollisessa tapahtumakohtaisessa osallistujanäkymässä.
+
+## Mitä on tehty
+
+Tässä vaiheessa on toteutettu:
+
+- `event`-sisältötyyppi
+- tapahtuman yksittäinen sivupohja
+- tapahtuma-arkisto, jossa on tulevat, menneet ja päivämäärättömät tapahtumat
+- tapahtumapäivän metakenttä
+- tapahtuman perustietojen metakentät
+- tapahtuman maksutuotelinkitys yhteen WooCommerce-tuotteeseen
+- julkinen `Ilmoittaudu ja maksa` -painike linkitetylle tuotteelle
+- tapahtumalistan admin-sarake tapahtumapäivälle
+- tapahtumapäivän mukaan järjestettävä admin-sarake
+- Tampere 2026 -ilmoittautumisen WooCommerce-pohjainen MVP
+- Tampere 2026 -osallistujalista adminissa
+- Tampere 2026 -osallistujien CSV-vienti
+- Tampere 2026 -järjestäjäilmoitukset
+
+## Jätetään myöhempään vaiheeseen
+
+Tässä vaiheessa ei toteuteta:
+
+- tapahtuman omaa ilmoittautumista ilman WooCommercea
+- yleistä osallistujaraporttia kaikille tapahtumille
+- erillistä osallistujien tietokantataulua
+- osallistujien massatoimintoja tapahtumanäkymästä
+- usean maksutuotteen linkitystä samaan tapahtumaan
+- automaattista ostoskoriin lisäämistä tapahtumasivulta
+- suoraa kassalle ohjausta tapahtumasivulta
+- tapahtumakohtaista kapasiteettilogiikkaa WordPress-tapahtumalle
+- tapahtumakohtaisia lippuja tai QR-koodeja
+- toistuvia tapahtumia
+- erillistä päättymispäivää
+- karttalinkkiä tai karttaupotusta
+- numeerista hintamallia tapahtuman metakenttiin
+- automaattista WooCommerce-tuotteen luontia tai muuttamista tapahtumasta
 
 ## Ensimmäiset tapahtumat
 
-Aseta nykyisille tapahtumille vähintään nämä päivämäärät:
+Nykyisille tapahtumille kannattaa asettaa vähintään nämä päivämäärät:
 
 - Rytkösten sukuseuran Etelä-Suomen tapaaminen: `2025-10-07`
 - Rytkösten sukukokous Tampereella: `2026-08-29`
@@ -70,15 +213,3 @@ Tampereen sukukokoukselle voidaan lisäksi asettaa:
 - Paikka: `Hotelli Rosendahl, Pyynikintie 13, Tampere`
 - Maksullisuus: `Maksullinen`
 - Hintateksti: `49 € / henkilö`
-
-## Rajaukset
-
-Tässä vaiheessa tapahtumalla on yksi päivämäärä, yksi aikaväli, yksi vapaa paikkateksti ja informatiivinen maksullisuustieto.
-
-Toteutus ei sisällä:
-
-- erillistä päättymispäivää
-- karttalinkkiä tai karttaupotusta
-- toistuvia tapahtumia
-- numeerista hintamallia
-- automaattista WooCommerce-tuotteen luontia tai muuttamista

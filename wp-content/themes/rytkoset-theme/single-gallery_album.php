@@ -173,6 +173,12 @@ if ( have_posts() ) :
 				</div>
 			</section>
 		</article>
+
+		<section class="section">
+			<div class="container section__wide">
+				<?php comments_template(); ?>
+			</div>
+		</section>
 		<?php
 	endwhile;
 endif;
