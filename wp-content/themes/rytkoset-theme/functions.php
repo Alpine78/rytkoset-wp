@@ -12,6 +12,7 @@ require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 require_once get_template_directory() . '/inc/media-library.php';
 require_once get_template_directory() . '/inc/events.php';
+require_once get_template_directory() . '/inc/event-registrations.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
 
 if ( ! function_exists( 'rytkoset_theme_get_attachment_display_caption_text' ) ) {
