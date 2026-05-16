@@ -29,13 +29,17 @@ if ( ! function_exists( 'rytkoset_theme_register_event_cpt' ) ) {
 		);
 
 		$args = array(
-			'labels'        => $labels,
-			'public'        => true,
-			'has_archive'   => true,
-			'menu_icon'     => 'dashicons-calendar-alt',
-			'show_in_rest'  => true,
-			'supports'      => array( 'title', 'editor', 'excerpt', 'thumbnail', 'custom-fields' ),
-			'rewrite'       => array(
+			'labels'          => $labels,
+			'public'          => true,
+			'has_archive'     => true,
+			'menu_icon'       => 'dashicons-calendar-alt',
+			'show_in_rest'    => true,
+			'supports'        => array( 'title', 'editor', 'excerpt', 'thumbnail', 'custom-fields' ),
+			'capability_type' => function_exists( 'rytkoset_theme_get_event_capability_type' )
+				? rytkoset_theme_get_event_capability_type()
+				: array( 'event', 'events' ),
+			'map_meta_cap'    => true,
+			'rewrite'         => array(
 				'slug'       => 'tapahtumat',
 				'with_front' => false,
 			),

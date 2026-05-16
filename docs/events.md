@@ -154,6 +154,26 @@ Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkit
 
 Tapahtuman ja WooCommerce-tuotteen välinen linkitys on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-event-product-link.md`.
 
+### Event Organizer -rooli
+
+Tapahtumien käytännön hallintaa varten sivustolla on rajattu `Event Organizer` -rooli.
+
+Rooli saa:
+
+- luoda, muokata, julkaista ja poistaa tapahtumia
+- hallita kaikkia ilmaisten tapahtumien ilmoittautumisia kohdassa `Tapahtumat > Ilmoittautumiset`
+- muuttaa ilmoittautumisen tilaa, esimerkiksi `pending`, `confirmed` tai `cancelled`
+- lisätä tapahtuman artikkelikuvan mediakirjastosta
+- linkittää tapahtumaan olemassa olevan WooCommerce-maksutuotteen
+
+Rooli ei saa:
+
+- hallita WooCommerce-tuotteita, tilauksia, maksutapoja tai asetuksia
+- avata WooCommerce-hallintanäkymiä
+- muuttaa sivuston yleisiä asetuksia, teeman asetuksia tai käyttäjärooleja
+
+Tämä rooli on tarkoitettu tapahtumien järjestäjille, joille ei haluta antaa täysiä ylläpitäjän oikeuksia. Maksutuotteet luo ja ylläpitää edelleen varsinainen ylläpitäjä.
+
 ### Tampere 2026
 
 Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle erillisinä MVP-osina:
@@ -213,6 +233,7 @@ Tässä vaiheessa on toteutettu:
 - Tampere 2026 -osallistujalista adminissa
 - Tampere 2026 -osallistujien CSV-vienti
 - Tampere 2026 -järjestäjäilmoitukset
+- rajattu `Event Organizer` -rooli tapahtumien ja ilmoittautumisten hallintaan
 
 ## Jätetään myöhempään vaiheeseen
 
