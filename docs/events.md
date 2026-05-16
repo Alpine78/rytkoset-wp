@@ -9,10 +9,11 @@ Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 - tapahtumat ovat WordPressin oma `event`-sisältötyyppi
 - tapahtuman perustiedot tallennetaan post metaan
 - tapahtuman julkinen sisältö kirjoitetaan WordPress-editorissa
+- ilmaisten tapahtumien ilmoittautumisille on oma ei-julkinen `event_registration`-sisältötyyppi
 - maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
 - Tampere 2026 -osallistujien hallinta tehdään WooCommerce-tilausten ja erillisen osallistujalista-adminin kautta
 
-Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta, ja WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
+Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta. Ilmaisten tapahtumien oma ilmoittautumisrakenne on valmiina admin-käyttöä ja myöhempää lomaketallennusta varten, ja WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
 
 ## Tekninen perusrakenne
 
@@ -33,6 +34,17 @@ Tapahtumat rekisteröidään teemassa tiedostossa `wp-content/themes/rytkoset-th
 
 Tapahtumien yksittäinen näkymä tulee tiedostosta `single-event.php` ja arkisto tiedostosta `archive-event.php`.
 
+### Ilmoittautumisten sisältötyyppi
+
+Ilmaisten tapahtumien ilmoittautumisia varten teemassa on ei-julkinen sisältötyyppi:
+
+- Post type: `event_registration`
+- Admin-nimi: `Ilmoittautumiset`
+- Näkyy WordPress-adminissa `Tapahtumat`-valikon alla
+- Ei julkista arkistoa, yksittäissivua, hakunäkyvyyttä tai REST-näkymää
+
+Yksi `event_registration` vastaa yhtä osallistujaa. Tämä pitää osallistujalistat ja myöhemmän CSV-viennin suoraviivaisina.
+
 ### Metakentät
 
 Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
@@ -48,6 +60,21 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Maksutuote | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID | Linkki ilmoittautumis-/maksutuotteeseen |
 
 Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
+
+### Ilmoittautumisten metakentät
+
+Ilmoittautumisen tiedot tallennetaan WordPressin post metaan:
+
+| Kenttä ylläpidossa | Meta-avain | Muoto / arvot | Käyttö |
+| --- | --- | --- | --- |
+| Tapahtuma | `_rytkoset_registration_event_id` | `event`-postauksen ID | Viittaus tapahtumaan |
+| Osallistujan nimi | `_rytkoset_registration_name` | vapaa teksti | Osallistujalista ja admin-otsikko |
+| Sähköposti | `_rytkoset_registration_email` | sähköpostiosoite | Yhteydenpito ja myöhempi vahvistus |
+| Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet` | vapaa teksti | Käytännön järjestelyt |
+| Lisätieto | `_rytkoset_registration_notes` | vapaa teksti | Ylläpidon lisätiedot |
+| Tila | `_rytkoset_registration_status` | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila |
+
+Ilmoittautumisen otsikko muodostetaan automaattisesti muodossa `Osallistujan nimi - Tapahtuman nimi`, jotta admin-lista pysyy luettavana.
 
 ### Julkinen näkyminen
 
@@ -111,7 +138,9 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 
 ### Yleinen malli
 
-Tällä hetkellä tapahtuman oma `event`-sisältötyyppi ei tallenna ilmoittautumisia itse.
+Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
+
+Tässä vaiheessa julkista ilmoittautumislomaketta ei vielä ole. Lomake, sen validointi ja varsinainen frontend-tallennus toteutetaan erillisissä tiketeissä #66 ja #67.
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 
@@ -167,6 +196,7 @@ Kun uusi maksullinen tapahtuma otetaan käyttöön:
 Tässä vaiheessa on toteutettu:
 
 - `event`-sisältötyyppi
+- `event_registration`-sisältötyyppi ilmaisten tapahtumien osallistujille
 - tapahtuman yksittäinen sivupohja
 - tapahtuma-arkisto, jossa on tulevat, menneet ja päivämäärättömät tapahtumat
 - tapahtumapäivän metakenttä
@@ -184,7 +214,8 @@ Tässä vaiheessa on toteutettu:
 
 Tässä vaiheessa ei toteuteta:
 
-- tapahtuman omaa ilmoittautumista ilman WooCommercea
+- julkista ilmoittautumislomaketta ilman WooCommercea
+- ilmoittautumislomakkeen validointi- ja tallennuspolkua
 - yleistä osallistujaraporttia kaikille tapahtumille
 - erillistä osallistujien tietokantataulua
 - osallistujien massatoimintoja tapahtumanäkymästä
