@@ -386,6 +386,26 @@
   gap: 1rem;
 }
 
+.event-registration__notice {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-s);
+  background: var(--color-surface);
+  font-weight: 700;
+}
+
+.event-registration__notice--success {
+  border-color: #15803d;
+  background: #dcfce7;
+  color: #14532d;
+}
+
+.event-registration__notice--error {
+  border-color: #b91c1c;
+  background: #fee2e2;
+  color: #7f1d1d;
+}
+
 .event-registration__field {
   display: grid;
   gap: 0.4rem;
