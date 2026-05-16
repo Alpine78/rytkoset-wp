@@ -21,13 +21,13 @@ if ( post_password_required() ) {
 			if ( '1' === $comment_count ) {
 				printf(
 					/* translators: %s: post title */
-					esc_html__( '1 kommentti artikkeliin "%s"', 'rytkoset-theme' ),
+					esc_html__( '1 kommentti aiheeseen "%s"', 'rytkoset-theme' ),
 					'<span>' . get_the_title() . '</span>'
 				);
 			} else {
 				printf(
 					/* translators: 1: number of comments, 2: post title */
-					esc_html( _n( '%1$s kommentti artikkeliin "%2$s"', '%1$s kommenttia artikkeliin "%2$s"', $comment_count, 'rytkoset-theme' ) ),
+					esc_html( _n( '%1$s kommentti aiheeseen "%2$s"', '%1$s kommenttia aiheeseen "%2$s"', $comment_count, 'rytkoset-theme' ) ),
 					number_format_i18n( $comment_count ),
 					'<span>' . get_the_title() . '</span>'
 				);
