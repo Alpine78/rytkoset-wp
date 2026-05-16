@@ -10,11 +10,11 @@ Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 - tapahtuman perustiedot tallennetaan post metaan
 - tapahtuman julkinen sisältö kirjoitetaan WordPress-editorissa
 - ilmaisten tapahtumien ilmoittautumisille on oma ei-julkinen `event_registration`-sisältötyyppi
-- maksuttomien tapahtumien sivulla voidaan näyttää ilmoittautumislomake
+- maksuttomien tapahtumien sivulla voidaan näyttää ilmoittautumislomake, jonka tiedot tallentuvat ilmoittautumisiksi
 - maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
 - Tampere 2026 -osallistujien hallinta tehdään WooCommerce-tilausten ja erillisen osallistujalista-adminin kautta
 
-Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta. Ilmaisten tapahtumien oma ilmoittautumisrakenne ja lomakkeen käyttöliittymä ovat valmiina, mutta varsinainen lomakkeen validointi ja tallennus toteutetaan erillisessä vaiheessa. WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
+Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta. Ilmaisten tapahtumien oma ilmoittautumisrakenne, lomakkeen käyttöliittymä sekä perustason validointi ja tallennus ovat valmiina. WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
 
 ## Tekninen perusrakenne
 
@@ -140,9 +140,9 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 
 ### Yleinen malli
 
-Ilmaisten tapahtumien ilmoittautumiset tallennetaan jatkossa `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
+Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
 
-Tässä vaiheessa julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, mutta lomakkeen validointi ja varsinainen frontend-tallennus toteutetaan tiketissä #67.
+Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta. Lomake tarkistaa noncen, tapahtuman, nimen ja sähköpostiosoitteen ennen tallennusta. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa.
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 
@@ -200,6 +200,7 @@ Tässä vaiheessa on toteutettu:
 - `event`-sisältötyyppi
 - `event_registration`-sisältötyyppi ilmaisten tapahtumien osallistujille
 - maksuttoman tapahtuman julkinen ilmoittautumislomake
+- maksuttoman tapahtuman ilmoittautumisen validointi ja frontend-tallennus
 - tapahtuman yksittäinen sivupohja
 - tapahtuma-arkisto, jossa on tulevat, menneet ja päivämäärättömät tapahtumat
 - tapahtumapäivän metakenttä
@@ -217,7 +218,6 @@ Tässä vaiheessa on toteutettu:
 
 Tässä vaiheessa ei toteuteta:
 
-- ilmoittautumislomakkeen validointi- ja tallennuspolkua
 - yleistä osallistujaraporttia kaikille tapahtumille
 - erillistä osallistujien tietokantataulua
 - osallistujien massatoimintoja tapahtumanäkymästä
