@@ -12,7 +12,8 @@ Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 - ilmaisten tapahtumien ilmoittautumisille on oma ei-julkinen `event_registration`-sisältötyyppi
 - maksuttomien tapahtumien sivulla voidaan näyttää ilmoittautumislomake, jonka tiedot tallentuvat ilmoittautumisiksi
 - maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
-- Tampere 2026 -osallistujien hallinta tehdään WooCommerce-tilausten ja erillisen osallistujalista-adminin kautta
+- osallistujat näkee tapahtumakohtaisesti `Tapahtumat > Osallistujat` -näkymästä, joka yhdistää ilmaiset ja maksulliset ilmoittautumiset
+- Tampere 2026 -osallistujien hallintaan on lisäksi oma WooCommerce-pikalinkkinäkymä
 
 Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta. Ilmaisten tapahtumien oma ilmoittautumisrakenne, lomakkeen käyttöliittymä sekä perustason validointi ja tallennus ovat valmiina. WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
 
@@ -191,13 +192,30 @@ Ylläpidon kannalta tärkein näkymä on:
 
 Siellä osallistujat näkyvät riveinä. Näkymä käyttää WooCommerce-tilauksille tallennettuja osallistujatietoja eikä luo erillistä tapahtumarekisteritaulua.
 
+### Yleinen osallistujanäkymä
+
+Kaikkien tapahtumien osallistujat näkee yhdistettynä näkymässä:
+
+- `Tapahtumat > Osallistujat`
+
+Näkymässä voi valita yksittäisen tapahtuman tai katsella kaikkien tapahtumien osallistujia kerralla. Näkymä yhdistää ilmaisten tapahtumien lomakeilmoittautumiset ja maksullisten tapahtumien WooCommerce-tilaukset. Suodatus tilauksen statuksen mukaan on tuettu.
+
+Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`.
+
+### Tampere 2026 -osallistujanäkymä
+
+Tampere 2026 -tapahtumalle on lisäksi erillinen pikalinkkisivu:
+
+- `WooCommerce > Tampere 2026 osallistujat`
+
+Tämä sivu näyttää vain Tampere 2026 -tilausten osallistujat ja toimii edelleen sellaisenaan. Uusi yleinen näkymä palvelee tulevia tapahtumia.
+
 ### Mitä ylläpitäjä tekee ilmoittautumisille
 
-1. Avaa `WooCommerce > Tampere 2026 osallistujat`.
-2. Tarkista osallistujat, yhteyshenkilöt ja tilauksen tila.
-3. Avaa tarvittaessa tilaus linkistä, jos maksun tai asiakkaan tietoja pitää tarkistaa.
-4. Suodata osallistujia tilauksen statuksen mukaan, jos haluat erottaa aktiiviset ja perutut ilmoittautumiset.
-5. Vie osallistujat CSV-tiedostoon, jos osallistujalista tarvitaan taulukkolaskentaan.
+1. Avaa `Tapahtumat > Osallistujat`.
+2. Valitse tapahtuma dropdownista tai katso kaikki tapahtumat kerralla.
+3. Suodata tarvittaessa statuksen mukaan.
+4. Avaa osallistuja muokkauslinkistä, jos tietoja pitää tarkistaa tai statusta pitää muuttaa.
 
 Jos tilaus perutaan tai hyvitetään, tarkista WooCommerce-tuotteen varastosaldo. Kapasiteetti perustuu WooCommercen varastoon, ei tapahtuman omaan laskuriin.
 
@@ -234,12 +252,12 @@ Tässä vaiheessa on toteutettu:
 - Tampere 2026 -osallistujien CSV-vienti
 - Tampere 2026 -järjestäjäilmoitukset
 - rajattu `Event Organizer` -rooli tapahtumien ja ilmoittautumisten hallintaan
+- yhdistetty `Tapahtumat > Osallistujat` -näkymä ilmaisten ja maksullisten tapahtumien osallistujille
 
 ## Jätetään myöhempään vaiheeseen
 
 Tässä vaiheessa ei toteuteta:
 
-- yleistä osallistujaraporttia kaikille tapahtumille
 - erillistä osallistujien tietokantataulua
 - osallistujien massatoimintoja tapahtumanäkymästä
 - usean maksutuotteen linkitystä samaan tapahtumaan
