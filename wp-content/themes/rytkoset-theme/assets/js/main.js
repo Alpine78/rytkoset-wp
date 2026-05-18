@@ -70,6 +70,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const openCurrentAncestorSubmenus = () => {
+    const ancestorSelectors = [
+      '.current-menu-ancestor',
+      '.current-menu-parent',
+      '.current-menu-item.menu-item-has-children',
+    ];
+    const ancestors = mobileMenu.querySelectorAll(ancestorSelectors.join(','));
+
+    ancestors.forEach((item) => {
+      if (item.closest('.mm-section--account')) return;
+
+      const toggle = item.querySelector(':scope > .mobile-submenu-toggle');
+      const submenu = item.querySelector(':scope > .sub-menu');
+
+      if (!toggle || !submenu) return;
+
+      toggle.setAttribute('aria-expanded', 'true');
+      submenu.hidden = false;
+      item.classList.add('submenu-open');
+    });
+  };
+
   const closeMenu = () => {
     toggleButton.setAttribute('aria-expanded', 'false');
     mobileMenu.classList.remove('mobile-menu--open');
@@ -96,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mobileMenu.setAttribute('aria-expanded', 'true');
     overlay?.classList.add('is-active');
     overlay?.removeAttribute('hidden');
+
+    openCurrentAncestorSubmenus();
 
     mobileMenu.focus();
 

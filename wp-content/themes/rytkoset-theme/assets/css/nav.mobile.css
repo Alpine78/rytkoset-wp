@@ -86,7 +86,7 @@
   width: 100vw;
   max-width: 100vw;
   margin: 0;
-  background: linear-gradient(180deg, #1f4277 0%, #0b315b 100%);
+  background: linear-gradient(180deg, #0f4c81 0%, #0b315b 100%);
   color: #fff;
   transform: translateX(100%);
   opacity: 0;
@@ -210,8 +210,8 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 52px;
-  padding: 0.8125rem 1rem;
+  min-height: 56px;
+  padding: 0.875rem 1rem;
   background: transparent;
   border: none;
   color: #fff;
@@ -221,7 +221,7 @@
   letter-spacing: -0.005em;
   text-align: left;
   text-decoration: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: background-color 150ms ease;
   position: relative;
@@ -250,9 +250,9 @@
 .mm-list > .current-menu-ancestor > a::before {
   content: "";
   position: absolute;
-  left: 4px;
-  top: 12px;
-  bottom: 12px;
+  left: 6px;
+  top: 14px;
+  bottom: 14px;
   width: 3px;
   border-radius: 2px;
   background: var(--color-accent);
@@ -264,11 +264,11 @@
   grid-template-columns: 1fr auto;
   align-items: center;
   column-gap: 0;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .mm-list > .menu-item-has-children > a {
-  border-radius: 10px 0 0 10px;
+  border-radius: 12px 0 0 12px;
 }
 
 /* ---- Submenu toggle button (injected by JS) ---- */
@@ -278,9 +278,9 @@
   color: rgba(255, 255, 255, 0.65);
   cursor: pointer;
   width: 2.75rem;
-  height: 52px;
+  height: 56px;
   min-height: 44px;
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 12px 12px 0;
   display: grid;
   place-items: center;
   transition: background-color 150ms ease, color 150ms ease;
@@ -325,6 +325,12 @@
   position: relative;
 }
 
+/* display: flex above kumoaa [hidden]-attribuutin oletuksen,
+   joten palautetaan piilotus eksplisiittisesti */
+.mm-list .sub-menu[hidden] {
+  display: none;
+}
+
 .mm-list .sub-menu::before {
   content: "";
   position: absolute;
@@ -332,7 +338,7 @@
   top: 4px;
   bottom: 6px;
   width: 2px;
-  background: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.4);
   border-radius: 2px;
 }
 
@@ -341,10 +347,10 @@
   align-items: center;
   min-height: 44px;
   padding: 0.625rem 0.875rem;
-  border-radius: 8px;
+  border-radius: 10px;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9375rem;
+  font-size: 0.96875rem;
   font-weight: 600;
   line-height: 1.3;
   transition: background-color 150ms ease;
@@ -372,10 +378,10 @@
 
 .mm-section__title {
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   font-size: 0.6875rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.52);
+  color: rgba(255, 255, 255, 0.55);
   margin: 0 0 0.75rem 0.25rem;
 }
 
