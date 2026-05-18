@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submenuItems = mobileMenu.querySelectorAll('.menu-item-has-children');
 
     submenuItems.forEach((item, index) => {
-      if (item.closest('.mobile-menu__account')) {
+      if (item.closest('.mm-section--account')) {
         return;
       }
 
@@ -167,7 +167,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="screen-reader-text">
           ${toggleButton.getAttribute('data-submenu-label') || 'Avaa alavalikko'}
         </span>
-        <span aria-hidden="true" class="mobile-submenu-toggle__icon">&#9662;</span>
+        <span aria-hidden="true" class="mobile-submenu-toggle__icon">
+          <svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 4.5 6 8l3.5-3.5" />
+          </svg>
+        </span>
       `;
 
       const link = item.querySelector(':scope > a');
