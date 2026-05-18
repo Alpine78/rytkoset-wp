@@ -66,5 +66,3 @@ wp-content/ai1wm-backups/
 
 # Claude Code local settings
 .claude/settings.local.json
-
-design_handoff_header_redesign
