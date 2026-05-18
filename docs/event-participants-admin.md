@@ -1,6 +1,6 @@
 # Tapahtumakohtainen osallistujalista adminissa
 
-Tämä dokumentti kuvaa tiketin `#72` toteutuksen.
+Tämä dokumentti kuvaa tikettien `#72` (näkymä) ja `#73` (CSV-vienti) toteutukset.
 
 ## Tavoite
 
@@ -50,6 +50,28 @@ Jokaiselta osallistujalta näkyy:
 
 Jos tapahtumalla ei ole yhtään osallistujaa valituilla suodattimilla, taulukko näyttää "Ei osallistujia tällä suodatuksella".
 
+### CSV-vienti
+
+Suodattimien vieressä on **Vie CSV** -painike, joka lataa osallistujat CSV-tiedostona. Vienti kunnioittaa nykyisiä suodattimia: jos tapahtuma- tai statussuodatin on käytössä, vientiin tulee vain niitä vastaavat rivit. Tiedoston nimi sisältää tapahtuman slugin (tai `kaikki-tapahtumat`) ja mahdollisen statussuodatimen.
+
+Tiedosto on UTF-8-koodattu BOM-merkillä, joten Excel ja LibreOffice tunnistavat ääkköset suoraan. Erottimena on puolipiste (`;`), joka soveltuu suomalaiseen Excel-asetukseen.
+
+Sarakkeet:
+
+| Sarake | Sisältö |
+| --- | --- |
+| Tapahtuma | Tapahtuman otsikko |
+| Nimi | Osallistujan nimi |
+| Sähköposti | Osallistujan sähköposti |
+| Puhelin | Puhelinnumero |
+| Ruokavalio / huomiot | Ruokarajoitteet ja lisätiedot yhdistettynä |
+| Lähde | `Maksuton` tai `Maksullinen` |
+| Status | Luettava tilaselite |
+| Ilmoittautunut | Ilmoittautumispäivä |
+| Yhteyshenkilö | Tilaajan nimi (maksullisissa) |
+| Yhteyshenkilön sähköposti | Tilaajan sähköposti (maksullisissa) |
+| Tilausnumero | WooCommerce-tilausnumero (maksullisissa) |
+
 ## Lähteet ja normalisointi
 
 Näkymä yhdistää kaksi eri lähdettä yhtenäiseen rivi­rakenteeseen:
@@ -86,11 +108,11 @@ event_id      – tapahtuman post ID
 event_title   – tapahtuman otsikko
 ```
 
-Tämä rakenne on suunniteltu CSV-vientiä (`#12`) varten.
+Tämä rakenne on käytössä myös CSV-viennissä.
 
 ## Oikeudet
 
-Sivu on näkyvissä käyttäjillä, joilla on `edit_others_event_registrations`-oikeus. Tämä kuuluu sekä `administrator`- että `event_organizer`-roolille.
+Sivu ja CSV-vienti ovat näkyvissä käyttäjillä, joilla on `edit_others_event_registrations`-oikeus. Tämä kuuluu sekä `administrator`- että `event_organizer`-roolille. Vienti tarkistaa oikeuden uudelleen `admin_post`-käsittelijässä ja vahvistaa nonce-merkin ennen tiedoston luontia.
 
 ## Tekninen toteutus
 
@@ -104,9 +126,10 @@ Pääfunktiot:
 - `rytkoset_theme_get_all_events_participants($status_filter)` — kerää osallistujat kaikista tapahtumista
 - `rytkoset_theme_register_event_participants_admin_page()` — rekisteröi adminisivun
 - `rytkoset_theme_render_event_participants_admin_page()` — renderöi sivun
+- `rytkoset_theme_render_event_participants_export_form()` — renderöi CSV-vientipainikkeen
+- `rytkoset_theme_export_event_participants_csv()` — `admin_post`-handleri, joka tuottaa CSV-tiedoston
 
 ## Rajaus tässä vaiheessa
 
-- Ei CSV-vientiä (tulossa tiketissä `#12`)
 - Ei massatoimintoja osallistujille
 - Ei ilmoittautumisten tilamuutosta suoraan listanäkymästä (tehdään `event_registration`-postilomakkeella)

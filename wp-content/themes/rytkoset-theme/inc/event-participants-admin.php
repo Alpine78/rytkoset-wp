@@ -365,6 +365,160 @@ if ( ! function_exists( 'rytkoset_theme_get_event_participants_admin_status_opti
 	}
 }
 
+if ( ! function_exists( 'rytkoset_theme_render_event_participants_export_form' ) ) {
+	/**
+	 * Renders the CSV export form for the unified event participants admin page.
+	 *
+	 * @param int    $selected_event  Selected event ID (0 for all events).
+	 * @param string $selected_status Selected status filter.
+	 * @return void
+	 */
+	function rytkoset_theme_render_event_participants_export_form( $selected_event, $selected_status ) {
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="alignleft actions">
+			<input type="hidden" name="action" value="rytkoset_export_event_participants_csv" />
+			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) absint( $selected_event ) ); ?>" />
+			<input type="hidden" name="status" value="<?php echo esc_attr( $selected_status ); ?>" />
+			<?php wp_nonce_field( 'rytkoset_export_event_participants_csv', 'rytkoset_event_participants_csv_nonce' ); ?>
+			<?php submit_button( __( 'Vie CSV', 'rytkoset-theme' ), 'secondary', '', false ); ?>
+		</form>
+		<?php
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_event_participants_csv_filename' ) ) {
+	/**
+	 * Builds a filename for the participants CSV export.
+	 *
+	 * @param int    $event_id        Event ID or 0 for all events.
+	 * @param string $selected_status Status filter value.
+	 * @return string
+	 */
+	function rytkoset_theme_get_event_participants_csv_filename( $event_id, $selected_status ) {
+		$event_id = absint( $event_id );
+		$slug     = 'kaikki-tapahtumat';
+
+		if ( $event_id > 0 ) {
+			$post = get_post( $event_id );
+
+			if ( $post instanceof WP_Post && '' !== $post->post_name ) {
+				$slug = $post->post_name;
+			} elseif ( $post instanceof WP_Post ) {
+				$slug = sanitize_title( $post->post_title );
+			}
+		}
+
+		$parts = array( 'osallistujat', $slug );
+
+		if ( '' !== $selected_status ) {
+			$parts[] = $selected_status;
+		}
+
+		return sanitize_file_name( implode( '-', $parts ) . '.csv' );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_export_event_participants_csv' ) ) {
+	/**
+	 * Sends the unified event participant list as a CSV download.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_export_event_participants_csv() {
+		if ( ! current_user_can( 'edit_others_event_registrations' ) ) {
+			wp_die( esc_html__( 'Sinulla ei ole oikeutta viedä osallistujalistaa.', 'rytkoset-theme' ) );
+		}
+
+		check_admin_referer( 'rytkoset_export_event_participants_csv', 'rytkoset_event_participants_csv_nonce' );
+
+		$event_id        = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
+		$selected_status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
+
+		$status_options = rytkoset_theme_get_event_participants_admin_status_options();
+
+		if ( ! isset( $status_options[ $selected_status ] ) ) {
+			$selected_status = '';
+		}
+
+		if ( $event_id > 0 && 'event' !== get_post_type( $event_id ) ) {
+			$event_id = 0;
+		}
+
+		$rows = $event_id > 0
+			? rytkoset_theme_get_event_participants( $event_id, $selected_status )
+			: rytkoset_theme_get_all_events_participants( $selected_status );
+
+		$filename = rytkoset_theme_get_event_participants_csv_filename( $event_id, $selected_status );
+
+		nocache_headers();
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+
+		$output = fopen( 'php://output', 'w' );
+
+		if ( false === $output ) {
+			wp_die( esc_html__( 'CSV-viennin alustaminen epäonnistui.', 'rytkoset-theme' ) );
+		}
+
+		// UTF-8 BOM jotta Excel tunnistaa koodauksen oikein.
+		echo "\xEF\xBB\xBF";
+
+		fputcsv(
+			$output,
+			array(
+				__( 'Tapahtuma', 'rytkoset-theme' ),
+				__( 'Nimi', 'rytkoset-theme' ),
+				__( 'Sähköposti', 'rytkoset-theme' ),
+				__( 'Puhelin', 'rytkoset-theme' ),
+				__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
+				__( 'Lähde', 'rytkoset-theme' ),
+				__( 'Status', 'rytkoset-theme' ),
+				__( 'Ilmoittautunut', 'rytkoset-theme' ),
+				__( 'Yhteyshenkilö', 'rytkoset-theme' ),
+				__( 'Yhteyshenkilön sähköposti', 'rytkoset-theme' ),
+				__( 'Tilausnumero', 'rytkoset-theme' ),
+			),
+			';'
+		);
+
+		foreach ( $rows as $row ) {
+			$details = trim( (string) ( $row['diet'] ?? '' ) );
+			$notes   = trim( (string) ( $row['notes'] ?? '' ) );
+
+			if ( '' !== $notes ) {
+				$details = '' !== $details ? $details . "\n" . $notes : $notes;
+			}
+
+			$source_label = isset( $row['source'] ) && 'paid' === $row['source']
+				? __( 'Maksullinen', 'rytkoset-theme' )
+				: __( 'Maksuton', 'rytkoset-theme' );
+
+			fputcsv(
+				$output,
+				array(
+					(string) ( $row['event_title'] ?? '' ),
+					(string) ( $row['name'] ?? '' ),
+					(string) ( $row['email'] ?? '' ),
+					(string) ( $row['phone'] ?? '' ),
+					$details,
+					$source_label,
+					(string) ( $row['status_label'] ?? '' ),
+					(string) ( $row['created'] ?? '' ),
+					(string) ( $row['contact_name'] ?? '' ),
+					(string) ( $row['contact_email'] ?? '' ),
+					isset( $row['order_number'] ) && null !== $row['order_number'] ? (string) $row['order_number'] : '',
+				),
+				';'
+			);
+		}
+
+		fclose( $output );
+		exit;
+	}
+}
+add_action( 'admin_post_rytkoset_export_event_participants_csv', 'rytkoset_theme_export_event_participants_csv' );
+
 if ( ! function_exists( 'rytkoset_theme_render_event_participants_admin_page' ) ) {
 	/**
 	 * Renders the unified event participants admin page.
@@ -410,12 +564,12 @@ if ( ! function_exists( 'rytkoset_theme_render_event_participants_admin_page' ) 
 			<h1><?php esc_html_e( 'Tapahtumien osallistujat', 'rytkoset-theme' ); ?></h1>
 			<p><?php esc_html_e( 'Valitse tapahtuma nähdäksesi sekä maksuttomat että maksulliset ilmoittautumiset yhtenäisenä listana.', 'rytkoset-theme' ); ?></p>
 
-			<form method="get">
-				<input type="hidden" name="post_type" value="event" />
-				<input type="hidden" name="page" value="rytkoset-event-participants" />
+			<div class="tablenav top">
+				<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+					<form method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
+						<input type="hidden" name="post_type" value="event" />
+						<input type="hidden" name="page" value="rytkoset-event-participants" />
 
-				<div class="tablenav top">
-					<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
 						<label for="rytkoset-event-participants-event">
 							<?php esc_html_e( 'Tapahtuma:', 'rytkoset-theme' ); ?>
 						</label>
@@ -450,24 +604,26 @@ if ( ! function_exists( 'rytkoset_theme_render_event_participants_admin_page' ) 
 						</select>
 
 						<?php submit_button( __( 'Suodata', 'rytkoset-theme' ), 'secondary', '', false ); ?>
+					</form>
 
-						<p class="description">
-							<?php
-							echo esc_html(
-								sprintf(
-									/* translators: 1: total, 2: free count, 3: paid count */
-									__( 'Yhteensä %1$d osallistujaa (maksuttomat %2$d, maksulliset %3$d).', 'rytkoset-theme' ),
-									$total_count,
-									$free_count,
-									$paid_count
-								)
-							);
-							?>
-						</p>
-					</div>
-					<br class="clear" />
+					<?php rytkoset_theme_render_event_participants_export_form( $selected_event, $selected_status ); ?>
+
+					<p class="description">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: 1: total, 2: free count, 3: paid count */
+								__( 'Yhteensä %1$d osallistujaa (maksuttomat %2$d, maksulliset %3$d).', 'rytkoset-theme' ),
+								$total_count,
+								$free_count,
+								$paid_count
+							)
+						);
+						?>
+					</p>
 				</div>
-			</form>
+				<br class="clear" />
+			</div>
 
 			<?php $show_event_column = 0 === $selected_event; ?>
 			<table class="widefat striped">
