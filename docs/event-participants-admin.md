@@ -129,7 +129,11 @@ Pääfunktiot:
 - `rytkoset_theme_render_event_participants_export_form()` — renderöi CSV-vientipainikkeen
 - `rytkoset_theme_export_event_participants_csv()` — `admin_post`-handleri, joka tuottaa CSV-tiedoston
 
+## Liittyvät toiminnot
+
+- **Massaviestintä:** sähköpostin lähettäminen osallistujille on toteutettu erillisellä sivulla `Tapahtumat > Viestintä`. Katso [event-participants-messaging.md](event-participants-messaging.md).
+
 ## Rajaus tässä vaiheessa
 
-- Ei massatoimintoja osallistujille
+- Ei muita massatoimintoja osallistujille tällä sivulla (viestintä on omalla sivullaan)
 - Ei ilmoittautumisten tilamuutosta suoraan listanäkymästä (tehdään `event_registration`-postilomakkeella)

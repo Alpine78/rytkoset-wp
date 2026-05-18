@@ -15,6 +15,7 @@ require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/event-registrations.php';
 require_once get_template_directory() . '/inc/event-participants-admin.php';
+require_once get_template_directory() . '/inc/event-participants-messaging.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
 
 if ( ! function_exists( 'rytkoset_theme_get_attachment_display_caption_text' ) ) {
