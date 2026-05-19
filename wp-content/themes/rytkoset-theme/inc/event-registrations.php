@@ -63,7 +63,7 @@ function rytkoset_theme_register_event_registration_cpt() {
 		'publicly_queryable'  => false,
 		'exclude_from_search' => true,
 		'show_ui'             => true,
-		'show_in_menu'        => 'edit.php?post_type=event',
+		'show_in_menu'        => 'edit.php?post_type=rytkoset_event',
 		'show_in_admin_bar'   => false,
 		'show_in_nav_menus'   => false,
 		'show_in_rest'        => false,
@@ -109,7 +109,7 @@ function rytkoset_theme_get_event_registration_meta( $registration_id, $key ) {
 function rytkoset_theme_is_valid_registration_event_id( $event_id ) {
 	$event_id = absint( $event_id );
 
-	return $event_id > 0 && 'event' === get_post_type( $event_id ) && 'trash' !== get_post_status( $event_id );
+	return $event_id > 0 && 'rytkoset_event' === get_post_type( $event_id ) && 'trash' !== get_post_status( $event_id );
 }
 
 /**
@@ -120,7 +120,7 @@ function rytkoset_theme_is_valid_registration_event_id( $event_id ) {
 function rytkoset_theme_get_event_registration_event_options() {
 	return get_posts(
 		array(
-			'post_type'              => 'event',
+			'post_type'              => 'rytkoset_event',
 			'post_status'            => array( 'publish', 'future', 'draft', 'pending', 'private' ),
 			'posts_per_page'         => -1,
 			'orderby'                => 'title',
@@ -451,7 +451,7 @@ function rytkoset_theme_get_event_registration_redirect_url( $event_id, $status,
 function rytkoset_theme_event_can_show_free_registration_form( $event_id ) {
 	$event_id = absint( $event_id );
 
-	if ( $event_id <= 0 || 'event' !== get_post_type( $event_id ) ) {
+	if ( $event_id <= 0 || 'rytkoset_event' !== get_post_type( $event_id ) ) {
 		return false;
 	}
 
@@ -497,7 +497,7 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_nonce' );
 	}
 
-	if ( $event_id <= 0 || 'event' !== get_post_type( $event_id ) || 'publish' !== get_post_status( $event_id ) ) {
+	if ( $event_id <= 0 || 'rytkoset_event' !== get_post_type( $event_id ) || 'publish' !== get_post_status( $event_id ) ) {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_event' );
 	}
 

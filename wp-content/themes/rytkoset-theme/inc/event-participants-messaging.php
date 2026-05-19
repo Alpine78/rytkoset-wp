@@ -140,7 +140,7 @@ function rytkoset_theme_get_event_messaging_log( $limit = 20 ) {
  */
 function rytkoset_theme_register_event_messaging_admin_page() {
 	add_submenu_page(
-		'edit.php?post_type=event',
+		'edit.php?post_type=rytkoset_event',
 		__( 'Viestintä', 'rytkoset-theme' ),
 		__( 'Viestintä', 'rytkoset-theme' ),
 		'edit_others_event_registrations',
@@ -169,7 +169,7 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 
 	$events = rytkoset_theme_get_event_participants_admin_events();
 
-	if ( $selected_event > 0 && 'event' !== get_post_type( $selected_event ) ) {
+	if ( $selected_event > 0 && 'rytkoset_event' !== get_post_type( $selected_event ) ) {
 		$selected_event = 0;
 	}
 
@@ -217,7 +217,7 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 		<div class="tablenav top">
 			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
 				<form method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
-					<input type="hidden" name="post_type" value="event" />
+					<input type="hidden" name="post_type" value="rytkoset_event" />
 					<input type="hidden" name="page" value="rytkoset-event-messaging" />
 
 					<label for="rytkoset-event-messaging-event">
@@ -419,13 +419,13 @@ function rytkoset_theme_send_event_participants_message() {
 		$selected_status = '';
 	}
 
-	if ( $event_id > 0 && 'event' !== get_post_type( $event_id ) ) {
+	if ( $event_id > 0 && 'rytkoset_event' !== get_post_type( $event_id ) ) {
 		$event_id = 0;
 	}
 
 	$redirect_base = add_query_arg(
 		array(
-			'post_type' => 'event',
+			'post_type' => 'rytkoset_event',
 			'page'      => 'rytkoset-event-messaging',
 			'event_id'  => $event_id,
 			'status'    => $selected_status,
