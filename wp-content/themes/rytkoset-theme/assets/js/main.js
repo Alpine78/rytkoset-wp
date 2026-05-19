@@ -70,6 +70,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
+  const openCurrentAncestorSubmenus = () => {
+    const ancestorSelectors = [
+      '.current-menu-ancestor',
+      '.current-menu-parent',
+      '.current-menu-item.menu-item-has-children',
+    ];
+    const ancestors = mobileMenu.querySelectorAll(ancestorSelectors.join(','));
+
+    ancestors.forEach((item) => {
+      if (item.closest('.mm-section--account')) return;
+
+      const toggle = item.querySelector(':scope > .mobile-submenu-toggle');
+      const submenu = item.querySelector(':scope > .sub-menu');
+
+      if (!toggle || !submenu) return;
+
+      toggle.setAttribute('aria-expanded', 'true');
+      submenu.hidden = false;
+      item.classList.add('submenu-open');
+    });
+  };
+
   const closeMenu = () => {
     toggleButton.setAttribute('aria-expanded', 'false');
     mobileMenu.classList.remove('mobile-menu--open');
@@ -96,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
     mobileMenu.setAttribute('aria-expanded', 'true');
     overlay?.classList.add('is-active');
     overlay?.removeAttribute('hidden');
+
+    openCurrentAncestorSubmenus();
 
     mobileMenu.focus();
 
@@ -148,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const submenuItems = mobileMenu.querySelectorAll('.menu-item-has-children');
 
     submenuItems.forEach((item, index) => {
-      if (item.closest('.mobile-menu__account')) {
+      if (item.closest('.mm-section--account')) {
         return;
       }
 
@@ -167,7 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <span class="screen-reader-text">
           ${toggleButton.getAttribute('data-submenu-label') || 'Avaa alavalikko'}
         </span>
-        <span aria-hidden="true" class="mobile-submenu-toggle__icon">&#9662;</span>
+        <span aria-hidden="true" class="mobile-submenu-toggle__icon">
+          <svg viewBox="0 0 12 12" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.5 4.5 6 8l3.5-3.5" />
+          </svg>
+        </span>
       `;
 
       const link = item.querySelector(':scope > a');
