@@ -9,10 +9,13 @@ Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 - tapahtumat ovat WordPressin oma `event`-sisältötyyppi
 - tapahtuman perustiedot tallennetaan post metaan
 - tapahtuman julkinen sisältö kirjoitetaan WordPress-editorissa
+- ilmaisten tapahtumien ilmoittautumisille on oma ei-julkinen `event_registration`-sisältötyyppi
+- maksuttomien tapahtumien sivulla voidaan näyttää ilmoittautumislomake, jonka tiedot tallentuvat ilmoittautumisiksi
 - maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
-- Tampere 2026 -osallistujien hallinta tehdään WooCommerce-tilausten ja erillisen osallistujalista-adminin kautta
+- osallistujat näkee tapahtumakohtaisesti `Tapahtumat > Osallistujat` -näkymästä, joka yhdistää ilmaiset ja maksulliset ilmoittautumiset
+- Tampere 2026 -osallistujien hallintaan on lisäksi oma WooCommerce-pikalinkkinäkymä
 
-Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta, ja WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
+Tapahtuma ei siis vielä ole erillinen täysi ilmoittautumisjärjestelmä. WordPress-tapahtuma kertoo tapahtumasta. Ilmaisten tapahtumien oma ilmoittautumisrakenne, lomakkeen käyttöliittymä sekä perustason validointi ja tallennus ovat valmiina. WooCommerce hoitaa ostamisen sekä ilmoittautumistiedot silloin, kun tapahtumaan on linkitetty maksutuote.
 
 ## Tekninen perusrakenne
 
@@ -33,6 +36,17 @@ Tapahtumat rekisteröidään teemassa tiedostossa `wp-content/themes/rytkoset-th
 
 Tapahtumien yksittäinen näkymä tulee tiedostosta `single-event.php` ja arkisto tiedostosta `archive-event.php`.
 
+### Ilmoittautumisten sisältötyyppi
+
+Ilmaisten tapahtumien ilmoittautumisia varten teemassa on ei-julkinen sisältötyyppi:
+
+- Post type: `event_registration`
+- Admin-nimi: `Ilmoittautumiset`
+- Näkyy WordPress-adminissa `Tapahtumat`-valikon alla
+- Ei julkista arkistoa, yksittäissivua, hakunäkyvyyttä tai REST-näkymää
+
+Yksi `event_registration` vastaa yhtä osallistujaa. Tämä pitää osallistujalistat ja myöhemmän CSV-viennin suoraviivaisina.
+
 ### Metakentät
 
 Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
@@ -49,12 +63,29 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 
 Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
 
+### Ilmoittautumisten metakentät
+
+Ilmoittautumisen tiedot tallennetaan WordPressin post metaan:
+
+| Kenttä ylläpidossa | Meta-avain | Muoto / arvot | Käyttö |
+| --- | --- | --- | --- |
+| Tapahtuma | `_rytkoset_registration_event_id` | `event`-postauksen ID | Viittaus tapahtumaan |
+| Osallistujan nimi | `_rytkoset_registration_name` | vapaa teksti | Osallistujalista ja admin-otsikko |
+| Sähköposti | `_rytkoset_registration_email` | sähköpostiosoite | Yhteydenpito ja myöhempi vahvistus |
+| Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet` | vapaa teksti | Käytännön järjestelyt |
+| Lisätieto | `_rytkoset_registration_notes` | vapaa teksti | Ylläpidon lisätiedot |
+| Tila | `_rytkoset_registration_status` | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila |
+| GDPR-hyväksyntä | `_rytkoset_registration_gdpr_consent` | Unix-aikaleima | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
+
+Ilmoittautumisen otsikko muodostetaan automaattisesti muodossa `Osallistujan nimi - Tapahtuman nimi`, jotta admin-lista pysyy luettavana.
+
 ### Julkinen näkyminen
 
 Yksittäisellä tapahtumasivulla näytetään:
 
 - tapahtuman artikkelikuva ja otsikko
 - editoriin kirjoitettu sisältö
+- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi eikä siihen ole linkitetty maksutuotetta — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38); onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32)
 - sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
 - jakopainikkeet
 
@@ -111,7 +142,9 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 
 ### Yleinen malli
 
-Tällä hetkellä tapahtuman oma `event`-sisältötyyppi ei tallenna ilmoittautumisia itse.
+Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
+
+Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta. Lomake tarkistaa noncen, tapahtuman, nimen ja sähköpostiosoitteen ennen tallennusta. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa.
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 
@@ -123,6 +156,26 @@ Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkit
 
 Tapahtuman ja WooCommerce-tuotteen välinen linkitys on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-event-product-link.md`.
 
+### Event Organizer -rooli
+
+Tapahtumien käytännön hallintaa varten sivustolla on rajattu `Event Organizer` -rooli.
+
+Rooli saa:
+
+- luoda, muokata, julkaista ja poistaa tapahtumia
+- hallita kaikkia ilmaisten tapahtumien ilmoittautumisia kohdassa `Tapahtumat > Ilmoittautumiset`
+- muuttaa ilmoittautumisen tilaa, esimerkiksi `pending`, `confirmed` tai `cancelled`
+- lisätä tapahtuman artikkelikuvan mediakirjastosta
+- linkittää tapahtumaan olemassa olevan WooCommerce-maksutuotteen
+
+Rooli ei saa:
+
+- hallita WooCommerce-tuotteita, tilauksia, maksutapoja tai asetuksia
+- avata WooCommerce-hallintanäkymiä
+- muuttaa sivuston yleisiä asetuksia, teeman asetuksia tai käyttäjärooleja
+
+Tämä rooli on tarkoitettu tapahtumien järjestäjille, joille ei haluta antaa täysiä ylläpitäjän oikeuksia. Maksutuotteet luo ja ylläpitää edelleen varsinainen ylläpitäjä.
+
 ### Tampere 2026
 
 Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle erillisinä MVP-osina:
@@ -130,23 +183,26 @@ Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle er
 - osallistumismaksutuote: `docs/woocommerce-tampere-2026-product.md`
 - checkoutin osallistujakentät: `docs/woocommerce-tampere-2026-checkout-fields.md`
 - määräpäivä ja kapasiteetti: `docs/woocommerce-tampere-2026-management.md`
-- osallistujalista adminissa: `docs/woocommerce-tampere-2026-participants-admin.md`
-- osallistujien CSV-vienti: `docs/woocommerce-tampere-2026-participants-csv-export.md`
 - järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
 
-Ylläpidon kannalta tärkein näkymä on:
+Tampere 2026 -osallistujat näkyvät yhteisessä osallistujalistassa (katso alla). Vanha `WooCommerce > Tampere 2026 osallistujat` -pikalinkkisivu poistettiin tiketissä `#194`, kun sama tieto on saatavilla rajatuilla oikeuksilla yhteisestä näkymästä.
 
-- `WooCommerce > Tampere 2026 osallistujat`
+### Yleinen osallistujanäkymä
 
-Siellä osallistujat näkyvät riveinä. Näkymä käyttää WooCommerce-tilauksille tallennettuja osallistujatietoja eikä luo erillistä tapahtumarekisteritaulua.
+Kaikkien tapahtumien osallistujat näkee yhdistettynä näkymässä:
+
+- `Tapahtumat > Osallistujat`
+
+Näkymässä voi valita yksittäisen tapahtuman tai katsella kaikkien tapahtumien osallistujia kerralla. Näkymä yhdistää ilmaisten tapahtumien lomakeilmoittautumiset ja maksullisten tapahtumien WooCommerce-tilaukset (mukaan lukien Tampere 2026 -tilausten osallistujat). Suodatus statuksen mukaan on tuettu, ja näkymästä on CSV-vienti samoilla suodattimilla.
+
+Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`. Saman valikon alta löytyy myös `Tapahtumat > Viestintä`, jolla voi lähettää sähköpostiviestin valitun tapahtuman osallistujille (`docs/event-participants-messaging.md`).
 
 ### Mitä ylläpitäjä tekee ilmoittautumisille
 
-1. Avaa `WooCommerce > Tampere 2026 osallistujat`.
-2. Tarkista osallistujat, yhteyshenkilöt ja tilauksen tila.
-3. Avaa tarvittaessa tilaus linkistä, jos maksun tai asiakkaan tietoja pitää tarkistaa.
-4. Suodata osallistujia tilauksen statuksen mukaan, jos haluat erottaa aktiiviset ja perutut ilmoittautumiset.
-5. Vie osallistujat CSV-tiedostoon, jos osallistujalista tarvitaan taulukkolaskentaan.
+1. Avaa `Tapahtumat > Osallistujat`.
+2. Valitse tapahtuma dropdownista tai katso kaikki tapahtumat kerralla.
+3. Suodata tarvittaessa statuksen mukaan.
+4. Avaa osallistuja muokkauslinkistä, jos tietoja pitää tarkistaa tai statusta pitää muuttaa.
 
 Jos tilaus perutaan tai hyvitetään, tarkista WooCommerce-tuotteen varastosaldo. Kapasiteetti perustuu WooCommercen varastoon, ei tapahtuman omaan laskuriin.
 
@@ -167,6 +223,9 @@ Kun uusi maksullinen tapahtuma otetaan käyttöön:
 Tässä vaiheessa on toteutettu:
 
 - `event`-sisältötyyppi
+- `event_registration`-sisältötyyppi ilmaisten tapahtumien osallistujille
+- maksuttoman tapahtuman julkinen ilmoittautumislomake
+- maksuttoman tapahtuman ilmoittautumisen validointi ja frontend-tallennus
 - tapahtuman yksittäinen sivupohja
 - tapahtuma-arkisto, jossa on tulevat, menneet ja päivämäärättömät tapahtumat
 - tapahtumapäivän metakenttä
@@ -179,13 +238,13 @@ Tässä vaiheessa on toteutettu:
 - Tampere 2026 -osallistujalista adminissa
 - Tampere 2026 -osallistujien CSV-vienti
 - Tampere 2026 -järjestäjäilmoitukset
+- rajattu `Event Organizer` -rooli tapahtumien ja ilmoittautumisten hallintaan
+- yhdistetty `Tapahtumat > Osallistujat` -näkymä ilmaisten ja maksullisten tapahtumien osallistujille
 
 ## Jätetään myöhempään vaiheeseen
 
 Tässä vaiheessa ei toteuteta:
 
-- tapahtuman omaa ilmoittautumista ilman WooCommercea
-- yleistä osallistujaraporttia kaikille tapahtumille
 - erillistä osallistujien tietokantataulua
 - osallistujien massatoimintoja tapahtumanäkymästä
 - usean maksutuotteen linkitystä samaan tapahtumaan
@@ -213,3 +272,19 @@ Tampereen sukukokoukselle voidaan lisäksi asettaa:
 - Paikka: `Hotelli Rosendahl, Pyynikintie 13, Tampere`
 - Maksullisuus: `Maksullinen`
 - Hintateksti: `49 € / henkilö`
+
+## Saavutettavuus
+
+Tapahtumaosio on testattu WCAG 2.1 AA -vaatimuksia vasten tiketissä #75. Seuraavat asiat on tarkistettu ja korjattu:
+
+- Otsikkohierarkia (h1→h2, ei hyppyjä) ✓
+- Section-alueet aria-labelledby-tunnisteilla ✓
+- Kuvien alt-tekstit ✓
+- Lomakekenttien eksplisiittiset label/for-parit ✓
+- GDPR-checkboxin eksplisiittinen id/for-assosiaatio ja aria-required ✓
+- Checkbox-elementin `:focus-visible`-tyyli ✓
+- Tekstin muted-väri eksplisiittisenä muuttujana (`--color-text-mute`) opacity-hämärryksen sijaan ✓
+- Redirect-URL sisältää fragmenttiankurin (`#element-id`) — selain skrollaa automaattisesti lomakkeelle tai vahvistusosioon ✓
+- `prefers-reduced-motion` -media query koko teemalle ✓
+
+Lomakkeen palvelinpuolen virheviestit ovat yleisiä ilmoituksia lomakkeen yläpuolella (`role="alert"`). HTML5 native validation hoitaa kenttäkohtaiset virheet ennen lähetystä.
