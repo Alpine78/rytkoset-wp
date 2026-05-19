@@ -23,76 +23,71 @@ require_once get_template_directory() . '/inc/login.php';
 require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
+require_once get_template_directory() . '/inc/customizer-contact.php';
 
-if ( ! function_exists( 'rytkoset_theme_get_attachment_display_caption_text' ) ) {
-	/**
-	 * Returns the short display caption for an attachment.
-	 *
-	 * Prefers the media caption field and falls back to the attachment title.
-	 *
-	 * @param int $attachment_id Attachment post ID.
-	 * @return string
-	 */
-	function rytkoset_theme_get_attachment_display_caption_text( $attachment_id ) {
-		$attachment_id = (int) $attachment_id;
+/**
+ * Returns the short display caption for an attachment.
+ *
+ * Prefers the media caption field and falls back to the attachment title.
+ *
+ * @param int $attachment_id Attachment post ID.
+ * @return string
+ */
+function rytkoset_theme_get_attachment_display_caption_text( $attachment_id ) {
+	$attachment_id = (int) $attachment_id;
 
-		if ( $attachment_id <= 0 ) {
-			return '';
-		}
-
-		$title   = trim( (string) get_the_title( $attachment_id ) );
-		$caption = trim( (string) wp_get_attachment_caption( $attachment_id ) );
-
-		return '' !== $caption ? $caption : $title;
+	if ( $attachment_id <= 0 ) {
+		return '';
 	}
+
+	$title   = trim( (string) get_the_title( $attachment_id ) );
+	$caption = trim( (string) wp_get_attachment_caption( $attachment_id ) );
+
+	return '' !== $caption ? $caption : $title;
 }
 
-if ( ! function_exists( 'rytkoset_theme_get_attachment_visible_caption_html' ) ) {
-	/**
-	 * Builds the short visible caption HTML for grid thumbnails and Gutenberg figcaptions.
-	 *
-	 * @param int $attachment_id Attachment post ID.
-	 * @return string
-	 */
-	function rytkoset_theme_get_attachment_visible_caption_html( $attachment_id ) {
-		$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
+/**
+ * Builds the short visible caption HTML for grid thumbnails and Gutenberg figcaptions.
+ *
+ * @param int $attachment_id Attachment post ID.
+ * @return string
+ */
+function rytkoset_theme_get_attachment_visible_caption_html( $attachment_id ) {
+	$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
 
-		if ( '' === $display_caption ) {
-			return '';
-		}
-
-		return '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
+	if ( '' === $display_caption ) {
+		return '';
 	}
+
+	return '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
 }
 
-if ( ! function_exists( 'rytkoset_theme_get_attachment_caption_html' ) ) {
-	/**
-	 * Builds PhotoSwipe caption HTML from attachment metadata.
-	 *
-	 * @param int $attachment_id Attachment post ID.
-	 * @return string
-	 */
-	function rytkoset_theme_get_attachment_caption_html( $attachment_id ) {
-		$attachment_id = (int) $attachment_id;
+/**
+ * Builds PhotoSwipe caption HTML from attachment metadata.
+ *
+ * @param int $attachment_id Attachment post ID.
+ * @return string
+ */
+function rytkoset_theme_get_attachment_caption_html( $attachment_id ) {
+	$attachment_id = (int) $attachment_id;
 
-		if ( $attachment_id <= 0 ) {
-			return '';
-		}
-
-		$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
-		$description     = trim( (string) get_post_field( 'post_content', $attachment_id ) );
-		$parts           = array();
-
-		if ( '' !== $display_caption ) {
-			$parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
-		}
-
-		if ( '' !== $description ) {
-			$parts[] = '<div class="pswp-caption-content__description">' . wp_kses_post( wpautop( $description ) ) . '</div>';
-		}
-
-		return implode( '', $parts );
+	if ( $attachment_id <= 0 ) {
+		return '';
 	}
+
+	$display_caption = rytkoset_theme_get_attachment_display_caption_text( $attachment_id );
+	$description     = trim( (string) get_post_field( 'post_content', $attachment_id ) );
+	$parts           = array();
+
+	if ( '' !== $display_caption ) {
+		$parts[] = '<p class="pswp-caption-content__caption">' . esc_html( $display_caption ) . '</p>';
+	}
+
+	if ( '' !== $description ) {
+		$parts[] = '<div class="pswp-caption-content__description">' . wp_kses_post( wpautop( $description ) ) . '</div>';
+	}
+
+	return implode( '', $parts );
 }
 
 function rytkoset_theme_setup() {
@@ -121,69 +116,67 @@ function rytkoset_theme_setup() {
 	);
 
 	// Navigaatiomenut
-        register_nav_menus(
-                array(
-                        'primary'   => __( 'Päävalikko', 'rytkoset-theme' ),
-                        'footer'    => __( 'Footer-valikko', 'rytkoset-theme' ),
-                        'account'   => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
-                )
-        );
+	register_nav_menus(
+		array(
+			'primary' => __( 'Päävalikko', 'rytkoset-theme' ),
+			'footer'  => __( 'Footer-valikko', 'rytkoset-theme' ),
+			'account' => __( 'Käyttäjä/tili-valikko', 'rytkoset-theme' ),
+		)
+	);
 }
 add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
 
-if ( ! function_exists( 'rytkoset_theme_get_cart_link_markup' ) ) {
-	/**
-	 * Builds a safe WooCommerce cart link for the site navigation.
-	 *
-	 * @param array $args Markup options.
-	 * @return string
-	 */
-	function rytkoset_theme_get_cart_link_markup( $args = array() ) {
-		if ( ! function_exists( 'wc_get_cart_url' ) ) {
-			return '';
-		}
-
-		$defaults = array(
-			'class' => 'site-cart-link',
-		);
-
-		$args     = wp_parse_args( $args, $defaults );
-		$cart_url = wc_get_cart_url();
-
-		if ( '' === $cart_url ) {
-			return '';
-		}
-
-		$item_count = 0;
-
-		if ( function_exists( 'WC' ) && WC() && WC()->cart ) {
-			$item_count = (int) WC()->cart->get_cart_contents_count();
-		}
-
-		$label      = __( 'Ostoskori', 'rytkoset-theme' );
-		$aria_label = $label;
-
-		if ( $item_count > 0 ) {
-			$aria_label = sprintf(
-				/* translators: %d: Number of products in cart. */
-				_n( 'Ostoskori, %d tuote', 'Ostoskori, %d tuotetta', $item_count, 'rytkoset-theme' ),
-				$item_count
-			);
-		}
-
-		ob_start();
-		?>
-		<a class="<?php echo esc_attr( trim( $args['class'] ) ); ?>" href="<?php echo esc_url( $cart_url ); ?>" aria-label="<?php echo esc_attr( $aria_label ); ?>">
-			<span class="site-cart-link__icon" aria-hidden="true"></span>
-			<span class="site-cart-link__label"><?php echo esc_html( $label ); ?></span>
-			<?php if ( $item_count > 0 ) : ?>
-				<span class="site-cart-link__count" aria-hidden="true"><?php echo esc_html( (string) $item_count ); ?></span>
-			<?php endif; ?>
-		</a>
-		<?php
-
-		return trim( ob_get_clean() );
+/**
+ * Builds a safe WooCommerce cart link for the site navigation.
+ *
+ * @param array $args Markup options.
+ * @return string
+ */
+function rytkoset_theme_get_cart_link_markup( $args = array() ) {
+	if ( ! function_exists( 'wc_get_cart_url' ) ) {
+		return '';
 	}
+
+	$defaults = array(
+		'class' => 'site-cart-link',
+	);
+
+	$args     = wp_parse_args( $args, $defaults );
+	$cart_url = wc_get_cart_url();
+
+	if ( '' === $cart_url ) {
+		return '';
+	}
+
+	$item_count = 0;
+
+	if ( function_exists( 'WC' ) && WC() && WC()->cart ) {
+		$item_count = (int) WC()->cart->get_cart_contents_count();
+	}
+
+	$label      = __( 'Ostoskori', 'rytkoset-theme' );
+	$aria_label = $label;
+
+	if ( $item_count > 0 ) {
+		$aria_label = sprintf(
+			/* translators: %d: Number of products in cart. */
+			_n( 'Ostoskori, %d tuote', 'Ostoskori, %d tuotetta', $item_count, 'rytkoset-theme' ),
+			$item_count
+		);
+	}
+
+	ob_start();
+	?>
+	<a class="<?php echo esc_attr( trim( $args['class'] ) ); ?>" href="<?php echo esc_url( $cart_url ); ?>" aria-label="<?php echo esc_attr( $aria_label ); ?>">
+		<span class="site-cart-link__icon" aria-hidden="true"></span>
+		<span class="site-cart-link__label"><?php echo esc_html( $label ); ?></span>
+		<?php if ( $item_count > 0 ) : ?>
+			<span class="site-cart-link__count" aria-hidden="true"><?php echo esc_html( (string) $item_count ); ?></span>
+		<?php endif; ?>
+	</a>
+	<?php
+
+	return trim( ob_get_clean() );
 }
 
 /**
@@ -434,85 +427,83 @@ function rytkoset_theme_scripts() {
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
 
-if ( ! function_exists( 'rytkoset_theme_inject_image_caption_metadata' ) ) {
-	/**
-	 * Adds up-to-date attachment caption metadata to Gutenberg image blocks.
-	 *
-	 * Visible figcaptions in post content may be stale, because Gutenberg stores them in post_content.
-	 * PhotoSwipe reads this data attribute first so media library edits take effect without rewriting content.
-	 *
-	 * @param string $block_content Rendered block HTML.
-	 * @param array  $block         Parsed block data.
-	 * @return string
-	 */
-	function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) {
-		if ( is_admin() || ! is_singular( 'gallery_album' ) ) {
-			return $block_content;
-		}
+/**
+ * Adds up-to-date attachment caption metadata to Gutenberg image blocks.
+ *
+ * Visible figcaptions in post content may be stale, because Gutenberg stores them in post_content.
+ * PhotoSwipe reads this data attribute first so media library edits take effect without rewriting content.
+ *
+ * @param string $block_content Rendered block HTML.
+ * @param array  $block         Parsed block data.
+ * @return string
+ */
+function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) {
+	if ( is_admin() || ! is_singular( 'gallery_album' ) ) {
+		return $block_content;
+	}
 
-		if ( empty( $block['blockName'] ) || 'core/image' !== $block['blockName'] ) {
-			return $block_content;
-		}
+	if ( empty( $block['blockName'] ) || 'core/image' !== $block['blockName'] ) {
+		return $block_content;
+	}
 
-		$has_caption_attr = false !== strpos( $block_content, 'data-pswp-caption-html=' );
-		$has_item_id_attr = false !== strpos( $block_content, 'data-pswp-item-id=' );
+	$has_caption_attr = false !== strpos( $block_content, 'data-pswp-caption-html=' );
+	$has_item_id_attr = false !== strpos( $block_content, 'data-pswp-item-id=' );
 
-		if ( $has_caption_attr && $has_item_id_attr ) {
-			return $block_content;
-		}
+	if ( $has_caption_attr && $has_item_id_attr ) {
+		return $block_content;
+	}
 
-		$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
-		$item_id               = $attachment_id > 0 ? (string) $attachment_id : '';
-		$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
-		$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
+	$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+	$item_id               = $attachment_id > 0 ? (string) $attachment_id : '';
+	$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
+	$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
 
-		if ( '' === $caption_html && '' === $item_id ) {
-			return $block_content;
-		}
+	if ( '' === $caption_html && '' === $item_id ) {
+		return $block_content;
+	}
 
-		$block_content = preg_replace_callback(
-			'/<figure\b/',
-			static function ( $matches ) use ( $caption_html, $item_id, $has_caption_attr, $has_item_id_attr ) {
-				$attributes = '';
+	$block_content = preg_replace_callback(
+		'/<figure\b/',
+		static function ( $matches ) use ( $caption_html, $item_id, $has_caption_attr, $has_item_id_attr ) {
+			$attributes = '';
 
-				if ( ! $has_caption_attr && '' !== $caption_html ) {
-					$attributes .= ' data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
-				}
-
-				if ( ! $has_item_id_attr && '' !== $item_id ) {
-					$attributes .= ' data-pswp-item-id="' . esc_attr( $item_id ) . '"';
-				}
-
-				return '<figure' . $attributes;
-			},
-			$block_content,
-			1
-		);
-
-		if ( preg_match( '/<figcaption\b[^>]*>/i', $block_content ) ) {
-			if ( '' === $visible_caption_html ) {
-				return $block_content;
+			if ( ! $has_caption_attr && '' !== $caption_html ) {
+				$attributes .= ' data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
 			}
 
-			return preg_replace(
-				'/(<figcaption\b[^>]*>).*?(<\/figcaption>)/is',
-				'$1' . wp_kses_post( $visible_caption_html ) . '$2',
-				$block_content,
-				1
-			);
-		}
+			if ( ! $has_item_id_attr && '' !== $item_id ) {
+				$attributes .= ' data-pswp-item-id="' . esc_attr( $item_id ) . '"';
+			}
 
+			return '<figure' . $attributes;
+		},
+		$block_content,
+		1
+	);
+
+	if ( preg_match( '/<figcaption\b[^>]*>/i', $block_content ) ) {
 		if ( '' === $visible_caption_html ) {
 			return $block_content;
 		}
 
 		return preg_replace(
-			'/<\/figure>\s*$/',
-			'<figcaption class="wp-element-caption">' . wp_kses_post( $visible_caption_html ) . '</figcaption></figure>',
+			'/(<figcaption\b[^>]*>).*?(<\/figcaption>)/is',
+			'$1' . wp_kses_post( $visible_caption_html ) . '$2',
 			$block_content,
 			1
 		);
 	}
+
+	if ( '' === $visible_caption_html ) {
+		return $block_content;
+	}
+
+	return preg_replace(
+		'/<\/figure>\s*$/',
+		'<figcaption class="wp-element-caption">' . wp_kses_post( $visible_caption_html ) . '</figcaption></figure>',
+		$block_content,
+		1
+	);
 }
 add_filter( 'render_block', 'rytkoset_theme_inject_image_caption_metadata', 10, 2 );
 
