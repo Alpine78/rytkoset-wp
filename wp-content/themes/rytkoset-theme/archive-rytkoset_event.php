@@ -13,7 +13,7 @@ $today              = current_time( 'Y-m-d' );
 $event_date_key     = rytkoset_theme_get_event_date_meta_key();
 $upcoming_events    = new WP_Query(
 	array(
-		'post_type'      => 'event',
+		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
@@ -33,7 +33,7 @@ $upcoming_events    = new WP_Query(
 );
 $past_events        = new WP_Query(
 	array(
-		'post_type'      => 'event',
+		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
@@ -53,7 +53,7 @@ $past_events        = new WP_Query(
 );
 $undated_events     = new WP_Query(
 	array(
-		'post_type'      => 'event',
+		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,

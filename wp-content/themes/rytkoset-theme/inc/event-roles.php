@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return string
  */
 function rytkoset_theme_get_event_roles_version() {
-	return '1';
+	return '2';
 }
 
 /**
@@ -22,7 +22,7 @@ function rytkoset_theme_get_event_roles_version() {
  * @return array
  */
 function rytkoset_theme_get_event_capability_type() {
-	return array( 'event', 'events' );
+	return array( 'rytkoset_event', 'rytkoset_events' );
 }
 
 /**
@@ -67,7 +67,7 @@ function rytkoset_theme_get_event_organizer_capabilities() {
 				'read',
 				'upload_files',
 			),
-			rytkoset_theme_get_event_post_type_capabilities( 'events' ),
+			rytkoset_theme_get_event_post_type_capabilities( 'rytkoset_events' ),
 			rytkoset_theme_get_event_post_type_capabilities( 'event_registrations' )
 		)
 	);
@@ -141,15 +141,19 @@ function rytkoset_theme_sync_event_roles() {
 	$forbidden_capabilities = rytkoset_theme_get_event_organizer_forbidden_capabilities();
 	$event_organizer        = get_role( 'event_organizer' );
 	$administrator          = get_role( 'administrator' );
+	$stored_version         = get_option( 'rytkoset_event_roles_version' );
 
 	if (
-		get_option( 'rytkoset_event_roles_version' ) === $version
+		$stored_version === $version
 		&& rytkoset_theme_role_has_capabilities( $event_organizer, $organizer_capabilities )
 		&& rytkoset_theme_role_lacks_capabilities( $event_organizer, $forbidden_capabilities )
 		&& rytkoset_theme_role_has_capabilities( $administrator, $organizer_capabilities )
 	) {
 		return;
 	}
+
+	// Migration v1 -> v2: remove old 'events' plural caps that were renamed to 'rytkoset_events'.
+	$legacy_capabilities = rytkoset_theme_get_event_post_type_capabilities( 'events' );
 
 	if ( ! $event_organizer ) {
 		add_role(
@@ -162,6 +166,10 @@ function rytkoset_theme_sync_event_roles() {
 	}
 
 	if ( $event_organizer ) {
+		foreach ( $legacy_capabilities as $capability ) {
+			$event_organizer->remove_cap( $capability );
+		}
+
 		foreach ( $organizer_capabilities as $capability ) {
 			$event_organizer->add_cap( $capability );
 		}
@@ -172,6 +180,10 @@ function rytkoset_theme_sync_event_roles() {
 	}
 
 	if ( $administrator ) {
+		foreach ( $legacy_capabilities as $capability ) {
+			$administrator->remove_cap( $capability );
+		}
+
 		foreach ( $organizer_capabilities as $capability ) {
 			$administrator->add_cap( $capability );
 		}
@@ -193,7 +205,7 @@ add_action( 'init', 'rytkoset_theme_sync_event_roles', 20 );
  */
 function rytkoset_theme_allow_event_organizer_admin_access( $prevent_access ) {
 	if (
-		current_user_can( 'edit_events' )
+		current_user_can( 'edit_rytkoset_events' )
 		|| current_user_can( 'edit_event_registrations' )
 	) {
 		return false;

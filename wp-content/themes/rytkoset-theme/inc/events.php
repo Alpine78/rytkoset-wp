@@ -42,7 +42,7 @@ function rytkoset_theme_register_event_cpt() {
 		),
 	);
 
-	register_post_type( 'event', $args );
+	register_post_type( 'rytkoset_event', $args );
 }
 add_action( 'init', 'rytkoset_theme_register_event_cpt' );
 
@@ -352,12 +352,12 @@ function rytkoset_theme_register_event_date_metabox() {
 		'rytkoset_event_date',
 		__( 'Tapahtumapäivä', 'rytkoset-theme' ),
 		'rytkoset_theme_render_event_date_metabox',
-		'event',
+		'rytkoset_event',
 		'side',
 		'high'
 	);
 }
-add_action( 'add_meta_boxes_event', 'rytkoset_theme_register_event_date_metabox' );
+add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_date_metabox' );
 
 /**
  * Renders the event date metabox.
@@ -430,7 +430,7 @@ function rytkoset_theme_save_event_date( $post_id ) {
 
 	update_post_meta( $post_id, rytkoset_theme_get_event_date_meta_key(), $date );
 }
-add_action( 'save_post_event', 'rytkoset_theme_save_event_date' );
+add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_date' );
 
 /**
  * Adds the event details metabox.
@@ -440,12 +440,12 @@ function rytkoset_theme_register_event_details_metabox() {
 		'rytkoset_event_details',
 		__( 'Tapahtuman tiedot', 'rytkoset-theme' ),
 		'rytkoset_theme_render_event_details_metabox',
-		'event',
+		'rytkoset_event',
 		'side',
 		'default'
 	);
 }
-add_action( 'add_meta_boxes_event', 'rytkoset_theme_register_event_details_metabox' );
+add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_details_metabox' );
 
 /**
  * Renders the event details metabox.
@@ -611,7 +611,7 @@ function rytkoset_theme_save_event_details( $post_id ) {
 		update_post_meta( $post_id, $meta_keys['price_text'], $price_text );
 	}
 }
-add_action( 'save_post_event', 'rytkoset_theme_save_event_details' );
+add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_details' );
 
 /**
  * Returns the meta key used to link an event to a WooCommerce product.
@@ -676,12 +676,12 @@ function rytkoset_theme_register_event_product_metabox() {
 		'rytkoset_event_product',
 		__( 'Maksutuote', 'rytkoset-theme' ),
 		'rytkoset_theme_render_event_product_metabox',
-		'event',
+		'rytkoset_event',
 		'side',
 		'default'
 	);
 }
-add_action( 'add_meta_boxes_event', 'rytkoset_theme_register_event_product_metabox' );
+add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_product_metabox' );
 
 /**
  * Prints small editor-only styles for event admin metaboxes.
@@ -689,7 +689,7 @@ add_action( 'add_meta_boxes_event', 'rytkoset_theme_register_event_product_metab
 function rytkoset_theme_print_event_admin_styles() {
 	$screen = get_current_screen();
 
-	if ( ! $screen || 'event' !== $screen->post_type ) {
+	if ( ! $screen || 'rytkoset_event' !== $screen->post_type ) {
 		return;
 	}
 	?>
@@ -728,7 +728,7 @@ function rytkoset_theme_event_admin_columns( $columns ) {
 
 	return $updated_columns;
 }
-add_filter( 'manage_event_posts_columns', 'rytkoset_theme_event_admin_columns' );
+add_filter( 'manage_rytkoset_event_posts_columns', 'rytkoset_theme_event_admin_columns' );
 
 /**
  * Renders event-specific admin column content.
@@ -754,7 +754,7 @@ function rytkoset_theme_event_admin_column_content( $column, $post_id ) {
 		esc_html( $date_display )
 	);
 }
-add_action( 'manage_event_posts_custom_column', 'rytkoset_theme_event_admin_column_content', 10, 2 );
+add_action( 'manage_rytkoset_event_posts_custom_column', 'rytkoset_theme_event_admin_column_content', 10, 2 );
 
 /**
  * Makes the event date column sortable.
@@ -767,7 +767,7 @@ function rytkoset_theme_event_sortable_columns( $columns ) {
 
 	return $columns;
 }
-add_filter( 'manage_edit-event_sortable_columns', 'rytkoset_theme_event_sortable_columns' );
+add_filter( 'manage_edit-rytkoset_event_sortable_columns', 'rytkoset_theme_event_sortable_columns' );
 
 /**
  * Sorts the event admin list by event date when requested.
@@ -781,7 +781,7 @@ function rytkoset_theme_sort_event_admin_by_event_date( $query ) {
 
 	$post_type = $query->get( 'post_type' );
 
-	if ( 'event' !== $post_type ) {
+	if ( 'rytkoset_event' !== $post_type ) {
 		return;
 	}
 
@@ -922,7 +922,7 @@ function rytkoset_theme_save_event_product_link( $post_id ) {
 
 	update_post_meta( $post_id, rytkoset_theme_get_event_product_meta_key(), $product_id );
 }
-add_action( 'save_post_event', 'rytkoset_theme_save_event_product_link' );
+add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_product_link' );
 
 /**
  * Returns the linked product URL for an event.

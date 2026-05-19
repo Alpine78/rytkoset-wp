@@ -268,7 +268,7 @@ function rytkoset_theme_get_event_participants( $event_id, $status_filter = '' )
 function rytkoset_theme_get_all_events_participants( $status_filter = '' ) {
 	$events = get_posts(
 		array(
-			'post_type'      => 'event',
+			'post_type'      => 'rytkoset_event',
 			'post_status'    => array( 'publish', 'future', 'draft', 'private' ),
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
@@ -293,7 +293,7 @@ function rytkoset_theme_get_all_events_participants( $status_filter = '' ) {
  */
 function rytkoset_theme_register_event_participants_admin_page() {
 	add_submenu_page(
-		'edit.php?post_type=event',
+		'edit.php?post_type=rytkoset_event',
 		__( 'Osallistujat', 'rytkoset-theme' ),
 		__( 'Osallistujat', 'rytkoset-theme' ),
 		'edit_others_event_registrations',
@@ -311,7 +311,7 @@ add_action( 'admin_menu', 'rytkoset_theme_register_event_participants_admin_page
 function rytkoset_theme_get_event_participants_admin_events() {
 	$events = get_posts(
 		array(
-			'post_type'      => 'event',
+			'post_type'      => 'rytkoset_event',
 			'post_status'    => array( 'publish', 'future', 'draft', 'private' ),
 			'posts_per_page' => -1,
 			'orderby'        => 'meta_value',
@@ -417,7 +417,7 @@ function rytkoset_theme_export_event_participants_csv() {
 		$selected_status = '';
 	}
 
-	if ( $event_id > 0 && 'event' !== get_post_type( $event_id ) ) {
+	if ( $event_id > 0 && 'rytkoset_event' !== get_post_type( $event_id ) ) {
 		$event_id = 0;
 	}
 
@@ -514,7 +514,7 @@ function rytkoset_theme_render_event_participants_admin_page() {
 
 	$events = rytkoset_theme_get_event_participants_admin_events();
 
-	if ( $selected_event > 0 && 'event' !== get_post_type( $selected_event ) ) {
+	if ( $selected_event > 0 && 'rytkoset_event' !== get_post_type( $selected_event ) ) {
 		$selected_event = 0;
 	}
 
@@ -542,7 +542,7 @@ function rytkoset_theme_render_event_participants_admin_page() {
 		<div class="tablenav top">
 			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
 				<form method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
-					<input type="hidden" name="post_type" value="event" />
+					<input type="hidden" name="post_type" value="rytkoset_event" />
 					<input type="hidden" name="page" value="rytkoset-event-participants" />
 
 					<label for="rytkoset-event-participants-event">
@@ -632,7 +632,7 @@ function rytkoset_theme_render_event_participants_admin_page() {
 									if ( $event_id_for_row > 0 ) {
 										$event_link = add_query_arg(
 											array(
-												'post_type' => 'event',
+												'post_type' => 'rytkoset_event',
 												'page'      => 'rytkoset-event-participants',
 												'event_id'  => $event_id_for_row,
 												'status'    => $selected_status,
