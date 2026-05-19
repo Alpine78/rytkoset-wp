@@ -30,7 +30,8 @@
     </nav>
 
     <div class="site-footer__meta">
-      <span>Yhteydenotot: <a href="mailto:info@rytkoset.net">info@rytkoset.net</a></span>
+      <?php $contact_email = rytkoset_theme_get_contact_email(); ?>
+      <span>Yhteydenotot: <a href="mailto:<?php echo esc_attr( $contact_email ); ?>"><?php echo esc_html( $contact_email ); ?></a></span>
 
       <?php
       $social_links = rytkoset_theme_get_social_links();
