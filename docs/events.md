@@ -75,6 +75,7 @@ Ilmoittautumisen tiedot tallennetaan WordPressin post metaan:
 | Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet` | vapaa teksti | Käytännön järjestelyt |
 | Lisätieto | `_rytkoset_registration_notes` | vapaa teksti | Ylläpidon lisätiedot |
 | Tila | `_rytkoset_registration_status` | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila |
+| GDPR-hyväksyntä | `_rytkoset_registration_gdpr_consent` | Unix-aikaleima | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
 
 Ilmoittautumisen otsikko muodostetaan automaattisesti muodossa `Osallistujan nimi - Tapahtuman nimi`, jotta admin-lista pysyy luettavana.
 
@@ -84,7 +85,7 @@ Yksittäisellä tapahtumasivulla näytetään:
 
 - tapahtuman artikkelikuva ja otsikko
 - editoriin kirjoitettu sisältö
-- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi eikä siihen ole linkitetty maksutuotetta
+- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi eikä siihen ole linkitetty maksutuotetta — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38)
 - sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
 - jakopainikkeet
 
