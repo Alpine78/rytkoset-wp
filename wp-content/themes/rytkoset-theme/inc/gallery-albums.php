@@ -244,22 +244,41 @@ function rytkoset_theme_sort_gallery_block_by_filename( $block ) {
                 return $block;
         }
 
-        $sorted_posts = get_posts(
-                array(
-                        'post_type'      => 'attachment',
-                        'post_status'    => 'inherit',
-                        'post__in'       => array_keys( $id_map ),
-                        'posts_per_page' => -1,
-                        'orderby'        => 'title',
-                        'order'          => 'ASC',
-                        'no_found_rows'  => true,
-                )
-        );
+        $post_id   = (int) get_the_ID();
+        $cache_key = 'album_gallery_order_' . $post_id;
+        $sorted_ids = get_transient( $cache_key );
+
+        if ( false === $sorted_ids ) {
+                $sorted_posts = get_posts(
+                        array(
+                                'post_type'      => 'attachment',
+                                'post_status'    => 'inherit',
+                                'post__in'       => array_keys( $id_map ),
+                                'posts_per_page' => -1,
+                                'orderby'        => 'title',
+                                'order'          => 'ASC',
+                                'no_found_rows'  => true,
+                        )
+                );
+
+                $sorted_ids = array();
+                foreach ( $sorted_posts as $post ) {
+                        $sorted_ids[] = $post->ID;
+                }
+
+                set_transient( $cache_key, $sorted_ids, HOUR_IN_SECONDS );
+        }
 
         $sorted = array();
-        foreach ( $sorted_posts as $post ) {
-                if ( isset( $id_map[ $post->ID ] ) ) {
-                        $sorted[] = $id_map[ $post->ID ];
+        foreach ( $sorted_ids as $id ) {
+                if ( isset( $id_map[ $id ] ) ) {
+                        $sorted[] = $id_map[ $id ];
+                }
+        }
+
+        foreach ( $id_map as $id => $inner ) {
+                if ( ! in_array( $id, $sorted_ids, true ) ) {
+                        $sorted[] = $inner;
                 }
         }
 
@@ -268,6 +287,17 @@ function rytkoset_theme_sort_gallery_block_by_filename( $block ) {
         return $block;
 }
 add_filter( 'render_block_data', 'rytkoset_theme_sort_gallery_block_by_filename' );
+
+/**
+ * Invalidates the gallery order transient when an album is saved.
+ *
+ * @param int $post_id Album post ID.
+ * @return void
+ */
+function rytkoset_theme_invalidate_album_gallery_order_transient( $post_id ) {
+        delete_transient( 'album_gallery_order_' . (int) $post_id );
+}
+add_action( 'save_post_gallery_album', 'rytkoset_theme_invalidate_album_gallery_order_transient' );
 
 /**
  * Formats a float as a CSS-safe decimal string (locale-independent).
