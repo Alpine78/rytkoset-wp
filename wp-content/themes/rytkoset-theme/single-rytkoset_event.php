@@ -18,8 +18,8 @@ if ( have_posts() ) :
 	while ( have_posts() ) :
 		the_post();
 		$event_id         = get_the_ID();
-		$has_summary_card = function_exists( 'rytkoset_theme_event_has_summary_card' ) && rytkoset_theme_event_has_summary_card( $event_id );
-		$event_date       = function_exists( 'rytkoset_theme_get_event_date_display' ) ? rytkoset_theme_get_event_date_display( $event_id ) : '';
+		$has_summary_card = rytkoset_theme_event_has_summary_card( $event_id );
+		$event_date       = rytkoset_theme_get_event_date_display( $event_id );
 		?>
 		<article <?php post_class( 'event' ); ?>>
 			<header class="event-hero<?php echo has_post_thumbnail() ? '' : ' event-hero--no-image'; ?>">
@@ -58,6 +58,8 @@ if ( have_posts() ) :
 							<div class="article__content">
 								<?php the_content(); ?>
 							</div>
+
+							<?php rytkoset_theme_render_free_event_registration_form( $event_id ); ?>
 
 							<?php
 							rytkoset_theme_share_buttons(
