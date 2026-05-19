@@ -15,12 +15,13 @@ if ( ! function_exists( 'rytkoset_theme_get_event_registration_meta_keys' ) ) {
 	 */
 	function rytkoset_theme_get_event_registration_meta_keys() {
 		return array(
-			'event_id' => '_rytkoset_registration_event_id',
-			'name'     => '_rytkoset_registration_name',
-			'email'    => '_rytkoset_registration_email',
-			'diet'     => '_rytkoset_registration_diet',
-			'notes'    => '_rytkoset_registration_notes',
-			'status'   => '_rytkoset_registration_status',
+			'event_id'     => '_rytkoset_registration_event_id',
+			'name'         => '_rytkoset_registration_name',
+			'email'        => '_rytkoset_registration_email',
+			'diet'         => '_rytkoset_registration_diet',
+			'notes'        => '_rytkoset_registration_notes',
+			'status'       => '_rytkoset_registration_status',
+			'gdpr_consent' => '_rytkoset_registration_gdpr_consent',
 		);
 	}
 }
@@ -543,6 +544,12 @@ if ( ! function_exists( 'rytkoset_theme_handle_event_registration_submission' ) 
 			rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_email' );
 		}
 
+		$gdpr_consent = isset( $_POST['registration_gdpr_consent'] ) && '1' === wp_unslash( $_POST['registration_gdpr_consent'] );
+
+		if ( ! $gdpr_consent ) {
+			rytkoset_theme_handle_event_registration_error( $event_id, 'missing_consent' );
+		}
+
 		$meta_keys       = rytkoset_theme_get_event_registration_meta_keys();
 		$registration_id = wp_insert_post(
 			array(
@@ -550,12 +557,13 @@ if ( ! function_exists( 'rytkoset_theme_handle_event_registration_submission' ) 
 				'post_status' => 'publish',
 				'post_title'  => rytkoset_theme_build_event_registration_title( $name, $event_id ),
 				'meta_input'  => array(
-					$meta_keys['event_id'] => $event_id,
-					$meta_keys['name']     => $name,
-					$meta_keys['email']    => $email,
-					$meta_keys['diet']     => $diet,
-					$meta_keys['notes']    => $notes,
-					$meta_keys['status']   => 'pending',
+					$meta_keys['event_id']     => $event_id,
+					$meta_keys['name']         => $name,
+					$meta_keys['email']        => $email,
+					$meta_keys['diet']         => $diet,
+					$meta_keys['notes']        => $notes,
+					$meta_keys['status']       => 'pending',
+					$meta_keys['gdpr_consent'] => time(),
 				),
 			),
 			true
@@ -594,8 +602,9 @@ if ( ! function_exists( 'rytkoset_theme_get_event_registration_feedback' ) ) {
 
 		$error    = isset( $_GET['registration_error'] ) ? sanitize_key( wp_unslash( $_GET['registration_error'] ) ) : '';
 		$messages = array(
-			'missing_name'  => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
-			'invalid_email' => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
+			'missing_name'    => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
+			'invalid_email'   => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
+			'missing_consent' => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
 		);
 
 		return array(
@@ -610,8 +619,6 @@ if ( ! function_exists( 'rytkoset_theme_get_event_registration_feedback' ) ) {
 if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) ) {
 	/**
 	 * Renders the free event registration form UI.
-	 *
-	 * The form handler is implemented in a later ticket.
 	 *
 	 * @param int $event_id Event post ID.
 	 */
@@ -673,6 +680,17 @@ if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) )
 						<?php esc_html_e( 'Lisätieto', 'rytkoset-theme' ); ?>
 					</label>
 					<textarea id="<?php echo esc_attr( $form_id . '-notes' ); ?>" name="registration_notes" rows="4"></textarea>
+				</div>
+
+				<div class="event-registration__gdpr">
+					<p class="event-registration__gdpr-notice">
+						<?php esc_html_e( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' ); ?>
+					</p>
+					<label class="event-registration__gdpr-label">
+						<input type="checkbox" name="registration_gdpr_consent" value="1" required />
+						<?php esc_html_e( 'Hyväksyn henkilötietojeni käsittelyn tapahtumaan ilmoittautumista varten.', 'rytkoset-theme' ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
 				</div>
 
 				<p class="event-registration__required-note">
