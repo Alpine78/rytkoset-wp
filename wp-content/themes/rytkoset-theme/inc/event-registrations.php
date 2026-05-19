@@ -616,6 +616,60 @@ if ( ! function_exists( 'rytkoset_theme_get_event_registration_feedback' ) ) {
 	}
 }
 
+if ( ! function_exists( 'rytkoset_theme_render_event_registration_confirmation' ) ) {
+	/**
+	 * Renders the confirmation view shown after a successful registration.
+	 *
+	 * @param int $event_id Event post ID.
+	 */
+	function rytkoset_theme_render_event_registration_confirmation( $event_id ) {
+		$event_id   = absint( $event_id );
+		$section_id = 'event-registration-confirmed-' . $event_id;
+		$title      = get_the_title( $event_id );
+		$date       = function_exists( 'rytkoset_theme_get_event_date_display' ) ? rytkoset_theme_get_event_date_display( $event_id ) : '';
+		$time       = function_exists( 'rytkoset_theme_get_event_time_display' ) ? rytkoset_theme_get_event_time_display( $event_id ) : '';
+		$location   = function_exists( 'rytkoset_theme_get_event_location' ) ? rytkoset_theme_get_event_location( $event_id ) : '';
+		?>
+		<section class="event-registration event-registration--confirmed" aria-labelledby="<?php echo esc_attr( $section_id ); ?>">
+			<h2 id="<?php echo esc_attr( $section_id ); ?>" class="event-registration__title">
+				<?php esc_html_e( 'Ilmoittautuminen vastaanotettu!', 'rytkoset-theme' ); ?>
+			</h2>
+			<div class="event-registration__confirmation">
+				<p class="event-registration__confirmation-lead">
+					<?php esc_html_e( 'Ilmoittautumisesi on vastaanotettu. Otamme tarvittaessa yhteyttä sähköpostitse.', 'rytkoset-theme' ); ?>
+				</p>
+				<dl class="event-registration__confirmation-details">
+					<?php if ( '' !== $title ) : ?>
+						<div class="event-registration__confirmation-row">
+							<dt><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></dt>
+							<dd><?php echo esc_html( $title ); ?></dd>
+						</div>
+					<?php endif; ?>
+					<?php if ( '' !== $date ) : ?>
+						<div class="event-registration__confirmation-row">
+							<dt><?php esc_html_e( 'Päivämäärä', 'rytkoset-theme' ); ?></dt>
+							<dd><?php echo esc_html( $date ); ?></dd>
+						</div>
+					<?php endif; ?>
+					<?php if ( '' !== $time ) : ?>
+						<div class="event-registration__confirmation-row">
+							<dt><?php esc_html_e( 'Kellonaika', 'rytkoset-theme' ); ?></dt>
+							<dd><?php echo esc_html( $time ); ?></dd>
+						</div>
+					<?php endif; ?>
+					<?php if ( '' !== $location ) : ?>
+						<div class="event-registration__confirmation-row">
+							<dt><?php esc_html_e( 'Paikka', 'rytkoset-theme' ); ?></dt>
+							<dd><?php echo esc_html( $location ); ?></dd>
+						</div>
+					<?php endif; ?>
+				</dl>
+			</div>
+		</section>
+		<?php
+	}
+}
+
 if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) ) {
 	/**
 	 * Renders the free event registration form UI.
@@ -632,6 +686,11 @@ if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) )
 		$form_id        = 'event-registration-form-' . $event_id;
 		$description_id = 'event-registration-description-' . $event_id;
 		$feedback       = rytkoset_theme_get_event_registration_feedback();
+
+		if ( ! empty( $feedback ) && 'success' === $feedback['type'] ) {
+			rytkoset_theme_render_event_registration_confirmation( $event_id );
+			return;
+		}
 		?>
 		<section class="event-registration" aria-labelledby="<?php echo esc_attr( $form_id . '-title' ); ?>">
 			<h2 id="<?php echo esc_attr( $form_id . '-title' ); ?>" class="event-registration__title">
@@ -641,8 +700,8 @@ if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) )
 				<?php esc_html_e( 'Tällä lomakkeella voit ilmoittautua maksuttomaan tapahtumaan.', 'rytkoset-theme' ); ?>
 			</p>
 
-			<?php if ( ! empty( $feedback ) ) : ?>
-				<div class="event-registration__notice event-registration__notice--<?php echo esc_attr( $feedback['type'] ); ?>" role="status">
+			<?php if ( ! empty( $feedback ) && 'error' === $feedback['type'] ) : ?>
+				<div class="event-registration__notice event-registration__notice--error" role="alert">
 					<?php echo esc_html( $feedback['message'] ); ?>
 				</div>
 			<?php endif; ?>

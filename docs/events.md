@@ -85,7 +85,7 @@ Yksittäisellä tapahtumasivulla näytetään:
 
 - tapahtuman artikkelikuva ja otsikko
 - editoriin kirjoitettu sisältö
-- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi eikä siihen ole linkitetty maksutuotetta — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38)
+- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi eikä siihen ole linkitetty maksutuotetta — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38); onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32)
 - sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
 - jakopainikkeet
 
