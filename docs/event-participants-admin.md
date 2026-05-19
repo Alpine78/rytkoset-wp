@@ -132,6 +132,7 @@ Pääfunktiot:
 ## Liittyvät toiminnot
 
 - **Massaviestintä:** sähköpostin lähettäminen osallistujille on toteutettu erillisellä sivulla `Tapahtumat > Viestintä`. Katso [event-participants-messaging.md](event-participants-messaging.md).
+- **Tampere 2026 -osallistujat:** näkyvät tällä sivulla osana yhtenäistä listaa, kun tapahtumasuodattimesta valitaan Tampere 2026 -tapahtuma. Vanha `WooCommerce > Tampere 2026 osallistujat` -pikalinkkisivu poistettiin tiketissä `#194`, koska sama tieto on saatavilla rajatuilla oikeuksilla (`edit_others_event_registrations`) tästä yhtenäisestä näkymästä.
 
 ## Rajaus tässä vaiheessa
 

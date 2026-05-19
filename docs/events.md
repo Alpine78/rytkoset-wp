@@ -182,15 +182,9 @@ Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle er
 - osallistumismaksutuote: `docs/woocommerce-tampere-2026-product.md`
 - checkoutin osallistujakentät: `docs/woocommerce-tampere-2026-checkout-fields.md`
 - määräpäivä ja kapasiteetti: `docs/woocommerce-tampere-2026-management.md`
-- osallistujalista adminissa: `docs/woocommerce-tampere-2026-participants-admin.md`
-- osallistujien CSV-vienti: `docs/woocommerce-tampere-2026-participants-csv-export.md`
 - järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
 
-Ylläpidon kannalta tärkein näkymä on:
-
-- `WooCommerce > Tampere 2026 osallistujat`
-
-Siellä osallistujat näkyvät riveinä. Näkymä käyttää WooCommerce-tilauksille tallennettuja osallistujatietoja eikä luo erillistä tapahtumarekisteritaulua.
+Tampere 2026 -osallistujat näkyvät yhteisessä osallistujalistassa (katso alla). Vanha `WooCommerce > Tampere 2026 osallistujat` -pikalinkkisivu poistettiin tiketissä `#194`, kun sama tieto on saatavilla rajatuilla oikeuksilla yhteisestä näkymästä.
 
 ### Yleinen osallistujanäkymä
 
@@ -198,17 +192,9 @@ Kaikkien tapahtumien osallistujat näkee yhdistettynä näkymässä:
 
 - `Tapahtumat > Osallistujat`
 
-Näkymässä voi valita yksittäisen tapahtuman tai katsella kaikkien tapahtumien osallistujia kerralla. Näkymä yhdistää ilmaisten tapahtumien lomakeilmoittautumiset ja maksullisten tapahtumien WooCommerce-tilaukset. Suodatus tilauksen statuksen mukaan on tuettu.
+Näkymässä voi valita yksittäisen tapahtuman tai katsella kaikkien tapahtumien osallistujia kerralla. Näkymä yhdistää ilmaisten tapahtumien lomakeilmoittautumiset ja maksullisten tapahtumien WooCommerce-tilaukset (mukaan lukien Tampere 2026 -tilausten osallistujat). Suodatus statuksen mukaan on tuettu, ja näkymästä on CSV-vienti samoilla suodattimilla.
 
-Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`.
-
-### Tampere 2026 -osallistujanäkymä
-
-Tampere 2026 -tapahtumalle on lisäksi erillinen pikalinkkisivu:
-
-- `WooCommerce > Tampere 2026 osallistujat`
-
-Tämä sivu näyttää vain Tampere 2026 -tilausten osallistujat ja toimii edelleen sellaisenaan. Uusi yleinen näkymä palvelee tulevia tapahtumia.
+Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`. Saman valikon alta löytyy myös `Tapahtumat > Viestintä`, jolla voi lähettää sähköpostiviestin valitun tapahtuman osallistujille (`docs/event-participants-messaging.md`).
 
 ### Mitä ylläpitäjä tekee ilmoittautumisille
 
