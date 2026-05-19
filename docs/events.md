@@ -272,3 +272,19 @@ Tampereen sukukokoukselle voidaan lisäksi asettaa:
 - Paikka: `Hotelli Rosendahl, Pyynikintie 13, Tampere`
 - Maksullisuus: `Maksullinen`
 - Hintateksti: `49 € / henkilö`
+
+## Saavutettavuus
+
+Tapahtumaosio on testattu WCAG 2.1 AA -vaatimuksia vasten tiketissä #75. Seuraavat asiat on tarkistettu ja korjattu:
+
+- Otsikkohierarkia (h1→h2, ei hyppyjä) ✓
+- Section-alueet aria-labelledby-tunnisteilla ✓
+- Kuvien alt-tekstit ✓
+- Lomakekenttien eksplisiittiset label/for-parit ✓
+- GDPR-checkboxin eksplisiittinen id/for-assosiaatio ja aria-required ✓
+- Checkbox-elementin `:focus-visible`-tyyli ✓
+- Tekstin muted-väri eksplisiittisenä muuttujana (`--color-text-mute`) opacity-hämärryksen sijaan ✓
+- Redirect-URL sisältää fragmenttiankurin (`#element-id`) — selain skrollaa automaattisesti lomakkeelle tai vahvistusosioon ✓
+- `prefers-reduced-motion` -media query koko teemalle ✓
+
+Lomakkeen palvelinpuolen virheviestit ovat yleisiä ilmoituksia lomakkeen yläpuolella (`role="alert"`). HTML5 native validation hoitaa kenttäkohtaiset virheet ennen lähetystä.
