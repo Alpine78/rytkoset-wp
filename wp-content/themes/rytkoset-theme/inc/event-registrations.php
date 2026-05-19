@@ -456,7 +456,17 @@ if ( ! function_exists( 'rytkoset_theme_get_event_registration_redirect_url' ) )
 			$args['registration_error'] = $error;
 		}
 
-		return add_query_arg( $args, $url );
+		$redirect_url = add_query_arg( $args, $url );
+
+		if ( $event_id > 0 ) {
+			if ( 'success' === $status ) {
+				$redirect_url .= '#event-registration-confirmed-' . $event_id;
+			} elseif ( 'error' === $status ) {
+				$redirect_url .= '#event-registration-form-' . $event_id;
+			}
+		}
+
+		return $redirect_url;
 	}
 }
 
@@ -745,8 +755,8 @@ if ( ! function_exists( 'rytkoset_theme_render_free_event_registration_form' ) )
 					<p class="event-registration__gdpr-notice">
 						<?php esc_html_e( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' ); ?>
 					</p>
-					<label class="event-registration__gdpr-label">
-						<input type="checkbox" name="registration_gdpr_consent" value="1" required />
+					<label class="event-registration__gdpr-label" for="<?php echo esc_attr( $form_id . '-gdpr' ); ?>">
+						<input id="<?php echo esc_attr( $form_id . '-gdpr' ); ?>" type="checkbox" name="registration_gdpr_consent" value="1" required aria-required="true" />
 						<?php esc_html_e( 'Hyväksyn henkilötietojeni käsittelyn tapahtumaan ilmoittautumista varten.', 'rytkoset-theme' ); ?>
 						<span aria-hidden="true">*</span>
 					</label>
