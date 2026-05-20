@@ -13,7 +13,7 @@ $today              = current_time( 'Y-m-d' );
 $event_date_key     = rytkoset_theme_get_event_date_meta_key();
 $upcoming_events    = new WP_Query(
 	array(
-		'post_type'      => 'event',
+		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
@@ -33,7 +33,7 @@ $upcoming_events    = new WP_Query(
 );
 $past_events        = new WP_Query(
 	array(
-		'post_type'      => 'event',
+		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
@@ -53,7 +53,7 @@ $past_events        = new WP_Query(
 );
 $undated_events     = new WP_Query(
 	array(
-		'post_type'      => 'event',
+		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
@@ -85,8 +85,7 @@ $render_event_list = static function ( WP_Query $event_query ) {
 			$event_date_display = rytkoset_theme_get_event_date_display( get_the_ID() );
 			$event_location     = rytkoset_theme_get_event_location( get_the_ID() );
 			$event_excerpt      = trim( get_the_excerpt() );
-			$has_product_link   = function_exists( 'rytkoset_theme_get_event_product_url' )
-				&& '' !== rytkoset_theme_get_event_product_url( get_the_ID() );
+			$has_product_link   = '' !== rytkoset_theme_get_event_product_url( get_the_ID() );
 
 			if ( '' === $event_excerpt ) {
 				$event_excerpt = wp_strip_all_tags( get_the_content() );

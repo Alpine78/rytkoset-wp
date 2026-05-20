@@ -144,25 +144,27 @@ Ydinsisältö:
 ## Roadmap & projektinhallinta
 
 - GitHub Projects (roadmap + tehtävätaulu): https://github.com/Alpine78/rytkoset-wp/projects
-- Epicit ja alitehtävät on jaettu taululle; hallitus voi seurata etenemistä tilojen (Todo -> In progress -> Done) ja milestonejen kautta.
+- Epicit ja alitehtävät on jaettu taululle; hallitus voi seurata etenemistä tilojen (Backlog → Next → In Progress → Done) kautta.
 
-### MVP
-- Teeman peruslayout (header/footer, navigaatio), etusivu ja keskeiset sisältösivut julkaistavassa kunnossa.
-- Blogi ja uutisvirta sekä perus media-albumit (Photoswipe) katsottavissa myös mobiilissa.
-- Dev/staging (Docker + CI/CD + FTPS) toimii ja hallitus pääsee katselmoimaan dev.rytkoset.netissä.
-- Saavutettavuuden peruslinjaukset valmiit (kontrastit, fokus, näppäimistö).
+### Nykytila — toukokuu 2026
 
-### Phase 2
-- WooCommerce-jäsenmaksut ja digitaaliset tuotteet, maksutavat ja sähköpostit.
-- Tapahtumien luonti + ilmoittautuminen ilmaisille tapahtumille (lomake + osallistujanäkymä).
-- Sisällönhallinnan ohjeistus (menu, blogi, galleriat) dokumentoituna ja testattuna.
-- Saavutettavuuden tarkennukset lomakkeisiin ja modaalikomponentteihin.
+**Valmiit:**
+- Teeman peruslayout, header/footer, navigaatio, responsiivisuus ✅
+- Media-albumit (PhotoSwipe-galleria), YouTube-videoiden upotus ✅
+- WooCommerce: jäsenmaksutuotteet, digitaaliset tuotteet, Tampere 2026 -tapahtumamaksu ✅
+- Dev/staging (Docker + CI/CD + FTPS) toimii ✅
 
-### Long-term
-- Maksullisten tapahtumien maksupolku (liput, maksutavat) ja organizer-työkalut.
-- Jäsenyyden jatkot: uusinnat, sähköpostimuistutukset ja raportointi.
-- Lisäintegraatiot (uutiskirje, analytiikka) ja laajennetut hakutoiminnot sivustolla.
-- Jatkuva optimointi: suorituskyky, kuvien optimointi, varmuuskopioinnin automatisointi.
+**Käynnissä:**
+- Header/footer-uudistus ja valikon refaktorointi
+- EPIC 5 (Tapahtumat): CSV-vienti ja pienet viimeistelytehtävät
+- Mollie MobilePay -käyttöönotto ja Mollie tuotantoon
+
+**Seuraavaksi:**
+- Sukuseuran esittelysivut (historia, hallitus, yhteystiedot)
+- Blogin arkistonäkymä ja postaussivupohja
+- Saavutettavuustestaus (WCAG 2.1 AA)
+- Uutiskirjeet (AcyMailing)
+- Tietosuojaseloste ja julkaisuvalmius
 
 ---
 
@@ -186,30 +188,21 @@ Ydinsisältö:
 
 ---
 
-## 🧱 Suunnittelun pääepicit
+## 🧱 Pääepicit
 
-Projektia seurataan GitHub-issuilla ja epiceillä. Pääepicit:
+Projektia seurataan GitHub-issuilla ja epiceillä.
 
-1. **EPIC 1 — Perusrakenne & navigaatio (UI/UX / Theme Core)**
-   - Teeman peruslayout, header/footer, navigaatio, responsiivisuus
-
-2. **EPIC 2 — Media (Kuvat, albumit, video)**
-   - Galleria-albumit, Photoswipe, videoiden upotus
-
-3. **EPIC 3 — WooCommerce (jäsenmaksut, tuotteet, maksut)**
-   - Jäsenmaksutuotteet, digitaaliset tuotteet, maksutavat, jäsenyydet
-
-4. **EPIC 4 — Blogi & sisältösivut**
-   - Sukuseuran sivusisällöt, blogi, tapahtumasivut
-
-5. **EPIC 5 — Tapahtumat & ilmoittautumiset (ilmaiset + maksulliset)**
-   - Event-CPT, ilmoittautumislomakkeet, osallistujalistat, organizer-työkalut
-
-6. **EPIC 6 — Saavutettavuus (WCAG 2.1 AA)**
-   - Kontrastit, näppäimistökäyttö, ARIA, lomakkeet, dev-testaus
-   - 
-7. **EPIC 7 — Uutiskirjeet & AcyMailing**
-   - AcyMailing-uutiskirjeiden hallinta, lähettäminen ja ylläpito
+| Epic | Tila | Kuvaus |
+|------|------|--------|
+| EPIC 1 | ✅ Valmis | Perusrakenne & navigaatio — teema, header/footer, navigaatio |
+| EPIC 2 | ✅ Valmis | Media — albumit, PhotoSwipe-galleria, YouTube-videot |
+| EPIC 3 | 🔄 Pääosin valmis | WooCommerce — jäsenmaksut, tuotteet, Mollie-maksut |
+| EPIC 4 | 🔄 Käynnissä | Blogi & sisältösivut — esittelysivut, hallitus, blogi |
+| EPIC 5 | 🔄 Käynnissä | Tapahtumat & ilmoittautumiset — CPT, lomakkeet, organizer-työkalut |
+| EPIC 6 | 📋 Backlog | Saavutettavuus — WCAG 2.1 AA, kontrastit, ARIA, lomakkeet |
+| EPIC 7 | 📋 Backlog | Uutiskirjeet & AcyMailing — pohjat, mailing-listat, lähetykset |
+| EPIC 8 | 📋 Backlog | Julkaisuvalmius — tietosuoja, turvallisuus, suorituskyky |
+| Digilehti | 📋 Backlog | Digilehtien käyttöoikeudet ja hinnoittelu |
 
 ### Rajaukset
 - Sivusto on yksikielinen (suomi). Monikielisyys ja kieliversioita hyödyntävät lisäosat (esim. Polylang, MultilingualPress) eivät ole osa projektin laajuutta eikä niitä ole tarkoitus asentaa.

@@ -35,12 +35,13 @@
 
     <div class="site-header__utility">
         <div class="site-header__container site-header__utility-inner">
-            <a class="utility-contact" href="mailto:info@rytkoset.net">
+            <?php $contact_email = rytkoset_theme_get_contact_email(); ?>
+            <a class="utility-contact" href="mailto:<?php echo esc_attr( $contact_email ); ?>">
                 <svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
                     <rect x="2" y="3.5" width="12" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
                     <path d="m2.5 5 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                 </svg>
-                <span>info@rytkoset.net</span>
+                <span><?php echo esc_html( $contact_email ); ?></span>
             </a>
 
             <div class="site-header__utility-actions">
@@ -195,7 +196,6 @@
         </div>
     </div>
 
-    <!-- Varsinainen mobiilivalikko (placeholder, logiikka lisätään myöhemmin) -->
     <div class="mobile-menu-layer">
         <div class="mobile-menu__overlay" aria-hidden="true" hidden></div>
         <nav id="mobile-menu"
@@ -204,45 +204,121 @@
             aria-hidden="true"
             aria-expanded="false"
             tabindex="-1">
-            <button type="button" class="mobile-menu__close">
-                <span aria-hidden="true">&#10005;</span>
-                <span class="mobile-menu__close-label"><?php esc_html_e( 'Sulje valikko', 'rytkoset-theme' ); ?></span>
-            </button>
 
-            <?php
-            wp_nav_menu(
-                array(
-                    'theme_location' => 'primary',
-                    'menu_class'     => 'mobile-menu__list',
-                    'container'      => false,
-                    'fallback_cb'    => false,
-                )
-            );
-            ?>
+            <div class="mm-header">
+                <a class="mm-brand" href="<?php echo $home_url; ?>">
+                    <?php if ( $custom_logo ) : ?>
+                        <span class="mm-brand__logo"><?php echo wp_kses_post( $custom_logo ); ?></span>
+                    <?php else : ?>
+                        <span class="mm-brand__name"><?php bloginfo( 'name' ); ?></span>
+                    <?php endif; ?>
+                </a>
+                <button type="button" class="mobile-menu__close mm-close" aria-label="<?php esc_attr_e( 'Sulje valikko', 'rytkoset-theme' ); ?>">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" aria-hidden="true" focusable="false">
+                        <path d="M6 6l12 12M18 6l-12 12" />
+                    </svg>
+                </button>
+            </div>
 
-                <div class="mobile-menu__section mobile-menu__account">
-                    <p class="mobile-menu__section-title">
-                        <?php esc_html_e( 'Tili', 'rytkoset-theme' ); ?>
-                    </p>
-                    <div class="mobile-menu__theme">
-                        <button class="theme-toggle" type="button" aria-pressed="false">
-                            <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
-                            <span class="theme-toggle__label"><?php esc_html_e( 'Teema', 'rytkoset-theme' ); ?></span>
-                        </button>
-                    </div>
-                    <?php
-                    wp_nav_menu(
-                        array(
-                            'theme_location' => 'account',
-                            'menu_class'     => 'mobile-menu__list mobile-account-nav__list',
-                            'container'      => false,
-                            'fallback_cb'    => is_user_logged_in()
-                                ? 'rytkoset_theme_account_menu_logged_in_fallback'
-                                : 'rytkoset_theme_account_menu_logged_out_fallback',
-                        )
-                    );
+            <div class="mm-scroll">
+                <?php
+                wp_nav_menu(
+                    array(
+                        'theme_location' => 'primary',
+                        'menu_class'     => 'mm-list',
+                        'container'      => false,
+                        'fallback_cb'    => false,
+                    )
+                );
+                ?>
+
+                <div class="mm-section mm-section--account">
+                    <p class="mm-section__title"><?php esc_html_e( 'Tili', 'rytkoset-theme' ); ?></p>
+                    <?php if ( is_user_logged_in() ) :
+                        $current_user  = wp_get_current_user();
+                        $first_initial = $current_user->first_name ? mb_strtoupper( mb_substr( $current_user->first_name, 0, 1 ) ) : '';
+                        $last_initial  = $current_user->last_name  ? mb_strtoupper( mb_substr( $current_user->last_name,  0, 1 ) ) : '';
+                        $initials      = $first_initial . $last_initial;
+                        if ( ! $initials ) {
+                            $initials = mb_strtoupper( mb_substr( $current_user->display_name, 0, 2 ) );
+                        }
+                        $account_url = function_exists( 'wc_get_account_endpoint_url' )
+                            ? wc_get_account_endpoint_url( 'dashboard' )
+                            : admin_url( 'profile.php' );
                     ?>
+                        <div class="mm-account">
+                            <div class="mm-account__user">
+                                <span class="mm-account__avatar" aria-hidden="true"><?php echo esc_html( $initials ); ?></span>
+                                <span class="mm-account__meta">
+                                    <span class="mm-account__greeting"><?php esc_html_e( 'Tervetuloa,', 'rytkoset-theme' ); ?></span>
+                                    <span class="mm-account__name"><?php echo esc_html( $current_user->display_name ); ?></span>
+                                </span>
+                            </div>
+                            <div class="mm-account__actions">
+                                <a href="<?php echo esc_url( $account_url ); ?>" class="mm-btn mm-btn--ghost">
+                                    <?php esc_html_e( 'Oma tili', 'rytkoset-theme' ); ?>
+                                </a>
+                                <a href="<?php echo esc_url( rytkoset_theme_get_logout_url() ); ?>" class="mm-btn mm-btn--ghost">
+                                    <?php esc_html_e( 'Kirjaudu ulos', 'rytkoset-theme' ); ?>
+                                </a>
+                            </div>
+                        </div>
+                    <?php else : ?>
+                        <div class="mm-account__actions">
+                            <a href="<?php echo esc_url( wp_login_url() ); ?>" class="mm-btn mm-btn--ghost">
+                                <?php esc_html_e( 'Kirjaudu', 'rytkoset-theme' ); ?>
+                            </a>
+                            <?php if ( get_option( 'users_can_register' ) ) : ?>
+                                <a href="<?php echo esc_url( wp_registration_url() ); ?>" class="mm-btn mm-btn--primary">
+                                    <?php esc_html_e( 'Rekisteröidy', 'rytkoset-theme' ); ?>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
+
+                <div class="mm-section">
+                    <p class="mm-section__title"><?php esc_html_e( 'Asetukset', 'rytkoset-theme' ); ?></p>
+                    <button class="theme-toggle mm-theme" type="button" aria-pressed="false">
+                        <span class="mm-theme__left">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
+                            </svg>
+                            <span><?php esc_html_e( 'Tumma tila', 'rytkoset-theme' ); ?></span>
+                        </span>
+                        <span class="mm-switch" aria-hidden="true">
+                            <span class="mm-switch__thumb"></span>
+                        </span>
+                    </button>
+                </div>
+
+                <?php if ( ! empty( $social_links ) ) : ?>
+                <div class="mm-section">
+                    <p class="mm-section__title"><?php esc_html_e( 'Seuraa meitä', 'rytkoset-theme' ); ?></p>
+                    <ul class="mm-social" aria-label="<?php esc_attr_e( 'Sosiaalisen median linkit', 'rytkoset-theme' ); ?>">
+                        <?php foreach ( $social_links as $social_link ) :
+                            if ( empty( $social_link['icon_src'] ) ) continue; ?>
+                            <li>
+                                <a class="mm-social__link" href="<?php echo esc_url( $social_link['url'] ); ?>" aria-label="<?php echo esc_attr( $social_link['label'] ); ?>">
+                                    <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" width="36" height="36" />
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endif; ?>
+            </div><!-- .mm-scroll -->
+
+            <div class="mm-footer">
+                <a href="mailto:<?php echo esc_attr( $contact_email ); ?>" class="mm-footer__contact">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                        <rect x="2" y="3.5" width="12" height="9" rx="1.5" />
+                        <path d="m2.5 5 5.5 4 5.5-4" />
+                    </svg>
+                    <span><?php echo esc_html( $contact_email ); ?></span>
+                </a>
+            </div>
+
         </nav>
     </div>
 

@@ -1,0 +1,107 @@
+# WooCommerce: tuotteiden synkronointi ympäristöjen välillä
+
+Tämä dokumentti kuvaa WooCommerce-tuotteiden siirtotyökalun, jolla tuotteet saa vietyä ympäristöstä toiseen (local → dev) SKU-pohjaisesti ilman koko tietokannan kopiointia.
+
+## Tavoite
+
+Tuotteiden ylläpito kahdessa ympäristössä tehtiin aiemmin käsin: tuote luotiin kahdesti ja kentät pidettiin synkassa manuaalisesti. Synkronointityökalu poistaa tämän virhealttiin vaiheen.
+
+Työkalu siirtää **vain tuotteet** — ei tilauksia, käyttäjiä, sivuja eikä muuta sisältöä. Kohdeympäristön muu data säilyy koskemattomana.
+
+## Käyttö
+
+Työkalu löytyy WordPress-administa: `Työkalut > Tuotteiden synkronointi`. Vaatii `manage_woocommerce`-oikeuden.
+
+### 1. Vienti (lähdeympäristö, esim. local)
+
+1. Avaa `Vienti`-välilehti.
+2. Valitse vietävät tuotteet checkboxeilla. Otsikon checkbox valitsee kaikki.
+3. Paina `Vie valitut (ZIP)`.
+4. Selain lataa ZIP-tiedoston `rytkoset-products-{pvm}.zip`.
+
+ZIP-paketti sisältää:
+
+- `manifest.json` — formaatin versio, lähde-URL, vientiaika, tuotteiden määrä
+- `products.json` — tuotteet rakenteisena JSON-listana
+- `files/` — downloadable-tuotteiden tiedostot (jos tuotteilla on ladattavia tiedostoja)
+
+Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste.
+
+### 2. Tuonti (kohdeympäristö, esim. dev)
+
+1. Avaa `Tuonti`-välilehti.
+2. Valitse ZIP-tiedosto ja paina `Esikatsele`.
+3. Esikatselu näyttää jokaiselle tuotteelle tilan **ennen** kuin mitään muutetaan.
+4. Valitse tuotavat tuotteet checkboxeilla ja paina `Tuo valitut`.
+5. Tuonnin jälkeen näytetään raportti: luotu / päivitetty / ohitettu / virheet.
+
+## Esikatselun tilat
+
+| Tila | Merkitys | Checkbox oletuksena |
+|------|----------|---------------------|
+| **Uusi** | SKU:ta ei ole kohdeympäristössä — tuote luodaan | päällä |
+| **Päivitetään** | SKU löytyy, kentissä eroja — muuttuvat kentät listataan | päällä |
+| **Identtinen** | SKU löytyy, ei eroja — tuonti ei tee mitään | pois |
+| **VIRHE** | Esim. downloadable-tiedosto puuttuu paketista — tuontia ei sallita | pois (lukittu) |
+
+Päivitettävillä tuotteilla esikatselu näyttää kenttäkohtaisen diffin (`vanha → uusi`), joten korvattavat arvot näkee ennen tuontia.
+
+## Tunnistus: SKU
+
+Tuotteet tunnistetaan **SKU:n** perusteella, ei WordPressin post ID:n. Tämä tarkoittaa:
+
+- Sama SKU eri ympäristöissä → sama tuote, päivitetään
+- Tuntematon SKU → uusi tuote, luodaan
+- Import ei luo duplikaatteja nimen perusteella
+
+## Siirrettävät kentät
+
+Ydinkentät: nimi, slug, status, tuotetyyppi, normaali- ja alennushinta, lyhyt kuvaus ja kuvaus, `Virtual`, `Downloadable`, kategoriat ja tagit.
+
+Kategoriat ja tagit siirretään slugilla. Jos kohdeympäristöstä puuttuu kategoria, se luodaan automaattisesti.
+
+### Custom product meta -avaimet
+
+Vain seuraavat `_rytkoset_*` -etuliitteiset metat siirtyvät (WooCommercen sisäisiä laskentakenttiä ei kosketa):
+
+- `_rytkoset_membership_product`
+- `_rytkoset_membership_type`
+- `_rytkoset_membership_period`
+- `_rytkoset_member_names_required`
+- `_rytkoset_registration_deadline`
+- `_rytkoset_registration_mode`
+
+Lista on filtteröitävissä koodista: `rytkoset_theme_product_sync_meta_keys`.
+
+## Downloadable-tuotteet
+
+Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonnissa:
+
+- Jos tiedosto puuttuu paketista → tuote merkitään esikatselussa **VIRHE**-tilaan eikä sitä voi tuoda. Rikkinäistä tuotetta ei luoda hiljaisesti.
+- Jos tiedosto löytyy → se kopioidaan kohdeympäristön `wp-content/uploads/woocommerce_uploads/`-hakemistoon ja liitetään tuotteeseen.
+
+## Tekniset huomiot
+
+- Moduuli: `wp-content/themes/rytkoset-theme/inc/woocommerce-product-sync.php`
+- Vaatii palvelimelta PHP:n `ZipArchive`-laajennuksen.
+- Ladattu ZIP puretaan väliaikaisesti hakemistoon `wp-content/uploads/rytkoset-product-sync/`. Hakemisto siivotaan automaattisesti tuonnin jälkeen.
+- Esikatselu-sessio säilyy transientissa 1 tunnin. Sen jälkeen ZIP pitää ladata uudelleen.
+- Tunnistus käyttää WooCommercen omaa `wc_get_product_id_by_sku()`-funktiota.
+
+## Rajaukset
+
+Työkalu **ei** tällä hetkellä:
+
+- siirrä variable productseja (vaihtelevia tuotteita) — vain `simple`-tuotteet
+- siirrä tilauksia, käyttäjiä, sivuja tai muuta post-dataa
+- tee automaattista ajastettua synkkausta — siirto on aina manuaalinen
+- toimi kaksisuuntaisesti — siirto on push-tyyppinen (lähde → kohde)
+
+## Testattu
+
+- Tuote voidaan viedä ZIP-pakettiin ja tuoda toiseen ympäristöön uutena tuotteena.
+- Olemassa olevan tuotteen päivitys: esikatselu näyttää muuttuvat kentät, tuonti päivittää ne.
+- Muuttumattoman tuotteen tuonti tunnistetaan `Identtinen`-tilaan eikä se tee muutoksia.
+- Downloadable-tuote siirtyy tiedostoineen; puuttuva tiedosto estää tuonnin `VIRHE`-tilalla.
+- Puuttuva kategoria luodaan kohdeympäristöön automaattisesti.
+- Custom meta -avaimet (`_rytkoset_membership_*`, `_rytkoset_registration_*`) säilyvät siirrossa.
