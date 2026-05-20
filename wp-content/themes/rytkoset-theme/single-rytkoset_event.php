@@ -62,6 +62,12 @@ if ( have_posts() ) :
 							<?php rytkoset_theme_render_free_event_registration_form( $event_id ); ?>
 
 							<?php
+							if ( function_exists( 'rytkoset_theme_render_free_event_registration_form' ) ) {
+								rytkoset_theme_render_free_event_registration_form( $event_id );
+							}
+							?>
+
+							<?php
 							rytkoset_theme_share_buttons(
 								array(
 									'heading' => __( 'Jaa tapahtuma', 'rytkoset-theme' ),

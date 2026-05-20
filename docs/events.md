@@ -51,15 +51,15 @@ Yksi `event_registration` vastaa yhtä osallistujaa. Tämä pitää osallistujal
 
 Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 
-| Kenttä ylläpidossa | Meta-avain | Muoto / arvot | Käyttö |
-| --- | --- | --- | --- |
-| Tapahtumapäivä | `_rytkoset_event_date` | `YYYY-MM-DD`, esim. `2026-08-29` | Arkiston järjestys ja julkinen päivämäärä |
-| Alkamisaika | `_rytkoset_event_start_time` | `HH:MM`, esim. `11:30` | Julkinen tapahtumatieto |
-| Päättymisaika | `_rytkoset_event_end_time` | `HH:MM`, esim. `18:00` | Julkinen tapahtumatieto, valinnainen |
-| Paikka | `_rytkoset_event_location` | vapaa teksti | Julkinen tapahtumatieto |
-| Maksullisuus | `_rytkoset_event_fee_type` | `free`, `paid` tai tyhjä | Julkinen hintatieto |
-| Hintateksti | `_rytkoset_event_price_text` | vapaa teksti, esim. `49 € / henkilö` | Julkinen hintatieto |
-| Maksutuote | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID | Linkki ilmoittautumis-/maksutuotteeseen |
+| Kenttä ylläpidossa | Meta-avain                   | Muoto / arvot                        | Käyttö                                    |
+| ------------------ | ---------------------------- | ------------------------------------ | ----------------------------------------- |
+| Tapahtumapäivä     | `_rytkoset_event_date`       | `YYYY-MM-DD`, esim. `2026-08-29`     | Arkiston järjestys ja julkinen päivämäärä |
+| Alkamisaika        | `_rytkoset_event_start_time` | `HH:MM`, esim. `11:30`               | Julkinen tapahtumatieto                   |
+| Päättymisaika      | `_rytkoset_event_end_time`   | `HH:MM`, esim. `18:00`               | Julkinen tapahtumatieto, valinnainen      |
+| Paikka             | `_rytkoset_event_location`   | vapaa teksti                         | Julkinen tapahtumatieto                   |
+| Maksullisuus       | `_rytkoset_event_fee_type`   | `free`, `paid` tai tyhjä             | Julkinen hintatieto                       |
+| Hintateksti        | `_rytkoset_event_price_text` | vapaa teksti, esim. `49 € / henkilö` | Julkinen hintatieto                       |
+| Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
 
 Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
 
@@ -67,15 +67,15 @@ Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkoh
 
 Ilmoittautumisen tiedot tallennetaan WordPressin post metaan:
 
-| Kenttä ylläpidossa | Meta-avain | Muoto / arvot | Käyttö |
-| --- | --- | --- | --- |
-| Tapahtuma | `_rytkoset_registration_event_id` | `event`-postauksen ID | Viittaus tapahtumaan |
-| Osallistujan nimi | `_rytkoset_registration_name` | vapaa teksti | Osallistujalista ja admin-otsikko |
-| Sähköposti | `_rytkoset_registration_email` | sähköpostiosoite | Yhteydenpito ja myöhempi vahvistus |
-| Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet` | vapaa teksti | Käytännön järjestelyt |
-| Lisätieto | `_rytkoset_registration_notes` | vapaa teksti | Ylläpidon lisätiedot |
-| Tila | `_rytkoset_registration_status` | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila |
-| GDPR-hyväksyntä | `_rytkoset_registration_gdpr_consent` | Unix-aikaleima | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
+| Kenttä ylläpidossa           | Meta-avain                            | Muoto / arvot                       | Käyttö                                                        |
+| ---------------------------- | ------------------------------------- | ----------------------------------- | ------------------------------------------------------------- |
+| Tapahtuma                    | `_rytkoset_registration_event_id`     | `event`-postauksen ID               | Viittaus tapahtumaan                                          |
+| Osallistujan nimi            | `_rytkoset_registration_name`         | vapaa teksti                        | Osallistujalista ja admin-otsikko                             |
+| Sähköposti                   | `_rytkoset_registration_email`        | sähköpostiosoite                    | Yhteydenpito ja myöhempi vahvistus                            |
+| Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet`         | vapaa teksti                        | Käytännön järjestelyt                                         |
+| Lisätieto                    | `_rytkoset_registration_notes`        | vapaa teksti                        | Ylläpidon lisätiedot                                          |
+| Tila                         | `_rytkoset_registration_status`       | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila                                |
+| GDPR-hyväksyntä              | `_rytkoset_registration_gdpr_consent` | Unix-aikaleima                      | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
 
 Ilmoittautumisen otsikko muodostetaan automaattisesti muodossa `Osallistujan nimi - Tapahtuman nimi`, jotta admin-lista pysyy luettavana.
 
