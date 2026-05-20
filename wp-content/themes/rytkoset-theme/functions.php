@@ -342,8 +342,18 @@ function rytkoset_theme_scripts() {
 			'rytkoset-theme-main',
 			'window.rytkosetCheckoutConfig = ' . wp_json_encode(
 				array(
-					'showMembershipNote' => rytkoset_theme_cart_requires_member_names(),
-					'membershipNoteHtml' => rytkoset_theme_get_membership_checkout_notice_markup(),
+					'checkoutNotes' => array_values(
+						array_filter(
+							array(
+								rytkoset_theme_cart_requires_member_names()
+									? rytkoset_theme_get_membership_checkout_notice_markup()
+									: '',
+								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()
+									? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
+									: '',
+							)
+						)
+					),
 				)
 			) . ';',
 			'before'
