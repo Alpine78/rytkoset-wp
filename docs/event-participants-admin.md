@@ -39,6 +39,8 @@ Jokaiselta osallistujalta näkyy:
 | Sarake | Selite |
 | --- | --- |
 | Nimi | Osallistujan nimi |
+| Osallistujatyyppi | Tampere 2026 -variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
+| Perjantain buffet | Osallistuuko henkilö perjantain buffet-illalliselle |
 | Sähköposti | Osallistujan sähköposti (ilmaisessa) tai yhteyshenkilön sähköposti (maksullisessa) |
 | Puhelin | Puhelinnumero |
 | Ruokavalio | Ruokarajoitteet tai allergiat |
@@ -62,6 +64,8 @@ Sarakkeet:
 | --- | --- |
 | Tapahtuma | Tapahtuman otsikko |
 | Nimi | Osallistujan nimi |
+| Osallistujatyyppi | Tampere 2026 -osallistujilla tuotteen variaatio |
+| Perjantain buffet | `Kyllä` tai `Ei` |
 | Sähköposti | Osallistujan sähköposti |
 | Puhelin | Puhelinnumero |
 | Ruokavalio / huomiot | Ruokarajoitteet ja lisätiedot yhdistettynä |
@@ -84,13 +88,15 @@ Lähde: `event_registration` -sisältötyyppi. Meta-avain `_rytkoset_registratio
 
 Lähde: WooCommerce-tilaukset, joissa on tapahtuman meta-avaimeen `_rytkoset_event_product_id` tallennettu tuote. Status seuraa tilauksen WooCommerce-statusta.
 
-- **Tampere 2026**: käytetään olemassa olevaa moniosallistujarakennetta — tilauksen checkout-kentistä puretaan jokainen osallistuja erikseen omaksi riviksi.
+- **Tampere 2026**: käytetään olemassa olevaa moniosallistujarakennetta — tilauksen checkout-kentistä puretaan jokainen osallistuja erikseen omaksi riviksi. Osallistujatyyppi tulee tilauksen variaatiosta ja perjantain buffet-valinta checkout-kentästä.
 - **Muut maksulliset tapahtumat**: yksi rivi per tilaus, tiedot tilauksen laskutustiedoista.
 
 ### Yhtenäinen rivirakenne
 
 ```
 name          – osallistujan nimi
+participant_type – Tampere 2026 -osallistujatyyppi
+friday_buffet – true/false perjantain buffet-illalliselle
 email         – sähköposti
 phone         – puhelinnumero
 diet          – ruokarajoitteet

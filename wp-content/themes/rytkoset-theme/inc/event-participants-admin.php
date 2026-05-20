@@ -56,22 +56,24 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 		$name = rytkoset_theme_get_event_registration_meta( $registration->ID, 'name' );
 
 		$rows[] = array(
-			'name'          => '' !== $name ? $name : __( 'Nimetön osallistuja', 'rytkoset-theme' ),
-			'email'         => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
-			'phone'         => '',
-			'diet'          => rytkoset_theme_get_event_registration_meta( $registration->ID, 'diet' ),
-			'notes'         => rytkoset_theme_get_event_registration_meta( $registration->ID, 'notes' ),
-			'status'        => $status,
-			'status_label'  => isset( $statuses[ $status ] ) ? $statuses[ $status ] : $statuses['pending'],
-			'source'        => 'free',
-			'created'       => get_the_date( '', $registration ),
-			'contact_name'  => '' !== $name ? $name : '',
-			'contact_email' => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
-			'edit_url'      => (string) get_edit_post_link( $registration->ID, '' ),
-			'order_id'      => null,
-			'order_number'  => null,
-			'event_id'      => $event_id,
-			'event_title'   => get_the_title( $event_id ),
+			'name'             => '' !== $name ? $name : __( 'Nimetön osallistuja', 'rytkoset-theme' ),
+			'email'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
+			'phone'            => '',
+			'diet'             => rytkoset_theme_get_event_registration_meta( $registration->ID, 'diet' ),
+			'notes'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'notes' ),
+			'participant_type' => '',
+			'friday_buffet'    => false,
+			'status'           => $status,
+			'status_label'     => isset( $statuses[ $status ] ) ? $statuses[ $status ] : $statuses['pending'],
+			'source'           => 'free',
+			'created'          => get_the_date( '', $registration ),
+			'contact_name'     => '' !== $name ? $name : '',
+			'contact_email'    => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
+			'edit_url'         => (string) get_edit_post_link( $registration->ID, '' ),
+			'order_id'         => null,
+			'order_number'     => null,
+			'event_id'         => $event_id,
+			'event_title'      => get_the_title( $event_id ),
 		);
 	}
 
@@ -132,7 +134,7 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 				continue;
 			}
 
-			if ( (int) $item_product->get_id() === $product_id ) {
+			if ( (int) $item_product->get_id() === $product_id || (int) $item_product->get_parent_id() === $product_id ) {
 				$order_has_product = true;
 				$quantity         += (int) $item->get_quantity();
 			}
@@ -168,22 +170,24 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 					: __( 'Nimi puuttuu', 'rytkoset-theme' );
 
 				$rows[] = array(
-					'name'          => $participant_name,
-					'email'         => '',
-					'phone'         => '',
-					'diet'          => isset( $participant['diet'] ) ? (string) $participant['diet'] : '',
-					'notes'         => '',
-					'status'        => 'paid',
-					'status_label'  => $status_label,
-					'source'        => 'paid',
-					'created'       => $created,
-					'contact_name'  => $contact_name,
-					'contact_email' => $contact_email,
-					'edit_url'      => $edit_url,
-					'order_id'      => $order->get_id(),
-					'order_number'  => $order->get_order_number(),
-					'event_id'      => $event_id,
-					'event_title'   => get_the_title( $event_id ),
+					'name'             => $participant_name,
+					'email'            => '',
+					'phone'            => '',
+					'diet'             => isset( $participant['diet'] ) ? (string) $participant['diet'] : '',
+					'notes'            => '',
+					'participant_type' => isset( $participant['participant_type'] ) ? (string) $participant['participant_type'] : '',
+					'friday_buffet'    => ! empty( $participant['friday_buffet'] ),
+					'status'           => 'paid',
+					'status_label'     => $status_label,
+					'source'           => 'paid',
+					'created'          => $created,
+					'contact_name'     => $contact_name,
+					'contact_email'    => $contact_email,
+					'edit_url'         => $edit_url,
+					'order_id'         => $order->get_id(),
+					'order_number'     => $order->get_order_number(),
+					'event_id'         => $event_id,
+					'event_title'      => get_the_title( $event_id ),
 				);
 			}
 
@@ -194,22 +198,24 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 
 		for ( $i = 0; $i < $units; $i++ ) {
 			$rows[] = array(
-				'name'          => $contact_name,
-				'email'         => $contact_email,
-				'phone'         => $contact_phone,
-				'diet'          => '',
-				'notes'         => (string) $order->get_customer_note(),
-				'status'        => 'paid',
-				'status_label'  => $status_label,
-				'source'        => 'paid',
-				'created'       => $created,
-				'contact_name'  => $contact_name,
-				'contact_email' => $contact_email,
-				'edit_url'      => $edit_url,
-				'order_id'      => $order->get_id(),
-				'order_number'  => $order->get_order_number(),
-				'event_id'      => $event_id,
-				'event_title'   => get_the_title( $event_id ),
+				'name'             => $contact_name,
+				'email'            => $contact_email,
+				'phone'            => $contact_phone,
+				'diet'             => '',
+				'notes'            => (string) $order->get_customer_note(),
+				'participant_type' => '',
+				'friday_buffet'    => false,
+				'status'           => 'paid',
+				'status_label'     => $status_label,
+				'source'           => 'paid',
+				'created'          => $created,
+				'contact_name'     => $contact_name,
+				'contact_email'    => $contact_email,
+				'edit_url'         => $edit_url,
+				'order_id'         => $order->get_id(),
+				'order_number'     => $order->get_order_number(),
+				'event_id'         => $event_id,
+				'event_title'      => get_the_title( $event_id ),
 			);
 		}
 	}
@@ -446,6 +452,8 @@ function rytkoset_theme_export_event_participants_csv() {
 		array(
 			__( 'Tapahtuma', 'rytkoset-theme' ),
 			__( 'Nimi', 'rytkoset-theme' ),
+			__( 'Osallistujatyyppi', 'rytkoset-theme' ),
+			__( 'Perjantain buffet', 'rytkoset-theme' ),
 			__( 'Sähköposti', 'rytkoset-theme' ),
 			__( 'Puhelin', 'rytkoset-theme' ),
 			__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
@@ -476,6 +484,8 @@ function rytkoset_theme_export_event_participants_csv() {
 			array(
 				(string) ( $row['event_title'] ?? '' ),
 				(string) ( $row['name'] ?? '' ),
+				(string) ( $row['participant_type'] ?? '' ),
+				! empty( $row['friday_buffet'] ) ? __( 'Kyllä', 'rytkoset-theme' ) : __( 'Ei', 'rytkoset-theme' ),
 				(string) ( $row['email'] ?? '' ),
 				(string) ( $row['phone'] ?? '' ),
 				$details,
@@ -603,6 +613,8 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Osallistujatyyppi', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Perjantain buffet', 'rytkoset-theme' ); ?></th>
 					<?php if ( $show_event_column ) : ?>
 						<th scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
 					<?php endif; ?>
@@ -618,12 +630,20 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			<tbody>
 				<?php if ( empty( $rows ) ) : ?>
 					<tr>
-						<td colspan="<?php echo $show_event_column ? 9 : 8; ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
+						<td colspan="<?php echo $show_event_column ? 11 : 10; ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
 					</tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $row ) : ?>
 						<tr>
 							<td><?php echo esc_html( (string) $row['name'] ); ?></td>
+							<td><?php echo '' !== (string) $row['participant_type'] ? esc_html( (string) $row['participant_type'] ) : '&mdash;'; ?></td>
+							<td>
+								<?php
+								echo ! empty( $row['friday_buffet'] )
+									? esc_html__( 'Kyllä', 'rytkoset-theme' )
+									: esc_html__( 'Ei', 'rytkoset-theme' );
+								?>
+							</td>
 							<?php if ( $show_event_column ) : ?>
 								<td>
 									<?php
