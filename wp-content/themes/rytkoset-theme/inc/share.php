@@ -7,24 +7,23 @@ if ( ! defined( 'ABSPATH' ) ) {
         exit;
 }
 
-if ( ! function_exists( 'rytkoset_theme_get_share_links' ) ) {
-        /**
-         * Palauttaa sosiaalisen median jakolinkit annetulle sisällölle.
-         *
-         * @param int|null $post_id Viestin ID; jos tyhjä, käytetään nykyistä.
-         * @return array[]
-         */
-        function rytkoset_theme_get_share_links( $post_id = null ) {
-                $post_id = $post_id ? (int) $post_id : get_the_ID();
+/**
+ * Palauttaa sosiaalisen median jakolinkit annetulle sisällölle.
+ *
+ * @param int|null $post_id Viestin ID; jos tyhjä, käytetään nykyistä.
+ * @return array[]
+ */
+function rytkoset_theme_get_share_links( $post_id = null ) {
+        $post_id = $post_id ? (int) $post_id : get_the_ID();
 
-                if ( ! $post_id ) {
-                        return array();
-                }
+        if ( ! $post_id ) {
+                return array();
+        }
 
-                $permalink      = get_permalink( $post_id );
-                $encoded_url    = rawurlencode( $permalink );
-                $title          = get_the_title( $post_id );
-                $encoded_title  = rawurlencode( $title );
+        $permalink      = get_permalink( $post_id );
+        $encoded_url    = rawurlencode( $permalink );
+        $title          = get_the_title( $post_id );
+        $encoded_title  = rawurlencode( $title );
 		$encoded_text   = rawurlencode( trim( $title . ' ' . $permalink ) );
 		$email_body     = rawurlencode( trim( $title . "\n" . $permalink ) );
 		$fb_app_id     = apply_filters( 'rytkoset_theme_facebook_app_id', '' );
@@ -37,129 +36,125 @@ if ( ! function_exists( 'rytkoset_theme_get_share_links' ) ) {
 			)
 			: sprintf( 'https://www.messenger.com/t/?link=%s', $encoded_url );
 
-                return array(
-                        array(
-                                'service' => 'facebook',
-                                'label'   => __( 'Facebook', 'rytkoset-theme' ),
-                                'url'     => sprintf(
-                                        'https://www.facebook.com/sharer/sharer.php?u=%s&quote=%s',
-                                        $encoded_url,
-                                        $encoded_title
-                                ),
-                                'type'    => 'link',
+        return array(
+                array(
+                        'service' => 'facebook',
+                        'label'   => __( 'Facebook', 'rytkoset-theme' ),
+                        'url'     => sprintf(
+                                'https://www.facebook.com/sharer/sharer.php?u=%s&quote=%s',
+                                $encoded_url,
+                                $encoded_title
                         ),
-                        array(
-                                'service' => 'x',
-                                'label'   => __( 'X', 'rytkoset-theme' ),
-                                'url'     => sprintf( 'https://twitter.com/intent/tweet?url=%s&text=%s', $encoded_url, $encoded_title ),
-                                'type'    => 'link',
-                        ),
-                        array(
-                                'service' => 'linkedin',
-                                'label'   => __( 'LinkedIn', 'rytkoset-theme' ),
-                                'url'     => sprintf( 'https://www.linkedin.com/sharing/share-offsite/?url=%s', $encoded_url ),
-                                'type'    => 'link',
-                        ),
-                        array(
-                                'service' => 'whatsapp',
-                                'label'   => __( 'WhatsApp', 'rytkoset-theme' ),
-                                'url'     => sprintf( 'https://api.whatsapp.com/send?text=%s', $encoded_text ),
-                                'type'    => 'link',
-                        ),
-                        array(
-                                'service' => 'messenger',
-                                'label'   => __( 'Messenger', 'rytkoset-theme' ),
-                                'url'     => $messenger_url,
-                                'type'    => 'link',
-                        ),
+                        'type'    => 'link',
+                ),
+                array(
+                        'service' => 'x',
+                        'label'   => __( 'X', 'rytkoset-theme' ),
+                        'url'     => sprintf( 'https://twitter.com/intent/tweet?url=%s&text=%s', $encoded_url, $encoded_title ),
+                        'type'    => 'link',
+                ),
+                array(
+                        'service' => 'linkedin',
+                        'label'   => __( 'LinkedIn', 'rytkoset-theme' ),
+                        'url'     => sprintf( 'https://www.linkedin.com/sharing/share-offsite/?url=%s', $encoded_url ),
+                        'type'    => 'link',
+                ),
+                array(
+                        'service' => 'whatsapp',
+                        'label'   => __( 'WhatsApp', 'rytkoset-theme' ),
+                        'url'     => sprintf( 'https://api.whatsapp.com/send?text=%s', $encoded_text ),
+                        'type'    => 'link',
+                ),
+                array(
+                        'service' => 'messenger',
+                        'label'   => __( 'Messenger', 'rytkoset-theme' ),
+                        'url'     => $messenger_url,
+                        'type'    => 'link',
+                ),
 			array(
 				'service' => 'email',
 				'label'   => __( 'Sähköposti', 'rytkoset-theme' ),
-				'url'     => sprintf( 'mailto:info@rytkoset.net?subject=%s&body=%s', $encoded_title, $email_body ),
+				'url'     => sprintf( 'mailto:%s?subject=%s&body=%s', rawurlencode( rytkoset_theme_get_contact_email() ), $encoded_title, $email_body ),
 				'type'    => 'link',
 			),
-                        array(
-                                'service' => 'copy',
-                                'label'   => __( 'Kopioi linkki', 'rytkoset-theme' ),
-                                'url'     => $permalink,
-                                'type'    => 'copy',
-                        ),
-                );
-        }
+                array(
+                        'service' => 'copy',
+                        'label'   => __( 'Kopioi linkki', 'rytkoset-theme' ),
+                        'url'     => $permalink,
+                        'type'    => 'copy',
+                ),
+        );
 }
 
-if ( ! function_exists( 'rytkoset_theme_should_show_gallery_share' ) ) {
-        /**
-         * Selvittää, näytetäänkö jakonapit galleriasivulla.
-         *
-         * @param WP_Post|int|null $post Viesti tai ID; oletuksena nykyinen.
-         * @return bool
-         */
-        function rytkoset_theme_should_show_gallery_share( $post = null ) {
-                $post = get_post( $post );
+/**
+ * Selvittää, näytetäänkö jakonapit galleriasivulla.
+ *
+ * @param WP_Post|int|null $post Viesti tai ID; oletuksena nykyinen.
+ * @return bool
+ */
+function rytkoset_theme_should_show_gallery_share( $post = null ) {
+        $post = get_post( $post );
 
-                if ( ! $post || 'page' !== $post->post_type ) {
-                        return false;
-                }
-
-                $gallery_slugs = array( 'valokuvat', 'galleria', 'galleriat' );
-
-                if ( in_array( $post->post_name, $gallery_slugs, true ) ) {
-                        return true;
-                }
-
-                $content = $post->post_content;
-
-                if ( function_exists( 'has_block' ) && has_block( 'gallery', $post ) ) {
-                        return true;
-                }
-
-                if ( has_shortcode( $content, 'gallery' ) ) {
-                        return true;
-                }
-
+        if ( ! $post || 'page' !== $post->post_type ) {
                 return false;
         }
+
+        $gallery_slugs = array( 'valokuvat', 'galleria', 'galleriat' );
+
+        if ( in_array( $post->post_name, $gallery_slugs, true ) ) {
+                return true;
+        }
+
+        $content = $post->post_content;
+
+        if ( function_exists( 'has_block' ) && has_block( 'gallery', $post ) ) {
+                return true;
+        }
+
+        if ( has_shortcode( $content, 'gallery' ) ) {
+                return true;
+        }
+
+        return false;
 }
 
-if ( ! function_exists( 'rytkoset_theme_share_buttons' ) ) {
-        /**
-         * Tulostaa jakonapit.
-         *
-         * @param array $args Asetukset: heading ja post_id.
-         */
-        function rytkoset_theme_share_buttons( $args = array() ) {
-                $defaults = array(
-                        'heading' => __( 'Jaa tämä sisältö', 'rytkoset-theme' ),
-                        'post_id' => get_the_ID(),
-                );
+/**
+ * Tulostaa jakonapit.
+ *
+ * @param array $args Asetukset: heading ja post_id.
+ */
+function rytkoset_theme_share_buttons( $args = array() ) {
+        $defaults = array(
+                'heading' => __( 'Jaa tämä sisältö', 'rytkoset-theme' ),
+                'post_id' => get_the_ID(),
+        );
 
-                $args              = wp_parse_args( $args, $defaults );
-                $share_links       = rytkoset_theme_get_share_links( $args['post_id'] );
-                $share_icons       = array(
-                        'facebook'  => 'Facebook.svg',
-                        'x'         => 'X.svg',
-                        'linkedin'  => 'LinkedIn.svg',
-                        'whatsapp'  => 'WhatsApp.svg',
-                        'messenger' => 'Messenger.svg',
+        $args              = wp_parse_args( $args, $defaults );
+        $share_links       = rytkoset_theme_get_share_links( $args['post_id'] );
+        $share_icons       = array(
+                'facebook'  => 'Facebook.svg',
+                'x'         => 'X.svg',
+                'linkedin'  => 'LinkedIn.svg',
+                'whatsapp'  => 'WhatsApp.svg',
+                'messenger' => 'Messenger.svg',
 			'email'     => 'Email.svg',
-                );
+        );
 		$share_permalink   = $args['post_id'] ? get_permalink( $args['post_id'] ) : '';
 		$share_title       = $args['post_id'] ? get_the_title( $args['post_id'] ) : '';
 		$share_text        = trim( wp_strip_all_tags( $share_title . ' ' . $share_permalink ) );
 
-                if ( empty( $share_links ) ) {
-                        return;
-                }
-                ?>
-                <div
+        if ( empty( $share_links ) ) {
+                return;
+        }
+        ?>
+        <div
 			class="share"
 			data-share
 			data-share-url="<?php echo esc_url( $share_permalink ); ?>"
 			data-share-title="<?php echo esc_attr( $share_title ); ?>"
 			data-share-text="<?php echo esc_attr( $share_text ); ?>"
 		>
-                        <h2 class="share__title"><?php echo esc_html( $args['heading'] ); ?></h2>
+                <h2 class="share__title"><?php echo esc_html( $args['heading'] ); ?></h2>
 			<div class="share__controls">
 				<button
 					type="button"
@@ -177,8 +172,8 @@ if ( ! function_exists( 'rytkoset_theme_share_buttons' ) ) {
 					<span class="share__trigger-label"><?php esc_html_e( 'Jaa', 'rytkoset-theme' ); ?></span>
 				</button>
 			</div>
-                        <div class="share__menu" data-share-menu hidden>
-                                <div class="share__actions">
+                <div class="share__menu" data-share-menu hidden>
+                        <div class="share__actions">
 					<button
 						type="button"
 						class="share__button share__button--native"
@@ -193,19 +188,19 @@ if ( ! function_exists( 'rytkoset_theme_share_buttons' ) ) {
 						</span>
 						<span><?php esc_html_e( 'Jaa laitteella...', 'rytkoset-theme' ); ?></span>
 					</button>
-                                        <?php foreach ( $share_links as $link ) : ?>
-                                                <?php if ( 'copy' === $link['type'] ) : ?>
-                                                        <button
-                                                                type="button"
-                                                                class="share__button share__button--<?php echo esc_attr( $link['service'] ); ?>"
-                                                                data-share-copy="<?php echo esc_url( $link['url'] ); ?>"
-                                                                data-share-success="<?php esc_attr_e( 'Linkki kopioitu leikepöydälle', 'rytkoset-theme' ); ?>"
-                                                                data-share-error="<?php esc_attr_e( 'Linkin kopiointi ei onnistunut', 'rytkoset-theme' ); ?>"
-                                                        >
-                                                                <span aria-hidden="true" class="share__icon">&#128279;</span>
-                                                                <span><?php echo esc_html( $link['label'] ); ?></span>
-                                                        </button>
-                                                <?php else : ?>
+                                <?php foreach ( $share_links as $link ) : ?>
+                                        <?php if ( 'copy' === $link['type'] ) : ?>
+                                                <button
+                                                        type="button"
+                                                        class="share__button share__button--<?php echo esc_attr( $link['service'] ); ?>"
+                                                        data-share-copy="<?php echo esc_url( $link['url'] ); ?>"
+                                                        data-share-success="<?php esc_attr_e( 'Linkki kopioitu leikepöydälle', 'rytkoset-theme' ); ?>"
+                                                        data-share-error="<?php esc_attr_e( 'Linkin kopiointi ei onnistunut', 'rytkoset-theme' ); ?>"
+                                                >
+                                                        <span aria-hidden="true" class="share__icon">&#128279;</span>
+                                                        <span><?php echo esc_html( $link['label'] ); ?></span>
+                                                </button>
+                                        <?php else : ?>
 							<a
 								class="share__button share__button--<?php echo esc_attr( $link['service'] ); ?>"
 								href="<?php echo esc_url( $link['url'] ); ?>"
@@ -253,10 +248,9 @@ if ( ! function_exists( 'rytkoset_theme_share_buttons' ) ) {
 							</a>
 						<?php endif; ?>
 					<?php endforeach; ?>
-                                </div>
                         </div>
-                        <p class="share__status" data-share-status hidden></p>
                 </div>
-                <?php
-        }
+                <p class="share__status" data-share-status hidden></p>
+        </div>
+        <?php
 }

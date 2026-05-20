@@ -35,12 +35,13 @@
 
     <div class="site-header__utility">
         <div class="site-header__container site-header__utility-inner">
-            <a class="utility-contact" href="mailto:info@rytkoset.net">
+            <?php $contact_email = rytkoset_theme_get_contact_email(); ?>
+            <a class="utility-contact" href="mailto:<?php echo esc_attr( $contact_email ); ?>">
                 <svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
                     <rect x="2" y="3.5" width="12" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
                     <path d="m2.5 5 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
                 </svg>
-                <span>info@rytkoset.net</span>
+                <span><?php echo esc_html( $contact_email ); ?></span>
             </a>
 
             <div class="site-header__utility-actions">
@@ -309,12 +310,12 @@
             </div><!-- .mm-scroll -->
 
             <div class="mm-footer">
-                <a href="mailto:info@rytkoset.net" class="mm-footer__contact">
+                <a href="mailto:<?php echo esc_attr( $contact_email ); ?>" class="mm-footer__contact">
                     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                         <rect x="2" y="3.5" width="12" height="9" rx="1.5" />
                         <path d="m2.5 5 5.5 4 5.5-4" />
                     </svg>
-                    <span>info@rytkoset.net</span>
+                    <span><?php echo esc_html( $contact_email ); ?></span>
                 </a>
             </div>
 

@@ -624,28 +624,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 (function () {
   const config = window.rytkosetCheckoutConfig;
+  const checkoutNotes = Array.isArray(config?.checkoutNotes)
+    ? config.checkoutNotes
+    : config?.showMembershipNote && config.membershipNoteHtml
+      ? [config.membershipNoteHtml]
+      : [];
 
-  if (!config || !config.showMembershipNote || !config.membershipNoteHtml) {
+  if (!checkoutNotes.length) {
     return;
   }
 
-  const insertMembershipNote = () => {
+  const insertCheckoutNotes = () => {
     const checkoutRoot = document.querySelector('.wp-block-woocommerce-checkout, .wc-block-checkout');
 
     if (!checkoutRoot || document.querySelector('.rytkoset-checkout-note')) {
       return false;
     }
 
-    checkoutRoot.insertAdjacentHTML('beforebegin', config.membershipNoteHtml);
+    checkoutRoot.insertAdjacentHTML('beforebegin', checkoutNotes.join(''));
     return true;
   };
 
-  if (insertMembershipNote()) {
+  if (insertCheckoutNotes()) {
     return;
   }
 
   const observer = new MutationObserver(() => {
-    if (insertMembershipNote()) {
+    if (insertCheckoutNotes()) {
       observer.disconnect();
     }
   });

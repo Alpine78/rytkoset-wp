@@ -54,28 +54,39 @@ Teema `wp-content/themes/rytkoset-theme/` on ainoa versioitu koodipohja. WordPre
 
 ### Template-hierarkia
 
-| Tiedosto | Tarkoitus |
-|----------|-----------|
-| `front-page.php` | Etusivu |
-| `page.php` | Staattiset sivut |
-| `single.php` | Blogipostaus |
-| `single-event.php` | Yksittäinen tapahtuma |
-| `single-gallery_album.php` | Yksittäinen albumi |
-| `archive-event.php` | Tapahtumaarkisto (`/tapahtumat`) |
-| `archive-gallery_album.php` | Albumiarkisto (`/albumit`) |
-| `header.php` / `footer.php` | Sivuston ylä- ja alaosa |
+| Tiedosto                    | Tarkoitus                        |
+| --------------------------- | -------------------------------- |
+| `front-page.php`            | Etusivu                          |
+| `page.php`                  | Staattiset sivut                 |
+| `single.php`                | Blogipostaus                     |
+| `single-event.php`          | Yksittäinen tapahtuma            |
+| `single-gallery_album.php`  | Yksittäinen albumi               |
+| `archive-event.php`         | Tapahtumaarkisto (`/tapahtumat`) |
+| `archive-gallery_album.php` | Albumiarkisto (`/albumit`)       |
+| `header.php` / `footer.php` | Sivuston ylä- ja alaosa          |
 
 ### functions.php ja inc/-moduulit
 
-`functions.php` (n. 3 400 riviä) sisältää sekä teeman perusasetukset että WooCommerce/Mollie/Tampere 2026 -logiikan, jota ei ole vielä pilkottu moduuleihin. Moduulit `inc/`-hakemistossa:
+`functions.php` (~580 riviä) sisältää teeman perusasetukset, asset enqueue:n, header/nav-apufunktiot ja jaetut WooCommerce-apufunktiot (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Toimialakohtainen logiikka on pilkottu `inc/`-hakemiston moduuleihin:
 
-| Tiedosto | Sisältö |
-|----------|---------|
-| `inc/events.php` | Event CPT, meta-kenttien rekisteröinti ja getterit |
-| `inc/gallery-albums.php` | Gallery Album CPT ja galleriapinoliikenne |
-| `inc/media-library.php` | Mediakirjaston järjestys albumeittain |
-| `inc/share.php` | Jako-painikkeet (Facebook, X, WhatsApp) |
-| `inc/social-links.php` | Some-linkit headeriin/footeriin |
+| Tiedosto                               | Sisältö                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| `inc/events.php`                       | Event CPT, meta-kenttien rekisteröinti ja getterit                                    |
+| `inc/event-registrations.php`          | Maksuttomien ilmoittautumisten CPT ja lomake                                          |
+| `inc/event-participants-admin.php`     | `Tapahtumat > Osallistujat` -admin-näkymä                                             |
+| `inc/event-participants-messaging.php` | `Tapahtumat > Viestintä` -massasähköposti                                             |
+| `inc/event-roles.php`                  | `event_organizer`-rooli ja capabilityt                                                |
+| `inc/gallery-albums.php`               | Gallery Album CPT ja galleriapinoliikenne                                             |
+| `inc/media-library.php`                | Mediakirjaston järjestys albumeittain                                                 |
+| `inc/digital-magazines.php`            | Digitaalisten lehtien lataussivut                                                     |
+| `inc/share.php`                        | Jako-painikkeet (Facebook, X, WhatsApp)                                               |
+| `inc/social-links.php`                 | Some-linkit headeriin/footeriin                                                       |
+| `inc/attachment-iptc.php`              | IPTC-headlinen ja -descriptionin synkronointi liitekuviin                             |
+| `inc/seo-meta.php`                     | Open Graph- ja Twitter Card -metatagit                                                |
+| `inc/login.php`                        | Login-sivun brändäys ja suomennokset                                                  |
+| `inc/woocommerce-mollie.php`           | Mollie-suomennokset, RF-viitteiden normalisointi                                      |
+| `inc/woocommerce-membership.php`       | Jäsenmaksutuotteet, kassailmoitus, admin-sarake ja metaboxi                           |
+| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 -osallistumismaksu: tuote, checkout-kentät, admin, järjestäjäilmoitukset |
 
 Kaikki funktiot käyttävät `if ( ! function_exists('rytkoset_theme_...') )` -suojausta ja `rytkoset_theme_` -etuliitettä.
 
