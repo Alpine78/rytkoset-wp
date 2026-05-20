@@ -11,10 +11,10 @@
         Rytkösten sukuseura ry. vaalii suvun perinteitä, kokoaa suvun jäseniä ja edistää sukututkimusta.
       </p>
       <div class="hero__actions">
-        <a href="<?php echo esc_url( home_url('/sukuseura/jaesenyys') ); ?>" class="btn btn--primary">
+        <a href="<?php echo esc_url( home_url('/sukuseura/jasenyys') ); ?>" class="btn btn--primary">
           Liity jäseneksi
         </a>
-        <a href="<?php echo esc_url( home_url('/sukuseura/sukuseura') ); ?>" class="btn btn--ghost">
+        <a href="<?php echo esc_url( home_url('/sukuseura') ); ?>" class="btn btn--ghost">
           Tutustu sukuseuraan
         </a>
       </div>
@@ -26,8 +26,13 @@
     <div class="container section__narrow">
       <h2>Tervetuloa Rytkösten sukuseuran sivuille</h2>
       <p>
+        Rytkösten sukuseura perustettiin 18.8.1963 Iisalmessa Runnin Terveyskylpylällä. Perustamisen
+        puuhamiehenä oli maanviljelijä Viljo Rytkönen, jonka kiinnostus sukututkimukseen ja suvun
+        vaiheiden tallentamiseen loi pohjaa sukuseuran toiminnalle.
+      </p>
+      <p>
         Sukuseura kokoaa yhteen Rytkösten suvun jäseniä, järjestää sukukokouksia ja tapaamisia sekä
-        tukee suvun historian ja sukututkimuksen tallentamista.
+        tukee suvun historian, kuvien ja sukututkimuksen säilymistä tuleville sukupolville.
       </p>
     </div>
   </section>
@@ -50,9 +55,9 @@
       <article class="card">
         <h3 class="card__title">Sukujuhlat Tampereella</h3>
         <p class="card__text">
-          Seuraavat sukujuhlat järjestetään ensi kesänä Tampereella. Näe suvun väkeä ja pysy ajan tasalla ohjelmasta.
+          Seuraavat sukujuhlat järjestetään Tampereella 29.8.2026. Näe suvun väkeä ja pysy ajan tasalla ohjelmasta.
         </p>
-        <a href="<?php echo esc_url( home_url('/sukujuhlat') ); ?>" class="card__link">
+        <a href="<?php echo esc_url( home_url('/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/') ); ?>" class="card__link">
           Lue lisää sukujuhlista &rarr;
         </a>
       </article>
@@ -81,7 +86,7 @@
         </p>
       </div>
       <div class="section__cta">
-        <a href="<?php echo esc_url( home_url('/sukuseura/jaesenyys') ); ?>" class="btn btn--light">
+        <a href="<?php echo esc_url( home_url('/sukuseura/jasenyys') ); ?>" class="btn btn--light">
           Lue lisää jäsenyydestä
         </a>
       </div>
