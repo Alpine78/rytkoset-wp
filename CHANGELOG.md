@@ -13,6 +13,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - WooCommerceen vuosijäsenmaksutuotteet `Yksityishenkilö` ja `Perhe`
 - WooCommerceen `Ainaisjäsenmaksu`, 100 EUR
 - Kassalle jäsenmaksuohje silloin, kun korissa on jäsenmaksutuote
+- WooCommerce-kaupan brändin mukaiset alasvetovalikko- ja painiketyylit.
 
 ### Fixed
 - Albumisivujen PhotoSwipe-lightbox käyttää nyt teeman omaa PhotoSwipe 5 -pakettia ilman WooCommercen legacy-konfliktia
