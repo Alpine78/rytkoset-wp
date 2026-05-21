@@ -306,6 +306,39 @@ function rytkoset_theme_account_menu_logged_out_fallback() {
 }
 
 /**
+ * Palauttaa korissa jo olevat yksittäin ostettavat WooCommerce-tuotteet.
+ *
+ * @return array<int>
+ */
+function rytkoset_theme_get_sold_individually_cart_product_ids() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return array();
+	}
+
+	$product_ids = array();
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product_id   = isset( $cart_item['product_id'] ) ? absint( $cart_item['product_id'] ) : 0;
+		$variation_id = isset( $cart_item['variation_id'] ) ? absint( $cart_item['variation_id'] ) : 0;
+		$product      = isset( $cart_item['data'] ) && $cart_item['data'] instanceof WC_Product
+			? $cart_item['data']
+			: null;
+
+		if ( ! $product_id || ! $product || ! $product->is_sold_individually() ) {
+			continue;
+		}
+
+		$product_ids[] = $product_id;
+
+		if ( $variation_id ) {
+			$product_ids[] = $variation_id;
+		}
+	}
+
+	return array_values( array_unique( $product_ids ) );
+}
+
+/**
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
@@ -327,6 +360,37 @@ function rytkoset_theme_scripts() {
         $theme_version,
         true // footer
     );
+
+	if (
+		function_exists( 'is_woocommerce' )
+		&& ( is_woocommerce() || is_cart() || is_checkout() )
+	) {
+		wp_enqueue_style(
+			'rytkoset-theme-shop',
+			get_template_directory_uri() . '/assets/css/shop.css',
+			array( 'rytkoset-theme-style' ),
+			$theme_version
+		);
+
+		wp_enqueue_script(
+			'rytkoset-theme-shop-select',
+			get_template_directory_uri() . '/assets/js/shop-select.js',
+			array(),
+			$theme_version,
+			true
+		);
+
+		wp_add_inline_script(
+			'rytkoset-theme-shop-select',
+			'window.rytkosetShopConfig = ' . wp_json_encode(
+				array(
+					'soldIndividuallyCartProductIds' => rytkoset_theme_get_sold_individually_cart_product_ids(),
+					'soldIndividuallyInCartText'    => __( 'Jo ostoskorissa', 'rytkoset-theme' ),
+				)
+			) . ';',
+			'before'
+		);
+	}
 
 	if ( is_post_type_archive( 'digital_magazine' ) || is_singular( 'digital_magazine' ) ) {
 		wp_enqueue_style(

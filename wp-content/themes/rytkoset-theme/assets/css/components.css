@@ -3,8 +3,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 0.75rem 1.5rem;
+  min-height: 40px;
+  padding: 0.45rem 1.15rem;
   border-radius: var(--radius-pill);
   font-weight: 800;
   border: 2px solid transparent;

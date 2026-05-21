@@ -39,7 +39,7 @@
 
 .account-nav__list > li + li:last-child > a {
   min-height: 36px;
-  padding: 0.55rem 1.1rem;
+  padding: 0.45rem 1rem;
   border-radius: var(--radius-pill);
   background: var(--color-accent);
   color: var(--color-primary-deeper);
