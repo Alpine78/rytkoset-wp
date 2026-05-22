@@ -908,112 +908,405 @@
   color: var(--color-accent);
 }
 
-/* Share */
+/* =================================================================
+   Share — "Jaa tapahtuma"
+   Työpöytä (≥ 760 px): yksi vaakarivi.  Mobiili: pinottu kortti.
+   Sama DOM molemmissa; teema periytyy data-theme-attribuutista.
+   ================================================================= */
 .share {
-  border-top: 1px solid var(--color-border-neutral);
-  padding-top: 0.9rem;
+  --share-fg:           var(--color-text);
+  --share-fg-mute:      var(--color-text-mute);
+  --share-fg-dim:       #8a93a3;
+  --share-border:       rgba(8, 37, 74, 0.1);
+  --share-divider:      rgba(8, 37, 74, 0.1);
+  --share-ico-bg:       #f5f7fa;
+  --share-ico-fg:       #3b4554;
+  --share-hero-bg:      linear-gradient(180deg, rgba(251, 191, 36, 0.16), rgba(251, 191, 36, 0.04));
+  --share-hero-bd:      rgba(251, 191, 36, 0.55);
+  --share-hero-sub:     var(--color-text-mute);
+  --share-hover-mix:    #ffffff;
+  --share-url-hover-bg: #f0f2f6;
+  --share-url-hover-fg: var(--color-primary-deeper);
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--share-fg);
+  border-top: 1px solid var(--share-border);
+  padding-top: 1rem;
+  margin-top: 1.5rem;
 }
 
-.share__title {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
+.share__heading {
+  margin: 0 0 4px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: var(--share-fg);
 }
 
-.share__controls {
+/* ─── Mobiili: hero-kortti ──────────────────────────────────────── */
+.share__hero {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--share-hero-bd);
+  border-radius: 14px;
+  background: var(--share-hero-bg);
+  color: var(--share-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 100ms ease;
 }
 
-.share__trigger {
+.share__hero:hover {
+  border-color: rgba(251, 191, 36, 0.85);
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.24), rgba(251, 191, 36, 0.08));
+}
+
+.share__hero:active {
+  transform: scale(0.99);
+}
+
+.share__hero:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.share__hero-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+}
+
+.share__hero-ic svg {
+  width: 18px;
+  height: 18px;
+}
+
+.share__hero-t {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.share__hero-t strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.share__hero-t span {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--share-hero-sub);
+}
+
+.share__hero-arrow {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--share-fg-mute);
+}
+
+/* ─── Mobiili: tekstierotin ─────────────────────────────────────── */
+.share__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--share-fg-dim);
+}
+
+.share__divider::before,
+.share__divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--share-divider);
+}
+
+/* ─── Rivilayout (kantaja molemmille; sisältö vaihtuu leveydellä) ── */
+.share__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.share__cta {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  background: var(--color-surface-alt);
-  color: var(--color-text);
-  border: 1px solid var(--color-border-neutral);
-  border-radius: var(--radius-pill);
-  padding: 0.4rem 0.85rem;
+  gap: 9px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.875rem;
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.share__cta:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+}
+
+.share__cta:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px var(--color-accent);
+}
+
+.share__cta svg {
+  width: 15px;
+  height: 15px;
+}
+
+.share__sep {
+  width: 1px;
+  height: 28px;
+  background: var(--share-divider);
+}
+
+.share__url-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.78rem;
+  color: var(--share-fg-mute);
+  cursor: pointer;
+  max-width: 36ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.share__url-link:hover,
+.share__url-link:focus-visible {
+  background: var(--share-url-hover-bg);
+  color: var(--share-url-hover-fg);
+}
+
+.share__url-link svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+/* ─── Ikoniympyrät (yhteiset molemmille layouteille) ────────────── */
+.share__quick {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.share__quick > li {
+  display: contents;
+}
+
+.share__ico {
+  --ch: var(--share-ico-fg);
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--share-border);
+  border-radius: 999px;
+  background: var(--share-ico-bg);
+  color: var(--share-ico-fg);
   cursor: pointer;
   text-decoration: none;
-  transition: background-color var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
 }
 
-.share__trigger:hover,
-.share__trigger:focus-visible {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: #0f172a;
-  text-decoration: none;
+.share__ico svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
-.share__trigger:active {
-  transform: scale(0.98);
+.share__ico:hover,
+.share__ico:focus-visible {
+  background: color-mix(in oklab, var(--ch) 14%, var(--share-hover-mix));
+  border-color: color-mix(in oklab, var(--ch) 55%, transparent);
+  color: var(--ch);
+  transform: translateY(-1px);
 }
 
-.share__trigger-icon {
-  display: inline-flex;
-  width: 1.1rem;
-  height: 1.1rem;
+.share__ico:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
-.share__menu {
-  margin-top: 0.65rem;
+.share__ico[data-ch="fb"]   { --ch: var(--color-fb); }
+.share__ico[data-ch="x"]    { --ch: var(--color-x-light); }
+.share__ico[data-ch="li"]   { --ch: var(--color-li); }
+.share__ico[data-ch="wa"]   { --ch: var(--color-wa); }
+.share__ico[data-ch="ms"]   { --ch: var(--color-ms); }
+.share__ico[data-ch="mail"] { --ch: var(--color-mail-light); }
+.share__ico[data-ch="copy"] { --ch: var(--color-accent); }
+
+/* ─── Status (kopioitu / jaettu / virhe) ────────────────────────── */
+.share__status {
+  margin: 4px 2px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #065f46;
 }
 
-.share__menu[hidden] {
+.share__status[hidden] {
   display: none;
 }
 
-.share__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+/* ─── Tumma teema (eksplisiittinen luokka tai sivun data-theme) ─── */
+.share--theme-dark,
+:root[data-theme="dark"] .share--theme-auto {
+  --share-fg:           #f5f7fb;
+  --share-fg-mute:      rgba(255, 255, 255, 0.62);
+  --share-fg-dim:       rgba(255, 255, 255, 0.45);
+  --share-border:       rgba(255, 255, 255, 0.1);
+  --share-divider:      rgba(255, 255, 255, 0.14);
+  --share-ico-bg:       rgba(255, 255, 255, 0.04);
+  --share-ico-fg:       #f5f7fb;
+  --share-hero-bg:      linear-gradient(180deg, rgba(251, 191, 36, 0.12), rgba(251, 191, 36, 0.04));
+  --share-hero-bd:      rgba(251, 191, 36, 0.3);
+  --share-hero-sub:     rgba(255, 255, 255, 0.65);
+  --share-hover-mix:    transparent;
+  --share-url-hover-bg: rgba(255, 255, 255, 0.06);
+  --share-url-hover-fg: #ffffff;
 }
 
-.share__button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--color-surface-alt);
-  color: var(--color-text);
-  border: 1px solid var(--color-border-neutral);
-  border-radius: var(--radius-pill);
-  padding: 0.4rem 0.9rem;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: background-color var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
-  text-decoration: none;
+.share--theme-dark .share__status,
+:root[data-theme="dark"] .share--theme-auto .share__status {
+  color: #34d399;
 }
 
-.share__button:hover,
-.share__button:focus-visible {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: #0f172a;
-  text-decoration: none;
+.share--theme-dark .share__ico[data-ch="x"],
+:root[data-theme="dark"] .share--theme-auto .share__ico[data-ch="x"] {
+  --ch: var(--color-x-dark);
 }
 
-.share__button:active {
-  transform: scale(0.98);
+.share--theme-dark .share__ico[data-ch="mail"],
+:root[data-theme="dark"] .share--theme-auto .share__ico[data-ch="mail"] {
+  --ch: var(--color-mail-dark);
 }
 
-.share__icon-image {
-  width: 1rem;
-  height: 1rem;
-  display: block;
+.share--theme-dark .share__hero:hover,
+:root[data-theme="dark"] .share--theme-auto .share__hero:hover {
+  border-color: rgba(251, 191, 36, 0.5);
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.18), rgba(251, 191, 36, 0.06));
 }
 
-.share__button--x .share__icon-image {
-  filter: brightness(0);
+/* ─── Responsiivinen vaihto — taittopiste 760 px ────────────────── */
+@media (min-width: 760px) {
+  .share__hero,
+  .share__divider {
+    display: none;
+  }
+
+  .share__quick {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  .share__ico {
+    width: 40px;
+    height: 40px;
+  }
+
+  .share__ico svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
-.share__status {
-  margin-top: 0.75rem;
-  color: #065f46;
-  font-weight: 600;
+@media (max-width: 759px) {
+  .share {
+    gap: 10px;
+    padding-top: 0.9rem;
+  }
+
+  /* Mobiilissa rivistä näytetään vain kanavalista; CTA, erotin ja
+     URL piiloon. .share__row toimii pelkkänä kantajana. */
+  .share__row {
+    display: block;
+  }
+
+  .share__row > .share__cta,
+  .share__row > .share__sep,
+  .share__row > .share__url-link {
+    display: none;
+  }
+}
+
+/* Hyvin kapeilla näytöillä X ja LinkedIn piiloon, etteivät tee
+   ylimääräistä riviä. */
+@media (max-width: 360px) {
+  .share__ico[data-ch="x"],
+  .share__ico[data-ch="li"] {
+    display: none;
+  }
+}
+
+/* No-webshare: JS havaitsi ettei navigator.share toimi -> "Jaa
+   laitteella" -kutsut piiloon, kanavaikonit hoitavat jakamisen. */
+.share.no-webshare .share__hero,
+.share.no-webshare .share__cta,
+.share.no-webshare .share__divider {
+  display: none;
+}
+
+@media (min-width: 760px) {
+  .share.no-webshare .share__sep {
+    display: none;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .share__hero,
+  .share__ico,
+  .share__cta,
+  .share__url-link {
+    transition: none;
+  }
+
+  .share__hero:active,
+  .share__ico:hover,
+  .share__cta:hover {
+    transform: none;
+  }
 }
 
 .section__wide {
