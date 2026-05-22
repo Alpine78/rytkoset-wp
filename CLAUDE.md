@@ -1,156 +1,160 @@
 # CLAUDE.md
 
+@AGENTS.md
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project context
 
-Rytkösten sukuseura ry:n WordPress-sivusto (rytkoset.net). Katso `AGENTS.md` projektin periaatteista, prioriteeteista ja yhteistyömallista — CLAUDE.md kattaa teknisen ympäristön ja arkkitehtuurin.
+WordPress site for Rytkösten sukuseura ry (rytkoset.net). AGENTS.md contains project principles, priorities, and collaboration model — CLAUDE.md covers the technical environment and architecture.
 
 ## Development environment
 
 ```bash
-# Käynnistä paikallinen ympäristö
+# Start local environment
 docker compose up -d
 # WordPress: http://localhost:8000
 
-# Sammuta
+# Stop
 docker compose down
 ```
 
-Kolme konttia: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `rytkoset-joomla-db` (Joomla-migraatio). Vain `wp-content/` on mountattu hostilta — muutos tiedostoon näkyy välittömästi ilman uudelleenkäynnistystä.
+Three containers: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `rytkoset-joomla-db` (Joomla migration). Only `wp-content/` is mounted from host — file changes are reflected immediately without restart.
 
-## Linting ja CI
+## Linting and CI
 
-Ei erillistä build-vaihetta. PHP-syntaksivalidointi:
+No separate build step. PHP syntax validation:
 
 ```bash
 find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
 ```
 
-GitHub Actions ajaa tämän automaattisesti jokaiselle PR:lle ja `main`-pushille (`.github/workflows/php-ci.yml`).
+GitHub Actions runs this automatically for every PR and `main` push (`.github/workflows/php-ci.yml`).
 
 ## Deploy
 
-- `dev`-branchi → automaattinen FTPS-deploy → `dev.rytkoset.net` (kun muutoksia `wp-content/themes/rytkoset-theme/**`)
-- `main`-branchi → ei automaattista deployta
-- Tuotantoon (`rytkoset.net`) deploy on aina manuaalinen
+- `dev` branch → automatic FTPS deploy → `dev.rytkoset.net` (when changes in `wp-content/themes/rytkoset-theme/**`)
+- `main` branch → no automatic deploy
+- Production (`rytkoset.net`) deploy is always manual
 
-## Commit-viestit
+## Commit messages
 
-Conventional Commits (katso `CONTRIBUTING.md`):
+Conventional Commits (see `CONTRIBUTING.md`):
 
 ```
-feat(events): lisää yksittäisen tapahtuman template
-fix(woo): korjaa membership-tilauksen tallennus
-docs: päivitä README staging-ohjeilla
-refactor: pilko functions.php inc/-moduuleihin
+feat(events): add single event template
+fix(woo): fix membership order save
+docs: update README with staging instructions
+refactor: split functions.php into inc/ modules
 ```
 
-Älä luo committia automaattisesti — raportoi toteutus ensin, ehdota commit-viestiä, anna käyttäjän katsoa diff ennen commitia.
+Do not create commits automatically — report the implementation first, suggest a commit message, and let the user review the diff before committing.
 
 ## Theme architecture
 
-Teema `wp-content/themes/rytkoset-theme/` on ainoa versioitu koodipohja. WordPress-ydin ja pluginit eivät ole repossa.
+The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. WordPress core and plugins are not in the repo.
 
-### Template-hierarkia
+### Template hierarchy
 
-| Tiedosto                    | Tarkoitus                        |
-| --------------------------- | -------------------------------- |
-| `front-page.php`            | Etusivu                          |
-| `page.php`                  | Staattiset sivut                 |
-| `single.php`                | Blogipostaus                     |
-| `single-event.php`          | Yksittäinen tapahtuma            |
-| `single-gallery_album.php`  | Yksittäinen albumi               |
-| `archive-event.php`         | Tapahtumaarkisto (`/tapahtumat`) |
-| `archive-gallery_album.php` | Albumiarkisto (`/albumit`)       |
-| `header.php` / `footer.php` | Sivuston ylä- ja alaosa          |
+| File                        | Purpose                              |
+| --------------------------- | ------------------------------------ |
+| `front-page.php`            | Front page                           |
+| `page.php`                  | Static pages                         |
+| `single.php`                | Blog post                            |
+| `single-rytkoset_event.php` | Single event                         |
+| `single-gallery_album.php`  | Single album                         |
+| `archive-rytkoset_event.php` | Event archive (`/tapahtumat`)       |
+| `archive-gallery_album.php` | Album archive (`/albumit`)           |
+| `header.php` / `footer.php` | Site header and footer               |
 
-### functions.php ja inc/-moduulit
+### functions.php and inc/ modules
 
-`functions.php` (~580 riviä) sisältää teeman perusasetukset, asset enqueue:n, header/nav-apufunktiot ja jaetut WooCommerce-apufunktiot (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Toimialakohtainen logiikka on pilkottu `inc/`-hakemiston moduuleihin:
+`functions.php` (~580 lines) contains theme setup, asset enqueue, header/nav helpers, and shared WooCommerce helpers (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Domain-specific logic is split into modules under `inc/`:
 
-| Tiedosto                               | Sisältö                                                                               |
-| -------------------------------------- | ------------------------------------------------------------------------------------- |
-| `inc/events.php`                       | Event CPT, meta-kenttien rekisteröinti ja getterit                                    |
-| `inc/event-registrations.php`          | Maksuttomien ilmoittautumisten CPT ja lomake                                          |
-| `inc/event-participants-admin.php`     | `Tapahtumat > Osallistujat` -admin-näkymä                                             |
-| `inc/event-participants-messaging.php` | `Tapahtumat > Viestintä` -massasähköposti                                             |
-| `inc/event-roles.php`                  | `event_organizer`-rooli ja capabilityt                                                |
-| `inc/gallery-albums.php`               | Gallery Album CPT ja galleriapinoliikenne                                             |
-| `inc/media-library.php`                | Mediakirjaston järjestys albumeittain                                                 |
-| `inc/digital-magazines.php`            | Digitaalisten lehtien lataussivut                                                     |
-| `inc/share.php`                        | Jako-painikkeet (Facebook, X, WhatsApp)                                               |
-| `inc/social-links.php`                 | Some-linkit headeriin/footeriin                                                       |
-| `inc/attachment-iptc.php`              | IPTC-headlinen ja -descriptionin synkronointi liitekuviin                             |
-| `inc/seo-meta.php`                     | Open Graph- ja Twitter Card -metatagit                                                |
-| `inc/login.php`                        | Login-sivun brändäys ja suomennokset                                                  |
-| `inc/woocommerce-mollie.php`           | Mollie-suomennokset, RF-viitteiden normalisointi                                      |
-| `inc/woocommerce-membership.php`       | Jäsenmaksutuotteet, kassailmoitus, admin-sarake ja metaboxi                           |
-| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 -osallistumismaksu: tuote, checkout-kentät, admin, järjestäjäilmoitukset |
+| File                                   | Contents                                                                                   |
+| -------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `inc/events.php`                       | Event CPT, meta field registration and getters                                             |
+| `inc/event-registrations.php`          | Free event registration CPT and form                                                       |
+| `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                         |
+| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email                                                            |
+| `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                    |
+| `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                  |
+| `inc/media-library.php`                | Media library ordering by album                                                            |
+| `inc/digital-magazines.php`            | Digital magazine download pages                                                            |
+| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp)                                                      |
+| `inc/social-links.php`                 | Social media links in header/footer                                                        |
+| `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                   |
+| `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                      |
+| `inc/login.php`                        | Login page branding and Finnish translations                                               |
+| `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                    |
+| `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                             |
+| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications   |
 
-Kaikki funktiot käyttävät `if ( ! function_exists('rytkoset_theme_...') )` -suojausta ja `rytkoset_theme_` -etuliitettä.
+All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
-### CSS-rakenne
+### CSS structure
 
-`style.css` importoi kaikki moduulit; ei build-vaihetta:
+`style.css` imports all modules; no build step:
 
 ```
-assets/css/base.css          # Typografia, värimuuttujat, peruselementit
-assets/css/layout.css        # Containerit, gridit, sectionit
-assets/css/components.css    # Napit, kortit, yleiset komponentit
-assets/css/nav.base.css      # Navigaation yhteiset tyylit
-assets/css/nav.desktop.css   # Desktop-navigaatio
-assets/css/nav.mobile.css    # Mobiilinavigaatio (hamburger)
-assets/css/nav.account.css   # Käyttäjä/tili-valikko
-assets/css/hero.css          # Etusivun hero-osio
-assets/css/gallery.css       # Galleria ja albumit
+assets/css/base.css          # Typography, color variables, base elements
+assets/css/layout.css        # Containers, grids, sections
+assets/css/components.css    # Buttons, cards, general components
+assets/css/nav.base.css      # Shared navigation styles
+assets/css/nav.desktop.css   # Desktop navigation
+assets/css/nav.mobile.css    # Mobile navigation (hamburger)
+assets/css/nav.account.css   # User/account menu
+assets/css/hero.css          # Front page hero section
+assets/css/gallery.css       # Gallery and albums
 assets/css/footer.css        # Footer
-assets/css/login.css         # WP-kirjautumissivun brändäys
-assets/css/responsive.css    # Media queryt
+assets/css/login.css         # WP login page branding
+assets/css/responsive.css    # Media queries
 ```
 
-Käytä CSS-muuttujia väreille ja spacingille. Ei Bootstrap-riippuvuutta.
+Use CSS variables for colors and spacing. No Bootstrap dependency.
 
 ### JavaScript
 
-`assets/js/main.js` — mobiilivalikon toggle ja muut yleiset interaktiot.  
-`assets/js/photoswipe-init.js` — PhotoSwipe 5 -lightboxin alustus albumisivuille.  
-`assets/vendor/photoswipe/` — PhotoSwipe 5 vendoroituna (ei npm/bundler).
+`assets/js/main.js` — mobile menu toggle and other general interactions.  
+`assets/js/photoswipe-init.js` — PhotoSwipe 5 lightbox initialization for album pages.  
+`assets/vendor/photoswipe/` — PhotoSwipe 5 vendored (no npm/bundler).
 
 ## Custom Post Types
 
 ### Event (`event`)
 
 - Slug: `/tapahtumat/`
-- Rekisteröity: `inc/events.php`
-- Meta-avaimet (via `rytkoset_theme_get_event_details_meta_keys()`):
-  - `_rytkoset_event_date` — päivämäärä `YYYY-MM-DD`
-  - `_rytkoset_event_start_time` — aloitusaika `HH:MM`
-  - `_rytkoset_event_end_time` — lopetusaika `HH:MM`
-  - `_rytkoset_event_location` — paikka
+- Registered in: `inc/events.php`
+- Meta keys (via `rytkoset_theme_get_event_details_meta_keys()`):
+  - `_rytkoset_event_date` — date `YYYY-MM-DD`
+  - `_rytkoset_event_start_time` — start time `HH:MM`
+  - `_rytkoset_event_end_time` — end time `HH:MM`
+  - `_rytkoset_event_location` — location
   - `_rytkoset_event_fee_type` — `free` | `paid`
-  - `_rytkoset_event_price_text` — hintateksti näytettäväksi
+  - `_rytkoset_event_price_text` — price text for display
 
 ### Gallery Album (`gallery_album`)
 
 - Slug: `/albumit/`
-- Rekisteröity: `inc/gallery-albums.php`
-- Kuvat ovat WordPress media attachmentteja, joissa `post_parent = album_post_id`
-- Järjestys: tiedostonimen mukaan (lajiteltu `inc/media-library.php`:ssä)
+- Registered in: `inc/gallery-albums.php`
+- Images are WordPress media attachments with `post_parent = album_post_id`
+- Order: by filename (sorted in `inc/media-library.php`)
 
-## WooCommerce-integraatio
+## WooCommerce integration
 
-WooCommerce-koodi elää tällä hetkellä `functions.php`:ssä (ei vielä `inc/`-moduuleissa). Tärkeimmät kokonaisuudet:
+WooCommerce code currently lives in `functions.php` (not yet in `inc/` modules). Key areas:
 
-- **Jäsenmaksutuotteet** — vuosi- ja ainaisjäsenmaksu; kassa-huomio kun tuote korissa
-- **Tampere 2026 -tapahtumamaksu** — custom checkout-kentät, osallistujalista adminissa, CSV-vienti, sähköposti-ilmoitukset järjestäjille
-- **Mollie-maksut** — suomenkieliset tekstit, output-bufferointi `thankyou`-sivulla pankkisiirron ohjeille
-- **PhotoSwipe-konflikti** — WooCommerce rekisteröi PhotoSwipe 4 -skriptit; teema dequeue niitä aktiivisesti konfliktien välttämiseksi
+- **Membership products** — annual and lifetime membership; checkout notice when product is in cart
+- **Tampere 2026 event fee** — custom checkout fields, participant list in admin, CSV export, organizer email notifications
+- **Mollie payments** — Finnish language texts, output buffering on `thankyou` page for bank transfer instructions
+- **PhotoSwipe conflict** — WooCommerce registers PhotoSwipe 4 scripts; theme actively dequeues them to avoid conflicts
 
-## Navigaatiomenut
+## Navigation menus
 
-WordPress-administa hallittavat menut: `primary` (päävalikko), `footer`, `account` (käyttäjä/tili).
+WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/account).
 
-## Dokumentaatio
+## Documentation
 
-`docs/`-hakemistossa on käyttöönotto- ja ylläpito-ohjeet WooCommercen eri ominaisuuksille. Lue relevantti doc ennen WooCommerce-muutoksia.
+`docs/` contains setup and maintenance guides for WooCommerce features. Read the relevant doc before making WooCommerce changes.
+
+`docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.

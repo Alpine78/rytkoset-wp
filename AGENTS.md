@@ -50,7 +50,7 @@ Avoid:
 - Production: `rytkoset.net`
 
 ### Deployment
-- GitHub Actions → FTPS → dev
+- GitHub Actions → FTPS → dev from the `dev` branch
 - Production deploy is manual
 
 ---
@@ -58,7 +58,8 @@ Avoid:
 ## ⚙️ Development Workflow
 
 ### Branching
-- `main` = deploys automatically to dev
+- `dev` = deploys automatically to dev when theme files change
+- `main` = primary integration branch; no automatic dev deploy
 - Use:
   - `feature/...`
   - `fix/...`
@@ -107,11 +108,12 @@ Then iterate.
 
 Current state:
 - UI and theme foundation mostly complete
-- Media system (EPIC 2) in progress
-- Event system (EPIC 5) NOT implemented yet
+- Media system (EPIC 2) largely complete: gallery albums, media library ordering, PhotoSwipe 5
+- Event system (EPIC 5) partially implemented: CPT, registration flow, participant admin, messaging, and event organizer role exist
+- WooCommerce (EPIC 4) partially implemented: membership products, Tampere 2026 fee, Mollie payments
 
 👉 Therefore:
-Focus on finishing EPIC 2 before starting EPIC 5.
+Before starting new work, verify the current issue scope and existing implementation first.
 
 ---
 
@@ -207,6 +209,12 @@ DO NOT:
 ---
 
 ## 🎨 Frontend Guidelines
+
+Before making CSS or UI changes:
+- Read `docs/design-system.md`
+- Check the relevant existing CSS modules before editing
+- Prefer existing CSS variables, layout helpers, and component patterns
+- Test mobile width, dark theme, and visible focus states before considering the change done
 
 DO:
 - Mobile-first
@@ -356,6 +364,16 @@ Avoid:
 3. Propose minimal implementation
 4. Implement one step only
 5. Test in dev
+
+---
+
+## 📝 Documentation Updates
+
+When implementing any feature or fix:
+- Update `docs/` if the change affects WooCommerce features or user-facing workflows
+- Update `CLAUDE.md` if the change affects theme architecture, file structure, CPTs, workflows, or other agent-relevant project knowledge
+- Update `AGENTS.md` only when project-level working rules, priorities, or AI collaboration guidance change
+- Update `CHANGELOG.md` for every merged change
 
 ---
 
