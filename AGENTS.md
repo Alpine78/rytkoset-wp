@@ -108,11 +108,12 @@ Then iterate.
 
 Current state:
 - UI and theme foundation mostly complete
-- Media system (EPIC 2) in progress
+- Media system (EPIC 2) largely complete: gallery albums, media library ordering, PhotoSwipe 5
 - Event system (EPIC 5) partially implemented: CPT, registration flow, participant admin, messaging, and event organizer role exist
+- WooCommerce (EPIC 4) partially implemented: membership products, Tampere 2026 fee, Mollie payments
 
 👉 Therefore:
-Before starting new event work, verify the current issue scope and existing implementation first.
+Before starting new work, verify the current issue scope and existing implementation first.
 
 ---
 
@@ -364,8 +365,8 @@ Avoid:
 
 When implementing any feature or fix:
 - Update `docs/` if the change affects WooCommerce features or user-facing workflows
-- Update `CLAUDE.md` if the change affects theme architecture, file structure, or CPTs
-- Update `CLAUDE.md` when Codex changes architecture, workflows, or other agent-relevant project knowledge so Claude Code can continue from the same context
+- Update `CLAUDE.md` if the change affects theme architecture, file structure, CPTs, workflows, or other agent-relevant project knowledge
+- Update `AGENTS.md` only when project-level working rules, priorities, or AI collaboration guidance change
 - Update `CHANGELOG.md` for every merged change
 
 ---
