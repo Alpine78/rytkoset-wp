@@ -50,7 +50,7 @@ Avoid:
 - Production: `rytkoset.net`
 
 ### Deployment
-- GitHub Actions → FTPS → dev
+- GitHub Actions → FTPS → dev from the `dev` branch
 - Production deploy is manual
 
 ---
@@ -58,7 +58,8 @@ Avoid:
 ## ⚙️ Development Workflow
 
 ### Branching
-- `main` = deploys automatically to dev
+- `dev` = deploys automatically to dev when theme files change
+- `main` = primary integration branch; no automatic dev deploy
 - Use:
   - `feature/...`
   - `fix/...`
@@ -108,10 +109,10 @@ Then iterate.
 Current state:
 - UI and theme foundation mostly complete
 - Media system (EPIC 2) in progress
-- Event system (EPIC 5) NOT implemented yet
+- Event system (EPIC 5) partially implemented: CPT, registration flow, participant admin, messaging, and event organizer role exist
 
 👉 Therefore:
-Focus on finishing EPIC 2 before starting EPIC 5.
+Before starting new event work, verify the current issue scope and existing implementation first.
 
 ---
 

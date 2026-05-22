@@ -61,9 +61,9 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | `front-page.php`            | Front page                           |
 | `page.php`                  | Static pages                         |
 | `single.php`                | Blog post                            |
-| `single-event.php`          | Single event                         |
+| `single-rytkoset_event.php` | Single event                         |
 | `single-gallery_album.php`  | Single album                         |
-| `archive-event.php`         | Event archive (`/tapahtumat`)        |
+| `archive-rytkoset_event.php` | Event archive (`/tapahtumat`)       |
 | `archive-gallery_album.php` | Album archive (`/albumit`)           |
 | `header.php` / `footer.php` | Site header and footer               |
 
