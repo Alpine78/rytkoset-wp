@@ -210,6 +210,12 @@ DO NOT:
 
 ## 🎨 Frontend Guidelines
 
+Before making CSS or UI changes:
+- Read `docs/design-system.md`
+- Check the relevant existing CSS modules before editing
+- Prefer existing CSS variables, layout helpers, and component patterns
+- Test mobile width, dark theme, and visible focus states before considering the change done
+
 DO:
 - Mobile-first
 - WCAG 2.1 AA

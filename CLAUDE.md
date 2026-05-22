@@ -156,3 +156,5 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 ## Documentation
 
 `docs/` contains setup and maintenance guides for WooCommerce features. Read the relevant doc before making WooCommerce changes.
+
+`docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.
