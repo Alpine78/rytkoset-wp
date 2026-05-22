@@ -75,6 +75,14 @@ if ( have_posts() ) :
 
 			<section class="section album__section">
 				<div class="container section__wide">
+					<?php
+					rytkoset_theme_share_buttons(
+						array(
+							'heading' => __( 'Jaa albumi', 'rytkoset-theme' ),
+							'post_id' => get_the_ID(),
+						)
+					);
+					?>
 					<div class="album__body">
 						<?php if ( '' !== $album_body_content ) : ?>
 							<div class="album__content"><?php the_content(); ?></div>
