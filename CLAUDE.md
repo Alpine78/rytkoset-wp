@@ -1,10 +1,12 @@
 # CLAUDE.md
 
+@AGENTS.md
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project context
 
-Rytkösten sukuseura ry:n WordPress-sivusto (rytkoset.net). Katso `AGENTS.md` projektin periaatteista, prioriteeteista ja yhteistyömallista — CLAUDE.md kattaa teknisen ympäristön ja arkkitehtuurin.
+Rytkösten sukuseura ry:n WordPress-sivusto (rytkoset.net). AGENTS.md sisältää projektin periaatteet, prioriteetit ja yhteistyömallin — CLAUDE.md kattaa teknisen ympäristön ja arkkitehtuurin.
 
 ## Development environment
 

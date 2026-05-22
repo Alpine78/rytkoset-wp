@@ -359,6 +359,15 @@ Avoid:
 
 ---
 
+## 📝 Documentation Updates
+
+When implementing any feature or fix:
+- Update `docs/` if the change affects WooCommerce features or user-facing workflows
+- Update `CLAUDE.md` if the change affects theme architecture, file structure, or CPTs
+- Update `CHANGELOG.md` for every merged change
+
+---
+
 ## 📌 Final Principle
 
 > "Make it work → make it simple → then improve."
