@@ -365,6 +365,7 @@ Avoid:
 When implementing any feature or fix:
 - Update `docs/` if the change affects WooCommerce features or user-facing workflows
 - Update `CLAUDE.md` if the change affects theme architecture, file structure, or CPTs
+- Update `CLAUDE.md` when Codex changes architecture, workflows, or other agent-relevant project knowledge so Claude Code can continue from the same context
 - Update `CHANGELOG.md` for every merged change
 
 ---
