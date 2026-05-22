@@ -26,6 +26,9 @@ function rytkoset_theme_get_share_links( $post_id = null ) {
 	$encoded_title = rawurlencode( $title );
 	$encoded_text  = rawurlencode( trim( $title . ' ' . $permalink ) );
 	$email_body    = rawurlencode( trim( $title . "\n" . $permalink ) );
+	// Messengerin web-jako (Send Dialog) vaatii Facebook App ID:n. Ilman
+	// sitä ei ole toimivaa web-jakolinkkiä — silloin Messenger-ikoni
+	// jätetään pois ja mobiilin natiivijako hoitaa Messengerin.
 	$fb_app_id     = apply_filters( 'rytkoset_theme_facebook_app_id', '' );
 	$messenger_url = $fb_app_id
 		? sprintf(
@@ -34,16 +37,17 @@ function rytkoset_theme_get_share_links( $post_id = null ) {
 			$encoded_url,
 			$encoded_url
 		)
-		: sprintf( 'https://www.messenger.com/t/?link=%s', $encoded_url );
+		: '';
 
 	return array(
 		array(
 			'service' => 'facebook',
 			'label'   => __( 'Facebook', 'rytkoset-theme' ),
+			// Facebook lukee esikatselun (otsikko/kuva/kuvaus) jaettavan
+			// sivun Open Graph -tageista; sharer.php ottaa vain u-parametrin.
 			'url'     => sprintf(
-				'https://www.facebook.com/sharer/sharer.php?u=%s&quote=%s',
-				$encoded_url,
-				$encoded_title
+				'https://www.facebook.com/sharer/sharer.php?u=%s',
+				$encoded_url
 			),
 			'type'    => 'link',
 		),
