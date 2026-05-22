@@ -31,9 +31,12 @@ get_header();
 						</div>
 
 						<?php
+						$share_heading = 'product' === get_post_type( $post )
+							? __( 'Jaa tuote', 'rytkoset-theme' )
+							: __( 'Jaa artikkeli', 'rytkoset-theme' );
 						rytkoset_theme_share_buttons(
 							array(
-								'heading' => __( 'Jaa artikkeli', 'rytkoset-theme' ),
+								'heading' => $share_heading,
 								'post_id' => $post->ID,
 							)
 						);
