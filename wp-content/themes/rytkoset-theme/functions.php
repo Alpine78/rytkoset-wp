@@ -361,6 +361,17 @@ function rytkoset_theme_scripts() {
         true // footer
     );
 
+    // Jakopainikkeiden JS (Web Share API + clipboard-fallback)
+    if ( is_singular() ) {
+        wp_enqueue_script(
+            'rytkoset-theme-share',
+            get_template_directory_uri() . '/assets/js/share.js',
+            array(),
+            $theme_version,
+            true // footer
+        );
+    }
+
 	if (
 		function_exists( 'is_woocommerce' )
 		&& ( is_woocommerce() || is_cart() || is_checkout() )
