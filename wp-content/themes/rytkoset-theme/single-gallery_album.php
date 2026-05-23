@@ -178,6 +178,15 @@ if ( have_posts() ) :
 						endif;
 						?>
 					</div>
+
+					<?php
+					rytkoset_theme_share_buttons(
+						array(
+							'heading' => __( 'Jaa albumi', 'rytkoset-theme' ),
+							'post_id' => get_the_ID(),
+						)
+					);
+					?>
 				</div>
 			</section>
 		</article>
