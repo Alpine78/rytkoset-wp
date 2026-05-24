@@ -173,6 +173,11 @@ function rytkoset_theme_login_finnish_strings( $translated, $original, $domain )
 add_filter( 'gettext', 'rytkoset_theme_login_finnish_strings', 10, 3 );
 
 /**
+ * Piilotetaan WordPressin sisäinen kielenvalitsin — sivusto on suomenkielinen.
+ */
+add_filter( 'login_display_language_dropdown', '__return_false' );
+
+/**
  * Varmistetaan, että back-linkki on suomeksi, vaikka gettext ei osuisi.
  */
 function rytkoset_theme_login_backlink_text() {
