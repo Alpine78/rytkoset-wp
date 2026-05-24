@@ -29,8 +29,6 @@ Text Domain: rytkoset-theme
 /* Footer */
 @import url("assets/css/footer.css");
 
-/* bbPress foorumi */
-@import url("assets/css/forum.css");
 
 /* Media queryt */
 @import url("assets/css/responsive.css");

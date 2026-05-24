@@ -260,7 +260,7 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 
         echo '<ul class="account-nav__list">';
         echo '<li class="menu-item menu-item-has-children account-menu__user">';
-        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false">';
+        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false" aria-label="' . esc_attr( sprintf( __( 'Avaa tilivalikko (%s)', 'rytkoset-theme' ), $display_name ) ) . '">';
         echo '<span class="account-menu__avatar">' . $avatar . '</span>';
         echo '<span class="account-menu__meta">';
         echo '<span class="account-menu__greeting">' . esc_html__( 'Kirjautunut', 'rytkoset-theme' ) . '</span>';
@@ -400,6 +400,15 @@ function rytkoset_theme_scripts() {
 				)
 			) . ';',
 			'before'
+		);
+	}
+
+	if ( function_exists( 'is_bbpress' ) && is_bbpress() ) {
+		wp_enqueue_style(
+			'rytkoset-theme-forum',
+			get_template_directory_uri() . '/assets/css/forum.css',
+			array( 'rytkoset-theme-style' ),
+			$theme_version
 		);
 	}
 
@@ -613,6 +622,93 @@ add_action(
 	},
 	20
 );
+
+// =============================================================================
+// bbPress forum helpers
+// =============================================================================
+
+/**
+ * Returns an initials-based avatar span for the forum design.
+ *
+ * @param string $display_name Full display name.
+ * @param string $size         'sm' | 'md' (default) | 'lg' | 'xl'.
+ * @return string HTML.
+ */
+if ( ! function_exists( 'rytkoset_theme_forum_avatar' ) ) :
+function rytkoset_theme_forum_avatar( $display_name, $size = 'md' ) {
+	$name   = trim( (string) $display_name );
+	$words  = array_values( array_filter( explode( ' ', $name ) ) );
+	if ( count( $words ) >= 2 ) {
+		$initials = mb_strtoupper( mb_substr( $words[0], 0, 1 ) ) .
+		            mb_strtoupper( mb_substr( end( $words ), 0, 1 ) );
+	} else {
+		$initials = mb_strtoupper( mb_substr( $name, 0, 2 ) );
+	}
+	$size_class = 'md' === $size ? '' : ( 'lg' === $size ? ' forum-avatar--lg' : ( 'xl' === $size ? ' forum-avatar--xl' : '' ) );
+	return '<span class="forum-avatar' . $size_class . '" aria-hidden="true">' . esc_html( $initials ) . '</span>';
+}
+endif;
+
+/**
+ * Returns the color-variant slug for a forum based on its post_name.
+ *
+ * @param int $forum_id Forum post ID.
+ * @return string Slug like 'rytkoset', 'net', 'seura', 'seka', 'testi', or 'default'.
+ */
+if ( ! function_exists( 'rytkoset_theme_forum_color' ) ) :
+function rytkoset_theme_forum_color( $forum_id ) {
+	$slug = (string) get_post_field( 'post_name', (int) $forum_id );
+	$map  = array(
+		'net'      => 'net',
+		'sukuseura' => 'seura',
+		'sekalainen' => 'seka',
+		'testiviestit' => 'testi',
+		'testi'    => 'testi',
+	);
+	foreach ( $map as $key => $color ) {
+		if ( false !== strpos( $slug, $key ) ) {
+			return $color;
+		}
+	}
+	return 'rytkoset'; // default / Rytköset forum
+}
+endif;
+
+/**
+ * Returns the display icon text for a forum (single letter or abbreviation).
+ *
+ * @param int    $forum_id Forum post ID.
+ * @param string $color    Color variant from rytkoset_theme_forum_color().
+ * @return string Icon label.
+ */
+if ( ! function_exists( 'rytkoset_theme_forum_icon' ) ) :
+function rytkoset_theme_forum_icon( $forum_id, $color ) {
+	if ( 'net' === $color ) {
+		return '.net';
+	}
+	$title = (string) get_the_title( (int) $forum_id );
+	return mb_strtoupper( mb_substr( wp_strip_all_tags( $title ), 0, 1 ) );
+}
+endif;
+
+/**
+ * Returns an author's display name from any bbPress post (topic or reply).
+ *
+ * @param int $post_id Topic or reply post ID.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_bbp_author_name' ) ) :
+function rytkoset_theme_bbp_author_name( $post_id ) {
+	$author_id = (int) get_post_field( 'post_author', (int) $post_id );
+	if ( ! $author_id ) {
+		return __( 'Nimetön', 'rytkoset-theme' );
+	}
+	$user = get_userdata( $author_id );
+	return $user ? $user->display_name : __( 'Nimetön', 'rytkoset-theme' );
+}
+endif;
+
+// =============================================================================
 
 /**
  * Returns an order object from a meta box callback parameter.
