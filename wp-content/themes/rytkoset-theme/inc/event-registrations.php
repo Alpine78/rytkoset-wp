@@ -712,6 +712,19 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 			<div class="event-registration__gdpr">
 				<p class="event-registration__gdpr-notice">
 					<?php esc_html_e( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' ); ?>
+					<?php
+					$privacy_url = get_privacy_policy_url();
+					if ( $privacy_url ) {
+						printf(
+							' ' . wp_kses(
+								/* translators: %s: link to the privacy policy page */
+								__( 'Lue lisää <a href="%s">tietosuojaselosteesta</a>.', 'rytkoset-theme' ),
+								array( 'a' => array( 'href' => true ) )
+							),
+							esc_url( $privacy_url )
+						);
+					}
+					?>
 				</p>
 				<label class="event-registration__gdpr-label" for="<?php echo esc_attr( $form_id . '-gdpr' ); ?>">
 					<input id="<?php echo esc_attr( $form_id . '-gdpr' ); ?>" type="checkbox" name="registration_gdpr_consent" value="1" required aria-required="true" />
