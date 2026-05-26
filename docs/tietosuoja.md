@@ -86,7 +86,9 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 - vapaamuotoiset lisätiedot (jos annat)
 - ilmoittautumisajan ja antamasi tietosuojasuostumuksen aikaleiman
 
-Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.
+Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
+
+Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 
@@ -97,11 +99,11 @@ Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -o
 - maksutapahtuman viitetiedot
 - jäsenyyteen liittyvät tiedot
 
-Maksunkäsittelyn suorittaa Mollie. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
+Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Mollie. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
 
 ### Uutiskirje
 
-Jos tilaat yhdistyksen uutiskirjeen, tallennamme sähköpostiosoitteesi ja tilauksen aikaleiman AcyMailing-järjestelmään. Voit milloin tahansa peruuttaa tilauksen jokaisen uutiskirjeen alalaidassa olevasta linkistä.
+Jos tilaat yhdistyksen uutiskirjeen, tallennamme sähköpostiosoitteesi ja tilauksen aikaleiman AcyMailing-järjestelmään. Sähköpostiosoite on pakollinen uutiskirjeen lähettämistä varten. Voit milloin tahansa peruuttaa tilauksen jokaisen uutiskirjeen alalaidassa olevasta linkistä.
 
 ### Yhteydenotot sähköpostilla
 
@@ -113,7 +115,7 @@ Sukututkimusta varten ylläpidetään erillistä sukututkimusrekisteriä. Sen re
 
 ### Sisältöön upotettu media
 
-Sivustolla voi olla YouTube-videoita. Teema näyttää videot YouTuben privacy-enhanced -upotuksina (`youtube-nocookie.com`), jotta katselutieto ei lataushetkellä vaikuttaisi YouTube-käyttökokemuksen personointiin. Kun katsot videon, YouTube voi silti käsitellä tietoja omien käytäntöjensä mukaisesti.
+Sivustolla voi olla YouTube-videoita. Teema näyttää videot YouTuben privacy-enhanced -upotuksina (`youtube-nocookie.com`), jotta katselutieto ei lataushetkellä vaikuttaisi YouTube-käyttökokemuksen personointiin. Kun katsot videon, YouTube ja Google voivat silti käsitellä tietoja omien käytäntöjensä mukaisesti.
 
 ## Evästeet
 
@@ -131,9 +133,11 @@ Sivustolla ei käytetä analytiikka- tai markkinointievästeitä. Voit estää e
 Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointitarkoituksiin. Käytämme seuraavia palveluntarjoajia tietojen käsittelyyn:
 
 - **Hosting**: Domainhotelli (palvelinlokit, varmuuskopiot)
-- **Välimuisti**: LiteSpeed Cache (sivujen väliaikaiset välimuistikopiot)
 - **Maksunvälitys**: Mollie B.V. (Hollanti) — verkkokaupan maksujen käsittely
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
+- **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
+
+Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on tehtävänsä perusteella tarve käsitellä tietoja, kuten sivuston ylläpitäjät, tapahtumien vastuuhenkilöt, verkkokaupan tilausten käsittelijät ja taloushallinnon vastuuhenkilöt.
 
 ## Kuinka kauan säilytämme tietoja
 
@@ -144,11 +148,17 @@ Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointit
 
 ## Mitä oikeuksia sinulla on tietoihisi
 
-Jos sinulla on käyttäjätili tai olet ilmoittautunut tapahtumaan, voit pyytää:
+Sinulla on oikeus:
 
-- näkemään sinusta tallennetut tiedot
-- korjaamaan virheelliset tiedot
-- poistamaan tietosi (lukuun ottamatta tietoja, joita kirjanpito- tai muu lainsäädäntö velvoittaa säilyttämään)
+- saada tieto siitä, mitä henkilötietoja sinusta käsitellään
+- pyytää virheellisten tai puutteellisten tietojen korjaamista
+- pyytää tietojesi poistamista, jos käsittelylle ei ole enää perustetta
+- pyytää käsittelyn rajoittamista
+- vastustaa henkilötietojesi käsittelyä, kun käsittely perustuu oikeutettuun etuun
+- saada sinua koskevat tiedot siirrettyä järjestelmästä toiseen, jos käsittely perustuu suostumukseen tai sopimukseen ja siirto on teknisesti mahdollinen
+- peruuttaa antamasi suostumus milloin tahansa, jos käsittely perustuu suostumukseen
+
+Oikeuksien käyttäminen arvioidaan tapauskohtaisesti GDPR:n ja muun soveltuvan lainsäädännön mukaisesti. Kaikkia tietoja ei voida poistaa heti, jos esimerkiksi kirjanpito- tai muu lainsäädäntö velvoittaa säilyttämään ne.
 
 Lähetä pyyntö osoitteeseen info@rytkoset.net.
 
@@ -157,6 +167,12 @@ Sinulla on myös oikeus tehdä valitus tietosuojavaltuutetun toimistolle (tietos
 ## Mihin lähetämme tietosi
 
 Sivuston palvelin sijaitsee Suomessa. Mollien maksunvälityspalvelu käsittelee tietoja EU-alueella.
+
+Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.
+
+## Automaattinen päätöksenteko ja profilointi
+
+Sivustolla ei tehdä automaattista päätöksentekoa tai profilointia, jolla olisi sinua koskevia oikeusvaikutuksia tai vastaavia merkittäviä vaikutuksia.
 
 ## Tietoturvasta
 
