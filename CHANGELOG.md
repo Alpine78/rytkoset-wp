@@ -17,6 +17,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Kassalle jäsenmaksuohje silloin, kun korissa on jäsenmaksutuote
 - WooCommerce-kaupan brändin mukaiset alasvetovalikko- ja painiketyylit.
 
+### Changed
+- Tietosuojaselosteen pohjaan täydennetty rekisteröidyn oikeudet, automaattisen päätöksenteon maininta, YouTube/Google-upotusten tietojen käsittely ja sisäisten käyttöoikeuksien kuvaus.
+
 ### Fixed
 - Albumisivujen PhotoSwipe-lightbox käyttää nyt teeman omaa PhotoSwipe 5 -pakettia ilman WooCommercen legacy-konfliktia
 - Albumisivujen YouTube-upotukset eivät käynnisty automaattisesti
