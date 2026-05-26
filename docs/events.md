@@ -59,6 +59,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Paikka             | `_rytkoset_event_location`   | vapaa teksti                         | Julkinen tapahtumatieto                   |
 | Maksullisuus       | `_rytkoset_event_fee_type`   | `free`, `paid` tai tyhjä             | Julkinen hintatieto                       |
 | Hintateksti        | `_rytkoset_event_price_text` | vapaa teksti, esim. `49 € / henkilö` | Julkinen hintatieto                       |
+| Ilmoittautumisen määräpäivä | `_rytkoset_event_registration_deadline` | `YYYY-MM-DD` | Maksuttoman tapahtuman lomakkeen sulkeminen |
 | Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
 
 Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
@@ -85,7 +86,7 @@ Yksittäisellä tapahtumasivulla näytetään:
 
 - tapahtuman artikkelikuva ja otsikko
 - editoriin kirjoitettu sisältö
-- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi eikä siihen ole linkitetty maksutuotetta — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38); onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32)
+- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi, siihen ei ole linkitetty maksutuotetta ja ilmoittautumisen määräpäivää ei ole ohitettu — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38); onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32)
 - sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
 - jakopainikkeet
 
@@ -95,7 +96,10 @@ Yhteenvetokortissa näytetään täytetyt perustiedot:
 - kellonaika tai aikaväli
 - paikka
 - hinta
+- ilmoittautumisen määräpäivä, jos sellainen voidaan päätellä tapahtumalta tai linkitetyltä tuotteelta ja tapahtumapäivä ei ole vielä mennyt; määräpäivän jälkeen mutta ennen tapahtumaa tekstinä on `Ilmoittautuminen päättyi`
 - `Ilmoittaudu ja maksa` -painike, jos tapahtumaan on linkitetty maksutuote
+
+Jos linkitetyn WooCommerce-tuotteen ilmoittautuminen on päättynyt tai tuote ei muuten ole ostettavissa, tapahtumasivu näyttää tilaviestinä syyn eikä tarjoa aktiivista maksupainiketta.
 
 Tapahtuma-arkistossa `/tapahtumat/` tapahtumat jaetaan kolmeen osioon:
 
@@ -119,9 +123,10 @@ Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Men
    - paikka
    - maksullisuus
    - hintateksti
-8. Jos tapahtumaan liittyy ilmoittautuminen tai maksu, valitse sivupalkin `Maksutuote`-laatikosta oikea WooCommerce-tuote.
-9. Julkaise tai päivitä tapahtuma.
-10. Tarkista julkinen tapahtumasivu ja tapahtuma-arkisto.
+8. Jos maksuton tapahtuma käyttää lomakeilmoittautumista, täytä sivupalkin `Tapahtumapäivä`-laatikosta `Maksuttoman ilmoittautumisen määräpäivä`.
+9. Jos tapahtumaan liittyy ilmoittautuminen tai maksu, valitse sivupalkin `Maksutuote`-laatikosta oikea WooCommerce-tuote.
+10. Julkaise tai päivitä tapahtuma.
+11. Tarkista julkinen tapahtumasivu ja tapahtuma-arkisto.
 
 ### Suositeltu minimitieto
 
@@ -144,7 +149,7 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 
 Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
 
-Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta. Lomake tarkistaa noncen, tapahtuman, nimen ja sähköpostiosoitteen ennen tallennusta. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa.
+Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa.
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 
@@ -153,6 +158,8 @@ Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkit
 3. tapahtumasivulle tulee `Ilmoittaudu ja maksa` -painike
 4. käyttäjä siirtyy WooCommerce-tuotesivulle ja ostaa tuotteen
 5. ilmoittautumistiedot tallentuvat WooCommerce-tilaukselle
+
+Maksullisen tapahtuman ilmoittautumisen määräpäivä luetaan linkitetyltä WooCommerce-tuotteelta, kun tuotteella on tapahtumailmoittautumisen oma deadline-logiikka. Tapahtumaan ei tallenneta samaa deadlinea erikseen, jotta tuotteen ostettavuus ja tapahtumasivun viesti eivät eriydy.
 
 Tapahtuman ja WooCommerce-tuotteen välinen linkitys on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-event-product-link.md`.
 
