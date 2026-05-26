@@ -132,6 +132,10 @@ Use CSS variables for colors and spacing. No Bootstrap dependency.
   - `_rytkoset_event_location` — location
   - `_rytkoset_event_fee_type` — `free` | `paid`
   - `_rytkoset_event_price_text` — price text for display
+  - `_rytkoset_event_registration_deadline` — free event registration deadline `YYYY-MM-DD`; empty falls back to event date for the public form cutoff
+  - `_rytkoset_event_product_id` — linked WooCommerce product for paid registration/payment
+
+Free event registration forms close after the event registration deadline. Paid event pages read the deadline and availability state from the linked WooCommerce product instead of duplicating that data on the event.
 
 ### Gallery Album (`gallery_album`)
 

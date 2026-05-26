@@ -114,6 +114,89 @@ function rytkoset_theme_get_event_date_display( $event_id ) {
 }
 
 /**
+ * Returns the meta key used for free event registration deadlines.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_registration_deadline_meta_key() {
+	return '_rytkoset_event_registration_deadline';
+}
+
+/**
+ * Normalizes an event registration deadline date into YYYY-MM-DD format.
+ *
+ * @param string $raw_date Raw date value.
+ * @return string
+ */
+function rytkoset_theme_normalize_event_registration_deadline_date( $raw_date ) {
+	$raw_date = trim( (string) $raw_date );
+
+	if ( '' === $raw_date ) {
+		return '';
+	}
+
+	$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $raw_date, wp_timezone() );
+
+	if ( ! $date ) {
+		return '';
+	}
+
+	return $date->format( 'Y-m-d' );
+}
+
+/**
+ * Returns the stored free event registration deadline.
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_free_event_registration_deadline_raw( $event_id ) {
+	$deadline = get_post_meta( $event_id, rytkoset_theme_get_event_registration_deadline_meta_key(), true );
+
+	return rytkoset_theme_normalize_event_registration_deadline_date( is_scalar( $deadline ) ? (string) $deadline : '' );
+}
+
+/**
+ * Returns the cutoff datetime for a YYYY-MM-DD deadline.
+ *
+ * The registration remains open until the end of the configured day.
+ *
+ * @param string $deadline Deadline date.
+ * @return DateTimeImmutable|null
+ */
+function rytkoset_theme_get_registration_deadline_cutoff_from_date( $deadline ) {
+	$deadline = rytkoset_theme_normalize_event_registration_deadline_date( $deadline );
+
+	if ( '' === $deadline ) {
+		return null;
+	}
+
+	$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $deadline, wp_timezone() );
+
+	if ( ! $date ) {
+		return null;
+	}
+
+	return $date->modify( '+1 day' )->setTime( 0, 0, 0 );
+}
+
+/**
+ * Checks whether the event date has passed.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_is_event_date_passed( $event_id ) {
+	$cutoff = rytkoset_theme_get_registration_deadline_cutoff_from_date( rytkoset_theme_get_event_date_raw( $event_id ) );
+
+	if ( ! $cutoff instanceof DateTimeImmutable ) {
+		return false;
+	}
+
+	return current_datetime() >= $cutoff;
+}
+
+/**
  * Returns meta keys used for event details.
  *
  * @return array
@@ -282,6 +365,7 @@ function rytkoset_theme_get_event_detail_items( $event_id ) {
 	$time_display = rytkoset_theme_get_event_time_display( $event_id );
 	$location     = rytkoset_theme_get_event_location( $event_id );
 	$fee_display  = rytkoset_theme_get_event_fee_display( $event_id );
+	$deadline     = rytkoset_theme_get_event_registration_deadline_display( $event_id );
 
 	if ( '' !== $date_display ) {
 		$items[] = array(
@@ -309,6 +393,14 @@ function rytkoset_theme_get_event_detail_items( $event_id ) {
 		$items[] = array(
 			'label' => __( 'Hinta', 'rytkoset-theme' ),
 			'value' => $fee_display,
+		);
+	}
+
+	if ( '' !== $deadline['value'] ) {
+		$items[] = array(
+			'label'    => $deadline['label'],
+			'value'    => $deadline['value'],
+			'datetime' => $deadline['datetime'],
 		);
 	}
 
@@ -365,7 +457,8 @@ add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_date
  * @param WP_Post $post Event post object.
  */
 function rytkoset_theme_render_event_date_metabox( $post ) {
-	$date = rytkoset_theme_get_event_date_raw( $post->ID );
+	$date                  = rytkoset_theme_get_event_date_raw( $post->ID );
+	$registration_deadline = rytkoset_theme_get_free_event_registration_deadline_raw( $post->ID );
 
 	wp_nonce_field( 'rytkoset_save_event_date', 'rytkoset_event_date_nonce' );
 	?>
@@ -383,6 +476,22 @@ function rytkoset_theme_render_event_date_metabox( $post ) {
 	/>
 	<p class="description">
 		<?php esc_html_e( 'Käytetään tapahtuma-arkiston järjestämiseen. Muoto tallennuksessa on YYYY-MM-DD.', 'rytkoset-theme' ); ?>
+	</p>
+	<hr />
+	<p>
+		<label for="rytkoset_event_registration_deadline">
+			<?php esc_html_e( 'Maksuttoman ilmoittautumisen määräpäivä', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<input
+		type="date"
+		id="rytkoset_event_registration_deadline"
+		name="rytkoset_event_registration_deadline"
+		value="<?php echo esc_attr( $registration_deadline ); ?>"
+		class="widefat"
+	/>
+	<p class="description">
+		<?php esc_html_e( 'Koskee maksuttomia lomakeilmoittautumisia. Jos kenttä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen.', 'rytkoset-theme' ); ?>
 	</p>
 	<?php
 }
@@ -418,6 +527,20 @@ function rytkoset_theme_save_event_date( $post_id ) {
 	$date = isset( $_POST['rytkoset_event_date'] )
 		? sanitize_text_field( wp_unslash( $_POST['rytkoset_event_date'] ) )
 		: '';
+
+	$registration_deadline = isset( $_POST['rytkoset_event_registration_deadline'] )
+		? sanitize_text_field( wp_unslash( $_POST['rytkoset_event_registration_deadline'] ) )
+		: '';
+
+	if ( '' === $registration_deadline ) {
+		delete_post_meta( $post_id, rytkoset_theme_get_event_registration_deadline_meta_key() );
+	} else {
+		$registration_deadline = rytkoset_theme_normalize_event_registration_deadline_date( $registration_deadline );
+
+		if ( '' !== $registration_deadline ) {
+			update_post_meta( $post_id, rytkoset_theme_get_event_registration_deadline_meta_key(), $registration_deadline );
+		}
+	}
 
 	if ( '' === $date ) {
 		delete_post_meta( $post_id, rytkoset_theme_get_event_date_meta_key() );
@@ -695,6 +818,7 @@ function rytkoset_theme_print_event_admin_styles() {
 	?>
 	<style>
 		#rytkoset_event_date_field,
+		#rytkoset_event_registration_deadline,
 		#rytkoset_event_product_id,
 		#rytkoset_event_start_time,
 		#rytkoset_event_end_time,
@@ -943,21 +1067,155 @@ function rytkoset_theme_get_event_product_url( $event_id ) {
 }
 
 /**
+ * Returns the registration deadline stored on a linked WooCommerce product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string
+ */
+function rytkoset_theme_get_event_product_registration_deadline( $product ) {
+	if (
+		! class_exists( 'WC_Product' )
+		|| ! $product instanceof WC_Product
+		|| ! function_exists( 'rytkoset_theme_get_tampere_2026_registration_deadline' )
+		|| ! function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' )
+		|| ! rytkoset_theme_is_tampere_2026_registration_product( $product )
+	) {
+		return '';
+	}
+
+	return rytkoset_theme_get_tampere_2026_registration_deadline( $product );
+}
+
+/**
+ * Returns the registration deadline date used on the event page.
+ *
+ * Paid events read the deadline from the linked product. Free events read the
+ * event meta and fall back to the event date.
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_registration_deadline_raw( $event_id ) {
+	$product = rytkoset_theme_get_event_linked_product( $event_id );
+
+	if ( class_exists( 'WC_Product' ) && $product instanceof WC_Product ) {
+		return rytkoset_theme_get_event_product_registration_deadline( $product );
+	}
+
+	if ( 'free' !== rytkoset_theme_get_event_fee_type( $event_id ) ) {
+		return '';
+	}
+
+	$deadline = rytkoset_theme_get_free_event_registration_deadline_raw( $event_id );
+
+	if ( '' !== $deadline ) {
+		return $deadline;
+	}
+
+	return rytkoset_theme_get_event_date_raw( $event_id );
+}
+
+/**
+ * Returns a display-ready event registration deadline.
+ *
+ * @param int $event_id Event post ID.
+ * @return array
+ */
+function rytkoset_theme_get_event_registration_deadline_display( $event_id ) {
+	$deadline = rytkoset_theme_get_event_registration_deadline_raw( $event_id );
+
+	if ( '' === $deadline || rytkoset_theme_is_event_date_passed( $event_id ) ) {
+		return array(
+			'label'    => '',
+			'value'    => '',
+			'datetime' => '',
+		);
+	}
+
+	$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $deadline, wp_timezone() );
+
+	if ( ! $date ) {
+		return array(
+			'label'    => '',
+			'value'    => '',
+			'datetime' => '',
+		);
+	}
+
+	return array(
+		'label'    => rytkoset_theme_is_event_registration_deadline_passed( $event_id )
+			? __( 'Ilmoittautuminen päättyi', 'rytkoset-theme' )
+			: __( 'Ilmoittautuminen päättyy', 'rytkoset-theme' ),
+		'value'    => wp_date( get_option( 'date_format' ), $date->getTimestamp() ),
+		'datetime' => $deadline,
+	);
+}
+
+/**
+ * Checks whether the event registration deadline has passed.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_is_event_registration_deadline_passed( $event_id ) {
+	$cutoff = rytkoset_theme_get_registration_deadline_cutoff_from_date( rytkoset_theme_get_event_registration_deadline_raw( $event_id ) );
+
+	if ( ! $cutoff instanceof DateTimeImmutable ) {
+		return false;
+	}
+
+	return current_datetime() >= $cutoff;
+}
+
+/**
+ * Returns the linked product unavailability message for an event.
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_product_unavailability_message( $event_id ) {
+	$product = rytkoset_theme_get_event_linked_product( $event_id );
+
+	if ( ! class_exists( 'WC_Product' ) || ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	if ( function_exists( 'rytkoset_theme_get_tampere_2026_registration_unavailability_message' ) ) {
+		$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+
+		if ( '' !== $message ) {
+			return $message;
+		}
+	}
+
+	if ( ! $product->is_purchasable() ) {
+		return __( 'Ilmoittautuminen ei ole tällä hetkellä avoinna.', 'rytkoset-theme' );
+	}
+
+	return '';
+}
+
+/**
  * Renders the linked product CTA for an event.
  *
  * @param int $event_id Event post ID.
  */
 function rytkoset_theme_render_event_product_cta( $event_id ) {
 	$product_url = rytkoset_theme_get_event_product_url( $event_id );
+	$message     = rytkoset_theme_get_event_product_unavailability_message( $event_id );
 
-	if ( ! $product_url ) {
+	if ( ! $product_url && '' === $message ) {
 		return;
 	}
 	?>
 	<div class="event-product-cta">
-		<a class="btn btn--primary" href="<?php echo esc_url( $product_url ); ?>">
-			<?php esc_html_e( 'Ilmoittaudu ja maksa', 'rytkoset-theme' ); ?>
-		</a>
+		<?php if ( '' !== $message ) : ?>
+			<p class="event-product-cta__notice"><?php echo esc_html( $message ); ?></p>
+		<?php else : ?>
+			<a class="btn btn--primary" href="<?php echo esc_url( $product_url ); ?>">
+				<?php esc_html_e( 'Ilmoittaudu ja maksa', 'rytkoset-theme' ); ?>
+			</a>
+		<?php endif; ?>
 	</div>
 	<?php
 }
@@ -969,8 +1227,11 @@ function rytkoset_theme_render_event_product_cta( $event_id ) {
  * @return bool
  */
 function rytkoset_theme_event_has_summary_card( $event_id ) {
+	$product_message = rytkoset_theme_get_event_product_unavailability_message( $event_id );
+
 	return ! empty( rytkoset_theme_get_event_detail_items( $event_id ) )
-		|| '' !== rytkoset_theme_get_event_product_url( $event_id );
+		|| '' !== rytkoset_theme_get_event_product_url( $event_id )
+		|| '' !== $product_message;
 }
 
 /**
@@ -979,10 +1240,11 @@ function rytkoset_theme_event_has_summary_card( $event_id ) {
  * @param int $event_id Event post ID.
  */
 function rytkoset_theme_render_event_summary_card( $event_id ) {
-	$items       = rytkoset_theme_get_event_detail_items( $event_id );
-	$product_url = rytkoset_theme_get_event_product_url( $event_id );
+	$items           = rytkoset_theme_get_event_detail_items( $event_id );
+	$product_url     = rytkoset_theme_get_event_product_url( $event_id );
+	$product_message = rytkoset_theme_get_event_product_unavailability_message( $event_id );
 
-	if ( empty( $items ) && '' === $product_url ) {
+	if ( empty( $items ) && '' === $product_url && '' === $product_message ) {
 		return;
 	}
 
@@ -1010,7 +1272,9 @@ function rytkoset_theme_render_event_summary_card( $event_id ) {
 			</dl>
 		<?php endif; ?>
 
-		<?php if ( '' !== $product_url ) : ?>
+		<?php if ( '' !== $product_message ) : ?>
+			<p class="event-summary-card__notice"><?php echo esc_html( $product_message ); ?></p>
+		<?php elseif ( '' !== $product_url ) : ?>
 			<div class="event-summary-card__cta">
 				<a class="btn btn--primary event-summary-card__button" href="<?php echo esc_url( $product_url ); ?>">
 					<?php esc_html_e( 'Ilmoittaudu ja maksa', 'rytkoset-theme' ); ?>

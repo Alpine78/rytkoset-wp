@@ -467,7 +467,64 @@ function rytkoset_theme_event_can_show_free_registration_form( $event_id ) {
 		return false;
 	}
 
+	if (
+		function_exists( 'rytkoset_theme_is_event_registration_deadline_passed' )
+		&& rytkoset_theme_is_event_registration_deadline_passed( $event_id )
+	) {
+		return false;
+	}
+
 	return true;
+}
+
+/**
+ * Checks whether an active registration already exists for an event email.
+ *
+ * Cancelled registrations are intentionally ignored so a cancelled participant
+ * can register again.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $email    Registration email.
+ * @return bool
+ */
+function rytkoset_theme_event_has_active_registration_for_email( $event_id, $email ) {
+	$event_id = absint( $event_id );
+	$email    = sanitize_email( $email );
+
+	if ( $event_id <= 0 || '' === $email ) {
+		return false;
+	}
+
+	$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+	$existing  = get_posts(
+		array(
+			'post_type'              => 'event_registration',
+			'post_status'            => array( 'publish', 'future', 'draft', 'pending', 'private' ),
+			'posts_per_page'         => 1,
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+			'meta_query'             => array(
+				'relation' => 'AND',
+				array(
+					'key'   => $meta_keys['event_id'],
+					'value' => $event_id,
+				),
+				array(
+					'key'   => $meta_keys['email'],
+					'value' => $email,
+				),
+				array(
+					'key'     => $meta_keys['status'],
+					'value'   => array( 'pending', 'confirmed' ),
+					'compare' => 'IN',
+				),
+			),
+		)
+	);
+
+	return ! empty( $existing );
 }
 
 /**
@@ -524,6 +581,10 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'missing_consent' );
 	}
 
+	if ( rytkoset_theme_event_has_active_registration_for_email( $event_id, $email ) ) {
+		rytkoset_theme_handle_event_registration_error( $event_id, 'already_registered' );
+	}
+
 	$meta_keys       = rytkoset_theme_get_event_registration_meta_keys();
 	$registration_id = wp_insert_post(
 		array(
@@ -576,7 +637,8 @@ function rytkoset_theme_get_event_registration_feedback() {
 	$messages = array(
 		'missing_name'    => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
 		'invalid_email'   => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
-		'missing_consent' => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
+		'missing_consent'    => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
+		'already_registered' => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
 	);
 
 	return array(
