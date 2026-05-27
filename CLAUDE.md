@@ -137,6 +137,7 @@ Use CSS variables for colors and spacing. No Bootstrap dependency.
   - `_rytkoset_event_price_text` — price text for display
   - `_rytkoset_event_registration_deadline` — free event registration deadline `YYYY-MM-DD`; empty falls back to event date for the public form cutoff
   - `_rytkoset_event_product_id` — linked WooCommerce product for paid registration/payment
+  - `_rytkoset_event_organizer_notification_recipients` — event-specific organizer notification email recipients for paid event orders
 
 Free event registration forms close after the event registration deadline. Paid event pages read the deadline and availability state from the linked WooCommerce product instead of duplicating that data on the event.
 
@@ -152,7 +153,7 @@ Free event registration forms close after the event registration deadline. Paid 
 WooCommerce-specific logic lives in `inc/woocommerce-*.php` modules, with small shared helpers still in `functions.php`. Key areas:
 
 - **Membership products** — annual and lifetime membership; checkout notice when product is in cart
-- **Tampere 2026 event fee** — custom checkout fields, participant list in admin, CSV export, organizer email notifications
+- **Paid event fees / Tampere 2026** — linked event products, Tampere-specific checkout fields, participant list in admin, CSV export, event-specific organizer email notifications
 - **Mollie payments** — Finnish language texts, output buffering on `thankyou` page for bank transfer instructions
 - **PhotoSwipe conflict** — WooCommerce registers PhotoSwipe 4 scripts; theme actively dequeues them to avoid conflicts
 

@@ -62,6 +62,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Hintateksti        | `_rytkoset_event_price_text` | vapaa teksti, esim. `49 € / henkilö` | Julkinen hintatieto                       |
 | Ilmoittautumisen määräpäivä | `_rytkoset_event_registration_deadline` | `YYYY-MM-DD` | Maksuttoman tapahtuman lomakkeen sulkeminen |
 | Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
+| Järjestäjäilmoitusten vastaanottajat | `_rytkoset_event_organizer_notification_recipients` | sähköpostiosoitteet, yksi per rivi | Maksullisen tapahtuman tilausilmoitusten vastaanottajat |
 
 Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
 
@@ -165,6 +166,8 @@ Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkit
 
 Maksullisen tapahtuman ilmoittautumisen määräpäivä luetaan linkitetyltä WooCommerce-tuotteelta, kun tuotteella on tapahtumailmoittautumisen oma deadline-logiikka. Tapahtumaan ei tallenneta samaa deadlinea erikseen, jotta tuotteen ostettavuus ja tapahtumasivun viesti eivät eriydy.
 
+Maksullisen tapahtuman järjestäjäilmoitukset lähetetään tapahtumalle asetetuille vastaanottajille, kun linkitetyn maksutuotteen tilaus saavuttaa tilan `on-hold`, `processing` tai `completed`. Ilmoitus lähetetään vain kerran per tapahtuma per tilaus. Jos vastaanottajia ei ole asetettu, sähköpostia ei lähetetä ja tilaukselle kirjataan private order note.
+
 Tapahtuman ja WooCommerce-tuotteen välinen linkitys on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-event-product-link.md`.
 
 ### Event Organizer -rooli
@@ -178,6 +181,7 @@ Rooli saa:
 - muuttaa ilmoittautumisen tilaa, esimerkiksi `pending`, `confirmed` tai `cancelled`
 - lisätä tapahtuman artikkelikuvan mediakirjastosta
 - linkittää tapahtumaan olemassa olevan WooCommerce-maksutuotteen
+- määrittää tapahtumakohtaiset järjestäjäilmoitusten vastaanottajat
 
 Rooli ei saa:
 
@@ -194,7 +198,7 @@ Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle er
 - osallistumismaksutuote: `docs/woocommerce-tampere-2026-product.md`
 - checkoutin osallistujakentät: `docs/woocommerce-tampere-2026-checkout-fields.md`
 - määräpäivä ja kapasiteetti: `docs/woocommerce-tampere-2026-management.md`
-- järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
+- maksullisten tapahtumien järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
 
 Tampere 2026 -osallistujat näkyvät yhteisessä osallistujalistassa (katso alla). Vanha `WooCommerce > Tampere 2026 osallistujat` -pikalinkkisivu poistettiin tiketissä `#194`, kun sama tieto on saatavilla rajatuilla oikeuksilla yhteisestä näkymästä.
 
@@ -227,9 +231,11 @@ Kun uusi maksullinen tapahtuma otetaan käyttöön:
 2. Luo WooCommerce-tuote, jos ilmoittautuminen tai maksu tarvitaan.
 3. Aseta tuotteelle hinta, varasto ja muut myyntiasetukset.
 4. Linkitä tuote tapahtuman `Maksutuote`-kentässä.
-5. Testaa julkiselta tapahtumasivulta, että painike vie oikealle tuotteelle.
-6. Testaa ostoskori ja kassa.
-7. Tarkista, että ilmoittautumistiedot näkyvät WooCommerce-tilauksella ja mahdollisessa tapahtumakohtaisessa osallistujanäkymässä.
+5. Lisää tapahtuman `Järjestäjäilmoitukset`-kenttään vastaanottajat.
+6. Testaa julkiselta tapahtumasivulta, että painike vie oikealle tuotteelle.
+7. Testaa ostoskori ja kassa.
+8. Tarkista, että ilmoittautumistiedot näkyvät WooCommerce-tilauksella ja mahdollisessa tapahtumakohtaisessa osallistujanäkymässä.
+9. Tarkista, että tilaukselle kirjautuu järjestäjäilmoituksen private order note.
 
 ## Mitä on tehty
 
@@ -251,7 +257,7 @@ Tässä vaiheessa on toteutettu:
 - Tampere 2026 -ilmoittautumisen WooCommerce-pohjainen MVP
 - Tampere 2026 -osallistujalista adminissa
 - Tampere 2026 -osallistujien CSV-vienti
-- Tampere 2026 -järjestäjäilmoitukset
+- maksullisten tapahtumien tapahtumakohtaiset järjestäjäilmoitukset
 - rajattu `Event Organizer` -rooli tapahtumien ja ilmoittautumisten hallintaan
 - yhdistetty `Tapahtumat > Osallistujat` -näkymä ilmaisten ja maksullisten tapahtumien osallistujille
 
