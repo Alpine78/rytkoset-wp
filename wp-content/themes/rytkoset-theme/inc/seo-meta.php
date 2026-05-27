@@ -34,13 +34,22 @@ function rytkoset_theme_social_meta() {
 	$image        = '';
 	$image_width  = 0;
 	$image_height = 0;
+	$image_type   = '';
+	$image_alt    = '';
 
 	if ( $post_id && has_post_thumbnail( $post_id ) ) {
-		$image_data = wp_get_attachment_image_src( get_post_thumbnail_id( $post_id ), 'full' );
+		$thumbnail_id = get_post_thumbnail_id( $post_id );
+
+		// Suositaan 1200 x 630 -rajattua OG-kokoa; jos sitä ei vielä ole
+		// generoitu, wp_get_attachment_image_src palauttaa alkuperäiskuvan.
+		$image_data = wp_get_attachment_image_src( $thumbnail_id, 'rytkoset-og' );
+
 		if ( is_array( $image_data ) ) {
 			$image        = $image_data[0];
 			$image_width  = isset( $image_data[1] ) ? (int) $image_data[1] : 0;
 			$image_height = isset( $image_data[2] ) ? (int) $image_data[2] : 0;
+			$image_type   = (string) get_post_mime_type( $thumbnail_id );
+			$image_alt    = trim( (string) get_post_meta( $thumbnail_id, '_wp_attachment_image_alt', true ) );
 		}
 	}
 
@@ -62,7 +71,12 @@ function rytkoset_theme_social_meta() {
 			$image        = $logo_data[0];
 			$image_width  = isset( $logo_data[1] ) ? (int) $logo_data[1] : 0;
 			$image_height = isset( $logo_data[2] ) ? (int) $logo_data[2] : 0;
+			$image_type   = $logo_id ? (string) get_post_mime_type( $logo_id ) : '';
 		}
+	}
+
+	if ( '' === $image_alt ) {
+		$image_alt = $title;
 	}
 
 	$locale = str_replace( '_', '-', get_locale() );
@@ -79,9 +93,23 @@ function rytkoset_theme_social_meta() {
 	if ( ! empty( $image ) ) {
 		$meta['og:image'] = $image;
 
+		// Facebook ja LinkedIn suosivat https-osoitetta erikseen.
+		if ( 0 === strpos( $image, 'https://' ) ) {
+			$meta['og:image:secure_url'] = $image;
+		}
+
 		if ( $image_width > 0 && $image_height > 0 ) {
 			$meta['og:image:width']  = $image_width;
 			$meta['og:image:height'] = $image_height;
+		}
+
+		// Facebook tukee vain JPG/PNG/GIF-kuvia og:image-tagissa.
+		if ( ! empty( $image_type ) ) {
+			$meta['og:image:type'] = $image_type;
+		}
+
+		if ( ! empty( $image_alt ) ) {
+			$meta['og:image:alt'] = $image_alt;
 		}
 	}
 
@@ -97,6 +125,10 @@ function rytkoset_theme_social_meta() {
 
 	if ( ! empty( $image ) ) {
 		$meta['twitter:image'] = $image;
+
+		if ( ! empty( $image_alt ) ) {
+			$meta['twitter:image:alt'] = $image_alt;
+		}
 	}
 
 	foreach ( $meta as $property => $content ) {

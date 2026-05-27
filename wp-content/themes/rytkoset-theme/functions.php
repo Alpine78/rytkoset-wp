@@ -99,6 +99,11 @@ function rytkoset_theme_setup() {
 	// Esikatselukuvat
 	add_theme_support( 'post-thumbnails' );
 
+	// Some-jaon esikatselukuva (Open Graph). 1200 x 630 px on Facebookin,
+	// LinkedInin ja X:n suosittelema koko isolle esikatselukortille.
+	// HUOM: vanhat kuvat tarvitsevat "Regenerate Thumbnails" -ajon.
+	add_image_size( 'rytkoset-og', 1200, 630, true );
+
 	// Sivuston logo
 	add_theme_support(
 		'custom-logo',
