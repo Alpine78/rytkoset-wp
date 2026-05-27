@@ -11,6 +11,7 @@ Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 - tapahtuman julkinen sisältö kirjoitetaan WordPress-editorissa
 - ilmaisten tapahtumien ilmoittautumisille on oma ei-julkinen `event_registration`-sisältötyyppi
 - maksuttomien tapahtumien sivulla voidaan näyttää ilmoittautumislomake, jonka tiedot tallentuvat ilmoittautumisiksi
+- maksuttoman tapahtumailmoittautumisen jälkeen ilmoittautujalle lähetetään kevyt kuittisähköposti
 - maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
 - osallistujat näkee tapahtumakohtaisesti `Tapahtumat > Osallistujat` -näkymästä, joka yhdistää ilmaiset ja maksulliset ilmoittautumiset
 - Tampere 2026 -osallistujien hallintaan on lisäksi oma WooCommerce-pikalinkkinäkymä
@@ -87,7 +88,7 @@ Yksittäisellä tapahtumasivulla näytetään:
 
 - tapahtuman artikkelikuva ja otsikko
 - editoriin kirjoitettu sisältö
-- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi, siihen ei ole linkitetty maksutuotetta ja ilmoittautumisen määräpäivää ei ole ohitettu — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38); onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32)
+- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi, siihen ei ole linkitetty maksutuotetta ja ilmoittautumisen määräpäivää ei ole ohitettu — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38); onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32), ja ilmoittautujalle lähetetään tekstimuotoinen kuittisähköposti (#107)
 - sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
 - jakopainikkeet
 
@@ -150,7 +151,7 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 
 Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
 
-Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa honeypot-kentän, noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa.
+Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa honeypot-kentän, noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa. Onnistuneen maksuttoman ilmoittautumisen jälkeen ilmoittautujalle lähetetään `wp_mail()`-pohjainen tekstimuotoinen kuittisähköposti, jossa kerrotaan ilmoittautumisen vastaanotosta ja näytetään tapahtuman perustiedot.
 
 Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, mutta tapahtumaviittaus ja status säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
 
@@ -207,6 +208,8 @@ Näkymässä voi valita yksittäisen tapahtuman tai katsella kaikkien tapahtumie
 
 Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`. Saman valikon alta löytyy myös `Tapahtumat > Viestintä`, jolla voi lähettää sähköpostiviestin valitun tapahtuman osallistujille (`docs/event-participants-messaging.md`).
 
+AcyMailingia ei käytetä #107:n kuittisähköposteihin eikä nykyiseen tapahtumaviestintään. Tapahtumaviestinnän mahdollinen AcyMailing-integraatio selvitetään erillisessä tiketissä #264.
+
 ### Mitä ylläpitäjä tekee ilmoittautumisille
 
 1. Avaa `Tapahtumat > Osallistujat`.
@@ -236,6 +239,7 @@ Tässä vaiheessa on toteutettu:
 - `event_registration`-sisältötyyppi ilmaisten tapahtumien osallistujille
 - maksuttoman tapahtuman julkinen ilmoittautumislomake
 - maksuttoman tapahtuman ilmoittautumisen validointi ja frontend-tallennus
+- maksuttoman tapahtumailmoittautumisen kuittisähköposti ilmoittautujalle
 - tapahtuman yksittäinen sivupohja
 - tapahtuma-arkisto, jossa on tulevat, menneet ja päivämäärättömät tapahtumat
 - tapahtumapäivän metakenttä

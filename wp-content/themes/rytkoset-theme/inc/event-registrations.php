@@ -529,6 +529,99 @@ function rytkoset_theme_event_has_active_registration_for_email( $event_id, $ema
 }
 
 /**
+ * Sends a lightweight receipt email after a successful free event registration.
+ *
+ * The email confirms receipt only. Registration status remains pending until
+ * an organizer handles it in the admin.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $name     Participant name.
+ * @param string $email    Participant email.
+ * @return bool Whether WordPress accepted the email for sending.
+ */
+function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email ) {
+	$event_id = absint( $event_id );
+	$name     = trim( (string) $name );
+	$email    = sanitize_email( $email );
+
+	if ( $event_id <= 0 || '' === $email || ! is_email( $email ) ) {
+		return false;
+	}
+
+	$event_title = get_the_title( $event_id );
+
+	if ( '' === $event_title ) {
+		$event_title = __( 'Tapahtuma', 'rytkoset-theme' );
+	}
+
+	$event_title_plain = wp_specialchars_decode( $event_title, ENT_QUOTES );
+	$subject           = sprintf(
+		/* translators: %s: event title. */
+		__( 'Ilmoittautuminen vastaanotettu: %s', 'rytkoset-theme' ),
+		$event_title_plain
+	);
+
+	$lines = array(
+		'' !== $name
+			? sprintf(
+				/* translators: %s: participant name. */
+				__( 'Hei %s,', 'rytkoset-theme' ),
+				$name
+			)
+			: __( 'Hei,', 'rytkoset-theme' ),
+		'',
+		__( 'Kiitos ilmoittautumisesta. Ilmoittautumisesi on vastaanotettu.', 'rytkoset-theme' ),
+		__( 'Järjestäjä ottaa tarvittaessa yhteyttä sähköpostitse.', 'rytkoset-theme' ),
+		'',
+		__( 'Tapahtuman tiedot:', 'rytkoset-theme' ),
+		sprintf(
+			/* translators: %s: event title. */
+			__( 'Tapahtuma: %s', 'rytkoset-theme' ),
+			$event_title_plain
+		),
+	);
+
+	$date     = rytkoset_theme_get_event_date_display( $event_id );
+	$time     = rytkoset_theme_get_event_time_display( $event_id );
+	$location = rytkoset_theme_get_event_location( $event_id );
+
+	if ( '' !== $date ) {
+		$lines[] = sprintf(
+			/* translators: %s: event date. */
+			__( 'Päivämäärä: %s', 'rytkoset-theme' ),
+			$date
+		);
+	}
+
+	if ( '' !== $time ) {
+		$lines[] = sprintf(
+			/* translators: %s: event time. */
+			__( 'Aika: %s', 'rytkoset-theme' ),
+			$time
+		);
+	}
+
+	if ( '' !== $location ) {
+		$lines[] = sprintf(
+			/* translators: %s: event location. */
+			__( 'Paikka: %s', 'rytkoset-theme' ),
+			$location
+		);
+	}
+
+	$lines[] = '';
+	$lines[] = __( 'Terveisin', 'rytkoset-theme' );
+	$lines[] = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+	return wp_mail(
+		$email,
+		$subject,
+		implode( "\n", $lines ),
+		array( 'Content-Type: text/plain; charset=UTF-8' )
+	);
+}
+
+/**
  * Redirects back to the event page with a frontend registration error.
  *
  * @param int    $event_id Event post ID.
@@ -622,6 +715,8 @@ function rytkoset_theme_handle_event_registration_submission() {
 	if ( is_wp_error( $registration_id ) || $registration_id <= 0 ) {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'save_failed' );
 	}
+
+	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email );
 
 	wp_safe_redirect( rytkoset_theme_get_event_registration_redirect_url( $event_id, 'success' ) );
 	exit;
