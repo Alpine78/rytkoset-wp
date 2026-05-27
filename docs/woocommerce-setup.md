@@ -50,7 +50,7 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - Tampere 2026 -checkout-kentät on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-checkout-fields.md`.
 - Tampere 2026 -tapahtumamaksun hallinta on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-management.md`.
 - Tampere 2026 -osallistujat näkyvät yhteisessä `Tapahtumat > Osallistujat` -näkymässä; katso `docs/event-participants-admin.md`.
-- Tampere 2026 -järjestäjäilmoitukset on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-notifications.md`.
+- Maksullisten tapahtumien tapahtumakohtaiset järjestäjäilmoitukset on dokumentoitu erikseen tiedostossa `docs/woocommerce-tampere-2026-notifications.md`.
 - Mollie-maksutapojen paikallinen testikäyttöönotto on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-payments.md`.
 - Mollien dev-live käyttöönotto ja hyväksymistestaus on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-go-live.md`.
 - Mollie MobilePay -käyttöönotto ja mahdolliset tilikohtaiset blockerit on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-mobilepay.md`.

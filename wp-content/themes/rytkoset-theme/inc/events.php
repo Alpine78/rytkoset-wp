@@ -8,6 +8,41 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Normalizes a raw email list into unique, valid recipient addresses.
+ *
+ * @param string $raw_value Raw textarea value.
+ * @return array<int, string>
+ */
+function rytkoset_theme_normalize_email_list( $raw_value ) {
+	$parts   = preg_split( '/[\r\n,;]+/', (string) $raw_value );
+	$emails  = array();
+	$results = array();
+
+	if ( ! is_array( $parts ) ) {
+		return array();
+	}
+
+	foreach ( $parts as $part ) {
+		$email = sanitize_email( trim( (string) $part ) );
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			continue;
+		}
+
+		$index = strtolower( $email );
+
+		if ( isset( $emails[ $index ] ) ) {
+			continue;
+		}
+
+		$emails[ $index ] = true;
+		$results[]        = $email;
+	}
+
+	return $results;
+}
+
+/**
  * Rekisteröi tapahtumien CPT:n.
  */
 function rytkoset_theme_register_event_cpt() {
@@ -746,6 +781,39 @@ function rytkoset_theme_get_event_product_meta_key() {
 }
 
 /**
+ * Returns the meta key used for event organizer notification recipients.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_organizer_notification_recipients_meta_key() {
+	return '_rytkoset_event_organizer_notification_recipients';
+}
+
+/**
+ * Sanitizes event organizer notification recipients for storage.
+ *
+ * @param string $raw_value Raw textarea value.
+ * @return string
+ */
+function rytkoset_theme_sanitize_event_organizer_notification_recipients( $raw_value ) {
+	$emails = rytkoset_theme_normalize_email_list( $raw_value );
+
+	return implode( "\n", $emails );
+}
+
+/**
+ * Returns configured organizer notification recipients for an event.
+ *
+ * @param int $event_id Event post ID.
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_event_organizer_notification_recipients( $event_id ) {
+	$value = get_post_meta( absint( $event_id ), rytkoset_theme_get_event_organizer_notification_recipients_meta_key(), true );
+
+	return rytkoset_theme_normalize_email_list( is_scalar( $value ) ? (string) $value : '' );
+}
+
+/**
  * Returns the WooCommerce product linked to an event.
  *
  * @param int $event_id Event post ID.
@@ -807,6 +875,21 @@ function rytkoset_theme_register_event_product_metabox() {
 add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_product_metabox' );
 
 /**
+ * Adds the event organizer notifications metabox.
+ */
+function rytkoset_theme_register_event_organizer_notifications_metabox() {
+	add_meta_box(
+		'rytkoset_event_organizer_notifications',
+		__( 'Järjestäjäilmoitukset', 'rytkoset-theme' ),
+		'rytkoset_theme_render_event_organizer_notifications_metabox',
+		'rytkoset_event',
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_organizer_notifications_metabox' );
+
+/**
  * Prints small editor-only styles for event admin metaboxes.
  */
 function rytkoset_theme_print_event_admin_styles() {
@@ -820,6 +903,7 @@ function rytkoset_theme_print_event_admin_styles() {
 		#rytkoset_event_date_field,
 		#rytkoset_event_registration_deadline,
 		#rytkoset_event_product_id,
+		#rytkoset_event_organizer_notification_recipients,
 		#rytkoset_event_start_time,
 		#rytkoset_event_end_time,
 		#rytkoset_event_fee_type {
@@ -1001,6 +1085,35 @@ function rytkoset_theme_render_event_product_metabox( $post ) {
 }
 
 /**
+ * Renders the event organizer notifications metabox.
+ *
+ * @param WP_Post $post Event post object.
+ * @return void
+ */
+function rytkoset_theme_render_event_organizer_notifications_metabox( $post ) {
+	$meta_key = rytkoset_theme_get_event_organizer_notification_recipients_meta_key();
+	$value    = (string) get_post_meta( $post->ID, $meta_key, true );
+
+	wp_nonce_field( 'rytkoset_save_event_organizer_notifications', 'rytkoset_event_organizer_notifications_nonce' );
+	?>
+	<p>
+		<label for="rytkoset_event_organizer_notification_recipients">
+			<?php esc_html_e( 'Järjestäjäilmoitusten vastaanottajat', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<textarea
+		id="rytkoset_event_organizer_notification_recipients"
+		name="rytkoset_event_organizer_notification_recipients"
+		rows="5"
+		class="widefat"
+	><?php echo esc_textarea( $value ); ?></textarea>
+	<p class="description">
+		<?php esc_html_e( 'Anna järjestäjäilmoitusten vastaanottajaosoitteet pilkuilla tai rivinvaihdoilla eroteltuna.', 'rytkoset-theme' ); ?>
+	</p>
+	<?php
+}
+
+/**
  * Saves the WooCommerce product linked to an event.
  *
  * @param int $post_id Event post ID.
@@ -1047,6 +1160,50 @@ function rytkoset_theme_save_event_product_link( $post_id ) {
 	update_post_meta( $post_id, rytkoset_theme_get_event_product_meta_key(), $product_id );
 }
 add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_product_link' );
+
+/**
+ * Saves event organizer notification recipients.
+ *
+ * @param int $post_id Event post ID.
+ * @return void
+ */
+function rytkoset_theme_save_event_organizer_notifications( $post_id ) {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+
+	if ( wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	if ( ! isset( $_POST['rytkoset_event_organizer_notifications_nonce'] ) ) {
+		return;
+	}
+
+	$nonce = sanitize_text_field( wp_unslash( $_POST['rytkoset_event_organizer_notifications_nonce'] ) );
+
+	if ( ! wp_verify_nonce( $nonce, 'rytkoset_save_event_organizer_notifications' ) ) {
+		return;
+	}
+
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+
+	$raw_recipients = isset( $_POST['rytkoset_event_organizer_notification_recipients'] )
+		? sanitize_textarea_field( wp_unslash( $_POST['rytkoset_event_organizer_notification_recipients'] ) )
+		: '';
+	$recipients     = rytkoset_theme_sanitize_event_organizer_notification_recipients( $raw_recipients );
+	$meta_key       = rytkoset_theme_get_event_organizer_notification_recipients_meta_key();
+
+	if ( '' === $recipients ) {
+		delete_post_meta( $post_id, $meta_key );
+		return;
+	}
+
+	update_post_meta( $post_id, $meta_key, $recipients );
+}
+add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_organizer_notifications' );
 
 /**
  * Returns the linked product URL for an event.
