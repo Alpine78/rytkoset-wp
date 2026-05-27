@@ -966,6 +966,167 @@ function rytkoset_theme_get_tampere_2026_order_participant_quantity( $order ) {
 }
 
 /**
+ * Returns the Tampere 2026 participant field IDs for a participant index.
+ *
+ * @param int $index Participant index.
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_tampere_2026_participant_field_ids( $index ) {
+	$index = absint( $index );
+
+	return array(
+		sprintf( 'rytkoset/participant_%d_name', $index ),
+		sprintf( 'rytkoset/participant_%d_diet', $index ),
+		sprintf( 'rytkoset/participant_%d_friday_buffet', $index ),
+	);
+}
+
+/**
+ * Removes WooCommerce's order meta prefix from an additional checkout field ID.
+ *
+ * @param string $field_id Field ID or order meta key.
+ * @return string
+ */
+function rytkoset_theme_normalize_tampere_2026_participant_field_id( $field_id ) {
+	$field_id = (string) $field_id;
+	$prefix   = '_wc_other/';
+
+	if ( 0 === strpos( $field_id, $prefix ) ) {
+		return substr( $field_id, strlen( $prefix ) );
+	}
+
+	return $field_id;
+}
+
+/**
+ * Parses a Tampere 2026 participant index from an additional checkout field ID.
+ *
+ * @param string $field_id Field ID or order meta key.
+ * @return int Participant index, or 0 when the field is not a Tampere 2026 participant field.
+ */
+function rytkoset_theme_get_tampere_2026_participant_index_from_field_id( $field_id ) {
+	$field_id = rytkoset_theme_normalize_tampere_2026_participant_field_id( $field_id );
+
+	if ( ! preg_match( '/^rytkoset\/participant_(\d+)_(?:name|diet|friday_buffet)$/', $field_id, $matches ) ) {
+		return 0;
+	}
+
+	return absint( $matches[1] );
+}
+
+/**
+ * Resolves the original checkout field ID from WooCommerce order confirmation field data.
+ *
+ * @param array<string, mixed> $field Field data.
+ * @param array<string, mixed> $fields All fields in the current confirmation context.
+ * @return string
+ */
+function rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields ) {
+	if ( isset( $field['id'] ) && is_string( $field['id'] ) ) {
+		return $field['id'];
+	}
+
+	foreach ( $fields as $field_id => $candidate_field ) {
+		if ( $candidate_field === $field ) {
+			return (string) $field_id;
+		}
+	}
+
+	return '';
+}
+
+/**
+ * Hides extra Tampere 2026 participant fields from order confirmation views and emails.
+ *
+ * WooCommerce Blocks stores unchecked hidden checkboxes as false, which would otherwise
+ * render as "Ei" for participants that were not actually purchased.
+ *
+ * @param bool                 $show Whether WooCommerce would show the field.
+ * @param array<string, mixed> $field Field data.
+ * @param array<string, mixed> $fields All fields in the current confirmation context.
+ * @param array<string, mixed> $context Confirmation context.
+ * @return bool
+ */
+function rytkoset_theme_filter_tampere_2026_order_confirmation_fields( $show, $field, $fields, $context ) {
+	$field_id = rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields );
+	$index    = rytkoset_theme_get_tampere_2026_participant_index_from_field_id( $field_id );
+
+	if ( $index < 1 ) {
+		return $show;
+	}
+
+	$order = isset( $context['order'] ) && $context['order'] instanceof WC_Order ? $context['order'] : null;
+
+	if ( ! $order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+		return $show;
+	}
+
+	return $show && $index <= rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+}
+add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_tampere_2026_order_confirmation_fields', 10, 4 );
+
+/**
+ * Removes extra Tampere 2026 participant fields from WooCommerce admin order fields.
+ *
+ * @param array<string, mixed> $fields Admin field definitions.
+ * @param WC_Order|null        $order Order object.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_filter_tampere_2026_admin_order_fields( $fields, $order = null ) {
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+		return $fields;
+	}
+
+	$participant_quantity = rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+
+	foreach ( $fields as $field_key => $field ) {
+		$field_id = is_array( $field ) && isset( $field['id'] ) ? (string) $field['id'] : (string) $field_key;
+		$index    = rytkoset_theme_get_tampere_2026_participant_index_from_field_id( $field_id );
+
+		if ( $index > $participant_quantity ) {
+			unset( $fields[ $field_key ] );
+		}
+	}
+
+	return $fields;
+}
+add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_tampere_2026_admin_order_fields', 20, 2 );
+
+/**
+ * Deletes hidden extra Tampere 2026 participant meta from new Store API orders.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_cleanup_tampere_2026_extra_participant_order_meta( $order ) {
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+		return;
+	}
+
+	$participant_quantity = rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+	$max_participants     = rytkoset_theme_get_tampere_2026_max_participants();
+	$deleted_meta         = false;
+
+	for ( $index = $participant_quantity + 1; $index <= $max_participants; $index++ ) {
+		foreach ( rytkoset_theme_get_tampere_2026_participant_field_ids( $index ) as $field_id ) {
+			$meta_key = '_wc_other/' . $field_id;
+
+			if ( ! $order->meta_exists( $meta_key ) ) {
+				continue;
+			}
+
+			$order->delete_meta_data( $meta_key );
+			$deleted_meta = true;
+		}
+	}
+
+	if ( $deleted_meta ) {
+		$order->save();
+	}
+}
+add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cleanup_tampere_2026_extra_participant_order_meta', 20 );
+
+/**
  * Registers the Tampere 2026 participants metabox for order admin screens.
  *
  * Uses a dedicated metabox so the participant list is visible in both legacy
