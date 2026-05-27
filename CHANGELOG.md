@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- Uutiskirjeen vapaaehtoinen AcyMailing-opt-in WordPress-rekisteröitymiseen, maksuttomaan tapahtumailmoittautumiseen ja WooCommerce Checkout Block -kassalle (#276)
 - Footerin AcyMailing-uutiskirjetilaus Customizer-shortcodella, kirjautuneen tilaajan piilotuslogiikalla sekä ylläpitodokumentaatio `docs/newsletter.md` (#266)
 - Maksullisille tapahtumille tapahtumakohtaiset järjestäjäilmoitusten vastaanottajat ja yleinen WooCommerce-tilausilmoitus (#269)
 - Maksuttoman tapahtumailmoittautumisen kuittisähköposti ilmoittautujalle sekä erillinen selvitystiketti AcyMailing-tapahtumaviestinnälle (#107, #264)

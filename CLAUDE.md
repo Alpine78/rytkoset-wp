@@ -87,7 +87,7 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                 |
 | `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                    |
 | `inc/login.php`                        | Login page branding and Finnish translations                                             |
-| `inc/newsletter.php`                   | Footer newsletter signup Customizer setting and AcyMailing shortcode rendering           |
+| `inc/newsletter.php`                   | AcyMailing newsletter integration: footer signup, subscription helpers and opt-in hooks   |
 | `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                  |
 | `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                           |
 | `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications |
@@ -166,6 +166,6 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 
 `docs/` contains setup and maintenance guides for WooCommerce features. Read the relevant doc before making WooCommerce changes.
 
-`docs/newsletter.md` documents the AcyMailing footer signup setup, target list and newsletter MVP boundaries.
+`docs/newsletter.md` documents the AcyMailing footer signup setup, target list, opt-in workflows and newsletter MVP boundaries.
 
 `docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.
