@@ -131,3 +131,163 @@
 .site-footer__social-link img[src*="X.svg"] {
   transform: scale(0.94);
 }
+
+.site-footer__newsletter {
+  flex: 1 1 260px;
+  max-width: 360px;
+  min-width: 0;
+}
+
+.site-footer__newsletter-title {
+  margin: 0 0 0.45rem;
+  color: var(--color-text-inverted);
+  font-size: 1.1rem;
+}
+
+.site-footer__newsletter-text {
+  margin: 0 0 0.85rem;
+  color: var(--color-text-light);
+}
+
+.site-footer__newsletter-form {
+  min-width: 0;
+}
+
+.site-footer__newsletter-form [id^="acym_fulldiv_"] {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--color-text-light) !important;
+}
+
+.site-footer__newsletter-form form,
+.site-footer__newsletter-form .acym_module_form,
+.site-footer__newsletter-form .acym_form {
+  display: grid;
+  gap: 0.7rem;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.site-footer__newsletter-action {
+  justify-items: start;
+}
+
+.site-footer__newsletter-status {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--color-text-light);
+}
+
+.site-footer__newsletter-form .acym__subscription__form__fields {
+  display: grid !important;
+  gap: 0.7rem !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.site-footer__newsletter-form .onefield,
+.site-footer__newsletter-form .acym__subscription__form__termscond,
+.site-footer__newsletter-form .acym__subscription__form__button {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.site-footer__newsletter-form input[type="email"],
+.site-footer__newsletter-form input[type="text"] {
+  width: 100% !important;
+  min-height: 48px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: var(--radius-medium);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-inverted);
+  padding: 0.65rem 0.8rem;
+}
+
+.site-footer__newsletter-form .onefield input:not([type="radio"]):not([type="checkbox"]):not([type="hidden"]) {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.site-footer__newsletter-form input[type="email"]::placeholder,
+.site-footer__newsletter-form input[type="text"]::placeholder {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.site-footer__newsletter-form input[type="email"]:focus-visible,
+.site-footer__newsletter-form input[type="text"]:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.site-footer__newsletter-form button,
+.site-footer__newsletter-form input[type="submit"],
+.site-footer__newsletter-form .acym_button,
+.site-footer__newsletter-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 2px solid var(--color-accent) !important;
+  border-radius: var(--radius-pill) !important;
+  background: var(--color-accent) !important;
+  color: var(--color-primary-deeper) !important;
+  padding: 0.45rem 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--transition-normal), border-color var(--transition-normal), color var(--transition-normal);
+}
+
+.site-footer__newsletter-form button:hover,
+.site-footer__newsletter-form button:focus-visible,
+.site-footer__newsletter-form button:disabled,
+.site-footer__newsletter-form input[type="submit"]:hover,
+.site-footer__newsletter-form input[type="submit"]:focus-visible,
+.site-footer__newsletter-form input[type="submit"]:disabled,
+.site-footer__newsletter-form .acym_button:hover,
+.site-footer__newsletter-form .acym_button:focus-visible,
+.site-footer__newsletter-button:hover,
+.site-footer__newsletter-button:focus-visible,
+.site-footer__newsletter-button:disabled {
+  background: var(--color-accent-hover) !important;
+  border-color: var(--color-accent-hover) !important;
+  color: var(--color-primary-deeper) !important;
+  text-decoration: none;
+}
+
+.site-footer__newsletter-form button:disabled,
+.site-footer__newsletter-form input[type="submit"]:disabled,
+.site-footer__newsletter-button:disabled {
+  cursor: wait;
+  opacity: 0.9;
+}
+
+.site-footer__newsletter-form label,
+.site-footer__newsletter-form .acym__users__creation__fields__title,
+.site-footer__newsletter-form .acym__field__error {
+  color: var(--color-text-light) !important;
+}
+
+.site-footer__newsletter-form .acym__subscription__form__termscond label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  line-height: 1.4;
+}
+
+.site-footer__newsletter-form .acym__subscription__form__termscond input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 0.2rem !important;
+}
+
+.site-footer__newsletter-form .acym__subscription__form__termscond a {
+  display: inline !important;
+  color: var(--color-text-light) !important;
+  text-decoration: underline;
+}
