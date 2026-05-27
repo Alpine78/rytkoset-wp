@@ -1076,7 +1076,7 @@ function rytkoset_theme_get_video_embed_url( $url ) {
                         'playsinline'     => 1,
                 );
 
-                return add_query_arg( $params, 'https://www.youtube.com/embed/' . rawurlencode( $video_id ) );
+                return add_query_arg( $params, 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $video_id ) );
         }
 
         return esc_url_raw( $url );

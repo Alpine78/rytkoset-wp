@@ -29,6 +29,8 @@ Kun tapahtumalle on valittu maksutuote, tapahtumasivulla näkyy painike:
 
 Painike vie WooCommerce-tuotteen julkiselle tuotesivulle. Se ei lisää tuotetta automaattisesti ostoskoriin eikä ohjaa suoraan kassalle.
 
+Jos linkitetty tuote ei ole ostettavissa, tapahtumasivulla ei näytetä aktiivista maksupainiketta. Esimerkiksi Tampere 2026 -tuotteen ilmoittautumisen määräpäivä luetaan suoraan tuotteelta, jolloin tapahtumasivu voi näyttää viestin `Ilmoittautuminen on päättynyt.` ilman että sama deadline tallennetaan tapahtumalle erikseen.
+
 ## Rajaus
 
 Tässä vaiheessa toteutetaan vain linkitys yhteen WooCommerce-tuotteeseen.
@@ -41,4 +43,4 @@ Ei toteuteta vielä:
 - tapahtumakohtaista kapasiteettilogiikkaa
 - lippuja tai QR-koodeja
 
-Tampere 2026 -tuotteen määräpäivä ja kapasiteetti hallitaan edelleen WooCommerce-tuotteen omilla asetuksilla.
+Tampere 2026 -tuotteen määräpäivä ja kapasiteetti hallitaan edelleen WooCommerce-tuotteen omilla asetuksilla. Tapahtuma lukee näitä tietoja vain julkisen tapahtumasivun näyttöä varten.

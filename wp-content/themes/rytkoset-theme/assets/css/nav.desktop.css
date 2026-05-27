@@ -57,8 +57,7 @@
   position: relative;
 }
 
-.site-nav__list > li > a,
-.account-nav__list > li > a {
+.site-nav__list > li > a {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;

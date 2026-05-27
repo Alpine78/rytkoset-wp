@@ -7,6 +7,13 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- Maksullisille tapahtumille tapahtumakohtaiset järjestäjäilmoitusten vastaanottajat ja yleinen WooCommerce-tilausilmoitus (#269)
+- Maksuttoman tapahtumailmoittautumisen kuittisähköposti ilmoittautujalle sekä erillinen selvitystiketti AcyMailing-tapahtumaviestinnälle (#107, #264)
+- GitHub PR -kuvauspohja yhtenäiselle muutosten, testien ja lisähuomioiden kuvaukselle.
+- WordPress Privacy Tools -export ja anonymisoiva eraser maksuttomille tapahtumailmoittautumisille sekä tapahtumakohtainen maksuttomien ilmoittautumisten massaanonymisointi adminiin
+- Maksuttomille tapahtumille oma ilmoittautumisen määräpäivä, jolla julkinen lomake sulkeutuu automaattisesti
+- Dokumentaatio tietosuojaselosteen julkaisusta ja suomenkielinen seloste-pohja: `docs/tietosuoja.md`
+- Tapahtumailmoittautumisen GDPR-tekstiin automaattinen linkki tietosuojaselosteeseen, kun sivu on asetettu WP:n tietosuojasivuksi
 - Dokumentaatio tapahtumakokonaisuuden toteutuksesta, käyttöönotosta ja ylläpidon toimintamallista: `docs/events.md`
 - Dokumentaatio WooCommercen ensimmäisestä peruskonfiguraatiosta: `docs/woocommerce-setup.md`
 - Dokumentaatio WooCommercen jäsenmaksutuotteista: `docs/woocommerce-membership-products.md`
@@ -15,9 +22,20 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Kassalle jäsenmaksuohje silloin, kun korissa on jäsenmaksutuote
 - WooCommerce-kaupan brändin mukaiset alasvetovalikko- ja painiketyylit.
 
+### Changed
+- Tampere 2026 -järjestäjäilmoitusten vastaanottajat siirretty globaalista asetuksesta tapahtuman omaan `Järjestäjäilmoitukset`-kenttään (#269)
+- Päivitetty `CLAUDE.md`:n `inc/`-moduulitaulukko ja WooCommerce-arkkitehtuurihuomio vastaamaan nykyistä `functions.php`-include-listaa.
+- Tapahtuman yhteenvetokortti piilottaa ilmoittautumisen määräpäivän menneiltä tapahtumilta ja käyttää mennyttä aikamuotoa määräpäivän jälkeen.
+- Tietosuojaselosteen pohjaan täydennetty rekisteröidyn oikeudet, automaattisen päätöksenteon maininta, YouTube/Google-upotusten tietojen käsittely ja sisäisten käyttöoikeuksien kuvaus.
+
 ### Fixed
+- Tietosuojaselosteen pitkät linkit, sähköpostiosoitteet ja koodimaiset tekstipätkät rivittyvät mobiilileveydellä ilman vaakasuuntaista overflow’ta (#267)
+- Maksuttoman tapahtuman julkinen ilmoittautumislomake hylkää honeypot-kentän täyttävät bottimaiset lähetykset ilman ilmoittautumisen tallennusta.
+- Tapahtumailmoittautuminen estää aktiiviset kaksoisilmoittautumiset samalla sähköpostilla ja huomioi ilmoittautumisajan päättymisen
+- Maksuttoman tapahtuman ilmoittautumislomake ei enää renderöidy kahteen kertaan
 - Albumisivujen PhotoSwipe-lightbox käyttää nyt teeman omaa PhotoSwipe 5 -pakettia ilman WooCommercen legacy-konfliktia
 - Albumisivujen YouTube-upotukset eivät käynnisty automaattisesti
+- Albumisivujen YouTube-upotukset käyttävät privacy-enhanced `youtube-nocookie.com` -osoitetta
 
 ---
 

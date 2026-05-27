@@ -373,6 +373,98 @@ function rytkoset_theme_render_event_participants_export_form( $selected_event, 
 }
 
 /**
+ * Renders feedback for event registration mass anonymization.
+ *
+ * @return void
+ */
+function rytkoset_theme_render_event_participants_anonymization_notice() {
+	$notice = isset( $_GET['rytkoset_anonymize_notice'] ) ? sanitize_key( wp_unslash( $_GET['rytkoset_anonymize_notice'] ) ) : '';
+
+	if ( '' === $notice ) {
+		return;
+	}
+
+	$count = isset( $_GET['rytkoset_anonymize_count'] ) ? absint( wp_unslash( $_GET['rytkoset_anonymize_count'] ) ) : 0;
+
+	if ( 'success' === $notice ) {
+		printf(
+			'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+			esc_html(
+				sprintf(
+					/* translators: %d: anonymized registration count */
+					_n( '%d maksuton ilmoittautuminen anonymisoitiin.', '%d maksutonta ilmoittautumista anonymisoitiin.', $count, 'rytkoset-theme' ),
+					$count
+				)
+			)
+		);
+		return;
+	}
+
+	if ( 'missing_confirmation' === $notice ) {
+		echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Anonymisointia ei tehty, koska vahvistus puuttui.', 'rytkoset-theme' ) . '</p></div>';
+		return;
+	}
+
+	echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Ilmoittautumisten anonymisointi epäonnistui.', 'rytkoset-theme' ) . '</p></div>';
+}
+
+/**
+ * Renders the event-specific free registration anonymization form.
+ *
+ * @param int $selected_event Selected event ID.
+ * @return void
+ */
+function rytkoset_theme_render_event_participants_anonymization_form( $selected_event ) {
+	$selected_event = absint( $selected_event );
+
+	if ( $selected_event <= 0 || 'rytkoset_event' !== get_post_type( $selected_event ) ) {
+		return;
+	}
+
+	$count = function_exists( 'rytkoset_theme_get_event_registration_ids_for_event_anonymization' )
+		? count( rytkoset_theme_get_event_registration_ids_for_event_anonymization( $selected_event ) )
+		: 0;
+	?>
+	<div class="postbox" style="margin-top:16px; max-width:760px;">
+		<div class="inside">
+			<h2><?php esc_html_e( 'GDPR: maksuttomien ilmoittautumisten anonymisointi', 'rytkoset-theme' ); ?></h2>
+			<p>
+				<?php esc_html_e( 'Toiminto anonymisoi valitun tapahtuman maksuttomat ilmoittautumiset. Se poistaa nimet, sähköpostiosoitteet, ruokarajoitteet ja lisätiedot, mutta säilyttää ilmoittautumisrivit, tapahtuman ja statuksen raportointia varten.', 'rytkoset-theme' ); ?>
+			</p>
+			<p>
+				<strong><?php esc_html_e( 'Huom:', 'rytkoset-theme' ); ?></strong>
+				<?php esc_html_e( 'Toiminto ei koske WooCommerce-tilauksia tai Tampere 2026 -osallistujakenttiä.', 'rytkoset-theme' ); ?>
+			</p>
+			<?php if ( $count > 0 ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="rytkoset_anonymize_event_free_registrations" />
+					<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $selected_event ); ?>" />
+					<?php wp_nonce_field( 'rytkoset_anonymize_event_free_registrations', 'rytkoset_event_anonymize_nonce' ); ?>
+					<p>
+						<label>
+							<input type="checkbox" name="confirm_anonymization" value="1" required />
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %d: anonymizable registration count */
+									_n( 'Vahvistan, että haluan anonymisoida %d maksuttoman ilmoittautumisen.', 'Vahvistan, että haluan anonymisoida %d maksutonta ilmoittautumista.', $count, 'rytkoset-theme' ),
+									$count
+								)
+							);
+							?>
+						</label>
+					</p>
+					<?php submit_button( __( 'Anonymisoi maksuttomat ilmoittautumiset', 'rytkoset-theme' ), 'delete', '', false ); ?>
+				</form>
+			<?php else : ?>
+				<p><?php esc_html_e( 'Tällä tapahtumalla ei ole anonymisoimattomia maksuttomia ilmoittautumisia. Mahdolliset alla näkyvät maksuttomat rivit on jo anonymisoitu.', 'rytkoset-theme' ); ?></p>
+			<?php endif; ?>
+		</div>
+	</div>
+	<?php
+}
+
+/**
  * Builds a filename for the participants CSV export.
  *
  * @param int    $event_id        Event ID or 0 for all events.
@@ -548,6 +640,7 @@ function rytkoset_theme_render_event_participants_admin_page() {
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Tapahtumien osallistujat', 'rytkoset-theme' ); ?></h1>
 		<p><?php esc_html_e( 'Valitse tapahtuma nähdäksesi sekä maksuttomat että maksulliset ilmoittautumiset yhtenäisenä listana.', 'rytkoset-theme' ); ?></p>
+		<?php rytkoset_theme_render_event_participants_anonymization_notice(); ?>
 
 		<div class="tablenav top">
 			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -607,6 +700,8 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			</div>
 			<br class="clear" />
 		</div>
+
+		<?php rytkoset_theme_render_event_participants_anonymization_form( $selected_event ); ?>
 
 		<?php $show_event_column = 0 === $selected_event; ?>
 		<table class="widefat striped">

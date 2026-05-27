@@ -317,6 +317,13 @@ body.login .privacy-policy-link:hover {
   color: var(--color-accent);
 }
 
+/* Pidetään #login keskitettynä vaikka plugin/WordPress injektoisi body-lapsia */
+body.login > *:not(#login) {
+  position: absolute;
+  left: -9999px;
+  visibility: hidden;
+}
+
 @media (max-width: 480px) {
   body.login {
     padding: 1.5rem 1rem;
