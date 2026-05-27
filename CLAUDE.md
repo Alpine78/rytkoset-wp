@@ -56,42 +56,43 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 
 ### Template hierarchy
 
-| File                        | Purpose                              |
-| --------------------------- | ------------------------------------ |
-| `front-page.php`            | Front page                           |
-| `page.php`                  | Static pages                         |
-| `single.php`                | Blog post                            |
-| `single-rytkoset_event.php` | Single event                         |
-| `single-gallery_album.php`  | Single album                         |
-| `archive-rytkoset_event.php` | Event archive (`/tapahtumat`)       |
-| `archive-gallery_album.php` | Album archive (`/albumit`)           |
-| `header.php` / `footer.php` | Site header and footer               |
+| File                         | Purpose                       |
+| ---------------------------- | ----------------------------- |
+| `front-page.php`             | Front page                    |
+| `page.php`                   | Static pages                  |
+| `single.php`                 | Blog post                     |
+| `single-rytkoset_event.php`  | Single event                  |
+| `single-gallery_album.php`   | Single album                  |
+| `archive-rytkoset_event.php` | Event archive (`/tapahtumat`) |
+| `archive-gallery_album.php`  | Album archive (`/albumit`)    |
+| `header.php` / `footer.php`  | Site header and footer        |
 
 ### functions.php and inc/ modules
 
 `functions.php` (~580 lines) contains theme setup, asset enqueue, header/nav helpers, and shared WooCommerce helpers (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Domain-specific logic is split into modules under `inc/`:
 
-| File                                   | Contents                                                                                   |
-| -------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `inc/events.php`                       | Event CPT, meta field registration and getters                                             |
-| `inc/event-registrations.php`          | Free event registration CPT and form                                                       |
-| `inc/event-registration-privacy.php`    | Privacy Tools export, erasure and anonymization for free event registrations               |
-| `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                         |
-| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email                                                            |
-| `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                    |
-| `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                  |
-| `inc/media-library.php`                | Media library ordering by album                                                            |
-| `inc/digital-magazines.php`            | Digital magazine download pages                                                            |
-| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp)                                                      |
-| `inc/social-links.php`                 | Social media links in header/footer                                                        |
-| `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                   |
-| `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                      |
-| `inc/login.php`                        | Login page branding and Finnish translations                                               |
-| `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                    |
-| `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                             |
-| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications   |
-| `inc/woocommerce-product-sync.php`      | WooCommerce product sync tool for local <-> dev                                           |
-| `inc/customizer-contact.php`            | Customizer contact fields for footer and admin email                                       |
+| File                                   | Contents                                                                                 |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `inc/events.php`                       | Event CPT, meta field registration and getters                                           |
+| `inc/event-registrations.php`          | Free event registration CPT and form                                                     |
+| `inc/event-registration-privacy.php`   | Privacy Tools export, erasure and anonymization for free event registrations             |
+| `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                       |
+| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email                                                          |
+| `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                  |
+| `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                |
+| `inc/media-library.php`                | Media library ordering by album                                                          |
+| `inc/digital-magazines.php`            | Digital magazine download pages                                                          |
+| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp)                                                    |
+| `inc/social-links.php`                 | Social media links in header/footer                                                      |
+| `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                 |
+| `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                    |
+| `inc/login.php`                        | Login page branding and Finnish translations                                             |
+| `inc/newsletter.php`                   | Footer newsletter signup Customizer setting and AcyMailing shortcode rendering           |
+| `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                  |
+| `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                           |
+| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications |
+| `inc/woocommerce-product-sync.php`     | WooCommerce product sync tool for local <-> dev                                          |
+| `inc/customizer-contact.php`           | Customizer contact fields for footer and admin email                                     |
 
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
@@ -165,6 +166,6 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 
 `docs/` contains setup and maintenance guides for WooCommerce features. Read the relevant doc before making WooCommerce changes.
 
-`docs/newsletter.md` documents the current AcyMailing list model and the MVP segmentation rules for newsletter recipients.
+`docs/newsletter.md` documents the AcyMailing footer signup setup, target list and newsletter MVP boundaries.
 
 `docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.

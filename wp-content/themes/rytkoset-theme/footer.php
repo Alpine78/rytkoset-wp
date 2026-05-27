@@ -55,6 +55,16 @@
         </ul>
       <?php endif; ?>
     </div>
+
+    <?php
+    $newsletter_markup = function_exists( 'rytkoset_theme_get_footer_newsletter_markup' )
+      ? rytkoset_theme_get_footer_newsletter_markup()
+      : '';
+
+    if ( '' !== $newsletter_markup ) {
+      echo $newsletter_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup is built by the theme and AcyMailing form renderer.
+    }
+    ?>
   </div>
 </footer>
 

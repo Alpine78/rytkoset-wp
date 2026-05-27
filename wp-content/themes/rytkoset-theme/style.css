@@ -4,7 +4,7 @@ Theme URI: https://rytkoset.net
 Author: Ilkka Rytkönen
 Author URI: https://ilkkarytkonen.fi
 Description: Rytkösten sukuseura ry:n uusi WordPress-teema.
-Version: 0.1.0
+Version: 0.1.1
 Text Domain: rytkoset-theme
 */
 
@@ -27,7 +27,7 @@ Text Domain: rytkoset-theme
 @import url("assets/css/nav.mobile.css");
 
 /* Footer */
-@import url("assets/css/footer.css");
+@import url("assets/css/footer.css?v=266-3");
 
 
 /* Media queryt */
