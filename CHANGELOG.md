@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- GitHub PR -kuvauspohja yhtenäiselle muutosten, testien ja lisähuomioiden kuvaukselle.
 - WordPress Privacy Tools -export ja anonymisoiva eraser maksuttomille tapahtumailmoittautumisille sekä tapahtumakohtainen maksuttomien ilmoittautumisten massaanonymisointi adminiin
 - Maksuttomille tapahtumille oma ilmoittautumisen määräpäivä, jolla julkinen lomake sulkeutuu automaattisesti
 - Dokumentaatio tietosuojaselosteen julkaisusta ja suomenkielinen seloste-pohja: `docs/tietosuoja.md`
