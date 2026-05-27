@@ -75,6 +75,7 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | -------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `inc/events.php`                       | Event CPT, meta field registration and getters                                             |
 | `inc/event-registrations.php`          | Free event registration CPT and form                                                       |
+| `inc/event-registration-privacy.php`    | Privacy Tools export, erasure and anonymization for free event registrations               |
 | `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                         |
 | `inc/event-participants-messaging.php` | `Events > Messaging` bulk email                                                            |
 | `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                    |
@@ -89,6 +90,8 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                    |
 | `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                             |
 | `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications   |
+| `inc/woocommerce-product-sync.php`      | WooCommerce product sync tool for local <-> dev                                           |
+| `inc/customizer-contact.php`            | Customizer contact fields for footer and admin email                                       |
 
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
@@ -146,7 +149,7 @@ Free event registration forms close after the event registration deadline. Paid 
 
 ## WooCommerce integration
 
-WooCommerce code currently lives in `functions.php` (not yet in `inc/` modules). Key areas:
+WooCommerce-specific logic lives in `inc/woocommerce-*.php` modules, with small shared helpers still in `functions.php`. Key areas:
 
 - **Membership products** — annual and lifetime membership; checkout notice when product is in cart
 - **Tampere 2026 event fee** — custom checkout fields, participant list in admin, CSV export, organizer email notifications
