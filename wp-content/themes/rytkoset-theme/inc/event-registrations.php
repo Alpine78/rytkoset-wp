@@ -544,6 +544,20 @@ function rytkoset_theme_handle_event_registration_error( $event_id, $error ) {
  */
 function rytkoset_theme_handle_event_registration_submission() {
 	$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
+	$website  = isset( $_POST['website'] ) // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Honeypot is intentionally checked before other validation.
+		? trim( sanitize_text_field( wp_unslash( $_POST['website'] ) ) )
+		: '';
+
+	if ( '' !== $website ) {
+		$redirect_url = $event_id > 0 ? get_permalink( $event_id ) : '';
+
+		if ( ! is_string( $redirect_url ) || '' === $redirect_url ) {
+			$redirect_url = home_url( '/tapahtumat/' );
+		}
+
+		wp_safe_redirect( $redirect_url );
+		exit;
+	}
 
 	if (
 		! isset( $_POST['rytkoset_event_registration_submit_nonce'] )
@@ -740,6 +754,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 		<form id="<?php echo esc_attr( $form_id ); ?>" class="event-registration__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" aria-describedby="<?php echo esc_attr( $description_id ); ?>">
 			<input type="hidden" name="action" value="rytkoset_submit_event_registration" />
 			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>" />
+			<input type="text" name="website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="display:none" />
 			<?php wp_nonce_field( 'rytkoset_submit_event_registration', 'rytkoset_event_registration_submit_nonce' ); ?>
 
 			<div class="event-registration__field">

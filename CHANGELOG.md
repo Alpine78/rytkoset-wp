@@ -25,6 +25,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Tietosuojaselosteen pohjaan täydennetty rekisteröidyn oikeudet, automaattisen päätöksenteon maininta, YouTube/Google-upotusten tietojen käsittely ja sisäisten käyttöoikeuksien kuvaus.
 
 ### Fixed
+- Maksuttoman tapahtuman julkinen ilmoittautumislomake hylkää honeypot-kentän täyttävät bottimaiset lähetykset ilman ilmoittautumisen tallennusta.
 - Tapahtumailmoittautuminen estää aktiiviset kaksoisilmoittautumiset samalla sähköpostilla ja huomioi ilmoittautumisajan päättymisen
 - Maksuttoman tapahtuman ilmoittautumislomake ei enää renderöidy kahteen kertaan
 - Albumisivujen PhotoSwipe-lightbox käyttää nyt teeman omaa PhotoSwipe 5 -pakettia ilman WooCommercen legacy-konfliktia
