@@ -120,6 +120,22 @@
 .article__content {
   display: grid;
   gap: 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.article__content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.article__content :where(a, code) {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.article__content :where(img, iframe, video, table) {
+  max-width: 100%;
 }
 
 .article--event {
