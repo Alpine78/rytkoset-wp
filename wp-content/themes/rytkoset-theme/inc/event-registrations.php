@@ -718,6 +718,14 @@ function rytkoset_theme_handle_event_registration_submission() {
 
 	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email );
 
+	if ( ! empty( $_POST['registration_newsletter_opt_in'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['registration_newsletter_opt_in'] ) ) && function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
+		$newsletter_result = rytkoset_theme_subscribe_email_to_newsletter( $email, 'event_registration', get_current_user_id() );
+
+		if ( is_wp_error( $newsletter_result ) && function_exists( 'rytkoset_theme_log_newsletter_error' ) ) {
+			rytkoset_theme_log_newsletter_error( 'event_registration', $newsletter_result->get_error_message() );
+		}
+	}
+
 	wp_safe_redirect( rytkoset_theme_get_event_registration_redirect_url( $event_id, 'success' ) );
 	exit;
 }
@@ -905,6 +913,16 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 					<span aria-hidden="true">*</span>
 				</label>
 			</div>
+
+			<?php if ( function_exists( 'rytkoset_theme_should_show_newsletter_opt_in' ) && function_exists( 'rytkoset_theme_render_newsletter_opt_in_checkbox' ) && rytkoset_theme_should_show_newsletter_opt_in() ) : ?>
+				<?php
+				rytkoset_theme_render_newsletter_opt_in_checkbox(
+					$form_id . '-newsletter',
+					'registration_newsletter_opt_in',
+					'event-registration__newsletter'
+				);
+				?>
+			<?php endif; ?>
 
 			<p class="event-registration__required-note">
 				<?php esc_html_e( '* Pakollinen kenttä', 'rytkoset-theme' ); ?>

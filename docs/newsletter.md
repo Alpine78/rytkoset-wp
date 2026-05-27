@@ -8,6 +8,8 @@ Uutiskirjeen tilaus kerätään AcyMailingilla. Teema ei tallenna tilaajia omaan
 
 Ensimmäinen julkaistu tilauspaikka on sivuston footer, koska se näkyy koko sivustolla eikä vaadi erillisiä sivukohtaisia sisältömuutoksia.
 
+Jatkoslicessä `#276` samaa AcyMailing-kohdelistaa käytetään myös vapaaehtoisissa opt-in-valinnoissa rekisteröitymisen, maksuttoman tapahtumailmoittautumisen ja WooCommerce-kassan yhteydessä.
+
 ## Lista
 
 Uudet yleiset uutiskirjetilaukset ohjataan olemassa olevalle AcyMailing-listalle:
@@ -86,12 +88,27 @@ Teema:
 - näyttää kirjautuneelle käyttäjälle lomakkeen sijaan tekstin `Olet jo uutiskirjeen tilaaja.`, jos käyttäjä on jo aktiivisena tilaajana lomakkeen kohdelistalla
 - näyttää kirjautuneelle käyttäjälle pelkän tilauspainikkeen, jos käyttäjä ei vielä ole kohdelistan tilaaja; painike käyttää kirjautuneen käyttäjän sähköpostiosoitetta piilotettuna kenttänä
 - vaihtaa kirjautuneen käyttäjän tilauspainikkeen onnistuneen AcyMailing-vastauksen jälkeen heti tekstiksi `Olet jo uutiskirjeen tilaaja.`, jotta käyttäjän ei tarvitse päivittää sivua nähdäkseen tilan
+- tarjoaa yhteisen AcyMailing-helperin, jolla rekisteröityminen, maksuton tapahtumailmoittautuminen ja WooCommerce-kassa voivat tilata sähköpostiosoitteen samalle kohdelistalle
+- näyttää opt-in-checkboxin vain, jos footer-shortcode ja sen AcyMailing-kohdelista ovat käytettävissä
+- piilottaa opt-in-checkboxin kirjautuneelta käyttäjältä, joka on jo kohdelistan aktiivinen tilaaja
 - poistaa footerissa renderöidystä AcyMailing-lomakkeesta lomakkeen omat sisäiset `<style>`-tagit, jotta AcyMailingin shortcode-preview-tyylit eivät tee footeriin erillistä valkoista laatikkoa
 - muotoilee lomakkeen scoped-tyyleillä tiedostossa `assets/css/footer.css`
 
 AcyMailingin plugin-koodissa automaattiset popup/header/footer-lomakkeet tarkistetaan Enterprise-tasoa vasten, mutta shortcode rekisteröidään erikseen WordPress-shortcodena. Siksi teema ei riipu Enterprise-footer-ominaisuudesta.
 
 Kirjautuneen käyttäjän tilaustila tarkistetaan AcyMailingin tauluista `wp_acym_user` ja `wp_acym_user_has_list`. Tarkistus käyttää footer-shortcoden lomake-ID:tä ja lomakkeen listavalintoja, joten listan numeerista ID:tä ei kovakoodata teemaan.
+
+## Opt-in-paikat
+
+Uutiskirjeen vapaaehtoinen opt-in on käytössä näissä työnkuluissa:
+
+- WordPress-rekisteröityminen: checkbox `Tilaa uutiskirje`, ei oletuksena valittu. Valittu opt-in käsitellään `user_register`-hookissa.
+- Maksuton tapahtumailmoittautuminen: checkbox näkyy lomakkeella, jos käyttäjä ei ole kirjautuneena jo tilaaja. Tilaus käsitellään vasta onnistuneen ilmoittautumisen tallennuksen jälkeen.
+- WooCommerce Checkout Block: checkbox `Tilaa uutiskirje` näkyy kaikille tilauksille, paitsi kirjautuneelle jo tilaajana olevalle käyttäjälle. Tilaus käsitellään Store API -checkoutin order processed -hookissa.
+
+Kirjautumattomille käyttäjille opt-in näytetään, koska tilaustilaa ei voi päätellä luotettavasti ennen sähköpostiosoitteen syöttämistä. Jos syötetty sähköposti on jo tilaaja, integraatio käsittelee tilanteen onnistumisena eikä näytä käyttäjälle virhettä.
+
+AcyMailingin `Require confirmation` -asetus määrää, vaatiiko uusi tilaus sähköpostivahvistuksen. Teema ei ohita AcyMailingin double opt-in -asetusta.
 
 ## Testaus
 
@@ -104,6 +121,10 @@ Testaa käyttöönoton jälkeen:
 - kirjautunut käyttäjä, joka ei ole kohdelistan tilaaja, voi tilata uutiskirjeen ilman sähköpostiosoitteen uudelleenkirjoittamista
 - kirjautuneen käyttäjän tilauspainike näyttää lähetyksen aikana tilan `Tilataan...` ja onnistumisen jälkeen tekstin `Olet jo uutiskirjeen tilaaja.`
 - kirjautunut käyttäjä, joka on jo kohdelistan tilaaja, näkee tekstin `Olet jo uutiskirjeen tilaaja.` lomakkeen sijaan
+- rekisteröitymisen opt-in lisää uuden käyttäjän sähköpostin uutiskirjelistalle
+- maksuttoman tapahtumailmoittautumisen opt-in lisää ilmoittautujan sähköpostin uutiskirjelistalle eikä estä ilmoittautumista, jos AcyMailing-tilaus epäonnistuu
+- WooCommerce-kassan opt-in lisää billing email -osoitteen uutiskirjelistalle eikä estä tilausta, jos AcyMailing-tilaus epäonnistuu
+- kirjautunut jo tilaaja ei näe tapahtuma- tai kassalomakkeiden opt-in-checkboxia
 - testiosoite ilmestyy AcyMailingin tilaajiin listalle `Rytkoset.net GDPR`
 
 Jos frontendissä näkyy virhe `You are not allowed to modify this user`, testaa lomake kirjautumattomana tai käytä kirjautuneen WordPress-käyttäjän omaa sähköpostiosoitetta. AcyMailing voi estää tilanteen, jossa kirjautunut käyttäjä yrittää tilata tai muokata eri sähköpostiosoitteen tilausta.
@@ -113,9 +134,7 @@ Jos frontendissä näkyy virhe `You are not allowed to modify this user`, testaa
 Tämä MVP ei sisällä:
 
 - etusivun erillistä uutiskirjenostoa
-- tapahtumailmoittautumisen erillistä uutiskirjevalintaa
-- WooCommerce checkout -tilausvalintaa
 - AcyMailing-automaatioita tai kuittiviestejä
 - uutiskirjeen lähetyspohjaa tai SMTP-asetuksia
 
-Paikallisessa plugin-koodissa ei ole mukana erillistä AcyMailing WooCommerce -integraatiolisäosaa. Siksi checkout-opt-in rajataan jatkotiketiksi, ellei lisäosa oteta myöhemmin käyttöön.
+Paikallisessa plugin-koodissa ei ole mukana erillistä AcyMailing WooCommerce -integraatiolisäosaa. Checkout-opt-in toteutetaan siksi teeman kevyellä WooCommerce Blocks -hookilla.

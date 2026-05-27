@@ -155,6 +155,71 @@ if ( ! function_exists( 'rytkoset_theme_get_newsletter_form_list_ids' ) ) {
 	}
 }
 
+if ( ! function_exists( 'rytkoset_theme_get_newsletter_list_ids' ) ) {
+	/**
+	 * Returns the newsletter target list IDs from the configured footer form.
+	 *
+	 * @return int[]
+	 */
+	function rytkoset_theme_get_newsletter_list_ids() {
+		$shortcode = rytkoset_theme_get_newsletter_shortcode();
+
+		if ( '' === $shortcode || ! shortcode_exists( 'acymailing_form_shortcode' ) ) {
+			return array();
+		}
+
+		$form_id = rytkoset_theme_get_newsletter_form_id( $shortcode );
+
+		return rytkoset_theme_get_newsletter_form_list_ids( $form_id );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_email_has_newsletter_subscription' ) ) {
+	/**
+	 * Checks whether an email address is already actively subscribed to the newsletter list.
+	 *
+	 * @param string $email    Email address.
+	 * @param int[]  $list_ids Optional AcyMailing list IDs. Defaults to the configured newsletter lists.
+	 * @return bool
+	 */
+	function rytkoset_theme_email_has_newsletter_subscription( $email, $list_ids = array() ) {
+		$email = sanitize_email( $email );
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			return false;
+		}
+
+		if ( empty( $list_ids ) ) {
+			$list_ids = rytkoset_theme_get_newsletter_list_ids();
+		}
+
+		$list_ids = array_values( array_unique( array_filter( array_map( 'absint', $list_ids ) ) ) );
+
+		if ( empty( $list_ids ) ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$user_table   = $wpdb->prefix . 'acym_user';
+		$list_table   = $wpdb->prefix . 'acym_user_has_list';
+		$placeholders = implode( ',', array_fill( 0, count( $list_ids ), '%d' ) );
+		$query_args   = array_merge( array( $email ), $list_ids );
+		$query        = $wpdb->prepare(
+			"SELECT COUNT(*)
+			 FROM {$user_table} AS acym_user
+			 INNER JOIN {$list_table} AS acym_list
+				ON acym_list.user_id = acym_user.id
+			 WHERE acym_user.email = %s
+				AND acym_list.status = 1
+				AND acym_list.list_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names and placeholders are generated internally.
+			$query_args
+		);
+
+		return (int) $wpdb->get_var( $query ) > 0;
+	}
+}
+
 if ( ! function_exists( 'rytkoset_theme_current_user_has_newsletter_subscription' ) ) {
 	/**
 	 * Checks whether the current logged-in user is already subscribed to the form target list.
@@ -200,6 +265,337 @@ if ( ! function_exists( 'rytkoset_theme_current_user_has_newsletter_subscription
 		return (int) $wpdb->get_var( $query ) > 0;
 	}
 }
+
+if ( ! function_exists( 'rytkoset_theme_user_has_newsletter_subscription' ) ) {
+	/**
+	 * Checks whether a WordPress user is already subscribed to the newsletter list.
+	 *
+	 * @param int   $user_id  WordPress user ID.
+	 * @param int[] $list_ids Optional AcyMailing list IDs. Defaults to the configured newsletter lists.
+	 * @return bool
+	 */
+	function rytkoset_theme_user_has_newsletter_subscription( $user_id, $list_ids = array() ) {
+		$user_id = absint( $user_id );
+
+		if ( 0 === $user_id ) {
+			return false;
+		}
+
+		if ( empty( $list_ids ) ) {
+			$list_ids = rytkoset_theme_get_newsletter_list_ids();
+		}
+
+		$list_ids = array_values( array_unique( array_filter( array_map( 'absint', $list_ids ) ) ) );
+
+		if ( empty( $list_ids ) ) {
+			return false;
+		}
+
+		$user = get_user_by( 'id', $user_id );
+
+		if ( ! $user instanceof WP_User || ! is_email( $user->user_email ) ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$user_table   = $wpdb->prefix . 'acym_user';
+		$list_table   = $wpdb->prefix . 'acym_user_has_list';
+		$placeholders = implode( ',', array_fill( 0, count( $list_ids ), '%d' ) );
+		$query_args   = array_merge( array( $user_id, sanitize_email( $user->user_email ) ), $list_ids );
+		$query        = $wpdb->prepare(
+			"SELECT COUNT(*)
+			 FROM {$user_table} AS acym_user
+			 INNER JOIN {$list_table} AS acym_list
+				ON acym_list.user_id = acym_user.id
+			 WHERE (acym_user.cms_id = %d OR acym_user.email = %s)
+				AND acym_list.status = 1
+				AND acym_list.list_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names and placeholders are generated internally.
+			$query_args
+		);
+
+		return (int) $wpdb->get_var( $query ) > 0;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_log_newsletter_error' ) ) {
+	/**
+	 * Logs newsletter integration errors without personal data.
+	 *
+	 * @param string $source Source workflow.
+	 * @param string $message Error message.
+	 * @return void
+	 */
+	function rytkoset_theme_log_newsletter_error( $source, $message ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$message = (string) preg_replace(
+				'/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i',
+				'[email redacted]',
+				(string) $message
+			);
+
+			error_log( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				sprintf(
+					'[rytkoset-newsletter] source=%s message=%s',
+					sanitize_key( $source ),
+					sanitize_text_field( $message )
+				)
+			);
+		}
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_newsletter_error_message' ) ) {
+	/**
+	 * Builds a safe AcyMailing error message for return values and logging.
+	 *
+	 * @param mixed  $errors   AcyMailing error data.
+	 * @param string $fallback Fallback message.
+	 * @return string
+	 */
+	function rytkoset_theme_get_newsletter_error_message( $errors, $fallback ) {
+		if ( empty( $errors ) ) {
+			return $fallback;
+		}
+
+		$message = implode( '; ', array_map( 'wp_strip_all_tags', (array) $errors ) );
+
+		return (string) preg_replace(
+			'/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i',
+			'[email redacted]',
+			$message
+		);
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
+	/**
+	 * Subscribes an email address to the configured AcyMailing newsletter list.
+	 *
+	 * @param string $email       Email address.
+	 * @param string $source      Source workflow.
+	 * @param int    $cms_user_id Optional WordPress user ID.
+	 * @return true|WP_Error
+	 */
+	function rytkoset_theme_subscribe_email_to_newsletter( $email, $source, $cms_user_id = 0 ) {
+		$email       = sanitize_email( $email );
+		$source      = sanitize_key( $source );
+		$cms_user_id = absint( $cms_user_id );
+		$list_ids    = rytkoset_theme_get_newsletter_list_ids();
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			return new WP_Error( 'invalid_email', __( 'Uutiskirjeen tilausta ei voitu tehdä virheellisen sähköpostiosoitteen takia.', 'rytkoset-theme' ) );
+		}
+
+		if ( empty( $list_ids ) ) {
+			return new WP_Error( 'missing_newsletter_list', __( 'Uutiskirjeen kohdelistaa ei ole määritetty.', 'rytkoset-theme' ) );
+		}
+
+		if ( rytkoset_theme_email_has_newsletter_subscription( $email, $list_ids ) ) {
+			return true;
+		}
+
+		if ( ! class_exists( '\AcyMailing\Classes\UserClass' ) ) {
+			return new WP_Error( 'acymailing_missing', __( 'AcyMailing ei ole käytettävissä.', 'rytkoset-theme' ) );
+		}
+
+		$user_class = new \AcyMailing\Classes\UserClass();
+		$user_class->checkVisitor = false;
+
+		if ( function_exists( 'acym_setVar' ) ) {
+			acym_setVar( 'acy_source', $source );
+		}
+
+		$subscriber = $user_class->getOneByEmail( $email );
+
+		if ( empty( $subscriber ) ) {
+			$subscriber = new stdClass();
+			$subscriber->email = $email;
+			$subscriber->source = $source;
+
+			if ( $cms_user_id > 0 ) {
+				$subscriber->cms_id = $cms_user_id;
+			}
+
+			$subscriber_id = $user_class->save( $subscriber );
+
+			if ( empty( $subscriber_id ) ) {
+				$message = rytkoset_theme_get_newsletter_error_message( $user_class->errors, __( 'Tilaajan tallennus epäonnistui.', 'rytkoset-theme' ) );
+				rytkoset_theme_log_newsletter_error( $source, $message );
+
+				return new WP_Error( 'acymailing_save_failed', $message );
+			}
+		} else {
+			$subscriber_id = absint( $subscriber->id );
+		}
+
+		if ( $cms_user_id > 0 && ! empty( $subscriber_id ) && empty( $subscriber->cms_id ) ) {
+			global $wpdb;
+
+			$wpdb->update(
+				$wpdb->prefix . 'acym_user',
+				array( 'cms_id' => $cms_user_id ),
+				array( 'id' => $subscriber_id ),
+				array( '%d' ),
+				array( '%d' )
+			);
+		}
+
+		$subscribed = $user_class->subscribe( array( $subscriber_id ), $list_ids );
+
+		if ( ! $subscribed && ! rytkoset_theme_email_has_newsletter_subscription( $email, $list_ids ) ) {
+			$message = rytkoset_theme_get_newsletter_error_message( $user_class->errors, __( 'Listalle lisääminen epäonnistui.', 'rytkoset-theme' ) );
+			rytkoset_theme_log_newsletter_error( $source, $message );
+
+			return new WP_Error( 'acymailing_subscribe_failed', $message );
+		}
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_should_show_newsletter_opt_in' ) ) {
+	/**
+	 * Returns whether a generic newsletter opt-in should be shown.
+	 *
+	 * @return bool
+	 */
+	function rytkoset_theme_should_show_newsletter_opt_in() {
+		$list_ids = rytkoset_theme_get_newsletter_list_ids();
+
+		if ( empty( $list_ids ) ) {
+			return false;
+		}
+
+		if ( is_user_logged_in() && rytkoset_theme_current_user_has_newsletter_subscription( $list_ids ) ) {
+			return false;
+		}
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_render_newsletter_opt_in_checkbox' ) ) {
+	/**
+	 * Renders a reusable newsletter opt-in checkbox.
+	 *
+	 * @param string $field_id Field ID.
+	 * @param string $field_name Field name.
+	 * @param string $class_name Wrapper class.
+	 * @return void
+	 */
+	function rytkoset_theme_render_newsletter_opt_in_checkbox( $field_id, $field_name, $class_name ) {
+		?>
+		<div class="<?php echo esc_attr( $class_name ); ?>">
+			<label for="<?php echo esc_attr( $field_id ); ?>">
+				<input id="<?php echo esc_attr( $field_id ); ?>" type="checkbox" name="<?php echo esc_attr( $field_name ); ?>" value="1" />
+				<?php esc_html_e( 'Tilaa uutiskirje', 'rytkoset-theme' ); ?>
+			</label>
+		</div>
+		<?php
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_render_registration_newsletter_opt_in' ) ) {
+	/**
+	 * Renders newsletter opt-in on the WordPress registration form.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_render_registration_newsletter_opt_in() {
+		if ( empty( rytkoset_theme_get_newsletter_list_ids() ) ) {
+			return;
+		}
+
+		rytkoset_theme_render_newsletter_opt_in_checkbox(
+			'rytkoset-newsletter-opt-in',
+			'rytkoset_newsletter_opt_in',
+			'rytkoset-login-newsletter-opt-in'
+		);
+	}
+}
+add_action( 'register_form', 'rytkoset_theme_render_registration_newsletter_opt_in' );
+
+if ( ! function_exists( 'rytkoset_theme_handle_registration_newsletter_opt_in' ) ) {
+	/**
+	 * Subscribes a newly registered user when they selected the opt-in checkbox.
+	 *
+	 * @param int $user_id WordPress user ID.
+	 * @return void
+	 */
+	function rytkoset_theme_handle_registration_newsletter_opt_in( $user_id ) {
+		if ( empty( $_POST['rytkoset_newsletter_opt_in'] ) || '1' !== sanitize_text_field( wp_unslash( $_POST['rytkoset_newsletter_opt_in'] ) ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Handled by WordPress registration flow.
+			return;
+		}
+
+		$user = get_user_by( 'id', $user_id );
+
+		if ( ! $user instanceof WP_User ) {
+			return;
+		}
+
+		$result = rytkoset_theme_subscribe_email_to_newsletter( $user->user_email, 'registration', $user_id );
+
+		if ( is_wp_error( $result ) ) {
+			rytkoset_theme_log_newsletter_error( 'registration', $result->get_error_message() );
+		}
+	}
+}
+add_action( 'user_register', 'rytkoset_theme_handle_registration_newsletter_opt_in' );
+
+if ( ! function_exists( 'rytkoset_theme_register_checkout_newsletter_opt_in' ) ) {
+	/**
+	 * Registers newsletter opt-in for WooCommerce Checkout Block.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_register_checkout_newsletter_opt_in() {
+		if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) || ! rytkoset_theme_should_show_newsletter_opt_in() ) {
+			return;
+		}
+
+		woocommerce_register_additional_checkout_field(
+			array(
+				'id'                => 'rytkoset/newsletter_opt_in',
+				'label'             => __( 'Tilaa uutiskirje', 'rytkoset-theme' ),
+				'location'          => 'order',
+				'type'              => 'checkbox',
+				'required'          => false,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+			)
+		);
+	}
+}
+add_action( 'woocommerce_init', 'rytkoset_theme_register_checkout_newsletter_opt_in' );
+
+if ( ! function_exists( 'rytkoset_theme_handle_checkout_newsletter_opt_in' ) ) {
+	/**
+	 * Handles WooCommerce Checkout Block newsletter opt-in after order processing.
+	 *
+	 * @param WC_Order $order WooCommerce order object.
+	 * @return void
+	 */
+	function rytkoset_theme_handle_checkout_newsletter_opt_in( $order ) {
+		if ( ! $order instanceof WC_Order || ! function_exists( 'rytkoset_theme_get_order_additional_checkout_field_bool' ) ) {
+			return;
+		}
+
+		if ( ! rytkoset_theme_get_order_additional_checkout_field_bool( $order, 'rytkoset/newsletter_opt_in' ) ) {
+			return;
+		}
+
+		$result = rytkoset_theme_subscribe_email_to_newsletter(
+			$order->get_billing_email(),
+			'woocommerce_checkout',
+			$order->get_user_id()
+		);
+
+		if ( is_wp_error( $result ) ) {
+			rytkoset_theme_log_newsletter_error( 'woocommerce_checkout', $result->get_error_message() );
+		}
+	}
+}
+add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_handle_checkout_newsletter_opt_in', 30 );
 
 if ( ! function_exists( 'rytkoset_theme_get_logged_in_newsletter_button_markup' ) ) {
 	/**
