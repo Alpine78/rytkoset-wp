@@ -14,6 +14,7 @@ require_once get_template_directory() . '/inc/media-library.php';
 require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/event-registrations.php';
+require_once get_template_directory() . '/inc/event-registration-privacy.php';
 require_once get_template_directory() . '/inc/event-participants-admin.php';
 require_once get_template_directory() . '/inc/event-participants-messaging.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';

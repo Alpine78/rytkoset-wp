@@ -14,13 +14,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function rytkoset_theme_get_event_registration_meta_keys() {
 	return array(
-		'event_id'     => '_rytkoset_registration_event_id',
-		'name'         => '_rytkoset_registration_name',
-		'email'        => '_rytkoset_registration_email',
-		'diet'         => '_rytkoset_registration_diet',
-		'notes'        => '_rytkoset_registration_notes',
-		'status'       => '_rytkoset_registration_status',
-		'gdpr_consent' => '_rytkoset_registration_gdpr_consent',
+		'event_id'      => '_rytkoset_registration_event_id',
+		'name'          => '_rytkoset_registration_name',
+		'email'         => '_rytkoset_registration_email',
+		'diet'          => '_rytkoset_registration_diet',
+		'notes'         => '_rytkoset_registration_notes',
+		'status'        => '_rytkoset_registration_status',
+		'gdpr_consent'  => '_rytkoset_registration_gdpr_consent',
+		'anonymized_at' => '_rytkoset_registration_anonymized_at',
 	);
 }
 
