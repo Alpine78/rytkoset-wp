@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- Dokumentaatio AcyMailing-listojen ja uutiskirjeiden segmentoinnin perusmallista: `docs/newsletter.md` (#106)
 - Maksullisille tapahtumille tapahtumakohtaiset järjestäjäilmoitusten vastaanottajat ja yleinen WooCommerce-tilausilmoitus (#269)
 - Maksuttoman tapahtumailmoittautumisen kuittisähköposti ilmoittautujalle sekä erillinen selvitystiketti AcyMailing-tapahtumaviestinnälle (#107, #264)
 - GitHub PR -kuvauspohja yhtenäiselle muutosten, testien ja lisähuomioiden kuvaukselle.
