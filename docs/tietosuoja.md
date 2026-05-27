@@ -88,7 +88,7 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 
-Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.
+Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 
@@ -142,7 +142,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 ## Kuinka kauan säilytämme tietoja
 
 - Käyttäjätilien tiedot säilytetään niin kauan kuin tilisi on aktiivinen. Voit pyytää tilisi poistamista milloin tahansa.
-- Tapahtumailmoittautumisten tiedot poistetaan viimeistään 12 kuukauden kuluttua tapahtumasta.
+- Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.
 - Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti 6 vuotta tilikauden päättymisestä.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
 

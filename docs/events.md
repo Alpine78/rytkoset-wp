@@ -68,15 +68,16 @@ Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkoh
 
 Ilmoittautumisen tiedot tallennetaan WordPressin post metaan:
 
-| Kenttä ylläpidossa           | Meta-avain                            | Muoto / arvot                       | Käyttö                                                        |
-| ---------------------------- | ------------------------------------- | ----------------------------------- | ------------------------------------------------------------- |
-| Tapahtuma                    | `_rytkoset_registration_event_id`     | `event`-postauksen ID               | Viittaus tapahtumaan                                          |
-| Osallistujan nimi            | `_rytkoset_registration_name`         | vapaa teksti                        | Osallistujalista ja admin-otsikko                             |
-| Sähköposti                   | `_rytkoset_registration_email`        | sähköpostiosoite                    | Yhteydenpito ja myöhempi vahvistus                            |
-| Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet`         | vapaa teksti                        | Käytännön järjestelyt                                         |
-| Lisätieto                    | `_rytkoset_registration_notes`        | vapaa teksti                        | Ylläpidon lisätiedot                                          |
-| Tila                         | `_rytkoset_registration_status`       | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila                                |
-| GDPR-hyväksyntä              | `_rytkoset_registration_gdpr_consent` | Unix-aikaleima                      | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
+| Kenttä ylläpidossa           | Meta-avain                              | Muoto / arvot                       | Käyttö                                                        |
+| ---------------------------- | --------------------------------------- | ----------------------------------- | ------------------------------------------------------------- |
+| Tapahtuma                    | `_rytkoset_registration_event_id`       | `event`-postauksen ID               | Viittaus tapahtumaan                                          |
+| Osallistujan nimi            | `_rytkoset_registration_name`           | vapaa teksti                        | Osallistujalista ja admin-otsikko                             |
+| Sähköposti                   | `_rytkoset_registration_email`          | sähköpostiosoite                    | Yhteydenpito ja myöhempi vahvistus                            |
+| Ruokarajoitteet ja allergiat | `_rytkoset_registration_diet`           | vapaa teksti                        | Käytännön järjestelyt                                         |
+| Lisätieto                    | `_rytkoset_registration_notes`          | vapaa teksti                        | Ylläpidon lisätiedot                                          |
+| Tila                         | `_rytkoset_registration_status`         | `pending`, `confirmed`, `cancelled` | Ilmoittautumisen käsittelytila                                |
+| GDPR-hyväksyntä              | `_rytkoset_registration_gdpr_consent`   | Unix-aikaleima                      | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
+| Anonymisointiaika            | `_rytkoset_registration_anonymized_at`  | MySQL-aikaleima                     | Tallennetaan, kun henkilötiedot anonymisoidaan (#250)         |
 
 Ilmoittautumisen otsikko muodostetaan automaattisesti muodossa `Osallistujan nimi - Tapahtuman nimi`, jotta admin-lista pysyy luettavana.
 
@@ -150,6 +151,8 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
 
 Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa.
+
+Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, mutta tapahtumaviittaus ja status säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 

@@ -76,6 +76,14 @@ Sarakkeet:
 | Yhteyshenkilön sähköposti | Tilaajan sähköposti (maksullisissa) |
 | Tilausnumero | WooCommerce-tilausnumero (maksullisissa) |
 
+### GDPR-anonymisointi
+
+Kun yksittäinen tapahtuma on valittuna, sivulla näkyy **GDPR: maksuttomien ilmoittautumisten anonymisointi** -toiminto. Se anonymisoi valitun tapahtuman maksuttomat `event_registration`-ilmoittautumiset kaikista statuksista (`pending`, `confirmed`, `cancelled`).
+
+Anonymisointi poistaa osallistujan nimen, sähköpostiosoitteen, ruokarajoitteet ja lisätiedot. Ilmoittautumisrivi, tapahtumaviittaus ja status säilyvät raportointia varten. Toiminto vaatii erillisen checkbox-vahvistuksen ja nonce-tarkistuksen.
+
+Toiminto ei koske WooCommerce-tilauksia, Tampere 2026 -osallistujakenttiä tai maksullisten tapahtumien tilaajatietoja.
+
 ## Lähteet ja normalisointi
 
 Näkymä yhdistää kaksi eri lähdettä yhtenäiseen rivi­rakenteeseen:
@@ -134,6 +142,10 @@ Pääfunktiot:
 - `rytkoset_theme_render_event_participants_admin_page()` — renderöi sivun
 - `rytkoset_theme_render_event_participants_export_form()` — renderöi CSV-vientipainikkeen
 - `rytkoset_theme_export_event_participants_csv()` — `admin_post`-handleri, joka tuottaa CSV-tiedoston
+- `rytkoset_theme_render_event_participants_anonymization_form()` — renderöi tapahtumakohtaisen anonymisointilomakkeen
+- `rytkoset_theme_handle_event_free_registrations_anonymization()` — `admin_post`-handleri, joka anonymisoi valitun tapahtuman maksuttomat ilmoittautumiset
+
+GDPR-exporter, eraser ja yhteinen anonymisointihelper ovat tiedostossa `wp-content/themes/rytkoset-theme/inc/event-registration-privacy.php`.
 
 ## Liittyvät toiminnot
 
@@ -142,5 +154,6 @@ Pääfunktiot:
 
 ## Rajaus tässä vaiheessa
 
-- Ei muita massatoimintoja osallistujille tällä sivulla (viestintä on omalla sivullaan)
+- Ei muita massatoimintoja osallistujille tällä sivulla kuin maksuttomien ilmoittautumisten anonymisointi (viestintä on omalla sivullaan)
 - Ei ilmoittautumisten tilamuutosta suoraan listanäkymästä (tehdään `event_registration`-postilomakkeella)
+- Ei WooCommerce-tilausten tai Tampere 2026 -osallistujakenttien anonymisointia tästä näkymästä
