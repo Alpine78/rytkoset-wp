@@ -40,6 +40,8 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Kenttien määrä perustuu Tampere 2026 -variaatioiden yhteenlaskettuun kappalemäärään.
 - Tunnistus tehdään ensisijaisesti parent-tuotteen SKU:lla `tampere-2026-osallistumismaksu`.
 - Kentät tallentuvat tilauksen lisäkentiksiin order-metana.
+- Piilotettuja ylimääräisiä osallistujakenttiä ei näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
+- Uusilta Store API -tilauksilta poistetaan ylimääräisten osallistujien lisäkenttämetat, jos WooCommerce Blocks on tallentanut tyhjiä checkbox-arvoja.
 - Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä.
 - Osallistujatyyppi puretaan tilauksen rivien variaatioista samassa järjestyksessä kuin osallistujakohtaiset checkout-kentät.
 - Kenttien autocomplete on tarkoituksella rajattu pois, jotta selaimen autofill ei kirjoita nimiä ruokarajoitekenttiin.
@@ -55,6 +57,10 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 
 ## Testaus
 
+- Lisää Tampere 2026 -tuotetta ostoskoriin yksi osallistuja
+- Tee testitilaus loppuun
+- Varmista, että tilausvahvistuksessa, sähköpostissa ja adminissa näkyvät vain osallistujan 1 kentät
+- Varmista, ettei osallistujien 2-10 tyhjiä buffet-kenttiä näytetä arvolla `Ei`
 - Lisää Tampere 2026 -tuotetta ostoskoriin yksi aikuinen ja yksi lapsi
 - Varmista, että kassalla näkyy 2 osallistujan kentät
 - Täytä molempien osallistujien nimet
@@ -62,3 +68,4 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Merkitse toiselle perjantain buffet-illallinen
 - Tee testitilaus loppuun
 - Varmista administa, että molemmat osallistujat näkyvät tilauksella luettavasti osallistujatyypin, ruokarajoitteen ja buffet-valinnan kanssa
+- Varmista, ettei osallistujien 3-10 tyhjiä kenttiä näytetä tilausvahvistuksessa, sähköpostissa tai adminissa
