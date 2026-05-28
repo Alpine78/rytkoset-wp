@@ -657,6 +657,9 @@ if ( ! function_exists( 'rytkoset_theme_get_logged_in_newsletter_button_markup' 
 			</button>
 			<p class="site-footer__newsletter-status" role="status" aria-live="polite"></p>
 		</form>
+		<p class="site-prefooter__disclaimer">
+			<?php esc_html_e( 'Tilaus tehdään tilillesi · voit perua koska vain', 'rytkoset-theme' ); ?>
+		</p>
 		<script>
 			window.rytkosetThemeSubmitNewsletterButton = window.rytkosetThemeSubmitNewsletterButton || function(form) {
 				if (!window.fetch || !window.FormData) {

@@ -27,7 +27,7 @@ if ( '' === $newsletter_form ) {
 				<?php esc_html_e( 'Tilaa Rytkösten uutiskirje', 'rytkoset-theme' ); ?>
 			</h2>
 			<p class="site-prefooter__desc">
-				<?php esc_html_e( 'Tapahtumat, sukukokoukset, uudet albumit ja sukututkimuksen löydöt — kerran kuussa ajankohtaiset tiedot suoraan sähköpostiisi. Vain sukuseuran omat uutiset, ei mainoksia. Voit perua tilauksen milloin vain.', 'rytkoset-theme' ); ?>
+				<?php esc_html_e( 'Tilaa ajankohtaiset uutiset suoraan sähköpostiisi ja pysy kärryillä sukuseuran toiminnasta. Ei mainoksia, ja voit perua tilauksen milloin tahansa.', 'rytkoset-theme' ); ?>
 			</p>
 			<ul class="site-prefooter__bullets">
 				<li><?php esc_html_e( 'Sukukokousten ohjelmat ja ilmoittautumislinkit', 'rytkoset-theme' ); ?></li>

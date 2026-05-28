@@ -108,6 +108,13 @@
   backdrop-filter: blur(6px);
 }
 
+.site-prefooter__disclaimer {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
 /* ---- Compact (sub pages) ---- */
 .site-prefooter--compact {
   padding: 2.25rem 0;
@@ -336,7 +343,8 @@
 }
 
 .site-footer__newsletter-action {
-  justify-items: start;
+  display: grid;
+  gap: 0.7rem;
 }
 
 .site-footer__newsletter-status {
@@ -391,10 +399,11 @@
 .site-footer__newsletter-form input[type="submit"],
 .site-footer__newsletter-form .acym_button,
 .site-footer__newsletter-button {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
+  width: 100%;
+  min-height: 52px;
   border: 2px solid var(--color-accent) !important;
   border-radius: var(--radius-pill) !important;
   background: var(--color-accent) !important;
