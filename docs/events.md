@@ -210,9 +210,9 @@ Kaikkien tapahtumien osallistujat näkee yhdistettynä näkymässä:
 
 Näkymässä voi valita yksittäisen tapahtuman tai katsella kaikkien tapahtumien osallistujia kerralla. Näkymä yhdistää ilmaisten tapahtumien lomakeilmoittautumiset ja maksullisten tapahtumien WooCommerce-tilaukset (mukaan lukien Tampere 2026 -tilausten osallistujat). Suodatus statuksen mukaan on tuettu, ja näkymästä on CSV-vienti samoilla suodattimilla.
 
-Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`. Saman valikon alta löytyy myös `Tapahtumat > Viestintä`, jolla voi lähettää sähköpostiviestin valitun tapahtuman osallistujille (`docs/event-participants-messaging.md`).
+Tarkempi kuvaus on tiedostossa `docs/event-participants-admin.md`. Saman valikon alta löytyy myös `Tapahtumat > Viestintä`, jolla voi lisätä sähköpostiviestin valitun tapahtuman osallistujille WP-Cron-lähetysjonoon (`docs/event-participants-messaging.md`). Jono lähettää enintään 18 `wp_mail()`-yritystä rullaavan 60 minuutin aikana.
 
-AcyMailingia ei käytetä #107:n kuittisähköposteihin eikä nykyiseen tapahtumaviestintään. Tapahtumaviestinnän mahdollinen AcyMailing-integraatio selvitetään erillisessä tiketissä #264.
+AcyMailingia ei käytetä #107:n kuittisähköposteihin eikä nykyiseen tapahtumaviestintään. #264:n ratkaisuna tapahtumaviestintä pysyy WordPressin `Tapahtumat > Viestintä` -näkymässä ja lähetysnopeus hallitaan kevyellä cron-jonolla.
 
 ### Mitä ylläpitäjä tekee ilmoittautumisille
 

@@ -136,6 +136,399 @@ function rytkoset_theme_get_event_messaging_log( $limit = 20 ) {
 }
 
 /**
+ * Returns the hourly send limit for event participant messaging.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_event_messaging_hourly_limit() {
+	return 18;
+}
+
+/**
+ * Returns the option key used for the messaging queue.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_messaging_queue_option_key() {
+	return 'rytkoset_event_messaging_queue';
+}
+
+/**
+ * Returns the option key used for rolling send attempt timestamps.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_messaging_send_attempts_option_key() {
+	return 'rytkoset_event_messaging_send_attempts';
+}
+
+/**
+ * Returns the cron hook name used for processing the messaging queue.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_messaging_cron_hook() {
+	return 'rytkoset_process_event_messaging_queue';
+}
+
+/**
+ * Returns the event messaging queue.
+ *
+ * @return array
+ */
+function rytkoset_theme_get_event_messaging_queue() {
+	$queue = get_option( rytkoset_theme_get_event_messaging_queue_option_key(), array() );
+
+	if ( ! is_array( $queue ) ) {
+		return array();
+	}
+
+	return array_values( $queue );
+}
+
+/**
+ * Stores the event messaging queue as a non-autoloaded option.
+ *
+ * @param array $queue Queue entries.
+ * @return void
+ */
+function rytkoset_theme_update_event_messaging_queue( $queue ) {
+	update_option( rytkoset_theme_get_event_messaging_queue_option_key(), array_values( $queue ), false );
+}
+
+/**
+ * Returns pruned send attempt timestamps from the last rolling hour.
+ *
+ * @param int|null $now Current Unix timestamp.
+ * @return int[]
+ */
+function rytkoset_theme_get_event_messaging_send_attempts( $now = null ) {
+	$now      = null === $now ? time() : absint( $now );
+	$cutoff   = $now - HOUR_IN_SECONDS;
+	$attempts = get_option( rytkoset_theme_get_event_messaging_send_attempts_option_key(), array() );
+
+	if ( ! is_array( $attempts ) ) {
+		return array();
+	}
+
+	$recent_attempts = array();
+
+	foreach ( $attempts as $timestamp ) {
+		$timestamp = absint( $timestamp );
+
+		if ( $timestamp > $cutoff && $timestamp <= $now ) {
+			$recent_attempts[] = $timestamp;
+		}
+	}
+
+	return $recent_attempts;
+}
+
+/**
+ * Stores send attempt timestamps as a non-autoloaded option.
+ *
+ * @param int[] $attempts Unix timestamps.
+ * @return void
+ */
+function rytkoset_theme_update_event_messaging_send_attempts( $attempts ) {
+	$clean_attempts = array();
+
+	foreach ( $attempts as $timestamp ) {
+		$timestamp = absint( $timestamp );
+
+		if ( $timestamp > 0 ) {
+			$clean_attempts[] = $timestamp;
+		}
+	}
+
+	update_option( rytkoset_theme_get_event_messaging_send_attempts_option_key(), $clean_attempts, false );
+}
+
+/**
+ * Counts pending recipients for a queued messaging job.
+ *
+ * @param array $job Queue job.
+ * @return int
+ */
+function rytkoset_theme_get_event_messaging_pending_recipient_count( $job ) {
+	$recipients = isset( $job['recipients'] ) && is_array( $job['recipients'] ) ? $job['recipients'] : array();
+	$count      = 0;
+
+	foreach ( $recipients as $recipient ) {
+		if ( 'pending' === (string) ( $recipient['status'] ?? 'pending' ) ) {
+			$count++;
+		}
+	}
+
+	return $count;
+}
+
+/**
+ * Returns a human-readable status for a queued messaging job.
+ *
+ * @param array $job Queue job.
+ * @return string
+ */
+function rytkoset_theme_get_event_messaging_job_status_label( $job ) {
+	$pending = rytkoset_theme_get_event_messaging_pending_recipient_count( $job );
+
+	if ( 0 === $pending ) {
+		return __( 'Valmis', 'rytkoset-theme' );
+	}
+
+	if ( (int) ( $job['sent_count'] ?? 0 ) > 0 || (int) ( $job['failed_count'] ?? 0 ) > 0 ) {
+		return __( 'Käsittelyssä', 'rytkoset-theme' );
+	}
+
+	return __( 'Jonossa', 'rytkoset-theme' );
+}
+
+/**
+ * Queues an event participant message for cron-based sending.
+ *
+ * @param array $args Job arguments.
+ * @return string Queued job ID, or empty string on failure.
+ */
+function rytkoset_theme_enqueue_event_messaging_job( $args ) {
+	$raw_recipients = isset( $args['recipients'] ) && is_array( $args['recipients'] ) ? $args['recipients'] : array();
+	$recipients     = array();
+
+	foreach ( $raw_recipients as $recipient ) {
+		$email = sanitize_email( (string) ( $recipient['email'] ?? '' ) );
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			continue;
+		}
+
+		$recipients[] = array(
+			'email'       => $email,
+			'name'        => sanitize_text_field( (string) ( $recipient['name'] ?? '' ) ),
+			'event_title' => sanitize_text_field( (string) ( $recipient['event_title'] ?? '' ) ),
+			'status'      => 'pending',
+			'sent_at'     => '',
+			'failed_at'   => '',
+		);
+	}
+
+	if ( empty( $recipients ) ) {
+		return '';
+	}
+
+	$body = trim( (string) ( $args['body'] ?? '' ) );
+	$subject = sanitize_text_field( (string) ( $args['subject'] ?? '' ) );
+
+	if ( '' === $subject || '' === $body ) {
+		return '';
+	}
+
+	$job = array(
+		'id'            => uniqid( 'msg_', true ),
+		'created_at'    => current_time( 'mysql' ),
+		'sender_id'     => absint( $args['sender_id'] ?? 0 ),
+		'sender_name'   => sanitize_text_field( (string) ( $args['sender_name'] ?? '' ) ),
+		'reply_to'      => sanitize_email( (string) ( $args['reply_to'] ?? '' ) ),
+		'event_id'      => absint( $args['event_id'] ?? 0 ),
+		'event_title'   => sanitize_text_field( (string) ( $args['event_title'] ?? '' ) ),
+		'status_filter' => sanitize_key( (string) ( $args['status_filter'] ?? '' ) ),
+		'status_label'  => sanitize_text_field( (string) ( $args['status_label'] ?? '' ) ),
+		'subject'       => $subject,
+		'body'          => $body,
+		'body_preview'  => function_exists( 'mb_substr' ) ? mb_substr( $body, 0, 200 ) : substr( $body, 0, 200 ),
+		'total_count'   => count( $recipients ),
+		'sent_count'    => 0,
+		'failed_count'  => 0,
+		'skipped_count' => absint( $args['skipped_count'] ?? 0 ),
+		'last_sent_at'  => '',
+		'completed_at'  => '',
+		'recipients'    => $recipients,
+	);
+
+	$queue   = rytkoset_theme_get_event_messaging_queue();
+	$queue[] = $job;
+
+	rytkoset_theme_update_event_messaging_queue( $queue );
+	rytkoset_theme_ensure_event_messaging_cron_scheduled();
+
+	return $job['id'];
+}
+
+/**
+ * Adds a five-minute cron schedule for event message queue processing.
+ *
+ * @param array $schedules Registered schedules.
+ * @return array
+ */
+function rytkoset_theme_add_event_messaging_cron_schedule( $schedules ) {
+	if ( ! isset( $schedules['rytkoset_five_minutes'] ) ) {
+		$schedules['rytkoset_five_minutes'] = array(
+			'interval' => 5 * MINUTE_IN_SECONDS,
+			'display'  => __( 'Every five minutes', 'rytkoset-theme' ),
+		);
+	}
+
+	return $schedules;
+}
+add_filter( 'cron_schedules', 'rytkoset_theme_add_event_messaging_cron_schedule' );
+
+/**
+ * Ensures the recurring event messaging queue processor is scheduled.
+ *
+ * @return void
+ */
+function rytkoset_theme_ensure_event_messaging_cron_scheduled() {
+	$hook = rytkoset_theme_get_event_messaging_cron_hook();
+
+	if ( ! wp_next_scheduled( $hook ) ) {
+		wp_schedule_event( time() + ( 5 * MINUTE_IN_SECONDS ), 'rytkoset_five_minutes', $hook );
+	}
+}
+add_action( 'init', 'rytkoset_theme_ensure_event_messaging_cron_scheduled' );
+
+/**
+ * Clears the event messaging cron hook when the theme is switched.
+ *
+ * @return void
+ */
+function rytkoset_theme_clear_event_messaging_cron() {
+	wp_clear_scheduled_hook( rytkoset_theme_get_event_messaging_cron_hook() );
+}
+add_action( 'switch_theme', 'rytkoset_theme_clear_event_messaging_cron' );
+
+/**
+ * Adds a completed queued job to the existing aggregate messaging log.
+ *
+ * @param array $job Queue job.
+ * @return void
+ */
+function rytkoset_theme_append_completed_event_messaging_job_to_log( $job ) {
+	$completed_at = (string) ( $job['completed_at'] ?? '' );
+
+	rytkoset_theme_append_event_messaging_log(
+		array(
+			'id'            => (string) ( $job['id'] ?? uniqid( 'msg_', true ) ),
+			'timestamp'     => '' !== $completed_at ? $completed_at : current_time( 'mysql' ),
+			'queued_at'     => (string) ( $job['created_at'] ?? '' ),
+			'sender_id'     => (int) ( $job['sender_id'] ?? 0 ),
+			'sender_name'   => (string) ( $job['sender_name'] ?? '' ),
+			'event_id'      => (int) ( $job['event_id'] ?? 0 ),
+			'event_title'   => (string) ( $job['event_title'] ?? '' ),
+			'status_filter' => (string) ( $job['status_filter'] ?? '' ),
+			'subject'       => (string) ( $job['subject'] ?? '' ),
+			'body_preview'  => (string) ( $job['body_preview'] ?? '' ),
+			'sent_count'    => (int) ( $job['sent_count'] ?? 0 ),
+			'failed_count'  => (int) ( $job['failed_count'] ?? 0 ),
+			'skipped_count' => (int) ( $job['skipped_count'] ?? 0 ),
+		)
+	);
+}
+
+/**
+ * Processes pending event participant messages within the rolling hourly limit.
+ *
+ * @return void
+ */
+function rytkoset_theme_process_event_messaging_queue() {
+	$lock_key = 'rytkoset_event_messaging_queue_lock';
+
+	if ( get_transient( $lock_key ) ) {
+		return;
+	}
+
+	set_transient( $lock_key, 1, 10 * MINUTE_IN_SECONDS );
+
+	try {
+		$now       = time();
+		$attempts  = rytkoset_theme_get_event_messaging_send_attempts( $now );
+		$available = max( 0, rytkoset_theme_get_event_messaging_hourly_limit() - count( $attempts ) );
+
+		if ( $available <= 0 ) {
+			rytkoset_theme_update_event_messaging_send_attempts( $attempts );
+			return;
+		}
+
+		$queue = rytkoset_theme_get_event_messaging_queue();
+
+		if ( empty( $queue ) ) {
+			rytkoset_theme_update_event_messaging_send_attempts( $attempts );
+			return;
+		}
+
+		$next_queue = array();
+
+		foreach ( $queue as $job ) {
+			$recipients = isset( $job['recipients'] ) && is_array( $job['recipients'] ) ? $job['recipients'] : array();
+
+			if ( $available > 0 ) {
+				$headers  = array( 'Content-Type: text/plain; charset=UTF-8' );
+				$reply_to = sanitize_email( (string) ( $job['reply_to'] ?? '' ) );
+
+				if ( '' !== $reply_to && is_email( $reply_to ) ) {
+					$headers[] = 'Reply-To: ' . $reply_to;
+				}
+
+				foreach ( $recipients as $index => $recipient ) {
+					if ( $available <= 0 ) {
+						break;
+					}
+
+					if ( 'pending' !== (string) ( $recipient['status'] ?? 'pending' ) ) {
+						continue;
+					}
+
+					$email = sanitize_email( (string) ( $recipient['email'] ?? '' ) );
+
+					if ( '' === $email || ! is_email( $email ) ) {
+						$recipients[ $index ]['status']    = 'failed';
+						$recipients[ $index ]['failed_at'] = current_time( 'mysql' );
+						$job['failed_count']               = (int) ( $job['failed_count'] ?? 0 ) + 1;
+						continue;
+					}
+
+					$message = rytkoset_theme_personalize_event_message(
+						(string) ( $job['body'] ?? '' ),
+						(string) ( $recipient['name'] ?? '' ),
+						(string) ( $recipient['event_title'] ?? '' )
+					);
+
+					$attempt_time = time();
+					$attempts[]   = $attempt_time;
+					$ok           = wp_mail( $email, (string) ( $job['subject'] ?? '' ), $message, $headers );
+					$sent_at      = current_time( 'mysql' );
+
+					if ( $ok ) {
+						$recipients[ $index ]['status']  = 'sent';
+						$recipients[ $index ]['sent_at'] = $sent_at;
+						$job['sent_count']               = (int) ( $job['sent_count'] ?? 0 ) + 1;
+					} else {
+						$recipients[ $index ]['status']    = 'failed';
+						$recipients[ $index ]['failed_at'] = $sent_at;
+						$job['failed_count']               = (int) ( $job['failed_count'] ?? 0 ) + 1;
+					}
+
+					$job['last_sent_at'] = $sent_at;
+					$available--;
+				}
+			}
+
+			$job['recipients'] = $recipients;
+
+			if ( 0 === rytkoset_theme_get_event_messaging_pending_recipient_count( $job ) ) {
+				$job['completed_at'] = current_time( 'mysql' );
+				rytkoset_theme_append_completed_event_messaging_job_to_log( $job );
+			} else {
+				$next_queue[] = $job;
+			}
+		}
+
+		rytkoset_theme_update_event_messaging_send_attempts( $attempts );
+		rytkoset_theme_update_event_messaging_queue( $next_queue );
+	} finally {
+		delete_transient( $lock_key );
+	}
+}
+add_action( 'rytkoset_process_event_messaging_queue', 'rytkoset_theme_process_event_messaging_queue' );
+
+/**
  * Registers the bulk messaging submenu under the Events CPT.
  */
 function rytkoset_theme_register_event_messaging_admin_page() {
@@ -182,13 +575,35 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 	$sent   = isset( $_GET['sent'] ) ? absint( wp_unslash( $_GET['sent'] ) ) : 0;
 	$failed = isset( $_GET['failed'] ) ? absint( wp_unslash( $_GET['failed'] ) ) : 0;
 	$skip   = isset( $_GET['skipped'] ) ? absint( wp_unslash( $_GET['skipped'] ) ) : 0;
+	$queued = isset( $_GET['queued'] ) ? absint( wp_unslash( $_GET['queued'] ) ) : 0;
+
+	$queue_entries     = rytkoset_theme_get_event_messaging_queue();
+	$recent_attempts   = rytkoset_theme_get_event_messaging_send_attempts();
+	$hourly_limit      = rytkoset_theme_get_event_messaging_hourly_limit();
+	$available_attempt = max( 0, $hourly_limit - count( $recent_attempts ) );
 
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Tapahtumien viestintä', 'rytkoset-theme' ); ?></h1>
-		<p><?php esc_html_e( 'Lähetä sähköpostiviesti tapahtuman osallistujille. Suodata ensin vastaanottajat, kirjoita viesti ja vahvista lähetys.', 'rytkoset-theme' ); ?></p>
+		<p><?php esc_html_e( 'Lisää sähköpostiviesti tapahtuman osallistujien lähetysjonoon. Suodata ensin vastaanottajat, kirjoita viesti ja vahvista jonotus.', 'rytkoset-theme' ); ?></p>
 
-		<?php if ( 'sent' === $notice ) : ?>
+		<?php if ( 'queued' === $notice ) : ?>
+			<div class="notice notice-success is-dismissible">
+				<p>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: 1: queued recipients, 2: skipped recipients, 3: hourly limit */
+							__( 'Viesti lisättiin lähetysjonoon. Vastaanottajia %1$d, ohitettuja (ei osoitetta) %2$d. Jono lähettää enintään %3$d viestiä tunnissa.', 'rytkoset-theme' ),
+							$queued,
+							$skip,
+							$hourly_limit
+						)
+					);
+					?>
+				</p>
+			</div>
+		<?php elseif ( 'sent' === $notice ) : ?>
 			<div class="notice notice-success is-dismissible">
 				<p>
 					<?php
@@ -260,8 +675,8 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 						sprintf(
 							/* translators: 1: recipient count, 2: skipped count */
 							_n(
-								'Viesti lähetetään %1$d vastaanottajalle (osoitteita puuttuu %2$d).',
-								'Viesti lähetetään %1$d vastaanottajalle (osoitteita puuttuu %2$d).',
+								'Viesti lisätään jonoon %1$d vastaanottajalle (osoitteita puuttuu %2$d).',
+								'Viesti lisätään jonoon %1$d vastaanottajalle (osoitteita puuttuu %2$d).',
 								$recipient_count,
 								'rytkoset-theme'
 							),
@@ -331,8 +746,8 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 				: sprintf(
 					/* translators: %d: recipient count */
 					_n(
-						'Lähetä viesti %d vastaanottajalle',
-						'Lähetä viesti %d vastaanottajalle',
+						'Lisää jonoon %d vastaanottajalle',
+						'Lisää jonoon %d vastaanottajalle',
 						$recipient_count,
 						'rytkoset-theme'
 					),
@@ -340,9 +755,10 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 				);
 
 			$confirm_message = sprintf(
-				/* translators: %d: recipient count */
-				__( 'Lähetetäänkö viesti %d vastaanottajalle? Tätä toimintoa ei voi peruuttaa.', 'rytkoset-theme' ),
-				$recipient_count
+				/* translators: 1: recipient count, 2: hourly limit */
+				__( 'Lisätäänkö viesti jonoon %1$d vastaanottajalle? Jono lähettää enintään %2$d viestiä tunnissa.', 'rytkoset-theme' ),
+				$recipient_count,
+				$hourly_limit
 			);
 			?>
 			<p class="submit">
@@ -356,6 +772,57 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 				</button>
 			</p>
 		</form>
+
+		<h2><?php esc_html_e( 'Lähetysjono', 'rytkoset-theme' ); ?></h2>
+		<p class="description">
+			<?php
+			echo esc_html(
+				sprintf(
+					/* translators: 1: hourly limit, 2: available send attempts */
+					__( 'Jono lähettää enintään %1$d viestiä 60 minuutin aikana. Vapaita lähetyksiä tällä hetkellä: %2$d.', 'rytkoset-theme' ),
+					$hourly_limit,
+					$available_attempt
+				)
+			);
+			?>
+		</p>
+
+		<?php if ( empty( $queue_entries ) ) : ?>
+			<p><?php esc_html_e( 'Ei jonossa olevia viestejä.', 'rytkoset-theme' ); ?></p>
+		<?php else : ?>
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Luotu', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Lähettäjä', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Aihe', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Tila', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Jonossa', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Lähetetty', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Epäonnistunut', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Ohitettu', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Viimeksi lähetetty', 'rytkoset-theme' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $queue_entries as $entry ) : ?>
+						<tr>
+							<td><?php echo esc_html( (string) ( $entry['created_at'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $entry['sender_name'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $entry['event_title'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $entry['subject'] ?? '' ) ); ?></td>
+							<td><?php echo esc_html( rytkoset_theme_get_event_messaging_job_status_label( $entry ) ); ?></td>
+							<td><?php echo esc_html( (string) rytkoset_theme_get_event_messaging_pending_recipient_count( $entry ) ); ?></td>
+							<td><?php echo esc_html( (string) ( (int) ( $entry['sent_count'] ?? 0 ) ) ); ?></td>
+							<td><?php echo esc_html( (string) ( (int) ( $entry['failed_count'] ?? 0 ) ) ); ?></td>
+							<td><?php echo esc_html( (string) ( (int) ( $entry['skipped_count'] ?? 0 ) ) ); ?></td>
+							<td><?php echo esc_html( (string) ( $entry['last_sent_at'] ?? '' ) ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
 
 		<h2><?php esc_html_e( 'Lähetysloki', 'rytkoset-theme' ); ?></h2>
 		<?php $log_entries = rytkoset_theme_get_event_messaging_log( 20 ); ?>
@@ -395,8 +862,8 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 }
 
 /**
- * Handles the bulk message send: validates input, sends per-recipient emails,
- * appends a log entry, and redirects back to the admin page with a notice.
+ * Handles the bulk message form: validates input, queues recipients,
+ * and redirects back to the admin page with a notice.
  *
  * @return void
  */
@@ -450,58 +917,36 @@ function rytkoset_theme_send_event_participants_message() {
 	$current_user = wp_get_current_user();
 	$reply_to     = $current_user && ! empty( $current_user->user_email ) ? $current_user->user_email : '';
 
-	$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
-
-	if ( '' !== $reply_to ) {
-		$headers[] = 'Reply-To: ' . $reply_to;
-	}
-
-	$sent_count   = 0;
-	$failed_count = 0;
-
-	foreach ( $recipients as $recipient ) {
-		$personalized = rytkoset_theme_personalize_event_message(
-			$body,
-			(string) ( $recipient['name'] ?? '' ),
-			(string) ( $recipient['event_title'] ?? '' )
-		);
-
-		$ok = wp_mail( $recipient['email'], $subject, $personalized, $headers );
-
-		if ( $ok ) {
-			$sent_count++;
-		} else {
-			$failed_count++;
-		}
-	}
-
 	$event_title_for_log = $event_id > 0
 		? get_the_title( $event_id )
 		: __( 'Kaikki tapahtumat', 'rytkoset-theme' );
 
-	rytkoset_theme_append_event_messaging_log(
+	$job_id = rytkoset_theme_enqueue_event_messaging_job(
 		array(
-			'id'            => uniqid( 'msg_', true ),
-			'timestamp'     => current_time( 'mysql' ),
 			'sender_id'     => (int) get_current_user_id(),
 			'sender_name'   => $current_user ? (string) $current_user->display_name : '',
+			'reply_to'      => $reply_to,
 			'event_id'      => $event_id,
 			'event_title'   => (string) $event_title_for_log,
 			'status_filter' => $selected_status,
+			'status_label'  => (string) ( $status_options[ $selected_status ] ?? '' ),
 			'subject'       => $subject,
-			'body_preview'  => function_exists( 'mb_substr' ) ? mb_substr( $body, 0, 200 ) : substr( $body, 0, 200 ),
-			'sent_count'    => $sent_count,
-			'failed_count'  => $failed_count,
+			'body'          => $body,
+			'recipients'    => $recipients,
 			'skipped_count' => $skipped_count,
 		)
 	);
 
+	if ( '' === $job_id ) {
+		wp_safe_redirect( add_query_arg( 'messaging_notice', 'error_no_recipients', $redirect_base ) );
+		exit;
+	}
+
 	wp_safe_redirect(
 		add_query_arg(
 			array(
-				'messaging_notice' => 'sent',
-				'sent'             => $sent_count,
-				'failed'           => $failed_count,
+				'messaging_notice' => 'queued',
+				'queued'           => count( $recipients ),
 				'skipped'          => $skipped_count,
 			),
 			$redirect_base

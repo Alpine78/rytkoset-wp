@@ -79,7 +79,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 | `inc/event-registrations.php`          | Free event registration CPT and form                                                     |
 | `inc/event-registration-privacy.php`   | Privacy Tools export, erasure and anonymization for free event registrations             |
 | `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                       |
-| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email                                                          |
+| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email queue and WP-Cron rate limiter                           |
 | `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                  |
 | `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                |
 | `inc/media-library.php`                | Media library ordering by album                                                          |
@@ -144,6 +144,8 @@ Use CSS variables for colors and spacing. No Bootstrap dependency.
   - `_rytkoset_event_organizer_notification_recipients` — event-specific organizer notification email recipients for paid event orders
 
 Free event registration forms close after the event registration deadline. Paid event pages read the deadline and availability state from the linked WooCommerce product instead of duplicating that data on the event.
+
+`Events > Messaging` keeps event participant messaging in WordPress. The admin form queues messages in `rytkoset_event_messaging_queue`; WP-Cron hook `rytkoset_process_event_messaging_queue` sends queued recipients with a rolling 18 `wp_mail()` attempts / 60 minutes limit tracked in `rytkoset_event_messaging_send_attempts`.
 
 ### Gallery Album (`gallery_album`)
 
