@@ -1,10 +1,10 @@
 # Massaviestintä tapahtuman osallistujille
 
-Tämä dokumentti kuvaa tiketin `#74` toteutuksen.
+Tämä dokumentti kuvaa tikettien `#74` ja `#264` toteutuksen.
 
 ## Tavoite
 
-Ylläpitäjä ja tapahtumajärjestäjä voivat lähettää sähköpostiviestin tapahtuman osallistujille suoraan WordPressin administa — vähentää manuaalista sähköpostityötä esim. muistutuksissa, lisäohjeissa ja aikataulumuutoksissa.
+Ylläpitäjä ja tapahtumajärjestäjä voivat lisätä sähköpostiviestin tapahtuman osallistujille WordPressin administa. Viestit lähtevät taustalla WP-Cron-jonosta, jotta noin 18 sähköpostin tuntirajaa ei ylitetä.
 
 ## Sijainti
 
@@ -21,7 +21,7 @@ Sivun yläosassa on samat suodattimet kuin osallistujalistalla:
 
 Suodattimien jälkeen näkyy vastaanottajamäärä:
 
-> *"Viesti lähetetään 23 vastaanottajalle (osoitteita puuttuu 2)."*
+> *"Viesti lisätään jonoon 23 vastaanottajalle (osoitteita puuttuu 2)."*
 
 Osoitteita puuttuvat osallistujat ohitetaan automaattisesti. Vastaanottajat deduplikoidaan sähköpostiosoitteen perusteella (sama yhteyshenkilö Tampere 2026 -tilauksessa lasketaan yhdeksi vastaanottajaksi).
 
@@ -39,21 +39,44 @@ Lomake hyväksyy kaksi placeholderia, jotka korvataan jokaisen vastaanottajan ko
 
 Esim. *"Hei {nimi}, tervetuloa tapahtumaan {tapahtuma}!"* lähetetään yksilöllisesti jokaiselle.
 
-### Lähetys
+### Lähetys ja jono
 
-Lähetä-painike on muodossa "Lähetä viesti X vastaanottajalle" ja näyttää tarkistuksen ennen lähetystä. Jos vastaanottajia on 0, painike on disabloitu.
+Lähetyspainike on muodossa "Lisää jonoon X vastaanottajalle" ja näyttää tarkistuksen ennen jonotusta. Jos vastaanottajia on 0, painike on disabloitu.
 
-Lähetys tapahtuu synkronisesti: jokaiselle vastaanottajalle tehdään oma `wp_mail()`-kutsu. Tämä mahdollistaa personoinnin sekä per-vastaanottaja-onnistumislaskennan, mutta saattaa olla hidas erittäin suurilla (>100) listoilla. Jos PHP-pyyntö timeoutaa, lähetys voidaan myöhemmin siirtää jonotettuun cron-tehtävään.
+Admin-lomake ei lähetä viestejä heti. Se tallentaa vastaanottajat, aiheen, viestin, lähettäjän ja `Reply-To`-osoitteen lähetysjonoon. WP-Cron käsittelee jonon vanhimmasta viestistä alkaen ja tekee jokaiselle vastaanottajalle oman `wp_mail()`-kutsun.
+
+Jono noudattaa rullaavaa tuntirajaa: `rytkoset_event_messaging_send_attempts`-option perusteella lasketaan viimeisen 60 minuutin `wp_mail()`-yritykset, ja uusi cron-ajo lähettää vain sen verran, että 18 yrityksen raja ei ylity. Sekä onnistuneet että epäonnistuneet `wp_mail()`-kutsut lasketaan yrityksiksi.
+
+Epäonnistuneet vastaanottajakohtaiset lähetykset merkitään tässä MVP:ssä lopullisesti epäonnistuneiksi. Kun jonotyöllä ei ole enää odottavia vastaanottajia, työ poistuu jonosta ja siitä kirjoitetaan koontirivi lähetyslokiin.
+
+WP-Cron käynnistyy normaalisti sivulatausten yhteydessä. Tuotannossa lähetyksen tasaisuus paranee, jos palvelimella kutsutaan WordPressin `wp-cron.php`-tiedostoa oikealla cron-ajolla.
 
 Lähettäjäksi tulee WordPressin oletusosoite (admin_email). Vastauksia varten viestiin lisätään `Reply-To`-otsake, joka on lähettävän käyttäjän sähköpostiosoite.
 
-### Lähetysloki
+### Lähetysjonon tila
 
-Sivun alaosassa näkyy taulukko viimeisestä 20 lähetyksestä:
+Sivulla näkyy lähetysjonon taulukko ennen lokia:
 
 | Sarake | Sisältö |
 | --- | --- |
-| Aika | Lähetyksen aikaleima |
+| Luotu | Jonotyön luontiaika |
+| Lähettäjä | Jonotyön luonut käyttäjä |
+| Tapahtuma | Tapahtuman otsikko (tai "Kaikki tapahtumat") |
+| Aihe | Sähköpostin aihe |
+| Tila | `Jonossa` tai `Käsittelyssä` |
+| Jonossa | Odottavien vastaanottajien määrä |
+| Lähetetty | Onnistuneiden lähetysten määrä |
+| Epäonnistunut | Epäonnistuneiden lähetysten määrä |
+| Ohitettu | Osallistujat, joilta puuttui osoite |
+| Viimeksi lähetetty | Viimeisin vastaanottajakohtainen lähetysaika |
+
+### Lähetysloki
+
+Sivun alaosassa näkyy taulukko viimeisestä 20 valmistuneesta jonotyöstä:
+
+| Sarake | Sisältö |
+| --- | --- |
+| Aika | Jonotyön valmistumisaika |
 | Lähettäjä | Lähetyksen tehnyt käyttäjä |
 | Tapahtuma | Tapahtuman otsikko (tai "Kaikki tapahtumat") |
 | Aihe | Sähköpostin aihe |
@@ -77,7 +100,10 @@ Pääfunktiot:
 - `rytkoset_theme_personalize_event_message($body, $name, $event_title)` — placeholder-korvaus
 - `rytkoset_theme_register_event_messaging_admin_page()` — rekisteröi adminisivun
 - `rytkoset_theme_render_event_messaging_admin_page()` — renderöi sivun
-- `rytkoset_theme_send_event_participants_message()` — `admin_post`-handleri, joka lähettää viestit ja kirjaa lokin
+- `rytkoset_theme_send_event_participants_message()` — `admin_post`-handleri, joka validoi lomakkeen ja lisää työn jonoon
+- `rytkoset_theme_enqueue_event_messaging_job($args)` — luo jonotyön non-autoloaded `rytkoset_event_messaging_queue`-optioniin
+- `rytkoset_theme_process_event_messaging_queue()` — WP-Cron-prosessori, joka purkaa jonoa 18 viestiä / rullaava 60 minuuttia -rajalla
+- `rytkoset_theme_get_event_messaging_send_attempts()` — lukee viimeisen tunnin lähetysyritykset `rytkoset_event_messaging_send_attempts`-optiosta
 - `rytkoset_theme_append_event_messaging_log($entry)` / `rytkoset_theme_get_event_messaging_log($limit)` — lokin tallennus ja haku
 
 Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content/themes/rytkoset-theme/inc/event-participants-admin.php):n olemassa olevia funktioita `rytkoset_theme_get_event_participants()` ja `rytkoset_theme_get_all_events_participants()`.
@@ -87,7 +113,6 @@ Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content
 - Vain sähköposti (ei SMS)
 - Vain tekstimuotoinen viesti (ei HTML-mallia, ei liitteitä)
 - Ei viestipohjien tallennusta
-- Ei queue/rate-limit-mekanismia — pitkät listat voivat hidastua
 - Ei unsubscribe-linkkejä
 - Loki ei näytä per-vastaanottaja-tasoa (vain aggregoidut laskurit)
-- Ei AcyMailing-integraatiota (jätetty seuraavaan iteraatioon)
+- Ei AcyMailing-integraatiota tässä ratkaisussa
