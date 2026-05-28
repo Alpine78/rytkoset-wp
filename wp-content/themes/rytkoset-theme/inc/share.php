@@ -132,21 +132,26 @@ function rytkoset_theme_should_show_gallery_share( $post = null ) {
  * @return string SVG-merkkaus.
  */
 function rytkoset_theme_get_share_icon( $channel ) {
-	$icons = array(
-		'fb'     => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-7.5h2.55l.38-2.95H13.5V8.7c0-.85.24-1.43 1.46-1.43h1.56V4.63c-.27-.04-1.2-.12-2.27-.12-2.25 0-3.79 1.37-3.79 3.9v2.14H7.9v2.95h2.56V21h3.04Z"/></svg>',
-		'x'      => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.53 3H20.5l-6.5 7.43L21.5 21h-6l-4.7-6.13L5.4 21H2.43l6.95-7.95L2 3h6.16l4.25 5.61L17.53 3Z"/></svg>',
-		'li'     => '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.94 8.5H4.06V20h2.88V8.5Zm.18-3.7c-.02-.85-.62-1.5-1.6-1.5s-1.6.65-1.6 1.5c0 .83.59 1.5 1.56 1.5h.02c1 0 1.62-.67 1.62-1.5Zm9.6 9.45c0-2.74-1.46-4.02-3.42-4.02-1.58 0-2.29.87-2.69 1.48V8.5H7.74c.04.83 0 11.5 0 11.5h2.87v-6.43c0-.26.02-.52.1-.7.21-.51.69-1.05 1.5-1.05 1.06 0 1.49.81 1.49 2v6.18h2.87v-6.5Z"/></svg>',
-		// WhatsApp ja Messenger: viralliset monoväriset glyfit (assets/icons/social).
-		// viewBox-täytteellä glyfit kokoutuvat samalle optiselle tasolle muiden kanssa.
-		'wa'     => '<svg viewBox="-72 -72 864 864" fill="currentColor" aria-hidden="true"><path d="M360,0C161.18,0,0,161.18,0,360c0,65.41,17.45,126.75,47.94,179.61L0,720l187.02-44.21c51.34,28.18,110.28,44.21,172.98,44.21,198.82,0,360-161.18,360-360S558.82,0,360,0ZM360,655.52c-60.17,0-116.13-17.98-162.82-48.87l-110.49,28.14,30.99-105.61c-33.53-47.93-53.2-106.26-53.2-169.19,0-163.21,132.31-295.52,295.52-295.52s295.52,132.31,295.52,295.52-132.31,295.52-295.52,295.52Z"/><path d="M444.35,407.52l87.1,41.06c4,1.88,6.56,5.94,6.2,10.34-.94,11.46-5.54,34.43-26.13,55.02-58.12,58.12-162.49-7.64-166.74-10.18-25.67-13.79-50.06-32.24-73.19-55.36-23.12-23.12-41.58-47.52-55.37-73.19-2.55-4.24-68.31-108.61-10.18-166.74,20.59-20.59,43.56-25.19,55.02-26.13,4.41-.36,8.46,2.2,10.34,6.2l41.07,87.1c1.94,4.12,1.09,9.02-2.13,12.24l-30.61,30.61c-6.62,6.62-8.56,16.93-4,25.11,11.17,20.03,26.19,39.32,43.59,57.07,17.75,17.4,37.04,32.43,57.07,43.59,8.18,4.56,18.48,2.62,25.11-4l30.61-30.61c3.22-3.22,8.12-4.08,12.24-2.13Z"/></svg>',
-		'ms'     => '<svg viewBox="-50 -50 602 602" fill="currentColor" aria-hidden="true"><path d="M251,1C110.17,1,1,104.16,1,243.5c0,72.89,29.87,135.86,78.51,179.37,4.09,3.65,6.55,8.78,6.72,14.25l1.36,44.48c.43,14.18,15.09,23.41,28.06,17.68l49.62-21.91c4.21-1.85,8.92-2.2,13.35-.97,22.81,6.27,47.07,9.61,72.37,9.61,140.83,0,250-103.16,250-242.5S391.83,1,251,1ZM405.92,178.79l-87.04,134.52c-4.42,6.83-13.53,8.78-20.36,4.36l-80.63-52.17c-3.12-2.02-7.16-1.96-10.22.15l-90.88,62.68c-13.26,9.14-29.47-6.59-20.72-20.11l87.05-134.52c4.42-6.83,13.53-8.78,20.35-4.36l80.65,52.18c3.12,2.02,7.16,1.96,10.22-.15l90.86-62.67c13.26-9.15,29.47,6.59,20.72,20.11Z"/></svg>',
-		'mail'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3 7 12 13 21 7"/></svg>',
-		'copy'   => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
-		'native' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>',
-		'arrow'  => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>',
+	// Kanava-avain → ikonitiedosto (assets/icons/{dir}/{name}.svg).
+	$map = array(
+		'fb'     => array( 'social', 'Facebook' ),
+		'x'      => array( 'social', 'X' ),
+		'li'     => array( 'social', 'LinkedIn' ),
+		'wa'     => array( 'social', 'WhatsApp' ),
+		'ms'     => array( 'social', 'Messenger' ),
+		'mail'   => array( 'social', 'Email' ),
+		'copy'   => array( 'ui', 'copy' ),
+		'native' => array( 'ui', 'native-share' ),
+		'arrow'  => array( 'ui', 'chevron-right' ),
 	);
 
-	return isset( $icons[ $channel ] ) ? $icons[ $channel ] : '';
+	if ( ! isset( $map[ $channel ] ) ) {
+		return '';
+	}
+
+	list( $dir, $name ) = $map[ $channel ];
+
+	return rytkoset_theme_inline_icon( $name, $dir );
 }
 
 /**

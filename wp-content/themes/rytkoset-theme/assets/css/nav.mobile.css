@@ -588,11 +588,11 @@
   outline-offset: 2px;
 }
 
-.mm-social__link img {
+.mm-social__link svg {
   display: block;
   width: 28px;
   height: 28px;
-  object-fit: contain;
+  fill: currentColor;
 }
 
 /* ---- Sticky footer ---- */
