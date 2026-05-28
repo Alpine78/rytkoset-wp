@@ -1210,8 +1210,8 @@
 
 .share__ico svg {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
 }
 
 .share__ico:hover,
@@ -1226,14 +1226,6 @@
   outline: 3px solid var(--color-accent);
   outline-offset: 3px;
 }
-
-.share__ico[data-ch="fb"]   { --ch: var(--color-fb); }
-.share__ico[data-ch="x"]    { --ch: var(--color-x-light); }
-.share__ico[data-ch="li"]   { --ch: var(--color-li); }
-.share__ico[data-ch="wa"]   { --ch: var(--color-wa); }
-.share__ico[data-ch="ms"]   { --ch: var(--color-ms); }
-.share__ico[data-ch="mail"] { --ch: var(--color-mail-light); }
-.share__ico[data-ch="copy"] { --ch: var(--color-accent); }
 
 /* ─── Status (kopioitu / jaettu / virhe) ────────────────────────── */
 .share__status {
@@ -1270,16 +1262,6 @@
   color: #34d399;
 }
 
-.share--theme-dark .share__ico[data-ch="x"],
-:root[data-theme="dark"] .share--theme-auto .share__ico[data-ch="x"] {
-  --ch: var(--color-x-dark);
-}
-
-.share--theme-dark .share__ico[data-ch="mail"],
-:root[data-theme="dark"] .share--theme-auto .share__ico[data-ch="mail"] {
-  --ch: var(--color-mail-dark);
-}
-
 .share--theme-dark .share__hero:hover,
 :root[data-theme="dark"] .share--theme-auto .share__hero:hover {
   border-color: rgba(251, 191, 36, 0.5);
@@ -1301,11 +1283,6 @@
   .share__ico {
     width: 40px;
     height: 40px;
-  }
-
-  .share__ico svg {
-    width: 18px;
-    height: 18px;
   }
 }
 

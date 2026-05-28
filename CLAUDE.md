@@ -84,8 +84,9 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 | `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                |
 | `inc/media-library.php`                | Media library ordering by album                                                          |
 | `inc/digital-magazines.php`            | Digital magazine download pages                                                          |
-| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp)                                                    |
-| `inc/social-links.php`                 | Social media links in header/footer                                                      |
+| `inc/icons.php`                        | Inline SVG icon helper (`rytkoset_theme_inline_icon`) — reads `currentColor` glyphs from `assets/icons/{social,ui}/` |
+| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp); icons via `rytkoset_theme_inline_icon`            |
+| `inc/social-links.php`                 | Social media links in header/footer; icons inlined via `rytkoset_theme_inline_icon`      |
 | `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                 |
 | `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                    |
 | `inc/login.php`                        | Login page branding and Finnish translations                                             |

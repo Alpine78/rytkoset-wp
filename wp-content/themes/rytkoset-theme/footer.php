@@ -64,14 +64,14 @@ if ( is_front_page() ) {
           <ul class="site-footer__social-list" aria-label="Sosiaalisen median linkit">
             <?php foreach ( $social_links as $social_link ) : ?>
               <?php
-              if ( empty( $social_link['icon_src'] ) ) {
+              if ( empty( $social_link['icon_file'] ) ) {
                 continue;
               }
               ?>
                 <li class="site-footer__social-item">
                   <a class="site-footer__social-link" href="<?php echo esc_url( $social_link['url'] ); ?>">
                     <span class="screen-reader-text"><?php echo esc_html( $social_link['label'] ); ?></span>
-                    <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" aria-hidden="true" />
+                    <?php echo rytkoset_theme_inline_icon( $social_link['icon_file'], 'social' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                   </a>
                 </li>
             <?php endforeach; ?>

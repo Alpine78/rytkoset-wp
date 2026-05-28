@@ -50,14 +50,14 @@
                         <ul class="site-header__social-list">
                             <?php foreach ( $social_links as $social_link ) : ?>
                                 <?php
-                                if ( empty( $social_link['icon_src'] ) ) {
+                                if ( empty( $social_link['icon_file'] ) ) {
                                     continue;
                                 }
                                 ?>
                                 <li class="site-header__social-item">
                                     <a class="site-header__social-link site-header__social-link--<?php echo esc_attr( $social_link['icon'] ); ?>" href="<?php echo esc_url( $social_link['url'] ); ?>">
                                         <span class="screen-reader-text"><?php echo esc_html( $social_link['label'] ); ?></span>
-                                        <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" aria-hidden="true" />
+                                        <?php echo rytkoset_theme_inline_icon( $social_link['icon_file'], 'social' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                     </a>
                                 </li>
                             <?php endforeach; ?>
@@ -298,10 +298,10 @@
                     <p class="mm-section__title"><?php esc_html_e( 'Seuraa meitä', 'rytkoset-theme' ); ?></p>
                     <ul class="mm-social" aria-label="<?php esc_attr_e( 'Sosiaalisen median linkit', 'rytkoset-theme' ); ?>">
                         <?php foreach ( $social_links as $social_link ) :
-                            if ( empty( $social_link['icon_src'] ) ) continue; ?>
+                            if ( empty( $social_link['icon_file'] ) ) continue; ?>
                             <li>
                                 <a class="mm-social__link" href="<?php echo esc_url( $social_link['url'] ); ?>" aria-label="<?php echo esc_attr( $social_link['label'] ); ?>">
-                                    <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" width="36" height="36" />
+                                    <?php echo rytkoset_theme_inline_icon( $social_link['icon_file'], 'social' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 </a>
                             </li>
                         <?php endforeach; ?>

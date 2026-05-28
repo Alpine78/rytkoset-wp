@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once get_template_directory() . '/inc/icons.php';
 require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';

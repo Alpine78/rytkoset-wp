@@ -283,25 +283,11 @@
   text-decoration: none;
 }
 
-.site-footer__social-link img,
 .site-footer__social-link svg {
   display: block;
   width: 28px;
   height: 28px;
-  object-fit: contain;
-}
-
-.site-footer__social-link img[src*="Facebook.svg"],
-.site-footer__social-link img[src*="YouTube.svg"] {
-  transform: scale(1.02);
-}
-
-.site-footer__social-link img[src*="Instagram.svg"] {
-  transform: scale(0.98);
-}
-
-.site-footer__social-link img[src*="X.svg"] {
-  transform: scale(0.94);
+  fill: currentColor;
 }
 
 .site-footer__legal {

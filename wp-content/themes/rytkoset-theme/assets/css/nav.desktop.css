@@ -35,11 +35,11 @@
   text-decoration: none;
 }
 
-.site-header__social-link img {
+.site-header__social-link svg {
   display: block;
   width: 28px;
   height: 28px;
-  object-fit: contain;
+  fill: currentColor;
 }
 
 .site-nav__list {

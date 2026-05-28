@@ -23,16 +23,6 @@
   --color-accent-hover: #faca45;
   --color-highlight: var(--color-accent);
 
-  /* Some-kanavien brändivärit (jakopainikkeiden hover-tila) */
-  --color-fb: #1877f2;
-  --color-li: #0a66c2;
-  --color-wa: #25d366;
-  --color-ms: #006aff;
-  --color-x-light: #0f172a;
-  --color-x-dark: #e6edf3;
-  --color-mail-light: #475569;
-  --color-mail-dark: #cbd5e1;
-
   /* Rajaukset ja varjot */
   --color-border-light: rgba(255, 255, 255, 0.6);
   --color-border-neutral: rgba(0, 0, 0, 0.1);
