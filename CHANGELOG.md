@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- Footerin uudistus (Footer C): näyttävä pre-footer-uutiskirjekaista etusivulla, kompakti kaista alasivuilla ja kevyt slim footer kaikilla sivuilla; uudet `template-parts/pre-footer-large.php` ja `template-parts/pre-footer-compact.php` (#278)
 - Uutiskirjeen vapaaehtoinen AcyMailing-opt-in WordPress-rekisteröitymiseen, maksuttomaan tapahtumailmoittautumiseen ja WooCommerce Checkout Block -kassalle (#276)
 - Footerin AcyMailing-uutiskirjetilaus Customizer-shortcodella, kirjautuneen tilaajan piilotuslogiikalla sekä ylläpitodokumentaatio `docs/newsletter.md` (#266)
 - Maksullisille tapahtumille tapahtumakohtaiset järjestäjäilmoitusten vastaanottajat ja yleinen WooCommerce-tilausilmoitus (#269)
@@ -25,6 +26,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - WooCommerce-kaupan brändin mukaiset alasvetovalikko- ja painiketyylit.
 
 ### Changed
+- Footerin uutiskirjetilaus siirtyi pre-footer-kaistaan; aktiiviselle tilaajalle koko kaista piilotetaan aiemman tekstihuomautuksen sijaan ja `assets/css/footer.css` kirjoitettiin uusiksi (#278)
 - Tampere 2026 -järjestäjäilmoitusten vastaanottajat siirretty globaalista asetuksesta tapahtuman omaan `Järjestäjäilmoitukset`-kenttään (#269)
 - Päivitetty `CLAUDE.md`:n `inc/`-moduulitaulukko ja WooCommerce-arkkitehtuurihuomio vastaamaan nykyistä `functions.php`-include-listaa.
 - Tapahtuman yhteenvetokortti piilottaa ilmoittautumisen määräpäivän menneiltä tapahtumilta ja käyttää mennyttä aikamuotoa määräpäivän jälkeen.

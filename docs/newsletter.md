@@ -6,7 +6,7 @@ Tämä dokumentti kuvaa uutiskirjeen tilauspaikkojen MVP-toteutuksen tiketille `
 
 Uutiskirjeen tilaus kerätään AcyMailingilla. Teema ei tallenna tilaajia omaan tietokantaan eikä käsittele lomakkeen lähetystä itse.
 
-Ensimmäinen julkaistu tilauspaikka on sivuston footer, koska se näkyy koko sivustolla eikä vaadi erillisiä sivukohtaisia sisältömuutoksia.
+Ensimmäinen julkaistu tilauspaikka on sivuston footerin yläpuolinen pre-footer-kaista, joka näkyy koko sivustolla eikä vaadi erillisiä sivukohtaisia sisältömuutoksia. Tiketissä `#278` footer jaettiin pre-footeriin (uutiskirjekaista) ja slim footeriin (brändi, navigaatio, yhteystiedot, some). Etusivulla pre-footer on näyttävä iso lohko (`template-parts/pre-footer-large.php`), muilla sivuilla yksirivinen kompakti kaista (`template-parts/pre-footer-compact.php`). Molemmat käyttävät samaa AcyMailing-lomaketta.
 
 Jatkoslicessä `#276` samaa AcyMailing-kohdelistaa käytetään myös vapaaehtoisissa opt-in-valinnoissa rekisteröitymisen, maksuttoman tapahtumailmoittautumisen ja WooCommerce-kassan yhteydessä.
 
@@ -85,7 +85,7 @@ Teema:
 - lisää Customizer-asetuksen `rytkoset_theme_newsletter_shortcode`
 - hyväksyy footerissa vain AcyMailingin `acymailing_form_shortcode`-shortcoden
 - renderöi lomakkeen footerissa vain, kun AcyMailing-shortcode on käytettävissä
-- näyttää kirjautuneelle käyttäjälle lomakkeen sijaan tekstin `Olet jo uutiskirjeen tilaaja.`, jos käyttäjä on jo aktiivisena tilaajana lomakkeen kohdelistalla
+- piilottaa koko pre-footer-kaistan kirjautuneelta käyttäjältä, joka on jo aktiivisena tilaajana lomakkeen kohdelistalla (`rytkoset_theme_get_footer_newsletter_form()` palauttaa tyhjän merkkijonon, jolloin partial ei renderöi mitään)
 - näyttää kirjautuneelle käyttäjälle pelkän tilauspainikkeen, jos käyttäjä ei vielä ole kohdelistan tilaaja; painike käyttää kirjautuneen käyttäjän sähköpostiosoitetta piilotettuna kenttänä
 - vaihtaa kirjautuneen käyttäjän tilauspainikkeen onnistuneen AcyMailing-vastauksen jälkeen heti tekstiksi `Olet jo uutiskirjeen tilaaja.`, jotta käyttäjän ei tarvitse päivittää sivua nähdäkseen tilan
 - tarjoaa yhteisen AcyMailing-helperin, jolla rekisteröityminen, maksuton tapahtumailmoittautuminen ja WooCommerce-kassa voivat tilata sähköpostiosoitteen samalle kohdelistalle
@@ -114,13 +114,14 @@ AcyMailingin `Require confirmation` -asetus määrää, vaatiiko uusi tilaus sä
 
 Testaa käyttöönoton jälkeen:
 
-- footer näyttää lomakkeen desktopissa ja mobiilissa
+- etusivun iso pre-footer ja alasivujen kompakti kaista näyttävät lomakkeen desktopissa ja mobiilissa
+- slim footer (brändi, navigaatio, yhteystiedot, some) näkyy kaikilla sivuilla
 - lomake toimii näppäimistöllä ja focus-tila näkyy
 - tumma teema näyttää kentät ja painikkeet luettavasti
 - kirjautumaton käyttäjä voi tilata uutiskirjeen, jos AcyMailing-asetukset sallivat sen
 - kirjautunut käyttäjä, joka ei ole kohdelistan tilaaja, voi tilata uutiskirjeen ilman sähköpostiosoitteen uudelleenkirjoittamista
 - kirjautuneen käyttäjän tilauspainike näyttää lähetyksen aikana tilan `Tilataan...` ja onnistumisen jälkeen tekstin `Olet jo uutiskirjeen tilaaja.`
-- kirjautunut käyttäjä, joka on jo kohdelistan tilaaja, näkee tekstin `Olet jo uutiskirjeen tilaaja.` lomakkeen sijaan
+- kirjautunut käyttäjä, joka on jo kohdelistan tilaaja, ei näe pre-footer-kaistaa lainkaan (vain slim footer)
 - rekisteröitymisen opt-in lisää uuden käyttäjän sähköpostin uutiskirjelistalle
 - maksuttoman tapahtumailmoittautumisen opt-in lisää ilmoittautujan sähköpostin uutiskirjelistalle eikä estä ilmoittautumista, jos AcyMailing-tilaus epäonnistuu
 - WooCommerce-kassan opt-in lisää billing email -osoitteen uutiskirjelistalle eikä estä tilausta, jos AcyMailing-tilaus epäonnistuu
@@ -133,7 +134,6 @@ Jos frontendissä näkyy virhe `You are not allowed to modify this user`, testaa
 
 Tämä MVP ei sisällä:
 
-- etusivun erillistä uutiskirjenostoa
 - AcyMailing-automaatioita tai kuittiviestejä
 - uutiskirjeen lähetyspohjaa tai SMTP-asetuksia
 

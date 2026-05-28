@@ -65,7 +65,9 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | `single-gallery_album.php`   | Single album                  |
 | `archive-rytkoset_event.php` | Event archive (`/tapahtumat`) |
 | `archive-gallery_album.php`  | Album archive (`/albumit`)    |
-| `header.php` / `footer.php`  | Site header and footer        |
+| `header.php` / `footer.php`  | Site header; footer = pre-footer band + slim footer |
+
+Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above the slim footer on every page — `template-parts/pre-footer-large.php` on the front page (`is_front_page()`), `template-parts/pre-footer-compact.php` elsewhere. Each partial calls `rytkoset_theme_get_footer_newsletter_form()` and renders nothing when there is no form to show (active subscriber, or newsletter shortcode not configured). The slim footer (`<footer class="site-footer">`) holds brand, footer nav, contact email and social links, and shows on all pages.
 
 ### functions.php and inc/ modules
 
