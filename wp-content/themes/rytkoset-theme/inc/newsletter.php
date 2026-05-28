@@ -727,13 +727,19 @@ if ( ! function_exists( 'rytkoset_theme_get_logged_in_newsletter_button_markup' 
 	}
 }
 
-if ( ! function_exists( 'rytkoset_theme_get_footer_newsletter_markup' ) ) {
+if ( ! function_exists( 'rytkoset_theme_get_footer_newsletter_form' ) ) {
 	/**
-	 * Builds the footer newsletter signup markup.
+	 * Builds the inner newsletter form markup for the pre-footer.
+	 *
+	 * Returns only the form element (no wrapping section/heading), so the
+	 * pre-footer partials can place it inside the large card or the compact row.
+	 * Returns an empty string when there is nothing to show — newsletter not
+	 * configured, or the current logged-in user is already an active subscriber
+	 * (the pre-footer band is hidden entirely in that case).
 	 *
 	 * @return string
 	 */
-	function rytkoset_theme_get_footer_newsletter_markup() {
+	function rytkoset_theme_get_footer_newsletter_form() {
 		$shortcode = rytkoset_theme_get_newsletter_shortcode();
 
 		if ( '' === $shortcode || ! shortcode_exists( 'acymailing_form_shortcode' ) ) {
@@ -743,43 +749,19 @@ if ( ! function_exists( 'rytkoset_theme_get_footer_newsletter_markup' ) ) {
 		$form_id  = rytkoset_theme_get_newsletter_form_id( $shortcode );
 		$list_ids = rytkoset_theme_get_newsletter_form_list_ids( $form_id );
 
+		// Active subscriber: no form, so the pre-footer band is omitted.
 		if ( rytkoset_theme_current_user_has_newsletter_subscription( $list_ids ) ) {
-			ob_start();
-			?>
-			<section class="site-footer__newsletter" aria-labelledby="site-footer-newsletter-title">
-				<h2 id="site-footer-newsletter-title" class="site-footer__newsletter-title">
-					<?php esc_html_e( 'Tilaa uutiskirje', 'rytkoset-theme' ); ?>
-				</h2>
-				<p class="site-footer__newsletter-text">
-					<?php esc_html_e( 'Olet jo uutiskirjeen tilaaja.', 'rytkoset-theme' ); ?>
-				</p>
-			</section>
-			<?php
-
-			return trim( ob_get_clean() );
+			return '';
 		}
 
+		// Logged-in non-subscriber: single subscribe button.
 		$logged_in_button_markup = rytkoset_theme_get_logged_in_newsletter_button_markup( $form_id, $list_ids );
 
 		if ( '' !== $logged_in_button_markup ) {
-			ob_start();
-			?>
-			<section class="site-footer__newsletter" aria-labelledby="site-footer-newsletter-title">
-				<h2 id="site-footer-newsletter-title" class="site-footer__newsletter-title">
-					<?php esc_html_e( 'Tilaa uutiskirje', 'rytkoset-theme' ); ?>
-				</h2>
-				<p class="site-footer__newsletter-text">
-					<?php esc_html_e( 'Saat ajankohtaiset tiedot sukuseuran uutisista ja tapahtumista sähköpostiisi.', 'rytkoset-theme' ); ?>
-				</p>
-				<div class="site-footer__newsletter-form">
-					<?php echo $logged_in_button_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup is generated and escaped above. ?>
-				</div>
-			</section>
-			<?php
-
-			return trim( ob_get_clean() );
+			return $logged_in_button_markup;
 		}
 
+		// Guest: full AcyMailing subscription form (email + consent + button).
 		$form_markup = trim( do_shortcode( $shortcode ) );
 
 		if ( '' === $form_markup || $form_markup === $shortcode ) {
@@ -789,25 +771,6 @@ if ( ! function_exists( 'rytkoset_theme_get_footer_newsletter_markup' ) ) {
 		$form_markup = preg_replace( '#<style\b[^>]*>.*?</style>#is', '', $form_markup );
 		$form_markup = is_string( $form_markup ) ? trim( $form_markup ) : '';
 
-		if ( '' === $form_markup ) {
-			return '';
-		}
-
-		ob_start();
-		?>
-		<section class="site-footer__newsletter" aria-labelledby="site-footer-newsletter-title">
-			<h2 id="site-footer-newsletter-title" class="site-footer__newsletter-title">
-				<?php esc_html_e( 'Tilaa uutiskirje', 'rytkoset-theme' ); ?>
-			</h2>
-			<p class="site-footer__newsletter-text">
-				<?php esc_html_e( 'Saat ajankohtaiset tiedot sukuseuran uutisista ja tapahtumista sähköpostiisi.', 'rytkoset-theme' ); ?>
-			</p>
-			<div class="site-footer__newsletter-form">
-				<?php echo $form_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- AcyMailing renders the subscription form markup. ?>
-			</div>
-		</section>
-		<?php
-
-		return trim( ob_get_clean() );
+		return $form_markup;
 	}
 }
