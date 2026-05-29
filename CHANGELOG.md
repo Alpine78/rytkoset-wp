@@ -27,6 +27,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - WooCommerce-kaupan brändin mukaiset alasvetovalikko- ja painiketyylit.
 
 ### Changed
+- Etusivun hero ja sisältölohkot uudistettu Claude Designin mallin mukaan: hero split-layoutiksi tervetulokuvituksella, Sukujuhlat Tampereella nostettu kohokohta-feature-lohkoksi (päivämäärä-/paikkachipit + kelluva merkki) ja sisältö rakentuu vuorottelevista vaalea/tumma-lohkoista (Albumit, Jäsenyys, Kauppa, Sukututkimus/Viljo); uusi `assets/css/home.css`, `--home-band-*`-tokenit molemmille teemoille ja `.btn--outline` (#289)
 - Kirjautumis-, rekisteröitymis- ja salasananunohdussivut (`wp-login.php`) uudistettu Claude Designin split-layoutiin: sininen brändipaneeli + lomakekortti, näkymäkohtaiset välilehdet/otsikot, uutiskirjeen opt-in -kortti ja sivuston teemavalintaa seuraava tumma/vaalea teema; toteutus `inc/login.php` + `assets/css/login.css` (#285)
 - Footerin uutiskirjetilaus siirtyi pre-footer-kaistaan; aktiiviselle tilaajalle koko kaista piilotetaan aiemman tekstihuomautuksen sijaan ja `assets/css/footer.css` kirjoitettiin uusiksi (#278)
 - Tampere 2026 -järjestäjäilmoitusten vastaanottajat siirretty globaalista asetuksesta tapahtuman omaan `Järjestäjäilmoitukset`-kenttään (#269)

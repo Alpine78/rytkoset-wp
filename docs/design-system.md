@@ -61,6 +61,7 @@ Dark theme overrides all of the above in the `:root[data-theme="dark"]` block â€
 - `.section__narrow` (720px) / `.section__wide` (1200px) â€” content width caps
 - `.grid` with `--grid--3` for three-column layouts
 - Breakpoints in use: `48rem`, `64rem` (rem-based), and `640px / 960px / 1280px` (px-based, hero areas)
+- Front-page content bands (`assets/css/home.css`) alternate light/dark with the `--home-band-light`, `--home-band-light-edge`, `--home-band-dark`, `--home-band-dark-2` tokens. These adapt in the dark theme: a "light" band uses the dark surface token and a "dark" band deepens, keeping the alternating rhythm coherent. Light bands use `--color-text`/`--color-text-mute` (theme-aware); dark bands always use light text since navy is dark in both themes
 
 ## Core components
 

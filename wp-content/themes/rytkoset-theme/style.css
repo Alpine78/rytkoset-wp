@@ -17,6 +17,9 @@ Text Domain: rytkoset-theme
 /* Hero-osio etusivulla */
 @import url("assets/css/hero.css");
 
+/* Etusivun sisältölohkot (vaalea/tumma-vuorottelu) */
+@import url("assets/css/home.css");
+
 /* Komponentit: napit, kortit jne. */
 @import url("assets/css/components.css");
 
