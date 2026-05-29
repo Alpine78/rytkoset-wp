@@ -67,6 +67,8 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | `archive-gallery_album.php`  | Album archive (`/albumit`)    |
 | `header.php` / `footer.php`  | Site header; footer = pre-footer band + slim footer |
 
+Front page (#289): `front-page.php` builds a Claude Design layout — a split hero (`.hero__content--split`) with a welcome illustration, a Sukujuhlat **feature** band as the showpiece (date/location chips + floating badge), then alternating light/dark content bands (Albumit, Jäsenyys, Kauppa, Sukututkimus/Viljo). Band tones use the `--home-band-*` tokens (`assets/css/base.css`) which adapt to the dark theme; styles live in `assets/css/home.css`. Illustrations are theme assets under `assets/images/home/`.
+
 Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above the slim footer on every page — `template-parts/pre-footer-large.php` on the front page (`is_front_page()`), `template-parts/pre-footer-compact.php` elsewhere. Each partial calls `rytkoset_theme_get_footer_newsletter_form()` and renders nothing when there is no form to show (active subscriber, or newsletter shortcode not configured). The slim footer (`<footer class="site-footer">`) holds brand, footer nav, contact email and social links, and shows on all pages.
 
 ### functions.php and inc/ modules
@@ -111,7 +113,8 @@ assets/css/nav.base.css      # Shared navigation styles
 assets/css/nav.desktop.css   # Desktop navigation
 assets/css/nav.mobile.css    # Mobile navigation (hamburger)
 assets/css/nav.account.css   # User/account menu
-assets/css/hero.css          # Front page hero section
+assets/css/hero.css          # Front page hero section (split layout with illustration)
+assets/css/home.css          # Front page content bands (alternating light/dark, feature + story)
 assets/css/gallery.css       # Gallery and albums
 assets/css/footer.css        # Footer
 assets/css/login.css         # WP login page branding
