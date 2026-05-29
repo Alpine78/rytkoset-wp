@@ -20,6 +20,9 @@ Text Domain: rytkoset-theme
 /* Etusivun sisältölohkot (vaalea/tumma-vuorottelu) */
 @import url("assets/css/home.css");
 
+/* 404-sivu (kadonnut oksa sukupuussa) */
+@import url("assets/css/404.css");
+
 /* Komponentit: napit, kortit jne. */
 @import url("assets/css/components.css");
 

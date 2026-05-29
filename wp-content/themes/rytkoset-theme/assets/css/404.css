@@ -1,0 +1,223 @@
+/* =====================================================
+   404 — "kadonnut oksa sukupuussa"
+   Tumma navy-osio kuten etusivun hero. Kermakortti ja
+   sukupuukaavio ovat itsenäinen vaalea kuvitus, joten
+   niiden paletti on kiinteä (--nf-*) eikä seuraa teemaa.
+   ===================================================== */
+.nf {
+  /* Sama gradientti kuin etusivun herossa (assets/css/hero.css) */
+  background: linear-gradient(180deg, var(--header-primary-bg) 0%, var(--header-utility-bg) 100%);
+  color: var(--color-text-inverted);
+
+  /* Kuvituksen kiinteä paletti */
+  --nf-cream: #efe7d6;
+  --nf-caption: rgba(21, 64, 110, 0.72);
+}
+
+.nf__inner {
+  display: grid;
+  grid-template-columns: 1.04fr 0.96fr;
+  gap: 60px;
+  align-items: center;
+  padding-top: clamp(4rem, 8vw, 5.25rem);
+  padding-bottom: clamp(4.75rem, 9vw, 6rem);
+  min-height: min(72vh, 760px);
+}
+
+/* ---- Tekstipalsta ---- */
+.nf__code {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 14px;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: clamp(64px, 9vw, 120px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--color-accent);
+  margin: 0 0 6px;
+}
+
+.nf__code small {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  transform: translateY(-0.7em);
+}
+
+.nf__title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(32px, 4.4vw, 52px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+  text-wrap: balance;
+}
+
+.nf__lede {
+  font-size: 18px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  max-width: 480px;
+  margin: 0 0 30px;
+  text-wrap: pretty;
+}
+
+.nf__actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 38px;
+}
+
+.nf__quick {
+  border-top: 1px solid var(--color-nav-border);
+  padding-top: 22px;
+}
+
+.nf__quick-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 12px;
+}
+
+.nf__chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.nf__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-nav-surface);
+  border: 1px solid var(--color-nav-border);
+  color: var(--color-text-inverted);
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              transform var(--transition-fast);
+}
+
+.nf__chip:hover {
+  background: var(--color-nav-hover);
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.nf__chip span {
+  transition: transform var(--transition-fast);
+}
+
+.nf__chip:hover span {
+  transform: translateX(2px);
+}
+
+/* ---- Kuvituskortti ---- */
+.nf__media {
+  position: relative;
+}
+
+.nf__card {
+  margin: 0;
+  background: var(--nf-cream);
+  border-radius: 22px;
+  padding: 34px 34px 26px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nf__card svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.nf__card-caption {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 13.5px;
+  font-style: italic;
+  color: var(--nf-caption);
+}
+
+/* SVG-paletti (sukupuukuva) */
+.nf-tree {
+  --line: #15406e;
+  --frame: #c79a3a;
+  --paper: #efe7d6;
+  --leaf: #8a9a63;
+  --leaf-2: #6f8050;
+}
+
+.nf-tree__line {
+  stroke: var(--line);
+  stroke-width: 3;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.nf-tree__frame {
+  fill: var(--paper);
+  stroke: var(--frame);
+  stroke-width: 3;
+}
+
+.nf-tree__leaf {
+  fill: var(--leaf);
+}
+
+.nf-tree__leaf--alt {
+  fill: var(--leaf-2);
+}
+
+.nf-tree__miss {
+  fill: rgba(199, 154, 58, 0.1);
+  stroke: var(--frame);
+  stroke-width: 3;
+  stroke-dasharray: 8 7;
+}
+
+.nf-tree__miss-text {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  fill: var(--line);
+}
+
+@media (max-width: 920px) {
+  .nf__inner {
+    grid-template-columns: 1fr;
+    gap: 44px;
+    padding-top: clamp(3rem, 8vw, 4rem);
+    padding-bottom: clamp(3.5rem, 9vw, 4.5rem);
+    min-height: 0;
+  }
+
+  /* Kuvitus tekstin yläpuolelle mobiilissa */
+  .nf__media {
+    order: -1;
+    max-width: 460px;
+  }
+}
+
+@media (max-width: 540px) {
+  .nf__card {
+    padding: 24px 22px 20px;
+  }
+}
