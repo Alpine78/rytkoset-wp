@@ -37,7 +37,7 @@
     <div class="container home-feature__split">
       <div class="home-feature__copy">
         <p class="home-feature__eyebrow">Suvun kohokohta</p>
-        <h2 class="home-feature__title">Sukujuhlat Tampereella 29.8.2026</h2>
+        <h2 class="home-feature__title">Sukujuhlat Tampereella</h2>
         <div class="home-feature__meta">
           <span class="home-feature__chip">
             <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
