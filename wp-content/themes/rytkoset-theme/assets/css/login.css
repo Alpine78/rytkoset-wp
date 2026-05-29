@@ -54,6 +54,14 @@ body.login a { color: inherit; }
 body.login img { display: block; max-width: 100%; }
 body.login button { font-family: inherit; }
 
+/* Inline-ikonien oletuskoko — estää SVG:n paisumisen jos kontekstisääntö puuttuu. */
+.auth-ic {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.auth-ic svg { width: 16px; height: 16px; }
+
 /* Piilotetaan WP:n oletuslogo-otsikko — brändi on vasemmassa paneelissa. */
 body.login h1 { display: none; }
 
@@ -598,6 +606,11 @@ body.login #login_error a {
 }
 :root[data-theme="dark"] body.login .message a,
 :root[data-theme="dark"] body.login #login_error a { color: var(--color-accent); }
+
+/* Salasanan palautuksessa WP:n ohjelaatikko toistaa näkymäotsikon alatekstin —
+   piilotetaan enhanced-tilassa (ilman JS:ää ohje jää näkyviin). Virheet
+   (#login_error) ja muiden näkymien viestit säilyvät. */
+body.login.js.login-action-lostpassword #login > .message { display: none; }
 
 /* =================================================================
    ALAVIIVALINKKI (#nav restyle) + back-linkki + footer
