@@ -32,7 +32,7 @@ $rytkoset_404_quick_links = array(
 );
 ?>
 
-<main id="primary" class="site-main">
+<main id="primary" class="site-main" tabindex="-1">
 
 	<section class="nf" aria-labelledby="nf-title">
 		<div class="container nf__inner">

@@ -427,3 +427,9 @@
   border-radius: var(--radius-nav);
   text-decoration: none;
 }
+
+/* Skip-linkin kohde saa fokuksen vain ohjelmallisesti, joten suuren
+   container-ääriviivan piilotus on tarkoituksellista. */
+#primary:focus {
+  outline: none;
+}

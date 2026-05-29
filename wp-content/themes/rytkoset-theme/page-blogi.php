@@ -21,7 +21,7 @@ $blog_query = new WP_Query(
 );
 ?>
 
-<main id="primary" class="site-main">
+<main id="primary" class="site-main" tabindex="-1">
 	<section class="section">
 		<div class="container">
 			<nav class="breadcrumb" aria-label="<?php esc_attr_e( 'Murupolku', 'rytkoset-theme' ); ?>">

@@ -37,6 +37,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Tietosuojaselosteen pohjaan täydennetty rekisteröidyn oikeudet, automaattisen päätöksenteon maininta, YouTube/Google-upotusten tietojen käsittely ja sisäisten käyttöoikeuksien kuvaus.
 
 ### Fixed
+- Navigaation saavutettavuus: `<main id="primary">`-maamerkki yhtenäistettiin kaikkiin sisältöpohjiin (mm. `page.php`, tapahtuma- ja albumiarkistot, `index.php`, `bbpress.php`), jotta "Siirry sisältöön" -ohituslinkillä on aina kohde; mainille lisättiin `tabindex="-1"`, jolloin näppäimistöfokus siirtyy sisältöön, ja mobiilivalikon alavalikon avauspainike sai näkyvän fokusrenkaan (#83)
 - Tampere 2026 -tilausten ylimääräiset osallistujien 2-10 buffet-kentät piilotetaan tilausvahvistuksesta, sähköposteista ja administa sekä siivotaan uusilta Store API -tilauksilta (#271)
 - Tietosuojaselosteen pitkät linkit, sähköpostiosoitteet ja koodimaiset tekstipätkät rivittyvät mobiilileveydellä ilman vaakasuuntaista overflow’ta (#267)
 - Maksuttoman tapahtuman julkinen ilmoittautumislomake hylkää honeypot-kentän täyttävät bottimaiset lähetykset ilman ilmoittautumisen tallennusta.
