@@ -298,6 +298,11 @@
   outline-offset: 2px;
 }
 
+.mobile-submenu-toggle:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 2px;
+}
+
 .mobile-submenu-toggle__icon {
   display: inline-flex;
   align-items: center;

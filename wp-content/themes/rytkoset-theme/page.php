@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 get_header();
 ?>
 
+<main id="primary" class="site-main" tabindex="-1">
 <section class="section">
         <div class="container section__narrow">
                 <?php
@@ -40,6 +41,7 @@ get_header();
                 ?>
         </div>
 </section>
+</main>
 
 <?php
 get_footer();

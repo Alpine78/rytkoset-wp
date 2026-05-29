@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 ?>
-<main id="main-content">
+<main id="primary" class="site-main" tabindex="-1">
 <?php
 if ( function_exists( 'bbp_is_single_topic' ) && bbp_is_single_topic() ) {
 	bbp_get_template_part( 'content', 'single-topic' );
