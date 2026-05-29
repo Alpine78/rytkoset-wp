@@ -89,7 +89,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 | `inc/social-links.php`                 | Social media links in header/footer; icons inlined via `rytkoset_theme_inline_icon`      |
 | `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                 |
 | `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                    |
-| `inc/login.php`                        | Login page branding and Finnish translations                                             |
+| `inc/login.php`                        | `wp-login.php` redesign: JS builds a split-layout brand panel + form card around `#login`, per-view copy/tabs, theme-following dark mode, Finnish translations |
 | `inc/newsletter.php`                   | AcyMailing newsletter integration: footer signup, subscription helpers and opt-in hooks   |
 | `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                  |
 | `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                           |

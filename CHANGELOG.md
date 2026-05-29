@@ -27,6 +27,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - WooCommerce-kaupan brändin mukaiset alasvetovalikko- ja painiketyylit.
 
 ### Changed
+- Kirjautumis-, rekisteröitymis- ja salasananunohdussivut (`wp-login.php`) uudistettu Claude Designin split-layoutiin: sininen brändipaneeli + lomakekortti, näkymäkohtaiset välilehdet/otsikot, uutiskirjeen opt-in -kortti ja sivuston teemavalintaa seuraava tumma/vaalea teema; toteutus `inc/login.php` + `assets/css/login.css` (#285)
 - Footerin uutiskirjetilaus siirtyi pre-footer-kaistaan; aktiiviselle tilaajalle koko kaista piilotetaan aiemman tekstihuomautuksen sijaan ja `assets/css/footer.css` kirjoitettiin uusiksi (#278)
 - Tampere 2026 -järjestäjäilmoitusten vastaanottajat siirretty globaalista asetuksesta tapahtuman omaan `Järjestäjäilmoitukset`-kenttään (#269)
 - Päivitetty `CLAUDE.md`:n `inc/`-moduulitaulukko ja WooCommerce-arkkitehtuurihuomio vastaamaan nykyistä `functions.php`-include-listaa.

@@ -507,11 +507,24 @@ if ( ! function_exists( 'rytkoset_theme_render_registration_newsletter_opt_in' )
 			return;
 		}
 
-		rytkoset_theme_render_newsletter_opt_in_checkbox(
-			'rytkoset-newsletter-opt-in',
-			'rytkoset_newsletter_opt_in',
-			'rytkoset-login-newsletter-opt-in'
-		);
+		$mail_icon  = function_exists( 'rytkoset_theme_inline_icon' ) ? rytkoset_theme_inline_icon( 'mail', 'ui' ) : '';
+		$check_icon = function_exists( 'rytkoset_theme_inline_icon' ) ? rytkoset_theme_inline_icon( 'check', 'ui' ) : '';
+		?>
+		<div class="rytkoset-login-newsletter-opt-in">
+			<label class="newsletter" for="rytkoset-newsletter-opt-in">
+				<input id="rytkoset-newsletter-opt-in" type="checkbox" name="rytkoset_newsletter_opt_in" value="1" />
+				<span class="newsletter__icon"><?php echo $mail_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted inline SVG from theme icon set. ?></span>
+				<span class="newsletter__text">
+					<span class="newsletter__head">
+						<span class="newsletter__title"><?php esc_html_e( 'Tilaa sukuseuran uutiskirje', 'rytkoset-theme' ); ?></span>
+						<span class="newsletter__opt"><?php esc_html_e( 'Vapaaehtoinen', 'rytkoset-theme' ); ?></span>
+					</span>
+					<span class="newsletter__desc"><?php esc_html_e( 'Saat ajankohtaiset uutiset, tapahtumat ja sukukokouskutsut suoraan sähköpostiisi. Voit perua tilauksen koska tahansa.', 'rytkoset-theme' ); ?></span>
+				</span>
+				<span class="newsletter__check"><?php echo $check_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted inline SVG from theme icon set. ?></span>
+			</label>
+		</div>
+		<?php
 	}
 }
 add_action( 'register_form', 'rytkoset_theme_render_registration_newsletter_opt_in' );
