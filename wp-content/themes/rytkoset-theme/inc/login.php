@@ -85,7 +85,7 @@ function rytkoset_theme_get_login_layout_config() {
 		'login'  => array(
 			'eyebrow'        => __( 'Jäsenten alue', 'rytkoset-theme' ),
 			'title'          => __( 'Tervetuloa takaisin', 'rytkoset-theme' ),
-			'sub'            => __( 'Kirjaudu sisään päästäksesi albumeihin, foorumille ja jäsenetuihin.', 'rytkoset-theme' ),
+			'sub'            => __( 'Kirjaudu sisään jatkaaksesi matkaa. Kehitämme sivustolle jatkuvasti uusia ominaisuuksia rekisteröityneille käyttäjille.', 'rytkoset-theme' ),
 			'brandEyebrow'   => __( 'Rytkösten sukuseura', 'rytkoset-theme' ),
 			'brandHeadline'  => __( 'Sukulaisten oma kohtaamispaikka.', 'rytkoset-theme' ),
 			'brandLede'      => __( 'Kirjaudu sisään ja jatka matkaa suvun tarinoiden, kuvien ja tapahtumien parissa.', 'rytkoset-theme' ),
@@ -94,12 +94,12 @@ function rytkoset_theme_get_login_layout_config() {
 			'switchLinkUrl'  => wp_registration_url(),
 		),
 		'register' => array(
-			'eyebrow'        => __( 'Uusi jäsen', 'rytkoset-theme' ),
+			'eyebrow'        => __( 'Rekisteröidy sivustolle', 'rytkoset-theme' ),
 			'title'          => __( 'Luo tunnus', 'rytkoset-theme' ),
 			'sub'            => __( 'Rekisteröidy mukaan — Rytkösiä sukupolvesta toiseen.', 'rytkoset-theme' ),
 			'brandEyebrow'   => __( 'Liity mukaan', 'rytkoset-theme' ),
 			'brandHeadline'  => __( 'Tule osaksi suvun tarinaa.', 'rytkoset-theme' ),
-			'brandLede'      => __( 'Jäsenenä pääset käsiksi albumeihin, foorumiin ja sukukokousten tietoihin.', 'rytkoset-theme' ),
+			'brandLede'      => __( 'Luo oma käyttäjätunnus, niin pääset aktiivisemmin mukaan sukuseuran verkkotoimintaan', 'rytkoset-theme' ),
 			'switchText'     => __( 'Onko sinulla jo tunnus?', 'rytkoset-theme' ),
 			'switchLinkText' => __( 'Kirjaudu sisään', 'rytkoset-theme' ),
 			'switchLinkUrl'  => wp_login_url(),
@@ -109,8 +109,8 @@ function rytkoset_theme_get_login_layout_config() {
 			'title'          => __( 'Unohtuiko salasana?', 'rytkoset-theme' ),
 			'sub'            => __( 'Kirjoita käyttäjätunnuksesi tai sähköpostiosoitteesi, niin lähetämme sinulle linkin uuden salasanan asettamiseen.', 'rytkoset-theme' ),
 			'brandEyebrow'   => __( 'Ei hätää', 'rytkoset-theme' ),
-			'brandHeadline'  => __( 'Autetaan sinut takaisin sisään.', 'rytkoset-theme' ),
-			'brandLede'      => __( 'Palautuslinkki on perillä hetkessä. Tunnukset pysyvät tallessa, suku odottaa.', 'rytkoset-theme' ),
+			'brandHeadline'  => __( 'Ei hätää, palautetaan salasanasi.', 'rytkoset-theme' ),
+			'brandLede'      => __( 'Palautuslinkki on perillä hetkessä. Suku odottaa!', 'rytkoset-theme' ),
 			'switchText'     => __( 'Muistitko sittenkin?', 'rytkoset-theme' ),
 			'switchLinkText' => __( 'Kirjaudu sisään', 'rytkoset-theme' ),
 			'switchLinkUrl'  => wp_login_url(),
@@ -234,7 +234,7 @@ function rytkoset_theme_login_layout_script() {
 			/* ---- Kortin yläosa: välilehdet / back-linkki + näkymäotsikko ---- */
 			var heading = loginEl.querySelector('h1');
 			var ref = heading ? heading.nextSibling : loginEl.firstChild;
-			function insertRef(node) { loginEl.insertBefore(node, ref); }
+			function insertRef(node) { return loginEl.insertBefore(node, ref); }
 
 			if (view === 'login' || view === 'register') {
 				var tabs = el('div', 'auth-tabs');
@@ -251,7 +251,9 @@ function rytkoset_theme_login_layout_script() {
 				tabs.appendChild(t2);
 				insertRef(tabs);
 			} else if (view === 'forgot') {
-				insertRef(linkWithLeadIcon(CFG.loginUrl, CFG.icons.arrowLeft, CFG.backLinkText)).className = 'back-link';
+				var back = linkWithLeadIcon(CFG.loginUrl, CFG.icons.arrowLeft, CFG.backLinkText);
+				back.className = 'back-link';
+				insertRef(back);
 			}
 
 			if (CFG.views[view]) {
@@ -353,8 +355,8 @@ function rytkoset_theme_login_finnish_strings( $translated, $original, $domain )
 		'Username'                  => 'Käyttäjätunnus',
 		'Email'                     => 'Sähköposti',
 		'Registration confirmation will be emailed to you.' => 'Vahvistus rekisteröitymisestä lähetetään sähköpostiisi.',
-		'Please enter your username or email address. You will receive an email message with instructions on how to reset your password.' => 'Anna käyttäjätunnus tai sähköposti. Saat sähköpostitse ohjeet salasanan vaihtoon.',
-		'Get New Password'          => 'Lähetä uusi salasana',
+		'Please enter your username or email address. You will receive an email message with instructions on how to reset your password.' => 'Syötä käyttäjätunnuksesi tai sähköpostiosoitteesi saadaksesi ohjeet salasanan vaihtoon.',
+		'Get New Password'          => 'Lähetä palautuslinkki',
 		$back_link                  => '← Palaa Rytkösten sukuseuran pääsivulle',
 		'← Go to %s'                => '← Palaa Rytkösten sukuseuran pääsivulle',
 		'&larr; Go to %s'           => '← Palaa Rytkösten sukuseuran pääsivulle',
