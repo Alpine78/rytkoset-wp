@@ -646,6 +646,7 @@ if ( ! function_exists( 'rytkoset_theme_get_logged_in_newsletter_button_markup' 
 			id="<?php echo esc_attr( $form_name ); ?>"
 			name="<?php echo esc_attr( $form_name ); ?>"
 			class="site-footer__newsletter-action"
+			aria-label="<?php esc_attr_e( 'Tilaa uutiskirje', 'rytkoset-theme' ); ?>"
 			method="post"
 			data-success-message="<?php esc_attr_e( 'Olet jo uutiskirjeen tilaaja.', 'rytkoset-theme' ); ?>"
 			data-loading-message="<?php esc_attr_e( 'Tilataan...', 'rytkoset-theme' ); ?>"

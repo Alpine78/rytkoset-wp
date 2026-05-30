@@ -128,6 +128,7 @@ function rytkoset_theme_get_login_layout_config() {
 		'loginUrl'             => wp_login_url(),
 		'registerUrl'          => wp_registration_url(),
 		'lostpasswordUrl'      => wp_lostpassword_url(),
+		'authNavLabel'         => __( 'Kirjautuminen', 'rytkoset-theme' ),
 		'tabLogin'             => __( 'Kirjaudu sisään', 'rytkoset-theme' ),
 		'tabRegister'          => __( 'Rekisteröidy', 'rytkoset-theme' ),
 		'lostpasswordLinkText' => __( 'Unohditko salasanasi?', 'rytkoset-theme' ),
@@ -237,16 +238,14 @@ function rytkoset_theme_login_layout_script() {
 			function insertRef(node) { return loginEl.insertBefore(node, ref); }
 
 			if (view === 'login' || view === 'register') {
-				var tabs = el('div', 'auth-tabs');
-				tabs.setAttribute('role', 'tablist');
+				var tabs = el('nav', 'auth-tabs');
+				tabs.setAttribute('aria-label', CFG.authNavLabel || 'Kirjautuminen');
 				var t1 = el('a', 'auth-tab' + (view === 'login' ? ' is-active' : ''), CFG.tabLogin);
 				t1.href = CFG.loginUrl;
-				t1.setAttribute('role', 'tab');
-				t1.setAttribute('aria-selected', view === 'login' ? 'true' : 'false');
+				if (view === 'login') t1.setAttribute('aria-current', 'page');
 				var t2 = el('a', 'auth-tab' + (view === 'register' ? ' is-active' : ''), CFG.tabRegister);
 				t2.href = CFG.registerUrl;
-				t2.setAttribute('role', 'tab');
-				t2.setAttribute('aria-selected', view === 'register' ? 'true' : 'false');
+				if (view === 'register') t2.setAttribute('aria-current', 'page');
 				tabs.appendChild(t1);
 				tabs.appendChild(t2);
 				insertRef(tabs);
