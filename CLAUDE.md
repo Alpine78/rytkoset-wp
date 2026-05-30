@@ -56,15 +56,15 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 
 ### Template hierarchy
 
-| File                         | Purpose                       |
-| ---------------------------- | ----------------------------- |
-| `front-page.php`             | Front page                    |
-| `page.php`                   | Static pages                  |
-| `single.php`                 | Blog post                     |
-| `single-rytkoset_event.php`  | Single event                  |
-| `single-gallery_album.php`   | Single album                  |
-| `archive-rytkoset_event.php` | Event archive (`/tapahtumat`) |
-| `archive-gallery_album.php`  | Album archive (`/albumit`)    |
+| File                         | Purpose                                             |
+| ---------------------------- | --------------------------------------------------- |
+| `front-page.php`             | Front page                                          |
+| `page.php`                   | Static pages                                        |
+| `single.php`                 | Blog post                                           |
+| `single-rytkoset_event.php`  | Single event                                        |
+| `single-gallery_album.php`   | Single album                                        |
+| `archive-rytkoset_event.php` | Event archive (`/tapahtumat`)                       |
+| `archive-gallery_album.php`  | Album archive (`/albumit`)                          |
 | `header.php` / `footer.php`  | Site header; footer = pre-footer band + slim footer |
 
 Front page (#289): `front-page.php` builds a Claude Design layout — a split hero (`.hero__content--split`) with a welcome illustration, a Sukujuhlat **feature** band as the showpiece (date/location chips + floating badge), then alternating light/dark content bands (Albumit, Jäsenyys, Kauppa, Sukututkimus/Viljo). Band tones use the `--home-band-*` tokens (`assets/css/base.css`) which adapt to the dark theme; styles live in `assets/css/home.css`. Illustrations are theme assets under `assets/images/home/`.
@@ -75,29 +75,29 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 
 `functions.php` (~580 lines) contains theme setup, asset enqueue, header/nav helpers, and shared WooCommerce helpers (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Domain-specific logic is split into modules under `inc/`:
 
-| File                                   | Contents                                                                                 |
-| -------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `inc/events.php`                       | Event CPT, meta field registration and getters                                           |
-| `inc/event-registrations.php`          | Free event registration CPT and form                                                     |
-| `inc/event-registration-privacy.php`   | Privacy Tools export, erasure and anonymization for free event registrations             |
-| `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                       |
-| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email queue and WP-Cron rate limiter                           |
-| `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                  |
-| `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                |
-| `inc/media-library.php`                | Media library ordering by album                                                          |
-| `inc/digital-magazines.php`            | Digital magazine download pages                                                          |
-| `inc/icons.php`                        | Inline SVG icon helper (`rytkoset_theme_inline_icon`) — reads `currentColor` glyphs from `assets/icons/{social,ui}/` |
-| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp); icons via `rytkoset_theme_inline_icon`            |
-| `inc/social-links.php`                 | Social media links in header/footer; icons inlined via `rytkoset_theme_inline_icon`      |
-| `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                 |
-| `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                    |
+| File                                   | Contents                                                                                                                                                       |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inc/events.php`                       | Event CPT, meta field registration and getters                                                                                                                 |
+| `inc/event-registrations.php`          | Free event registration CPT and form                                                                                                                           |
+| `inc/event-registration-privacy.php`   | Privacy Tools export, erasure and anonymization for free event registrations                                                                                   |
+| `inc/event-participants-admin.php`     | `Events > Participants` admin view                                                                                                                             |
+| `inc/event-participants-messaging.php` | `Events > Messaging` bulk email queue and WP-Cron rate limiter                                                                                                 |
+| `inc/event-roles.php`                  | `event_organizer` role and capabilities                                                                                                                        |
+| `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                                                                                      |
+| `inc/media-library.php`                | Media library ordering by album                                                                                                                                |
+| `inc/digital-magazines.php`            | Digital magazine download pages                                                                                                                                |
+| `inc/icons.php`                        | Inline SVG icon helper (`rytkoset_theme_inline_icon`) — reads `currentColor` glyphs from `assets/icons/{social,ui}/`                                           |
+| `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp); icons via `rytkoset_theme_inline_icon`                                                                                  |
+| `inc/social-links.php`                 | Social media links in header/footer; icons inlined via `rytkoset_theme_inline_icon`                                                                            |
+| `inc/attachment-iptc.php`              | IPTC headline and description sync for attachment images                                                                                                       |
+| `inc/seo-meta.php`                     | Open Graph and Twitter Card meta tags                                                                                                                          |
 | `inc/login.php`                        | `wp-login.php` redesign: JS builds a split-layout brand panel + form card around `#login`, per-view copy/tabs, theme-following dark mode, Finnish translations |
-| `inc/newsletter.php`                   | AcyMailing newsletter integration: footer signup, subscription helpers and opt-in hooks   |
-| `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                  |
-| `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                           |
-| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications |
-| `inc/woocommerce-product-sync.php`     | WooCommerce product sync tool for local <-> dev                                          |
-| `inc/customizer-contact.php`           | Customizer contact fields for footer and admin email                                     |
+| `inc/newsletter.php`                   | AcyMailing newsletter integration: footer signup, subscription helpers and opt-in hooks                                                                        |
+| `inc/woocommerce-mollie.php`           | Mollie Finnish translations, RF reference normalization                                                                                                        |
+| `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                                                                                                 |
+| `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications                                                                       |
+| `inc/woocommerce-product-sync.php`     | WooCommerce product sync tool for local <-> dev                                                                                                                |
+| `inc/customizer-contact.php`           | Customizer contact fields for footer and admin email                                                                                                           |
 
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
