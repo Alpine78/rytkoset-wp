@@ -733,6 +733,26 @@ add_action( 'admin_post_rytkoset_submit_event_registration', 'rytkoset_theme_han
 add_action( 'admin_post_nopriv_rytkoset_submit_event_registration', 'rytkoset_theme_handle_event_registration_submission' );
 
 /**
+ * Maps a registration error code to the form field it concerns.
+ *
+ * Used to wire up aria-invalid + aria-describedby on the failing field after a
+ * redirect-based submission.
+ *
+ * @param string $error_code Error code from the redirect query string.
+ * @return string Field key (name|email|gdpr) or empty string when no specific field applies.
+ */
+function rytkoset_theme_get_event_registration_error_field( $error_code ) {
+	$map = array(
+		'missing_name'       => 'name',
+		'invalid_email'      => 'email',
+		'already_registered' => 'email',
+		'missing_consent'    => 'gdpr',
+	);
+
+	return isset( $map[ $error_code ] ) ? $map[ $error_code ] : '';
+}
+
+/**
  * Returns frontend registration feedback based on query parameters.
  *
  * @return array
@@ -743,6 +763,8 @@ function rytkoset_theme_get_event_registration_feedback() {
 	if ( 'success' === $status ) {
 		return array(
 			'type'    => 'success',
+			'code'    => '',
+			'field'   => '',
 			'message' => __( 'Ilmoittautuminen vastaanotettu. Kiitos!', 'rytkoset-theme' ),
 		);
 	}
@@ -753,14 +775,16 @@ function rytkoset_theme_get_event_registration_feedback() {
 
 	$error    = isset( $_GET['registration_error'] ) ? sanitize_key( wp_unslash( $_GET['registration_error'] ) ) : '';
 	$messages = array(
-		'missing_name'    => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
-		'invalid_email'   => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
+		'missing_name'       => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
+		'invalid_email'      => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
 		'missing_consent'    => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
 		'already_registered' => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
 	);
 
 	return array(
 		'type'    => 'error',
+		'code'    => $error,
+		'field'   => rytkoset_theme_get_event_registration_error_field( $error ),
 		'message' => isset( $messages[ $error ] )
 			? $messages[ $error ]
 			: __( 'Ilmoittautumista ei voitu tallentaa. Tarkista tiedot ja yritä uudelleen.', 'rytkoset-theme' ),
@@ -833,12 +857,21 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 
 	$form_id        = 'event-registration-form-' . $event_id;
 	$description_id = 'event-registration-description-' . $event_id;
+	$notice_id      = 'event-registration-notice-' . $event_id;
 	$feedback       = rytkoset_theme_get_event_registration_feedback();
 
 	if ( ! empty( $feedback ) && 'success' === $feedback['type'] ) {
 		rytkoset_theme_render_event_registration_confirmation( $event_id );
 		return;
 	}
+
+	$invalid_field   = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
+		? $feedback['field']
+		: '';
+	$invalid_attrs   = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
+	$name_invalid    = 'name' === $invalid_field ? $invalid_attrs : '';
+	$email_invalid   = 'email' === $invalid_field ? $invalid_attrs : '';
+	$gdpr_invalid    = 'gdpr' === $invalid_field ? $invalid_attrs : '';
 	?>
 	<section class="event-registration" aria-labelledby="<?php echo esc_attr( $form_id . '-title' ); ?>">
 		<h2 id="<?php echo esc_attr( $form_id . '-title' ); ?>" class="event-registration__title">
@@ -849,12 +882,12 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 		</p>
 
 		<?php if ( ! empty( $feedback ) && 'error' === $feedback['type'] ) : ?>
-			<div class="event-registration__notice event-registration__notice--error" role="alert">
+			<div id="<?php echo esc_attr( $notice_id ); ?>" class="event-registration__notice event-registration__notice--error" role="alert">
 				<?php echo esc_html( $feedback['message'] ); ?>
 			</div>
 		<?php endif; ?>
 
-		<form id="<?php echo esc_attr( $form_id ); ?>" class="event-registration__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" aria-describedby="<?php echo esc_attr( $description_id ); ?>">
+		<form id="<?php echo esc_attr( $form_id ); ?>" class="event-registration__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" aria-describedby="<?php echo esc_attr( $description_id ); ?>" data-invalid-field="<?php echo esc_attr( $invalid_field ); ?>">
 			<input type="hidden" name="action" value="rytkoset_submit_event_registration" />
 			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>" />
 			<input type="text" name="website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="display:none" />
@@ -865,7 +898,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 					<?php esc_html_e( 'Osallistujan nimi', 'rytkoset-theme' ); ?>
 					<span aria-hidden="true">*</span>
 				</label>
-				<input id="<?php echo esc_attr( $form_id . '-name' ); ?>" name="registration_name" type="text" autocomplete="name" required />
+				<input id="<?php echo esc_attr( $form_id . '-name' ); ?>" name="registration_name" type="text" autocomplete="name" required aria-required="true"<?php echo $name_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
 			</div>
 
 			<div class="event-registration__field">
@@ -873,7 +906,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 					<?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?>
 					<span aria-hidden="true">*</span>
 				</label>
-				<input id="<?php echo esc_attr( $form_id . '-email' ); ?>" name="registration_email" type="email" autocomplete="email" required />
+				<input id="<?php echo esc_attr( $form_id . '-email' ); ?>" name="registration_email" type="email" autocomplete="email" required aria-required="true"<?php echo $email_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
 			</div>
 
 			<div class="event-registration__field">
@@ -908,7 +941,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 					?>
 				</p>
 				<label class="event-registration__gdpr-label" for="<?php echo esc_attr( $form_id . '-gdpr' ); ?>">
-					<input id="<?php echo esc_attr( $form_id . '-gdpr' ); ?>" type="checkbox" name="registration_gdpr_consent" value="1" required aria-required="true" />
+					<input id="<?php echo esc_attr( $form_id . '-gdpr' ); ?>" type="checkbox" name="registration_gdpr_consent" value="1" required aria-required="true"<?php echo $gdpr_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
 					<?php esc_html_e( 'Hyväksyn henkilötietojeni käsittelyn tapahtumaan ilmoittautumista varten.', 'rytkoset-theme' ); ?>
 					<span aria-hidden="true">*</span>
 				</label>
@@ -933,5 +966,18 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 			</button>
 		</form>
 	</section>
+	<?php if ( '' !== $invalid_field ) : ?>
+		<script>
+			(function () {
+				var form = document.getElementById(<?php echo wp_json_encode( $form_id ); ?>);
+				if (!form) { return; }
+				var invalidInput = form.querySelector('[aria-invalid="true"]');
+				if (!invalidInput) { return; }
+				try { invalidInput.focus({ preventScroll: false }); } catch (e) { invalidInput.focus(); }
+			})();
+		</script>
+		<?php
+	endif;
+	?>
 	<?php
 }

@@ -377,7 +377,7 @@ function rytkoset_theme_render_album_gallery_block( $block_content, $block ) {
                         'full_srcset'          => (string) wp_get_attachment_image_srcset( $image_id, 'full' ),
                         'thumb_src'            => $thumb ? $thumb[0] : $full[0],
                         'thumb_srcset'         => (string) wp_get_attachment_image_srcset( $image_id, 'large' ),
-                        'alt'                  => (string) get_post_meta( $image_id, '_wp_attachment_image_alt', true ),
+                        'alt'                  => rytkoset_theme_get_gallery_image_alt( $image_id ),
                         'caption_html'         => rytkoset_theme_get_attachment_caption_html( $image_id ),
                         'visible_caption_html' => rytkoset_theme_get_attachment_visible_caption_html( $image_id ),
                         'aspect_ratio'         => $width / $height,

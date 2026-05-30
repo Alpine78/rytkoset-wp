@@ -177,3 +177,5 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 `docs/newsletter.md` documents the AcyMailing footer signup setup, target list, opt-in workflows and newsletter MVP boundaries.
 
 `docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.
+
+`docs/media-saavutettavuus.md` documents admin-facing media accessibility rules: alt-text guidance, the gallery alt-fallback chain (`rytkoset_theme_get_gallery_image_alt()`), automatic iframe titles for album videos, and PhotoSwipe keyboard shortcuts.

@@ -67,6 +67,42 @@ function rytkoset_theme_get_attachment_visible_caption_html( $attachment_id ) {
 }
 
 /**
+ * Resolves an accessible alt text for a gallery image.
+ *
+ * WordPress treats an empty alt as decorative; for photo galleries this is
+ * rarely what we want. Falls back through media-library alt → caption so a
+ * meaningful name is announced even when the alt field was left empty.
+ *
+ * @param int    $attachment_id Attachment post ID.
+ * @param string $explicit_alt  Alt provided by the calling context (e.g. ACF gallery row).
+ * @return string
+ */
+function rytkoset_theme_get_gallery_image_alt( $attachment_id, $explicit_alt = '' ) {
+	$attachment_id = (int) $attachment_id;
+	$explicit      = trim( (string) $explicit_alt );
+
+	if ( '' !== $explicit ) {
+		return $explicit;
+	}
+
+	if ( $attachment_id <= 0 ) {
+		return '';
+	}
+
+	$meta_alt = trim( (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+	if ( '' !== $meta_alt ) {
+		return $meta_alt;
+	}
+
+	$caption = trim( (string) wp_get_attachment_caption( $attachment_id ) );
+	if ( '' !== $caption ) {
+		return $caption;
+	}
+
+	return '';
+}
+
+/**
  * Builds PhotoSwipe caption HTML from attachment metadata.
  *
  * @param int $attachment_id Attachment post ID.

@@ -17,7 +17,7 @@ if ( have_posts() ) :
 		$blog_page = get_page_by_path( 'blogi' );
 		$blog_url  = $blog_page instanceof WP_Post ? get_permalink( $blog_page ) : home_url( '/blogi/' );
 		?>
-<main id="primary" class="site-main">
+<main id="primary" class="site-main" tabindex="-1">
 
 	<header class="blog-post-hero<?php echo has_post_thumbnail() ? '' : ' blog-post-hero--no-image'; ?>">
 		<?php if ( has_post_thumbnail() ) : ?>

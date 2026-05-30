@@ -728,6 +728,20 @@
   border-color: var(--color-accent);
 }
 
+/* Virheellisesti täytetyt kentät: punainen reuna + accent-fokusrengas
+   säilyy. aria-invalid="true" lisätään PHP:ssä redirectin jälkeen, kun
+   palvelin tunnisti vikaisen kentän (nimi, sähköposti, GDPR). */
+.event-registration__field input[aria-invalid="true"],
+.event-registration__field textarea[aria-invalid="true"] {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 1px #b91c1c;
+}
+
+.event-registration__gdpr-label input[type="checkbox"][aria-invalid="true"] {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
+}
+
 .event-registration__submit {
   justify-self: start;
 }

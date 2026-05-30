@@ -2,7 +2,7 @@
 
 <?php $rytkoset_home_img = get_template_directory_uri() . '/assets/images/home'; ?>
 
-<main id="primary" class="site-main">
+<main id="primary" class="site-main" tabindex="-1">
 
   <!-- HERO (tumma) -->
   <section class="hero">

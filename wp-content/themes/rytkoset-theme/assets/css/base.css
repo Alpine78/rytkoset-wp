@@ -54,7 +54,9 @@
 
   /* Nav helperit */
   --header-utility-bg: #1f4277;
-  --header-primary-bg: #3b82f6;
+  /* Vaalean teeman päävalikon palkki: brändisininen, jotta valkoinen
+     teksti ja hero-gradientin yläosa täyttävät WCAG 2.1 AA -kontrastit. */
+  --header-primary-bg: var(--color-primary);
   --nav-bg: var(--color-primary-dark);
   --nav-border: var(--color-nav-border);
   --nav-hover-bg: var(--color-nav-hover);

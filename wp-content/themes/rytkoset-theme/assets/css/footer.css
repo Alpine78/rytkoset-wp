@@ -13,7 +13,9 @@
   position: relative;
   overflow: hidden;
   padding: 4.5rem 0 5rem;
-  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  /* Sama gradientti kuin headerilla ja herolla, jotta valkoinen teksti
+     säilyttää WCAG AA -kontrastin molemmissa teemoissa. */
+  background: linear-gradient(180deg, var(--header-primary-bg) 0%, var(--header-utility-bg) 100%);
 }
 
 .site-prefooter--large::before {
@@ -118,7 +120,7 @@
 /* ---- Compact (sub pages) ---- */
 .site-prefooter--compact {
   padding: 2.25rem 0;
-  background: var(--color-primary);
+  background: var(--header-primary-bg);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
