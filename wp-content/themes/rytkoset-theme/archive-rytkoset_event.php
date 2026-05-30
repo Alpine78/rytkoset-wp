@@ -143,6 +143,7 @@ $render_event_list = static function ( WP_Query $event_query ) {
 };
 ?>
 
+<main id="primary" class="site-main" tabindex="-1">
 <section class="section">
 	<div class="container">
 		<header class="section__header">
@@ -178,6 +179,7 @@ $render_event_list = static function ( WP_Query $event_query ) {
 		<?php endif; ?>
 	</div>
 </section>
+</main>
 
 <?php
 get_footer();

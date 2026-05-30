@@ -1,0 +1,328 @@
+/* =================================================================
+   Etusivun sisältölohkot — vaalea/tumma-vuorottelu
+   Hero (tumma) → Sukujuhlat-feature (vaalea) → Albumit (tumma) →
+   Jäsenyys (vaalea) → Kauppa (tumma) → Sukututkimus/Viljo (vaalea)
+
+   Sävyt tulevat --home-band-* -tokeneista (base.css), jotka kääntyvät
+   tummassa teemassa. Kuvitukset istuvat kehystetyissä korteissa, jotka
+   nousevat esiin vastasävyistä lohkoa vasten.
+   ================================================================= */
+
+.home-block {
+  padding: clamp(4rem, 9vw, 5.75rem) 0;
+}
+
+.home-block--dark {
+  background: var(--home-band-dark);
+  color: var(--color-text-inverted);
+}
+
+.home-block--light {
+  background: var(--home-band-light);
+  color: var(--color-text);
+}
+
+/* Hiusrajaus vierekkäisten vaaleiden lohkojen väliin */
+.home-block--light + .home-block--light {
+  border-top: 1px solid var(--home-band-light-edge);
+}
+
+/* ---- Split-grid: copy + kuvitus ---- */
+.home-block__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2.5rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.home-block__split--reverse .home-block__copy {
+  order: 2;
+}
+
+.home-block__split--reverse .home-block__media {
+  order: 1;
+}
+
+.home-block__copy {
+  max-width: 33rem;
+}
+
+/* ---- Copy-tekstit ---- */
+.home-block__eyebrow {
+  margin: 0 0 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-accent);
+}
+
+.home-block--light .home-block__eyebrow {
+  color: var(--color-primary);
+}
+
+.home-block__title {
+  margin: 0 0 1rem;
+  font-family: var(--font-heading);
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.home-block__text {
+  margin: 0 0 1.6rem;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.home-block--dark .home-block__text {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.home-block--light .home-block__text {
+  color: var(--color-text-mute);
+}
+
+/* ---- Sävytietoinen inline-CTA ---- */
+.home-block__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+  padding-bottom: 0.125rem;
+  border-bottom: 2px solid currentColor;
+}
+
+.home-block--dark .home-block__link {
+  color: var(--color-accent);
+}
+
+.home-block--light .home-block__link {
+  color: var(--color-primary);
+}
+
+.home-block__link:hover,
+.home-block__link:focus-visible {
+  text-decoration: none;
+}
+
+.home-block__link-arrow {
+  transition: transform var(--transition-fast);
+}
+
+.home-block__link:hover .home-block__link-arrow {
+  transform: translateX(3px);
+}
+
+/* ---- Kehystetty kuvitus ---- */
+.home-block__figure {
+  margin: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 52px rgba(8, 37, 74, 0.22);
+}
+
+.home-block__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* =================================================================
+   Sukujuhlat — etusivun kohokohta (feature)
+   ================================================================= */
+.home-feature {
+  padding: clamp(4.5rem, 10vw, 6.5rem) 0;
+}
+
+.home-feature__split {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: clamp(2.5rem, 5vw, 4rem);
+  align-items: center;
+}
+
+.home-feature__copy {
+  max-width: 34rem;
+}
+
+.home-feature__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--color-primary);
+}
+
+.home-feature__eyebrow::before {
+  content: "";
+  width: 1.6rem;
+  height: 2px;
+  background: var(--color-accent);
+}
+
+.home-feature__title {
+  margin: 0 0 1.25rem;
+  font-family: var(--font-heading);
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.home-feature__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 1.4rem;
+}
+
+.home-feature__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem 0.5rem 0.8rem;
+  border: 1px solid var(--home-band-light-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-shadow: var(--shadow-card);
+}
+
+.home-feature__chip svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.home-feature__lead {
+  margin: 0 0 1.9rem;
+  max-width: 33rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--color-text-mute);
+  text-wrap: pretty;
+}
+
+.home-feature__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.home-feature__media {
+  position: relative;
+}
+
+.home-feature__figure {
+  margin: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 26px 64px rgba(8, 37, 74, 0.26);
+}
+
+.home-feature__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Kelluva päivämäärämerkki kuvituksen päällä */
+.home-feature__badge {
+  position: absolute;
+  top: 1.4rem;
+  left: -1rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: var(--radius-l);
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+  text-align: center;
+  line-height: 1.05;
+  box-shadow: 0 14px 30px rgba(8, 37, 74, 0.28);
+}
+
+.home-feature__badge strong {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.home-feature__badge span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* =================================================================
+   Sukututkimus — Viljon muotokuvanosto (story)
+   ================================================================= */
+.home-story__split {
+  display: grid;
+  grid-template-columns: minmax(0, 280px) 1fr;
+  gap: clamp(2.5rem, 5vw, 3.5rem);
+  align-items: center;
+}
+
+.home-story__portrait {
+  margin: 0;
+}
+
+.home-story__portrait img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 180px / 210px;
+  border: 5px solid var(--color-surface);
+  box-shadow: 0 20px 48px rgba(8, 37, 74, 0.22);
+}
+
+.home-story__caption {
+  margin-top: 0.9rem;
+  text-align: center;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--color-text-mute);
+}
+
+/* =================================================================
+   Responsiivisuus — splitit yhteen kolumniin
+   ================================================================= */
+@media (max-width: 60rem) {
+  .home-block__split,
+  .home-feature__split,
+  .home-story__split {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  /* Kuva aina copyn alle mobiilissa, myös reverse-lohkoissa */
+  .home-block__split--reverse .home-block__copy,
+  .home-block__split--reverse .home-block__media {
+    order: 0;
+  }
+
+  .home-story__portrait {
+    max-width: 15rem;
+    margin-inline: auto;
+  }
+
+  .home-feature__badge {
+    left: 0.75rem;
+  }
+}

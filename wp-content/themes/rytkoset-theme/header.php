@@ -36,7 +36,7 @@
     <div class="site-header__utility">
         <div class="site-header__container site-header__utility-inner">
             <?php $contact_email = rytkoset_theme_get_contact_email(); ?>
-            <a class="utility-contact" href="mailto:<?php echo esc_attr( $contact_email ); ?>">
+            <a class="utility-contact" href="mailto:<?php echo esc_attr( $contact_email ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Lähetä sähköpostia: %s', 'rytkoset-theme' ), $contact_email ) ); ?>">
                 <svg aria-hidden="true" focusable="false" viewBox="0 0 16 16" width="16" height="16">
                     <rect x="2" y="3.5" width="12" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"></rect>
                     <path d="m2.5 5 5.5 4 5.5-4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -50,14 +50,14 @@
                         <ul class="site-header__social-list">
                             <?php foreach ( $social_links as $social_link ) : ?>
                                 <?php
-                                if ( empty( $social_link['icon_src'] ) ) {
+                                if ( empty( $social_link['icon_file'] ) ) {
                                     continue;
                                 }
                                 ?>
                                 <li class="site-header__social-item">
                                     <a class="site-header__social-link site-header__social-link--<?php echo esc_attr( $social_link['icon'] ); ?>" href="<?php echo esc_url( $social_link['url'] ); ?>">
                                         <span class="screen-reader-text"><?php echo esc_html( $social_link['label'] ); ?></span>
-                                        <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" aria-hidden="true" />
+                                        <?php echo rytkoset_theme_inline_icon( $social_link['icon_file'], 'social' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                     </a>
                                 </li>
                             <?php endforeach; ?>
@@ -66,7 +66,7 @@
                     <span class="site-header__utility-divider" aria-hidden="true"></span>
                 <?php endif; ?>
 
-                <button class="theme-toggle desktop-theme-toggle" type="button" aria-pressed="false">
+                <button class="theme-toggle desktop-theme-toggle" type="button" aria-pressed="false" aria-label="<?php esc_attr_e( 'Vaihda teemaa', 'rytkoset-theme' ); ?>">
                     <span class="theme-toggle__icon" aria-hidden="true">🌙</span>
                     <span class="theme-toggle__label"><?php esc_html_e( 'Tumma', 'rytkoset-theme' ); ?></span>
                 </button>
@@ -175,6 +175,7 @@
                             aria-expanded="false"
                             aria-controls="mobile-menu"
                             aria-haspopup="true"
+                            aria-label="<?php esc_attr_e( 'Valikko', 'rytkoset-theme' ); ?>"
                             data-submenu-label="<?php esc_attr_e( 'Avaa alavalikko', 'rytkoset-theme' ); ?>">
                         <span class="mobile-menu-toggle__icon" aria-hidden="true"><span></span></span>
                         <span class="mobile-menu-toggle__label">
@@ -279,7 +280,7 @@
 
                 <div class="mm-section">
                     <p class="mm-section__title"><?php esc_html_e( 'Asetukset', 'rytkoset-theme' ); ?></p>
-                    <button class="theme-toggle mm-theme" type="button" aria-pressed="false">
+                    <button class="theme-toggle mm-theme" type="button" aria-pressed="false" aria-label="<?php esc_attr_e( 'Vaihda teemaa', 'rytkoset-theme' ); ?>">
                         <span class="mm-theme__left">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
                                 <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />
@@ -297,10 +298,10 @@
                     <p class="mm-section__title"><?php esc_html_e( 'Seuraa meitä', 'rytkoset-theme' ); ?></p>
                     <ul class="mm-social" aria-label="<?php esc_attr_e( 'Sosiaalisen median linkit', 'rytkoset-theme' ); ?>">
                         <?php foreach ( $social_links as $social_link ) :
-                            if ( empty( $social_link['icon_src'] ) ) continue; ?>
+                            if ( empty( $social_link['icon_file'] ) ) continue; ?>
                             <li>
                                 <a class="mm-social__link" href="<?php echo esc_url( $social_link['url'] ); ?>" aria-label="<?php echo esc_attr( $social_link['label'] ); ?>">
-                                    <img src="<?php echo esc_url( $social_link['icon_src'] ); ?>" alt="" width="36" height="36" />
+                                    <?php echo rytkoset_theme_inline_icon( $social_link['icon_file'], 'social' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                                 </a>
                             </li>
                         <?php endforeach; ?>

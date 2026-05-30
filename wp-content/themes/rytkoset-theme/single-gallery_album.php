@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 get_header();
 
 ?>
-<main id="primary" class="site-main">
+<main id="primary" class="site-main" tabindex="-1">
 <?php
 
 if ( have_posts() ) :
@@ -83,11 +83,33 @@ if ( have_posts() ) :
 						<?php if ( ! empty( $album_videos ) ) : ?>
 							<div class="album__videos">
 								<h2 class="album__section-title"><?php esc_html_e( 'Videot', 'rytkoset-theme' ); ?></h2>
-								<?php foreach ( $album_videos as $video ) : ?>
+								<?php
+								$album_title_plain = wp_strip_all_tags( get_the_title() );
+								$videos_total      = count( $album_videos );
+								?>
+								<?php foreach ( $album_videos as $video_index => $video ) : ?>
+									<?php
+									if ( $videos_total > 1 ) {
+										$iframe_title = sprintf(
+											/* translators: 1: video number, 2: total number of videos, 3: album title */
+											__( 'Video %1$d/%2$d albumissa %3$s', 'rytkoset-theme' ),
+											$video_index + 1,
+											$videos_total,
+											$album_title_plain
+										);
+									} else {
+										$iframe_title = sprintf(
+											/* translators: %s: album title */
+											__( 'Video albumissa %s', 'rytkoset-theme' ),
+											$album_title_plain
+										);
+									}
+									?>
 									<div class="album__video">
 										<div class="album__video-embed">
 											<iframe
 												src="<?php echo esc_url( $video['embed_url'] ); ?>"
+												title="<?php echo esc_attr( $iframe_title ); ?>"
 												allow="encrypted-media; picture-in-picture"
 												allowfullscreen
 												loading="lazy"
@@ -117,13 +139,15 @@ if ( have_posts() ) :
 									continue;
 								}
 
+								$explicit_alt = is_array( $image ) && isset( $image['alt'] ) ? (string) $image['alt'] : '';
+
 								$gallery_items[] = array(
 									'type'                 => 'image',
 									'item_id'              => (string) $image_id,
 									'src'                  => $full[0],
 									'width'                => isset( $full[1] ) ? (int) $full[1] : 0,
 									'height'               => isset( $full[2] ) ? (int) $full[2] : 0,
-									'alt'                  => is_array( $image ) && isset( $image['alt'] ) ? $image['alt'] : '',
+									'alt'                  => rytkoset_theme_get_gallery_image_alt( $image_id, $explicit_alt ),
 									'srcset'               => wp_get_attachment_image_srcset( $image_id, 'large' ),
 									'sizes'                => '(min-width: 960px) 25vw, 90vw',
 									'thumb_src'            => $thumb ? $thumb[0] : $full[0],
@@ -170,6 +194,15 @@ if ( have_posts() ) :
 						endif;
 						?>
 					</div>
+
+					<?php
+					rytkoset_theme_share_buttons(
+						array(
+							'heading' => __( 'Jaa albumi', 'rytkoset-theme' ),
+							'post_id' => get_the_ID(),
+						)
+					);
+					?>
 				</div>
 			</section>
 		</article>

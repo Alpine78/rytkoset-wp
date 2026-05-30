@@ -226,142 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initSubmenuToggles();
 
-  const shareBlocks = document.querySelectorAll('[data-share]');
-
-  shareBlocks.forEach((share) => {
-    const status = share.querySelector('[data-share-status]');
-    const copyButton = share.querySelector('[data-share-copy]');
-    const trigger = share.querySelector('[data-share-trigger]');
-    const menu = share.querySelector('[data-share-menu]');
-    const nativeButton = share.querySelector('[data-share-native]');
-    const supportsNativeShare = Boolean(navigator && navigator.share);
-
-    let isMenuOpen = false;
-    let outsideListener = null;
-
-    const getShareData = () => {
-      const url = trigger?.getAttribute('data-share-url') || share.dataset.shareUrl || window.location.href;
-      const title = trigger?.getAttribute('data-share-title') || share.dataset.shareTitle || document.title;
-      const text = trigger?.getAttribute('data-share-text') || share.dataset.shareText || title;
-
-      return { title, text, url };
-    };
-
-    const showStatus = (message) => {
-      if (!status || !message) return;
-      status.textContent = message;
-      status.hidden = false;
-      window.setTimeout(() => {
-        status.hidden = true;
-      }, 2500);
-    };
-
-    const closeMenu = () => {
-      if (menu) {
-        menu.hidden = true;
-        share.classList.remove('share--open');
-      }
-      isMenuOpen = false;
-      if (outsideListener) {
-        document.removeEventListener('click', outsideListener, true);
-        outsideListener = null;
-      }
-    };
-
-    const openMenu = () => {
-      if (!menu) return;
-      menu.hidden = false;
-      share.classList.add('share--open');
-      isMenuOpen = true;
-
-      outsideListener = (event) => {
-        if (!share.contains(event.target)) {
-          closeMenu();
-        }
-      };
-
-      document.addEventListener('click', outsideListener, true);
-    };
-
-    const tryNativeShare = async () => {
-      if (!navigator?.share) {
-        return false;
-      }
-
-      const shareData = getShareData();
-
-      if (navigator.canShare && !navigator.canShare(shareData)) {
-        return false;
-      }
-
-      try {
-        await navigator.share(shareData);
-        return true;
-      } catch (error) {
-        if (error && error.name === 'AbortError') {
-          return true;
-        }
-        return false;
-      }
-    };
-
-    if (trigger) {
-      trigger.addEventListener('click', async () => {
-        if (isMenuOpen) {
-          closeMenu();
-        } else {
-          openMenu();
-        }
-      });
-
-      trigger.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          closeMenu();
-        }
-      });
-    }
-
-    if (menu) {
-      menu.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          closeMenu();
-          trigger?.focus();
-        }
-      });
-    }
-
-    if (nativeButton) {
-      if (!supportsNativeShare) {
-        nativeButton.hidden = true;
-        nativeButton.setAttribute('aria-hidden', 'true');
-        nativeButton.setAttribute('tabindex', '-1');
-      } else {
-        nativeButton.addEventListener('click', async () => {
-          const shared = await tryNativeShare();
-          if (shared) {
-            showStatus(nativeButton.dataset.shareSuccess);
-            closeMenu();
-          } else {
-            showStatus(nativeButton.dataset.shareError || 'Jakaminen ei onnistunut');
-          }
-        });
-      }
-    }
-
-    if (copyButton) {
-      copyButton.addEventListener('click', async () => {
-        const url = copyButton.getAttribute('data-share-copy');
-        if (!url) return;
-
-        try {
-          await navigator.clipboard.writeText(url);
-          showStatus(copyButton.dataset.shareSuccess || 'Linkki kopioitu leikepöydälle');
-        } catch (error) {
-          showStatus(copyButton.dataset.shareError || 'Linkin kopiointi ei onnistunut');
-        }
-      });
-    }
-  });
+  // Jakopainikkeiden logiikka on siirretty omaan tiedostoon: assets/js/share.js
 });
 
 (function () {
@@ -624,28 +489,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
 (function () {
   const config = window.rytkosetCheckoutConfig;
+  const checkoutNotes = Array.isArray(config?.checkoutNotes)
+    ? config.checkoutNotes
+    : config?.showMembershipNote && config.membershipNoteHtml
+      ? [config.membershipNoteHtml]
+      : [];
 
-  if (!config || !config.showMembershipNote || !config.membershipNoteHtml) {
+  if (!checkoutNotes.length) {
     return;
   }
 
-  const insertMembershipNote = () => {
+  const insertCheckoutNotes = () => {
     const checkoutRoot = document.querySelector('.wp-block-woocommerce-checkout, .wc-block-checkout');
 
     if (!checkoutRoot || document.querySelector('.rytkoset-checkout-note')) {
       return false;
     }
 
-    checkoutRoot.insertAdjacentHTML('beforebegin', config.membershipNoteHtml);
+    checkoutRoot.insertAdjacentHTML('beforebegin', checkoutNotes.join(''));
     return true;
   };
 
-  if (insertMembershipNote()) {
+  if (insertCheckoutNotes()) {
     return;
   }
 
   const observer = new MutationObserver(() => {
-    if (insertMembershipNote()) {
+    if (insertCheckoutNotes()) {
       observer.disconnect();
     }
   });

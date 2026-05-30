@@ -54,7 +54,9 @@
 
   /* Nav helperit */
   --header-utility-bg: #1f4277;
-  --header-primary-bg: #3b82f6;
+  /* Vaalean teeman päävalikon palkki: brändisininen, jotta valkoinen
+     teksti ja hero-gradientin yläosa täyttävät WCAG 2.1 AA -kontrastit. */
+  --header-primary-bg: var(--color-primary);
   --nav-bg: var(--color-primary-dark);
   --nav-border: var(--color-nav-border);
   --nav-hover-bg: var(--color-nav-hover);
@@ -62,6 +64,12 @@
 
   /* Lisäväri */
   --color-surface-muted: #edf2f7;
+
+  /* Etusivun lohkot: vaalea/tumma-vuorottelu */
+  --home-band-light: #f6f1e7;
+  --home-band-light-edge: #ece4d3;
+  --home-band-dark: var(--color-primary-dark);
+  --home-band-dark-2: var(--color-primary-deeper);
 }
 
 :root[data-theme="dark"] {
@@ -97,6 +105,13 @@
   --nav-hover-bg: rgba(255, 255, 255, 0.1);
 
   --color-surface-muted: #1e2a3d;
+
+  /* Etusivun lohkot: tummassa teemassa "vaalea" lohko sovittuu tummaksi
+     pinnaksi ja "tumma" lohko syvenee, jotta vuorottelu säilyy hallittuna */
+  --home-band-light: var(--color-surface-alt);
+  --home-band-light-edge: var(--color-border-neutral);
+  --home-band-dark: #081a33;
+  --home-band-dark-2: #050f1f;
 }
 
 html, body {

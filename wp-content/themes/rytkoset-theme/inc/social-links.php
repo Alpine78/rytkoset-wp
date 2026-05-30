@@ -81,11 +81,12 @@ add_action( 'acf/init', 'rytkoset_theme_register_social_fields' );
  * @return array[] Lista sosiaalisen median linkkejä.
  */
 function rytkoset_theme_get_social_links() {
+        // Kanava-avain → inline-ikonin tiedostonimi (assets/icons/social/{name}.svg).
         $icon_files = array(
-                'facebook'  => 'Facebook.svg',
-                'youtube'   => 'YouTube.svg',
-                'instagram' => 'Instagram.svg',
-                'x'         => 'X.svg',
+                'facebook'  => 'Facebook',
+                'youtube'   => 'YouTube',
+                'instagram' => 'Instagram',
+                'x'         => 'X',
         );
 
         $defaults = array(
@@ -124,10 +125,10 @@ function rytkoset_theme_get_social_links() {
                 }
 
                 $social_links[] = array(
-                        'label'    => $data['label'],
-                        'url'      => esc_url_raw( $url ),
-                        'icon'     => $key,
-                        'icon_src' => isset( $icon_files[ $key ] ) ? get_template_directory_uri() . '/assets/icons/social/' . $icon_files[ $key ] : '',
+                        'label'     => $data['label'],
+                        'url'       => esc_url_raw( $url ),
+                        'icon'      => $key,
+                        'icon_file' => isset( $icon_files[ $key ] ) ? $icon_files[ $key ] : '',
                 );
         }
 

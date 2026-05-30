@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once get_template_directory() . '/inc/icons.php';
 require_once get_template_directory() . '/inc/social-links.php';
 require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
@@ -14,15 +15,18 @@ require_once get_template_directory() . '/inc/media-library.php';
 require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/event-registrations.php';
+require_once get_template_directory() . '/inc/event-registration-privacy.php';
 require_once get_template_directory() . '/inc/event-participants-admin.php';
 require_once get_template_directory() . '/inc/event-participants-messaging.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
 require_once get_template_directory() . '/inc/attachment-iptc.php';
 require_once get_template_directory() . '/inc/seo-meta.php';
 require_once get_template_directory() . '/inc/login.php';
+require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
+require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 
 /**
@@ -63,6 +67,42 @@ function rytkoset_theme_get_attachment_visible_caption_html( $attachment_id ) {
 }
 
 /**
+ * Resolves an accessible alt text for a gallery image.
+ *
+ * WordPress treats an empty alt as decorative; for photo galleries this is
+ * rarely what we want. Falls back through media-library alt → caption so a
+ * meaningful name is announced even when the alt field was left empty.
+ *
+ * @param int    $attachment_id Attachment post ID.
+ * @param string $explicit_alt  Alt provided by the calling context (e.g. ACF gallery row).
+ * @return string
+ */
+function rytkoset_theme_get_gallery_image_alt( $attachment_id, $explicit_alt = '' ) {
+	$attachment_id = (int) $attachment_id;
+	$explicit      = trim( (string) $explicit_alt );
+
+	if ( '' !== $explicit ) {
+		return $explicit;
+	}
+
+	if ( $attachment_id <= 0 ) {
+		return '';
+	}
+
+	$meta_alt = trim( (string) get_post_meta( $attachment_id, '_wp_attachment_image_alt', true ) );
+	if ( '' !== $meta_alt ) {
+		return $meta_alt;
+	}
+
+	$caption = trim( (string) wp_get_attachment_caption( $attachment_id ) );
+	if ( '' !== $caption ) {
+		return $caption;
+	}
+
+	return '';
+}
+
+/**
  * Builds PhotoSwipe caption HTML from attachment metadata.
  *
  * @param int $attachment_id Attachment post ID.
@@ -96,6 +136,11 @@ function rytkoset_theme_setup() {
 
 	// Esikatselukuvat
 	add_theme_support( 'post-thumbnails' );
+
+	// Some-jaon esikatselukuva (Open Graph). 1200 x 630 px on Facebookin,
+	// LinkedInin ja X:n suosittelema koko isolle esikatselukortille.
+	// HUOM: vanhat kuvat tarvitsevat "Regenerate Thumbnails" -ajon.
+	add_image_size( 'rytkoset-og', 1200, 630, true );
 
 	// Sivuston logo
 	add_theme_support(
@@ -259,7 +304,7 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 
         echo '<ul class="account-nav__list">';
         echo '<li class="menu-item menu-item-has-children account-menu__user">';
-        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false">';
+        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false" aria-label="' . esc_attr( sprintf( __( 'Avaa tilivalikko (%s)', 'rytkoset-theme' ), $display_name ) ) . '">';
         echo '<span class="account-menu__avatar">' . $avatar . '</span>';
         echo '<span class="account-menu__meta">';
         echo '<span class="account-menu__greeting">' . esc_html__( 'Kirjautunut', 'rytkoset-theme' ) . '</span>';
@@ -305,6 +350,39 @@ function rytkoset_theme_account_menu_logged_out_fallback() {
 }
 
 /**
+ * Palauttaa korissa jo olevat yksittäin ostettavat WooCommerce-tuotteet.
+ *
+ * @return array<int>
+ */
+function rytkoset_theme_get_sold_individually_cart_product_ids() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return array();
+	}
+
+	$product_ids = array();
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product_id   = isset( $cart_item['product_id'] ) ? absint( $cart_item['product_id'] ) : 0;
+		$variation_id = isset( $cart_item['variation_id'] ) ? absint( $cart_item['variation_id'] ) : 0;
+		$product      = isset( $cart_item['data'] ) && $cart_item['data'] instanceof WC_Product
+			? $cart_item['data']
+			: null;
+
+		if ( ! $product_id || ! $product || ! $product->is_sold_individually() ) {
+			continue;
+		}
+
+		$product_ids[] = $product_id;
+
+		if ( $variation_id ) {
+			$product_ids[] = $variation_id;
+		}
+	}
+
+	return array_values( array_unique( $product_ids ) );
+}
+
+/**
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
@@ -327,6 +405,57 @@ function rytkoset_theme_scripts() {
         true // footer
     );
 
+    // Jakopainikkeiden JS (Web Share API + clipboard-fallback)
+    if ( is_singular() ) {
+        wp_enqueue_script(
+            'rytkoset-theme-share',
+            get_template_directory_uri() . '/assets/js/share.js',
+            array(),
+            $theme_version,
+            true // footer
+        );
+    }
+
+	if (
+		function_exists( 'is_woocommerce' )
+		&& ( is_woocommerce() || is_cart() || is_checkout() )
+	) {
+		wp_enqueue_style(
+			'rytkoset-theme-shop',
+			get_template_directory_uri() . '/assets/css/shop.css',
+			array( 'rytkoset-theme-style' ),
+			$theme_version
+		);
+
+		wp_enqueue_script(
+			'rytkoset-theme-shop-select',
+			get_template_directory_uri() . '/assets/js/shop-select.js',
+			array(),
+			$theme_version,
+			true
+		);
+
+		wp_add_inline_script(
+			'rytkoset-theme-shop-select',
+			'window.rytkosetShopConfig = ' . wp_json_encode(
+				array(
+					'soldIndividuallyCartProductIds' => rytkoset_theme_get_sold_individually_cart_product_ids(),
+					'soldIndividuallyInCartText'    => __( 'Jo ostoskorissa', 'rytkoset-theme' ),
+				)
+			) . ';',
+			'before'
+		);
+	}
+
+	if ( function_exists( 'is_bbpress' ) && is_bbpress() ) {
+		wp_enqueue_style(
+			'rytkoset-theme-forum',
+			get_template_directory_uri() . '/assets/css/forum.css',
+			array( 'rytkoset-theme-style' ),
+			$theme_version
+		);
+	}
+
 	if ( is_post_type_archive( 'digital_magazine' ) || is_singular( 'digital_magazine' ) ) {
 		wp_enqueue_style(
 			'rytkoset-theme-digital-magazine',
@@ -341,8 +470,18 @@ function rytkoset_theme_scripts() {
 			'rytkoset-theme-main',
 			'window.rytkosetCheckoutConfig = ' . wp_json_encode(
 				array(
-					'showMembershipNote' => rytkoset_theme_cart_requires_member_names(),
-					'membershipNoteHtml' => rytkoset_theme_get_membership_checkout_notice_markup(),
+					'checkoutNotes' => array_values(
+						array_filter(
+							array(
+								rytkoset_theme_cart_requires_member_names()
+									? rytkoset_theme_get_membership_checkout_notice_markup()
+									: '',
+								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()
+									? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
+									: '',
+							)
+						)
+					),
 				)
 			) . ';',
 			'before'
@@ -527,6 +666,93 @@ add_action(
 	},
 	20
 );
+
+// =============================================================================
+// bbPress forum helpers
+// =============================================================================
+
+/**
+ * Returns an initials-based avatar span for the forum design.
+ *
+ * @param string $display_name Full display name.
+ * @param string $size         'sm' | 'md' (default) | 'lg' | 'xl'.
+ * @return string HTML.
+ */
+if ( ! function_exists( 'rytkoset_theme_forum_avatar' ) ) :
+function rytkoset_theme_forum_avatar( $display_name, $size = 'md' ) {
+	$name   = trim( (string) $display_name );
+	$words  = array_values( array_filter( explode( ' ', $name ) ) );
+	if ( count( $words ) >= 2 ) {
+		$initials = mb_strtoupper( mb_substr( $words[0], 0, 1 ) ) .
+		            mb_strtoupper( mb_substr( end( $words ), 0, 1 ) );
+	} else {
+		$initials = mb_strtoupper( mb_substr( $name, 0, 2 ) );
+	}
+	$size_class = 'md' === $size ? '' : ( 'lg' === $size ? ' forum-avatar--lg' : ( 'xl' === $size ? ' forum-avatar--xl' : '' ) );
+	return '<span class="forum-avatar' . $size_class . '" aria-hidden="true">' . esc_html( $initials ) . '</span>';
+}
+endif;
+
+/**
+ * Returns the color-variant slug for a forum based on its post_name.
+ *
+ * @param int $forum_id Forum post ID.
+ * @return string Slug like 'rytkoset', 'net', 'seura', 'seka', 'testi', or 'default'.
+ */
+if ( ! function_exists( 'rytkoset_theme_forum_color' ) ) :
+function rytkoset_theme_forum_color( $forum_id ) {
+	$slug = (string) get_post_field( 'post_name', (int) $forum_id );
+	$map  = array(
+		'net'      => 'net',
+		'sukuseura' => 'seura',
+		'sekalainen' => 'seka',
+		'testiviestit' => 'testi',
+		'testi'    => 'testi',
+	);
+	foreach ( $map as $key => $color ) {
+		if ( false !== strpos( $slug, $key ) ) {
+			return $color;
+		}
+	}
+	return 'rytkoset'; // default / Rytköset forum
+}
+endif;
+
+/**
+ * Returns the display icon text for a forum (single letter or abbreviation).
+ *
+ * @param int    $forum_id Forum post ID.
+ * @param string $color    Color variant from rytkoset_theme_forum_color().
+ * @return string Icon label.
+ */
+if ( ! function_exists( 'rytkoset_theme_forum_icon' ) ) :
+function rytkoset_theme_forum_icon( $forum_id, $color ) {
+	if ( 'net' === $color ) {
+		return '.net';
+	}
+	$title = (string) get_the_title( (int) $forum_id );
+	return mb_strtoupper( mb_substr( wp_strip_all_tags( $title ), 0, 1 ) );
+}
+endif;
+
+/**
+ * Returns an author's display name from any bbPress post (topic or reply).
+ *
+ * @param int $post_id Topic or reply post ID.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_bbp_author_name' ) ) :
+function rytkoset_theme_bbp_author_name( $post_id ) {
+	$author_id = (int) get_post_field( 'post_author', (int) $post_id );
+	if ( ! $author_id ) {
+		return __( 'Nimetön', 'rytkoset-theme' );
+	}
+	$user = get_userdata( $author_id );
+	return $user ? $user->display_name : __( 'Nimetön', 'rytkoset-theme' );
+}
+endif;
+
+// =============================================================================
 
 /**
  * Returns an order object from a meta box callback parameter.

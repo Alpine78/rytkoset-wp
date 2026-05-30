@@ -11,8 +11,11 @@
   background: var(--color-surface-alt);
 }
 .section--accent {
-  background: var(--color-primary);
+  background: var(--color-primary-light);
   color: var(--color-text-inverted);
+}
+:root[data-theme="dark"] .section--accent {
+  background: var(--color-primary-dark);
 }
 
 .section__narrow {

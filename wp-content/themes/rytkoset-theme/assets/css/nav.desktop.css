@@ -35,11 +35,11 @@
   text-decoration: none;
 }
 
-.site-header__social-link img {
+.site-header__social-link svg {
   display: block;
   width: 28px;
   height: 28px;
-  object-fit: contain;
+  fill: currentColor;
 }
 
 .site-nav__list {
@@ -57,8 +57,7 @@
   position: relative;
 }
 
-.site-nav__list > li > a,
-.account-nav__list > li > a {
+.site-nav__list > li > a {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;

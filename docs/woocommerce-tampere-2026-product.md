@@ -5,27 +5,32 @@ Tämä dokumentti kuvaa tiketin `#139` tavoitetilan ja toteutusmallin paikallise
 ## Rajaus tässä vaiheessa
 
 - Tuote koskee vain sukukokouksen varsinaista juhlapäivää `29.8.2026`
-- Perjantain `28.8.2026` iltaohjelmaa ei huomioida tässä vaiheessa
 - Tuote kattaa vain osallistumisen lauantain ohjelmaan
-- Illallinen, majoitus, verkkomaksuintegraatio ja osallistujakohtaiset checkout-kentät jäävät myöhempiin tiketteihin
+- Perjantain `28.8.2026` buffet-illalliselle ilmoittaudutaan samalla kassapolulla osallistujakohtaisella valinnalla
+- Perjantain buffet-illallinen maksetaan paikan päällä, joten siitä ei tehdä omaa maksullista tuotetta
+- Majoitus ja varsinainen verkkomaksuintegraatio jäävät myöhempiin tiketteihin
 
 ## Tuotemalli
 
 - Tuotteen nimi: `Tampere 2026 osallistumismaksu`
 - Suositeltu SKU: `tampere-2026-osallistumismaksu`
-- Tuotetyyppi: `Simple product`
+- Tuotetyyppi: `Variable product`
 - Virtuaalituote: `Kyllä`
 - Ladattava tuote: `Ei`
-- Hinta: `49 € / henkilö`
+- Variaatiot:
+  - `Aikuinen`: `49 €`
+  - `Lapsi 3-12 vuotta`: `24,50 €`
 - `Sold individually`: `Ei`
 
 ## Myyntilogiikka
 
-- Yksi kappale tuotetta vastaa yhtä osallistujaa
+- Yksi variaation kappale vastaa yhtä osallistujaa
 - Samalla tilauksella voidaan ostaa useampi kappale
-- Tuotteen kappalemäärä kertoo osallistujien lukumäärän
+- Tuotteelle valitaan osallistujatyyppi samalla tavalla kuin vaatteelle valittaisiin koko
+- Variaatioiden kappalemäärät kertovat osallistujien lukumäärän
 - Maksutapana riittää tässä vaiheessa nykyinen `Tilisiirto`
-- Checkoutin osallistujakentät ja ilmoituslogiikka tunnistavat tuotteen ensisijaisesti SKU:lla `tampere-2026-osallistumismaksu`
+- Checkoutin osallistujakentät ja ilmoituslogiikka tunnistavat tuotteen parent-tuotteen SKU:lla `tampere-2026-osallistumismaksu` sekä sen variaatioilla
+- Perjantain buffet-illallinen kerätään checkoutissa osallistujakohtaisena kyllä/ei-valintana
 
 ## Tuotekuvauksen minimitiedot
 
@@ -34,31 +39,34 @@ Tuotekuvauksessa pitää kertoa vähintään:
 - tapahtuma: `Rytkösten sukukokous 29.8.2026`
 - että osallistumismaksu koskee lauantain ohjelmaa
 - että hinta sisältää buffetlounaan ja iltapäiväkahvin
+- että aikuisen hinta on `49 €` ja lapsen `24,50 €`
 - että ilmoittautumisen määräpäivä on `30.7.2026`
-- että ostoskoriin lisätään yhtä monta kappaletta kuin osallistujia
+- että ostoskoriin lisätään oikea määrä aikuisia ja lapsia
+- että perjantain buffet-illallinen valitaan kassalla ja maksetaan paikan päällä
 
 ## Esimerkkikuvaus
 
 `Tampere 2026 osallistumismaksu` on Rytkösten sukukokouksen osallistumismaksu lauantaille `29.8.2026`.
 
-Hinta on `49 € / henkilö` ja sisältää buffetlounaan sekä iltapäiväkahvin.
+Hinta on `49 € / aikuinen` ja `24,50 € / lapsi 3-12 vuotta`. Osallistumismaksu sisältää buffetlounaan sekä iltapäiväkahvin.
 
-Lisää ostoskoriin yhtä monta kappaletta kuin osallistujia. Ilmoittautumisen määräpäivä on `30.7.2026`.
+Valitse osallistujatyyppi ja lisää ostoskoriin oikea määrä aikuisia ja lapsia. Perjantain buffet-illallinen valitaan kassalla osallistujakohtaisesti ja maksetaan paikan päällä. Ilmoittautumisen määräpäivä on `30.7.2026`.
 
 ## Testaus
 
 - Tuote näkyy WooCommerce-adminissa oikealla nimellä
-- Tuotteen hinta on `49 €`
-- Tuote on `Simple product`
+- Tuote on `Variable product`
+- Tuotteella on variaatiot `Aikuinen` ja `Lapsi 3-12 vuotta`
+- Aikuisen hinta on `49 €`
+- Lapsen hinta on `24,50 €`
 - Tuote on `Virtual`
-- Tuotetta voi lisätä ostoskoriin useamman kappaleen
-- Ostoskorin summa muuttuu oikein kappalemäärän mukaan
+- Tuotetta voi lisätä ostoskoriin useamman kappaleen eri variaatioilla
+- Ostoskorin summa muuttuu oikein variaatioiden ja kappalemäärien mukaan
 - `Kassa` toimii tuotteen kanssa nykyisellä maksupolulla
 
 ## Jätetään seuraaviin tiketteihin
 
-- osallistujakohtaiset tiedot kassalla (`#140`)
 - tapahtuman linkitys maksutuotteeseen (`#138`)
 - määräpäivän ja kapasiteetin hallinta (`#141`)
 - varsinainen verkkomaksuintegraatio (`#145`)
-- perjantain `28.8.2026` iltaohjelman mahdollinen myyntipolku
+- perjantain `28.8.2026` buffet-illallisen maksaminen verkossa
