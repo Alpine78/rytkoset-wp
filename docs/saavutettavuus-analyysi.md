@@ -39,7 +39,7 @@ toteutettavissa pieninä osina jatkotiketeissä:
 | **Matala** | Pari fokustilaa ilmaistaan vain tausta-/värimuutoksella, ei fokusrenkaalla | #83 | ✅ korjattu |
 | **Matala** | `aria-current` aktiivisesta valikkokohdasta | #83 | ✅ varmistettu (WP-walker tuottaa automaattisesti) |
 | **Matala** | Skip-linkki rikki staattisilla sivuilla ja arkistoissa (puuttuva tai poikkeava main) | #83 | ✅ korjattu (löydetty toteutuksen aikana) |
-| **Matala** | WooCommerce-kassan ja uutiskirjeen kenttien labelit — varmistettava | #85 / #88 | avoinna |
+| **Matala** | WooCommerce-kassan ja uutiskirjeen kenttien labelit — varmistettava | #85 / #88 | ✅ verifioitu (uutiskirje #85, WC-osiot #88) |
 
 ---
 
@@ -119,7 +119,7 @@ teksti saa ~8,9:1.
 
 | Asia | WCAG | Sijainti |
 | --- | --- | --- |
-| Tapahtumailmoittautuminen: `<label for>`, `required` + `aria-required`, `autocomplete`, `role="alert"` -virheilmoitus, pakollisten kenttien selite | 1.3.1, 3.3.2, 4.1.2 | `inc/event-registrations.php` |
+| Tapahtumailmoittautuminen: `<label for>`, `required` + `aria-required` kaikilla pakollisilla, `autocomplete`, `role="alert"` -virheilmoitus, pakollisten kenttien selite, kenttäkohtainen `aria-invalid`+`aria-describedby` virhetilassa ja automaattinen fokussiirto vikaiseen kenttään *(parannettu #87:ssä)* | 1.3.1, 3.3.1, 3.3.2, 4.1.2 | `inc/event-registrations.php` |
 | GDPR-suostumus pakollisena valintaruutuna selitteineen | 3.3.2 | `inc/event-registrations.php` |
 | Kirjautumissivun välilehdet: `<nav aria-label>` + `aria-current="page"` *(korjattu #85:ssä — oli rikki `role="tab"`)* | 4.1.2 | `inc/login.php` |
 | Hakukenttä headerissa: `role="search"`, `<label for>` | 1.3.1 | `header.php:154` |
@@ -127,12 +127,27 @@ teksti saa ~8,9:1.
 | Uutiskirje (kirjautuneille): `aria-label="Tilaa uutiskirje"` lisätty lomakkeelle *(korjattu #85:ssä)* | 1.3.1 | `inc/newsletter.php:644` |
 | Ei pelkkä-placeholder-labeleita teeman lomakkeissa | 3.3.2 | — |
 
-**Avoinna / varmistettava:**
+**Verifioitu #88:ssa:**
 
-- **WooCommerce-kassan omat kentät** (Tampere 2026 -kentät, jäsenmaksut) — labelien
-  sidonta hoituu WooCommerce Blocks -kautta; *varmistettava renderöidystä kassasta*. → #88
-- **AcyMailing-shortcoden lomake** (pre-footer) — kolmannen osapuolen vastuulla; teema
-  ei voi vaikuttaa sen rakenteeseen.
+- **WooCommerce-kassan omat kentät** (Tampere 2026 -osallistujakentät, jäsenmaksun
+  jäsenten nimet) — rekisteröity `woocommerce_register_additional_checkout_field`-
+  API:lla, joka tuottaa labelit ja `aria-required`-merkinnät WooCommercen blockissa.
+  Yksityiskohtainen tila eri kohteille → [docs/woocommerce-saavutettavuus.md](woocommerce-saavutettavuus.md).
+- **Mukautettu lajitteluvalikko** (`assets/js/shop-select.js`) toteuttaa ARIA
+  listbox + button -patternin: `aria-haspopup="listbox"`, `aria-expanded`,
+  `aria-controls`, `aria-activedescendant`, `role="listbox"`/`option`,
+  `aria-selected`, `aria-disabled`, nuolinäppäimet + Home/End. ✅
+- **Mukautetut määränapit** (`+`/`−`) saavat `aria-label="Vähennä/Lisää määrää"`;
+  fokus näkyy konttireunan ja box-shadow-renkaan kautta (`.rytkoset-quantity:focus-within`,
+  `.wc-block-components-quantity-selector:focus-within`). ✅
+- **Otsikon ostoskorilinkki** sisältää tuotemäärän aria-labelissa
+  ("Ostoskori, N tuote(tta)"); ikoni ja näkyvä count `aria-hidden="true"`. ✅
+- **Tampere 2026 / jäsenmaksu -kassailmoitukset** käyttävät `role="note"`. ✅
+
+**Avoinna:**
+
+- **AcyMailing-shortcoden lomake** (pre-footer) — kolmannen osapuolen vastuulla;
+  teema ei voi vaikuttaa sen rakenteeseen.
 
 ### 2.4 Media ja ikonit
 
@@ -203,13 +218,26 @@ tikettikohtaisesti.
 - [x] Galleriakuvien alt-tekstien oletuskäsittely + ylläpitäjän ohjeistus
 - [x] PhotoSwipe-näppäimistökäyttö verifioitu
 
-### #87 Tapahtumalomakkeen saavutettavuus
-- [ ] Tapahtumailmoittautumislomake testattu ruudunlukijalla ja näppäimistöllä
-  (pohja jo hyvä; varmistus)
+### #87 Tapahtumalomakkeen saavutettavuus *(✅ valmis)*
+- [x] Pohja oli jo hyvä; lisätty kenttäkohtainen virhetila (`aria-invalid` +
+  `aria-describedby` palvelinpuolen virhekoodin perusteella)
+- [x] `aria-required="true"` lisätty kaikkiin pakollisiin kenttiin (oli vain
+  GDPR-checkboxissa)
+- [x] Lomakkeen lähetyksen epäonnistuessa fokus siirtyy automaattisesti
+  vikaiseen kenttään (inline-JS, latautuu vain virhetilanteessa)
+- [x] CSS: punainen reuna vikaisille kentille `aria-invalid="true"` -valinnalla
 
-### #88 WooCommerce-osioiden saavutettavuus
-- [ ] Kassan ja tuotesivujen kenttälabelit, virheilmoitukset ja fokus tarkistettu
-- [ ] Määräpainikkeen (`shop.css:356`) fokustila yhtenäistetty
+### #88 WooCommerce-osioiden saavutettavuus *(✅ valmis)*
+- [x] Kassan ja tuotesivujen kenttälabelit verifioitu: WC Block-checkout ja
+  `woocommerce_register_additional_checkout_field`-rekisteröidyt kentät tuottavat
+  labelit ja `aria-required`-merkinnät automaattisesti
+- [x] Mukautetut widgetit (listbox-lajitteluvalikko, määränapit, ostoskorilinkki)
+  on tarkistettu — ARIA-merkinnät kunnossa
+- [x] Määränappien fokustila perustellusti konttireuna + box-shadow-renkaan kautta
+  (`:focus-within`), ei nappikohtainen outline
+- [x] Kassailmoitukset käyttävät `role="note"`
+- [x] Kehittäjäohje [docs/woocommerce-saavutettavuus.md](woocommerce-saavutettavuus.md)
+  dokumentoi nykytilan ja kolmansien osapuolten rajat (Mollie, WC Block)
 
 ### #89 Saavutettavuustestaus
 - [ ] Perustason testausmenetelmät dokumentoitu ja ajettu (ks. luku 5)

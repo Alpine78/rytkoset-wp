@@ -179,3 +179,5 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 `docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.
 
 `docs/media-saavutettavuus.md` documents admin-facing media accessibility rules: alt-text guidance, the gallery alt-fallback chain (`rytkoset_theme_get_gallery_image_alt()`), automatic iframe titles for album videos, and PhotoSwipe keyboard shortcuts.
+
+`docs/woocommerce-saavutettavuus.md` is a developer-facing audit of the WooCommerce-related a11y surface: cart link aria-label, the custom listbox sort widget, custom quantity controls, Tampere 2026 / membership checkout notices, and the third-party boundaries (Mollie hosted page, WC Checkout Block).
