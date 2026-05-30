@@ -119,7 +119,7 @@ teksti saa ~8,9:1.
 
 | Asia | WCAG | Sijainti |
 | --- | --- | --- |
-| Tapahtumailmoittautuminen: `<label for>`, `required` + `aria-required`, `autocomplete`, `role="alert"` -virheilmoitus, pakollisten kenttien selite | 1.3.1, 3.3.2, 4.1.2 | `inc/event-registrations.php` |
+| Tapahtumailmoittautuminen: `<label for>`, `required` + `aria-required` kaikilla pakollisilla, `autocomplete`, `role="alert"` -virheilmoitus, pakollisten kenttien selite, kenttäkohtainen `aria-invalid`+`aria-describedby` virhetilassa ja automaattinen fokussiirto vikaiseen kenttään *(parannettu #87:ssä)* | 1.3.1, 3.3.1, 3.3.2, 4.1.2 | `inc/event-registrations.php` |
 | GDPR-suostumus pakollisena valintaruutuna selitteineen | 3.3.2 | `inc/event-registrations.php` |
 | Kirjautumissivun välilehdet: `<nav aria-label>` + `aria-current="page"` *(korjattu #85:ssä — oli rikki `role="tab"`)* | 4.1.2 | `inc/login.php` |
 | Hakukenttä headerissa: `role="search"`, `<label for>` | 1.3.1 | `header.php:154` |
@@ -203,9 +203,14 @@ tikettikohtaisesti.
 - [x] Galleriakuvien alt-tekstien oletuskäsittely + ylläpitäjän ohjeistus
 - [x] PhotoSwipe-näppäimistökäyttö verifioitu
 
-### #87 Tapahtumalomakkeen saavutettavuus
-- [ ] Tapahtumailmoittautumislomake testattu ruudunlukijalla ja näppäimistöllä
-  (pohja jo hyvä; varmistus)
+### #87 Tapahtumalomakkeen saavutettavuus *(✅ valmis)*
+- [x] Pohja oli jo hyvä; lisätty kenttäkohtainen virhetila (`aria-invalid` +
+  `aria-describedby` palvelinpuolen virhekoodin perusteella)
+- [x] `aria-required="true"` lisätty kaikkiin pakollisiin kenttiin (oli vain
+  GDPR-checkboxissa)
+- [x] Lomakkeen lähetyksen epäonnistuessa fokus siirtyy automaattisesti
+  vikaiseen kenttään (inline-JS, latautuu vain virhetilanteessa)
+- [x] CSS: punainen reuna vikaisille kentille `aria-invalid="true"` -valinnalla
 
 ### #88 WooCommerce-osioiden saavutettavuus
 - [ ] Kassan ja tuotesivujen kenttälabelit, virheilmoitukset ja fokus tarkistettu
