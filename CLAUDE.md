@@ -35,7 +35,7 @@ GitHub Actions runs this automatically for every PR and `main` push (`.github/wo
 
 - `dev` branch → automatic FTPS deploy → `dev.rytkoset.net` (when changes in `wp-content/themes/rytkoset-theme/**`)
 - `main` branch → no automatic deploy
-- Production (`rytkoset.net`) deploy is always manual
+- Production (`rytkoset.net`) deploy is manual via `.github/workflows/deploy-production.yml`, defaulting to `main` and requiring production FTPS secrets (`PROD_FTP_HOST`, `PROD_FTP_USERNAME`, `PROD_FTP_PASSWORD`, `PROD_FTP_PORT`)
 
 ## Commit messages
 

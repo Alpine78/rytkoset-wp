@@ -13,6 +13,15 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 Ensimmäinen tuotantojulkaisu: uusi WordPress-teema rytkoset.net-sivustolla. Sisältää tapahtumakokonaisuuden (CPT, maksuttomat ilmoittautumiset, viestintä, GDPR), WooCommerce-jäsenmaksut ja Tampere 2026 -osallistumismaksun Mollie-maksuilla, AcyMailing-uutiskirjeen, Claude Designin mukaisesti uusitut etusivun, footerin ja kirjautumissivut, branded 404-sivun sekä WCAG 2.1 AA -tason saavutettavuusparannukset.
 
 ### Added
+- Manual GitHub Actions production theme deploy workflow for `rytkoset.net`.
+
+---
+
+## [1.0.0] - 2026-05-30
+
+Ensimmäinen tuotantojulkaisu: uusi WordPress-teema rytkoset.net-sivustolla. Sisältää tapahtumakokonaisuuden (CPT, maksuttomat ilmoittautumiset, viestintä, GDPR), WooCommerce-jäsenmaksut ja Tampere 2026 -osallistumismaksun Mollie-maksuilla, AcyMailing-uutiskirjeen, Claude Designin mukaisesti uusitut etusivun, footerin ja kirjautumissivut, branded 404-sivun sekä WCAG 2.1 AA -tason saavutettavuusparannukset.
+
+### Added
 - Saavutettavuuden perustason analyysi (WCAG 2.1 AA): keskeisten näkymien läpikäynti, todennetut kontrastilaskelmat, priorisoidut löydökset ja ehdotetut jatkotikettien sisällöt (#83–#89); dokumentti `docs/saavutettavuus-analyysi.md` (#82)
 - Tapahtumaviestinnän WP-Cron-lähetysjono, joka säilyttää `Tapahtumat > Viestintä` -näkymän ensisijaisena työkaluna ja rajoittaa massaviestit 18 `wp_mail()`-yritykseen rullaavan tunnin aikana (#264)
 - Footerin uudistus (Footer C): näyttävä pre-footer-uutiskirjekaista etusivulla, kompakti kaista alasivuilla ja kevyt slim footer kaikilla sivuilla; uudet `template-parts/pre-footer-large.php` ja `template-parts/pre-footer-compact.php` (#278)
