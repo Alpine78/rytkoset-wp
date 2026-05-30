@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Added
+- Manual GitHub Actions production theme deploy workflow for `rytkoset.net`.
+
 ---
 
 ## [1.0.0] - 2026-05-30

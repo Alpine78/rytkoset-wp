@@ -1,0 +1,51 @@
+name: Deploy theme to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Git ref to deploy
+        required: true
+        default: main
+      server_dir:
+        description: Production theme directory
+        required: true
+        default: /wp-content/themes/rytkoset-theme/
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Lint PHP files in theme
+        run: |
+          find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Deploy via FTPS
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ secrets.PROD_FTP_HOST }}
+          username: ${{ secrets.PROD_FTP_USERNAME }}
+          password: ${{ secrets.PROD_FTP_PASSWORD }}
+          port: ${{ secrets.PROD_FTP_PORT }}
+          protocol: ftps
+          local-dir: wp-content/themes/rytkoset-theme/
+          server-dir: ${{ inputs.server_dir }}
+          log-level: standard
+          dangerous-clean-slate: false
