@@ -121,16 +121,18 @@ teksti saa ~8,9:1.
 | --- | --- | --- |
 | Tapahtumailmoittautuminen: `<label for>`, `required` + `aria-required`, `autocomplete`, `role="alert"` -virheilmoitus, pakollisten kenttien selite | 1.3.1, 3.3.2, 4.1.2 | `inc/event-registrations.php` |
 | GDPR-suostumus pakollisena valintaruutuna selitteineen | 3.3.2 | `inc/event-registrations.php` |
-| Kirjautumissivun välilehdet: `role="tab"`, `aria-selected` | 4.1.2 | `inc/login.php` |
+| Kirjautumissivun välilehdet: `<nav aria-label>` + `aria-current="page"` *(korjattu #85:ssä — oli rikki `role="tab"`)* | 4.1.2 | `inc/login.php` |
+| Hakukenttä headerissa: `role="search"`, `<label for>` | 1.3.1 | `header.php:154` |
+| Kommenttikenttä: WordPress core `comment_form()` tuottaa labelit | 1.3.1 | `comments.php` |
+| Uutiskirje (kirjautuneille): `aria-label="Tilaa uutiskirje"` lisätty lomakkeelle *(korjattu #85:ssä)* | 1.3.1 | `inc/newsletter.php:644` |
 | Ei pelkkä-placeholder-labeleita teeman lomakkeissa | 3.3.2 | — |
 
-**Varmistettava:**
+**Avoinna / varmistettava:**
 
 - **WooCommerce-kassan omat kentät** (Tampere 2026 -kentät, jäsenmaksut) — labelien
-  sidonta hoituu WooCommerce Blocks -kautta; *varmistettava renderöidystä kassasta*. → #88 / #85
-- **Uutiskirjelomakkeen kentät** (`inc/newsletter.php`, `template-parts/pre-footer-*.php`)
-  — opt-in-valintaruudun label on kunnossa; AcyMailing-shortcoden tuottaman lomakkeen
-  saavutettavuus on kolmannen osapuolen vastuulla. *Varmistettava.* → #85
+  sidonta hoituu WooCommerce Blocks -kautta; *varmistettava renderöidystä kassasta*. → #88
+- **AcyMailing-shortcoden lomake** (pre-footer) — kolmannen osapuolen vastuulla; teema
+  ei voi vaikuttaa sen rakenteeseen.
 
 ### 2.4 Media ja ikonit
 
