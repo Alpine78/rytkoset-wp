@@ -6,6 +6,10 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Added
+- `wp-content/maintenance.php`: branded maintenance page that overrides WordPress's default maintenance screen. Navy hero with gold accent, Newsreader/Manrope fonts, cream illustration card, pulsing status badge, return-time chip, and social links — matching the site's visual language. Reads `get_theme_mod()` for concept (`uudistus`/`huolto`/`talkoot`), return text, contact email, and custom logo.
+- Customizer section **Huoltotila** (in `inc/customizer-contact.php`): settings for maintenance concept and optional return-time text.
+
 ---
 
 ## [1.0.0] - 2026-05-30

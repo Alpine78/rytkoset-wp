@@ -54,6 +54,8 @@ Do not create commits automatically — report the implementation first, suggest
 
 The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. WordPress core and plugins are not in the repo.
 
+`wp-content/maintenance.php` overrides WordPress's built-in maintenance page (shown when a `.maintenance` file exists in the WordPress root, or during core/plugin updates). It is a self-contained PHP/HTML file — all CSS is inline, Google Fonts are loaded directly, and theme assets are referenced via `WP_CONTENT_URL`. It reads `get_theme_mod()` values (`rytkoset_theme_maintenance_concept`, `rytkoset_theme_maintenance_return_text`, `rytkoset_theme_contact_email`, `custom_logo`) which are available because WordPress's options and theme APIs load before maintenance mode is triggered. Customizer settings are under **Huoltotila** in the WordPress Customizer.
+
 ### Template hierarchy
 
 | File                         | Purpose                                             |
@@ -97,7 +99,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 | `inc/woocommerce-membership.php`       | Membership products, checkout notice, admin column and metabox                                                                                                 |
 | `inc/woocommerce-tampere-2026.php`     | Tampere 2026 participation fee: product, checkout fields, admin, organizer notifications                                                                       |
 | `inc/woocommerce-product-sync.php`     | WooCommerce product sync tool for local <-> dev                                                                                                                |
-| `inc/customizer-contact.php`           | Customizer contact fields for footer and admin email                                                                                                           |
+| `inc/customizer-contact.php`           | Customizer contact fields for footer and admin email; maintenance mode concept and return-text settings                                                         |
 
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
