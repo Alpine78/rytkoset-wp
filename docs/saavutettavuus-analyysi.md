@@ -34,8 +34,8 @@ toteutettavissa pieninä osina jatkotiketeissä:
 | Prioriteetti | Löydös | Tiketti | Tila |
 | --- | --- | --- | --- |
 | **Korkea** | Vaalean teeman päävalikon linkkitekstin kontrasti alle AA:n (3,68:1) | #84 | ✅ korjattu |
-| **Keski** | Galleriavideon `<iframe>` ilman saavutettavaa nimeä (`title`) | #86 | avoinna |
-| **Keski** | Galleriakuvien alt-tekstien laatu riippuu syötetystä datasta | #86 | avoinna |
+| **Keski** | Galleriavideon `<iframe>` ilman saavutettavaa nimeä (`title`) | #86 | ✅ korjattu |
+| **Keski** | Galleriakuvien alt-tekstien laatu riippuu syötetystä datasta | #86 | ✅ korjattu (fallback-ketju + ohjeistus) |
 | **Matala** | Pari fokustilaa ilmaistaan vain tausta-/värimuutoksella, ei fokusrenkaalla | #83 | ✅ korjattu |
 | **Matala** | `aria-current` aktiivisesta valikkokohdasta | #83 | ✅ varmistettu (WP-walker tuottaa automaattisesti) |
 | **Matala** | Skip-linkki rikki staattisilla sivuilla ja arkistoissa (puuttuva tai poikkeava main) | #83 | ✅ korjattu (löydetty toteutuksen aikana) |
@@ -146,16 +146,21 @@ teksti saa ~8,9:1.
 | Kirjautumissivun logo koristeellisena `alt=""` | 1.1.1 | `inc/login.php` |
 | IPTC-otsikon/kuvauksen synkronointi mediakirjastoon (pohja alt-teksteille) | 1.1.1 | `inc/attachment-iptc.php` |
 
-**Korjattava:**
+**Korjattu #86:ssä:**
 
-- **Galleriavideon `<iframe>` ilman saavutettavaa nimeä** — upotetulta videokehykseltä
-  puuttuu `title`-attribuutti (`single-gallery_album.php:89`). Ruudunlukija ilmoittaa
-  kehyksen vain geneerisesti. Korjaus: lisää `title`, esim. albumin/videon nimi.
-  Vakavuus: keski. → #86
-- **Galleriakuvien alt-tekstien laatu** — kuvat renderöidään mediakirjaston alt-kentästä;
-  laatu riippuu siitä, mitä ylläpitäjä on syöttänyt. Tämä on sisältö-/ohjeistusasia, ei
-  koodivirhe — suositellaan ohjeistus alt-tekstien täyttöön ja oletuskäsittely puuttuvalle
-  alt-tekstille. Vakavuus: keski. → #86
+- **Galleriavideon `<iframe>`** sai kuvaavan `title`-attribuutin
+  ([single-gallery_album.php](../wp-content/themes/rytkoset-theme/single-gallery_album.php)):
+  yksi video → "Video albumissa {albumi}", useita → "Video N/M albumissa {albumi}".
+- **Galleriakuvien alt-tekstien fallback-ketju** uudella helperillä
+  `rytkoset_theme_get_gallery_image_alt()` ([functions.php](../wp-content/themes/rytkoset-theme/functions.php)):
+  1) eksplisiittinen alt (ACF gallery-kentästä) → 2) `_wp_attachment_image_alt`-meta
+  → 3) liitteen kuvateksti (caption) → 4) tyhjä (koristekuva). Sovellettu sekä
+  `single-gallery_album.php`-pohjaan että `inc/gallery-albums.php`:n core/gallery-
+  renderöintiin. Lisäksi `docs/media-saavutettavuus.md` ohjeistaa ylläpitäjiä.
+- **PhotoSwipe-näppäimistökäyttö** verifioitu (PhotoSwipe 5 default + oma copy-link
+  -painike `isButton: true`): Esc sulkee, ←/→ navigoivat, Tab kiertää työkalupalkin
+  painikkeet (mukaan lukien kopioi linkki). Kuvalinkit galleriaruudukossa ovat
+  `<a href>` -elementtejä, joten ne ovat luonnostaan näppäimistöllä avattavissa.
 
 ---
 
@@ -193,10 +198,10 @@ tikettikohtaisesti.
 - [ ] Uutiskirje- ja muut teeman lomakkeet: label-sidonta, virheilmoitukset, fokusjärjestys
 - [ ] AcyMailing-lomakkeen saavutettavuuden rajat dokumentoitu
 
-### #86 Kuvien ja median saavutettavuus
-- [ ] Galleriavideon `<iframe>` saa kuvaavan `title`-attribuutin
-- [ ] Galleriakuvien alt-tekstien oletuskäsittely + ylläpitäjän ohjeistus
-- [ ] PhotoSwipe-näppäimistökäyttö testattu
+### #86 Kuvien ja median saavutettavuus *(✅ valmis)*
+- [x] Galleriavideon `<iframe>` saa kuvaavan `title`-attribuutin
+- [x] Galleriakuvien alt-tekstien oletuskäsittely + ylläpitäjän ohjeistus
+- [x] PhotoSwipe-näppäimistökäyttö verifioitu
 
 ### #87 Tapahtumalomakkeen saavutettavuus
 - [ ] Tapahtumailmoittautumislomake testattu ruudunlukijalla ja näppäimistöllä
