@@ -31,14 +31,15 @@ fokustyylit sekä esimerkillisesti merkitty tapahtumailmoittautumislomake.
 **Kriittisiä esteitä ei löytynyt.** Korjattavat kohdat ovat rajattuja ja
 toteutettavissa pieninä osina jatkotiketeissä:
 
-| Prioriteetti | Löydös | Tiketti |
-| --- | --- | --- |
-| **Korkea** | Vaalean teeman päävalikon linkkitekstin kontrasti alle AA:n (3,68:1) | #84 |
-| **Keski** | Galleriavideon `<iframe>` ilman saavutettavaa nimeä (`title`) | #86 |
-| **Keski** | Galleriakuvien alt-tekstien laatu riippuu syötetystä datasta | #86 |
-| **Matala** | Pari fokustilaa ilmaistaan vain tausta-/värimuutoksella, ei fokusrenkaalla | #83 |
-| **Matala** | `aria-current` aktiivisesta valikkokohdasta — varmistettava renderöidystä HTML:stä | #83 |
-| **Matala** | WooCommerce-kassan ja uutiskirjeen kenttien labelit — varmistettava | #85 / #88 |
+| Prioriteetti | Löydös | Tiketti | Tila |
+| --- | --- | --- | --- |
+| **Korkea** | Vaalean teeman päävalikon linkkitekstin kontrasti alle AA:n (3,68:1) | #84 | ✅ korjattu |
+| **Keski** | Galleriavideon `<iframe>` ilman saavutettavaa nimeä (`title`) | #86 | avoinna |
+| **Keski** | Galleriakuvien alt-tekstien laatu riippuu syötetystä datasta | #86 | avoinna |
+| **Matala** | Pari fokustilaa ilmaistaan vain tausta-/värimuutoksella, ei fokusrenkaalla | #83 | ✅ korjattu |
+| **Matala** | `aria-current` aktiivisesta valikkokohdasta | #83 | ✅ varmistettu (WP-walker tuottaa automaattisesti) |
+| **Matala** | Skip-linkki rikki staattisilla sivuilla ja arkistoissa (puuttuva tai poikkeava main) | #83 | ✅ korjattu (löydetty toteutuksen aikana) |
+| **Matala** | WooCommerce-kassan ja uutiskirjeen kenttien labelit — varmistettava | #85 / #88 | avoinna |
 
 ---
 
@@ -91,25 +92,26 @@ Kontrastit on laskettu WCAG-kaavalla `(L1+0,05)/(L2+0,05)`. Rajat: normaali teks
 | Tumma etusivulohko, valkoinen | `#ffffff` / `#0b315b` | ~7,8:1 | ✅ |
 | Footer-teksti / footer | `#ffffff` / `#111827` | ~13,1:1 | ✅ |
 | Yläpalkin utility-rivi | `rgba(255,255,255,.82)` / `#1f4277` | ~7:1+ | ✅ |
-| **Päävalikon linkki (15px) / palkki** | `#ffffff` / `#3b82f6` | **~3,68:1** | ❌ |
+| Päävalikon linkki (15px) / palkki | `#ffffff` / `#0f4c81` *(oli `#3b82f6` — korjattu #84:ssä)* | ~8,9:1 | ✅ |
 
 **Tumma teema** (`:root[data-theme="dark"]`) läpäisee kauttaaltaan (laskennalliset
 suhteet 5:1–13:1), mm. päävalikon palkki tummenee arvoon `#0f4c81`, jolloin valkoinen
 teksti saa ~8,9:1.
 
-**Korjattava:**
+**Korjattu #84:ssä:**
 
-- **Vaalean teeman päävalikon linkkiteksti** — `.menu-item a` on valkoista
-  (`--color-text-inverted`) 15px:n tekstiä (`font-size: 0.9375rem`,
-  `nav.desktop.css:67`) sinisen palkin (`--header-primary-bg: #3b82f6`,
-  `nav.base.css:4`) päällä. Kontrasti **~3,68:1** alittaa normaalin tekstin AA-rajan
-  4,5:1 (riittäisi vain suurelle tekstille). **Korkein prioriteetti.** Korjausvaihtoehdot:
-  tummempi palkin sävy vaaleassa teemassa (esim. `#1f4277`, jolla valkoinen saa ~10:1)
-  tai tummempi tekstiväri. Vakavuus: korkea. → #84
-- **Ghost-/outline-napit kuvan päällä** (`components.css`, hero) — valkoinen teksti
-  läpinäkyvällä napilla kuvan päällä: kontrasti riippuu kuvan kirkkaudesta. Teemassa on
-  gradienttipeite, mutta *varmistettava todellisilla hero-kuvilla dev-ympäristössä*.
-  Vakavuus: keski. → #84
+- **Vaalean teeman päävalikon linkkiteksti** — `--header-primary-bg` muutettiin
+  `#3b82f6` → `var(--color-primary)` (`#0f4c81`, [base.css:57](../wp-content/themes/rytkoset-theme/assets/css/base.css)).
+  Vaalea ja tumma teema käyttävät nyt rakenteellisesti samaa headeria. Valkoisen
+  tekstin kontrasti nousi 3,68:1 → ~8,9:1. Korjaus heijastuu myös hero-gradientin
+  yläosaan ja `.btn--ghost`-nappeihin gradientin päällä — hero-otsikon alaotsikko
+  `hero__lead` (rgba(255,255,255,.82) 18px) nousi ~3,0:1 → ~5,4:1.
+
+**Avoinna:**
+
+- **Ghost-napit erittäin kirkkaiden kuvien päällä** (`components.css`) — kontrasti
+  hero-gradientin lisäksi kuvan luminanssista. Korjauksen jälkeen riski on huomattavasti
+  pienempi. Vakavuus: matala. Tarvittaessa lisätään tummempi gradienttipeite.
 
 ### 2.3 Lomakkeet
 
