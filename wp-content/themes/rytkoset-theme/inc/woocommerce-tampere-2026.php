@@ -966,6 +966,23 @@ function rytkoset_theme_get_tampere_2026_order_participant_quantity( $order ) {
 }
 
 /**
+ * Returns the highest Tampere 2026 participant field index that should be shown for an order.
+ *
+ * Non-Tampere orders can still contain stale hidden Store API checkbox meta. Those
+ * participant fields are not relevant for the order and should never be displayed.
+ *
+ * @param WC_Order|null $order WooCommerce order object.
+ * @return int
+ */
+function rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order ) {
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+		return 0;
+	}
+
+	return rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+}
+
+/**
  * Returns the Tampere 2026 participant field IDs for a participant index.
  *
  * @param int $index Participant index.
@@ -1057,11 +1074,7 @@ function rytkoset_theme_filter_tampere_2026_order_confirmation_fields( $show, $f
 
 	$order = isset( $context['order'] ) && $context['order'] instanceof WC_Order ? $context['order'] : null;
 
-	if ( ! $order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
-		return $show;
-	}
-
-	return $show && $index <= rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+	return $show && $index <= rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order );
 }
 add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_tampere_2026_order_confirmation_fields', 10, 4 );
 
@@ -1073,11 +1086,11 @@ add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_
  * @return array<string, mixed>
  */
 function rytkoset_theme_filter_tampere_2026_admin_order_fields( $fields, $order = null ) {
-	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+	if ( ! $order instanceof WC_Order ) {
 		return $fields;
 	}
 
-	$participant_quantity = rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+	$participant_quantity = rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order );
 
 	foreach ( $fields as $field_key => $field ) {
 		$field_id = is_array( $field ) && isset( $field['id'] ) ? (string) $field['id'] : (string) $field_key;
@@ -1099,11 +1112,11 @@ add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_tampere_
  * @return void
  */
 function rytkoset_theme_cleanup_tampere_2026_extra_participant_order_meta( $order ) {
-	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+	if ( ! $order instanceof WC_Order ) {
 		return;
 	}
 
-	$participant_quantity = rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+	$participant_quantity = rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order );
 	$max_participants     = rytkoset_theme_get_tampere_2026_max_participants();
 	$deleted_meta         = false;
 

@@ -164,7 +164,7 @@ Free event registration forms close after the event registration deadline. Paid 
 WooCommerce-specific logic lives in `inc/woocommerce-*.php` modules, with small shared helpers still in `functions.php`. Key areas:
 
 - **Membership products** — annual and lifetime membership; checkout notice when product is in cart
-- **Paid event fees / Tampere 2026** — linked event products, Tampere-specific checkout fields, participant list in admin, CSV export, event-specific organizer email notifications
+- **Paid event fees / Tampere 2026** — linked event products, Tampere-specific checkout fields, stale participant field hiding in admin/emails, participant list in admin, CSV export, event-specific organizer email notifications
 - **Mollie payments** — Finnish language texts, output buffering on `thankyou` page for bank transfer instructions
 - **PhotoSwipe conflict** — WooCommerce registers PhotoSwipe 4 scripts; theme actively dequeues them to avoid conflicts
 
