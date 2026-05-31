@@ -7,6 +7,9 @@
   --shop-popover-shadow: 0 1px 0 rgba(15, 23, 42, 0.04),
     0 18px 40px rgba(8, 37, 74, 0.18);
   --shop-accent-soft: #fef3c7;
+  --shop-notice-bg: #f6f5f8;
+  --shop-notice-success: #8fae1b;
+  --shop-notice-error: #b91c1c;
 }
 
 :root[data-theme="dark"] .woocommerce,
@@ -16,6 +19,54 @@
   --shop-popover-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 18px 40px rgba(0, 0, 0, 0.34);
   --shop-accent-soft: rgba(251, 191, 36, 0.18);
+  --shop-notice-bg: var(--color-surface-alt);
+  --shop-notice-success: #a3c72b;
+  --shop-notice-error: #f87171;
+}
+
+.woocommerce .woocommerce-message,
+.woocommerce .woocommerce-info,
+.woocommerce .woocommerce-error,
+.woocommerce-page .woocommerce-message,
+.woocommerce-page .woocommerce-info,
+.woocommerce-page .woocommerce-error {
+  border-top-color: var(--shop-notice-success);
+  background: var(--shop-notice-bg);
+  color: var(--color-text);
+}
+
+.woocommerce .woocommerce-info,
+.woocommerce-page .woocommerce-info {
+  border-top-color: var(--color-primary);
+}
+
+.woocommerce .woocommerce-error,
+.woocommerce-page .woocommerce-error {
+  border-top-color: var(--shop-notice-error);
+}
+
+.woocommerce .woocommerce-message::before,
+.woocommerce-page .woocommerce-message::before {
+  color: var(--shop-notice-success);
+}
+
+.woocommerce .woocommerce-info::before,
+.woocommerce-page .woocommerce-info::before {
+  color: var(--color-primary);
+}
+
+.woocommerce .woocommerce-error::before,
+.woocommerce-page .woocommerce-error::before {
+  color: var(--shop-notice-error);
+}
+
+.woocommerce .woocommerce-message a:not(.button),
+.woocommerce .woocommerce-info a:not(.button),
+.woocommerce .woocommerce-error a:not(.button),
+.woocommerce-page .woocommerce-message a:not(.button),
+.woocommerce-page .woocommerce-info a:not(.button),
+.woocommerce-page .woocommerce-error a:not(.button) {
+  color: var(--color-primary);
 }
 
 .woocommerce a.button,

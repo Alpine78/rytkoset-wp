@@ -12,6 +12,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ### Fixed
 - Ostoskorin tyhjän korin `Uutta kaupassa` -tuotesuositusten napit yhtenäistettiin kaupan etusivun keltaiseen CTA-tyyliin ja tasattiin samaan riviin (#317).
+- WooCommerce-ilmoitusten tumman teeman värit vakioitiin, jotta ostoskoriin lisäyksen ilmoitusteksti säilyy luettavana (#317).
 - Tampere 2026 -osallistujakenttien tyhjät `buffet: Ei` -rivit piilotetaan myös ei-Tampere-tilauksilta WooCommerce Adminissa ja asiakassähköposteissa (#314).
 
 ---
