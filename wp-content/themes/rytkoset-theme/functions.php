@@ -421,11 +421,14 @@ function rytkoset_theme_scripts() {
 		function_exists( 'is_woocommerce' )
 		&& ( is_woocommerce() || is_cart() || is_checkout() )
 	) {
+		$shop_style_path    = get_template_directory() . '/assets/css/shop.css';
+		$shop_style_version = file_exists( $shop_style_path ) ? (string) filemtime( $shop_style_path ) : $theme_version;
+
 		wp_enqueue_style(
 			'rytkoset-theme-shop',
 			get_template_directory_uri() . '/assets/css/shop.css',
 			array( 'rytkoset-theme-style' ),
-			$theme_version
+			$shop_style_version
 		);
 
 		wp_enqueue_script(
