@@ -178,7 +178,7 @@
           Rytkösten sukuseura perustettiin 18.8.1963 Iisalmessa Runnin Terveyskylpylällä.
           Perustamisen puuhamiehenä oli maanviljelijä Viljo Rytkönen, jonka kiinnostus
           sukututkimukseen loi pohjan seuran toiminnalle. Vanhat valokuvat ja asiakirjat
-          kertovat, keitä olemme — sukuseura kokoaa ja tallentaa Rytkösten vaiheita sukupolvelta
+          kertovat, keitä olemme. Sukuseura kokoaa ja tallentaa Rytkösten vaiheita sukupolvelta
           toiselle, jotta tarinat eivät unohdu.
         </p>
         <a href="<?php echo esc_url( home_url('/sukuseura') ); ?>" class="home-block__link">
