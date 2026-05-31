@@ -22,7 +22,9 @@ get_header();
 					?>
 					<article <?php post_class( 'article' ); ?>>
 						<header class="article__header">
-							<p class="article__meta"><?php echo esc_html( get_the_date() ); ?></p>
+							<?php if ( 'product' !== get_post_type() ) : ?>
+								<p class="article__meta"><?php echo esc_html( get_the_date() ); ?></p>
+							<?php endif; ?>
 							<h1 class="article__title"><?php the_title(); ?></h1>
 						</header>
 
