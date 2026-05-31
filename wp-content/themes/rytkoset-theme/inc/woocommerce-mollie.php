@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return string
  */
 function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain ) {
-	if ( 'mollie-payments-for-woocommerce' !== $domain ) {
+	if ( ! in_array( $domain, array( 'mollie-payments-for-woocommerce', 'woocommerce', 'woocommerce-payments' ), true ) ) {
 		return $translated;
 	}
 
@@ -28,6 +28,7 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 
 	$map = array(
 		', payment pending.' => ', maksu odottaa vahvistusta.',
+		'Your payment was not successful. Please complete your order with a different payment method.' => 'Maksu ei onnistunut. Viimeistele tilaus valitsemalla toinen maksutapa.',
 		'Please complete your payment by transferring the total amount to the following bank account:' => 'Viimeistele maksu siirtämällä koko summa seuraavalle pankkitilille:',
 		'Beneficiary: %s' => 'Saaja: %s',
 		'Payment reference: %s' => 'Viite: %s',
