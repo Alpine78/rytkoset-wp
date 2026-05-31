@@ -347,7 +347,10 @@ function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 's
 		return;
 	}
 
-	$key = $context . ':' . $order->get_id();
+	// Screen contexts (thank-you page and order details) render on the same
+	// request, so dedupe them with a shared key and keep email separate.
+	$scope = ( 'email' === $context ) ? 'email' : 'screen';
+	$key   = $scope . ':' . $order->get_id();
 
 	if ( isset( $rendered[ $key ] ) ) {
 		return;
@@ -376,7 +379,7 @@ function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 's
 
 	$message = sprintf(
 		/* translators: %s: RF reference instruction. */
-		__( 'Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
+		__( 'Maksunvälittäjänä toimii Mollie, ja tilisiirto maksetaan hollantilaiseen pankkiin – tämä on normaalia. Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
 		$reference_instruction
 	);
 
@@ -386,9 +389,11 @@ function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 's
 		return;
 	}
 
-	$style = 'margin:16px 0;padding:16px 20px;background:#f6f5f8;border-top:3px solid #8fae1b;color:#1d2327;';
+	// Avoid WooCommerce's `woocommerce-info` class: its absolutely positioned
+	// ::before icon overlaps the bold heading. Use a self-contained style.
+	$style = 'margin:16px 0;padding:16px 20px;background:#f6f5f8;border-top:3px solid #8fae1b;color:#1d2327;border-radius:4px;';
 
-	echo '<div class="woocommerce-info rytkoset-mollie-rf-notice" style="' . esc_attr( $style ) . '">';
+	echo '<div class="rytkoset-mollie-rf-notice" style="' . esc_attr( $style ) . '">';
 	echo '<strong>' . esc_html__( 'Tärkeää suomalaisissa pankeissa:', 'rytkoset-theme' ) . '</strong> ';
 	echo esc_html( $message );
 	echo '</div>';
