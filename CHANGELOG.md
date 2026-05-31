@@ -17,6 +17,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Mollien kassamaksutapojen ja luottokorttikenttien englanninkielisiä tekstejä suomennettiin (#317).
 - Mollie Componentsin locale pakotetaan suomeksi, kun WordPressin locale on `fi`, jotta korttikenttien iframe ei putoa englanniksi (#317).
 - Maksun epäonnistumisen kassailmoitus suomennettiin (#317).
+- Mollien tilisiirto- ja verkkopankkitilauksille lisättiin asiakasohje, joka kertoo suomalaisten pankkien RF-viitteen käytöstä ilman väliviivoja (#317).
 - Tampere 2026 -osallistujakenttien tyhjät `buffet: Ei` -rivit piilotetaan myös ei-Tampere-tilauksilta WooCommerce Adminissa ja asiakassähköposteissa (#314).
 
 ---

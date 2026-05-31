@@ -303,13 +303,144 @@ function rytkoset_theme_end_mollie_email_instruction_buffer( $order, $sent_to_ad
 	rytkoset_theme_end_mollie_instruction_buffer( 'email', $order );
 }
 
+/**
+ * Extracts a normalized RF reference from saved Mollie instructions.
+ *
+ * @param WC_Order|mixed $order WooCommerce order object.
+ * @return string
+ */
+function rytkoset_theme_get_mollie_rf_reference( $order ) {
+	if ( ! rytkoset_theme_is_mollie_rf_reference_order( $order ) ) {
+		return '';
+	}
+
+	$instructions = $order->get_meta( '_mollie_payment_instructions', true );
+
+	if ( ! is_string( $instructions ) || '' === $instructions ) {
+		return '';
+	}
+
+	$normalized = rytkoset_theme_normalize_mollie_rf_references( $instructions );
+
+	if ( preg_match( '/\bRF\d{2}[A-Z0-9]{5,}\b/i', $normalized, $matches ) ) {
+		return strtoupper( $matches[0] );
+	}
+
+	return '';
+}
+
+/**
+ * Renders a Finnish bank transfer note for Mollie RF references.
+ *
+ * Mollie's own bank transfer email is sent outside WordPress, so show the
+ * Finnish bank-specific guidance in WooCommerce-controlled customer views.
+ *
+ * @param WC_Order|mixed $order      WooCommerce order object.
+ * @param string         $context    Render context.
+ * @param bool           $plain_text Whether the output is plain text email.
+ * @return void
+ */
+function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 'screen', $plain_text = false ) {
+	static $rendered = array();
+
+	if ( ! rytkoset_theme_is_mollie_rf_reference_order( $order ) ) {
+		return;
+	}
+
+	$key = $context . ':' . $order->get_id();
+
+	if ( isset( $rendered[ $key ] ) ) {
+		return;
+	}
+
+	$rendered[ $key ] = true;
+
+	$reference      = rytkoset_theme_get_mollie_rf_reference( $order );
+	$example_source = 'RF98-1937-5848-0918';
+	$example_target = rytkoset_theme_normalize_mollie_rf_references( $example_source );
+
+	if ( '' !== $reference ) {
+		$reference_instruction = sprintf(
+			/* translators: %s: normalized RF payment reference. */
+			__( 'Käytä pankissa viitettä %s.', 'rytkoset-theme' ),
+			$reference
+		);
+	} else {
+		$reference_instruction = sprintf(
+			/* translators: 1: formatted RF reference, 2: normalized RF reference. */
+			__( 'Esimerkiksi %1$s kirjoitetaan pankkiin muodossa %2$s.', 'rytkoset-theme' ),
+			$example_source,
+			$example_target
+		);
+	}
+
+	$message = sprintf(
+		/* translators: %s: RF reference instruction. */
+		__( 'Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
+		$reference_instruction
+	);
+
+	if ( $plain_text ) {
+		echo "\n" . esc_html__( 'Tärkeää suomalaisissa pankeissa:', 'rytkoset-theme' ) . "\n";
+		echo esc_html( $message ) . "\n";
+		return;
+	}
+
+	$style = 'margin:16px 0;padding:16px 20px;background:#f6f5f8;border-top:3px solid #8fae1b;color:#1d2327;';
+
+	echo '<div class="woocommerce-info rytkoset-mollie-rf-notice" style="' . esc_attr( $style ) . '">';
+	echo '<strong>' . esc_html__( 'Tärkeää suomalaisissa pankeissa:', 'rytkoset-theme' ) . '</strong> ';
+	echo esc_html( $message );
+	echo '</div>';
+}
+
+/**
+ * Renders the RF reference notice on Mollie thank-you pages.
+ *
+ * @param int $order_id WooCommerce order ID.
+ * @return void
+ */
+function rytkoset_theme_render_mollie_thankyou_rf_reference_notice( $order_id ) {
+	rytkoset_theme_render_mollie_rf_reference_notice( wc_get_order( $order_id ), 'thankyou' );
+}
+
+/**
+ * Renders the RF reference notice on customer order detail pages.
+ *
+ * @param WC_Order|mixed $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_render_mollie_order_details_rf_reference_notice( $order ) {
+	rytkoset_theme_render_mollie_rf_reference_notice( $order, 'order-details' );
+}
+
+/**
+ * Renders the RF reference notice in customer emails.
+ *
+ * @param WC_Order|mixed $order         WooCommerce order object.
+ * @param bool           $sent_to_admin Whether the email targets admin.
+ * @param bool           $plain_text    Whether the email is plain text.
+ * @return void
+ */
+function rytkoset_theme_render_mollie_email_rf_reference_notice( $order, $sent_to_admin, $plain_text ) {
+	if ( $sent_to_admin ) {
+		return;
+	}
+
+	rytkoset_theme_render_mollie_rf_reference_notice( $order, 'email', $plain_text );
+}
+
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_start_mollie_thankyou_instruction_buffer', 9 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_end_mollie_thankyou_instruction_buffer', 11 );
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_render_mollie_thankyou_rf_reference_notice', 12 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_start_mollie_thankyou_instruction_buffer', 9 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_end_mollie_thankyou_instruction_buffer', 11 );
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_render_mollie_thankyou_rf_reference_notice', 12 );
 add_action( 'woocommerce_order_details_after_order_table', 'rytkoset_theme_start_mollie_order_details_instruction_buffer', 9 );
 add_action( 'woocommerce_order_details_after_order_table', 'rytkoset_theme_end_mollie_order_details_instruction_buffer', 11 );
+add_action( 'woocommerce_order_details_after_order_table', 'rytkoset_theme_render_mollie_order_details_rf_reference_notice', 12 );
 add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_start_mollie_email_instruction_buffer', 9, 3 );
 add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_end_mollie_email_instruction_buffer', 11, 3 );
+add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_render_mollie_email_rf_reference_notice', 12, 3 );
 add_action( 'woocommerce_email_order_meta', 'rytkoset_theme_start_mollie_email_instruction_buffer', 9, 3 );
 add_action( 'woocommerce_email_order_meta', 'rytkoset_theme_end_mollie_email_instruction_buffer', 11, 3 );
