@@ -14,6 +14,8 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Ostoskorin tyhjän korin `Uutta kaupassa` -tuotesuositusten napit yhtenäistettiin kaupan etusivun keltaiseen CTA-tyyliin ja tasattiin samaan riviin (#317).
 - WooCommerce-ilmoitusten tumman teeman värit vakioitiin, jotta ostoskoriin lisäyksen ilmoitusteksti säilyy luettavana (#317).
 - WooCommerce-tuotesivuilta poistettiin geneerisen yksittäissivupohjan julkaisupäivämäärä (#317).
+- Mollien kassamaksutapojen ja luottokorttikenttien englanninkielisiä tekstejä suomennettiin (#317).
+- Mollie Componentsin locale pakotetaan suomeksi, kun WordPressin locale on `fi`, jotta korttikenttien iframe ei putoa englanniksi (#317).
 - Tampere 2026 -osallistujakenttien tyhjät `buffet: Ei` -rivit piilotetaan myös ei-Tampere-tilauksilta WooCommerce Adminissa ja asiakassähköposteissa (#314).
 
 ---

@@ -34,6 +34,12 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 		'Please provide the payment reference <strong>%s</strong>' => 'Käytä maksussa viitettä <strong>%s</strong>',
 		'The payment will expire on <strong>%s</strong>.' => 'Maksu vanhenee <strong>%s</strong>.',
 		'The payment will expire on <strong>%s</strong>. Please make sure you transfer the total amount before this date.' => 'Maksu vanhenee <strong>%s</strong>. Varmista, että siirrät koko summan ennen tätä päivää.',
+		'Pay by Bank' => 'Verkkopankkimaksu',
+		'Name on card' => 'Kortinhaltijan nimi',
+		'Card number' => 'Kortin numero',
+		'Expiry date' => 'Voimassaoloaika',
+		'Secure payments provided by' => 'Turvallisen maksun tarjoaa',
+		'%1$s Secure payments provided by %2$s' => '%1$s Turvallisen maksun tarjoaa %2$s',
 		'Payment completed by <strong>%1$s</strong> (IBAN (last 4 digits): %2$s, BIC: %3$s)' => 'Maksu suoritettu tililtä <strong>%1$s</strong> (IBAN, 4 viimeistä merkkiä: %2$s, BIC: %3$s)',
 		'%1$s payment pending (%2$s).' => '%1$s: maksu odottaa vahvistusta (%2$s).',
 		'%1$s payment still pending (%2$s) but customer already returned to the store. Status should be updated automatically in the future, if it doesn\'t this might indicate a communication issue between the site and Mollie.' => '%1$s: maksu odottaa edelleen vahvistusta (%2$s), vaikka asiakas on jo palannut kauppaan. Tilan pitäisi päivittyä automaattisesti myöhemmin. Jos näin ei käy, sivuston ja Mollien välillä voi olla yhteysongelma.',
@@ -47,6 +53,57 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 	return $translated;
 }
 add_filter( 'gettext', 'rytkoset_theme_mollie_finnish_strings', 10, 3 );
+
+/**
+ * Keeps selected Mollie gateway titles understandable for Finnish checkout users.
+ *
+ * @param string $title      Payment gateway title.
+ * @param string $gateway_id Payment gateway ID.
+ * @return string
+ */
+function rytkoset_theme_mollie_gateway_title( $title, $gateway_id ) {
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	if ( 0 !== strpos( (string) $locale, 'fi' ) ) {
+		return $title;
+	}
+
+	if ( 'mollie_wc_gateway_paybybank' === $gateway_id ) {
+		return __( 'Verkkopankkimaksu', 'rytkoset-theme' );
+	}
+
+	return $title;
+}
+add_filter( 'woocommerce_gateway_title', 'rytkoset_theme_mollie_gateway_title', 10, 2 );
+
+/**
+ * Forces Mollie Components to use Finnish locale when WordPress reports plain "fi".
+ *
+ * Mollie Components accepts "fi_FI", while WordPress can store the Finnish site
+ * locale as "fi". Without this adapter the card input iframe falls back to en_US.
+ *
+ * @return void
+ */
+function rytkoset_theme_mollie_components_finnish_locale() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	if ( 0 !== strpos( (string) $locale, 'fi' ) ) {
+		return;
+	}
+
+	$script = <<<'JS'
+if (window.mollieServerData && window.mollieServerData.componentData && window.mollieServerData.componentData.options) {
+	window.mollieServerData.componentData.options.locale = 'fi_FI';
+}
+JS;
+
+	wp_add_inline_script( 'mollie_block_index', $script, 'before' );
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_mollie_components_finnish_locale', 20 );
 
 /**
  * Returns true when the order uses a Mollie payment method with RF instructions.
