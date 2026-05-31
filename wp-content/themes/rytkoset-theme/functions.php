@@ -28,6 +28,7 @@ require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
+require_once get_template_directory() . '/inc/coming-soon.php';
 
 /**
  * Returns the short display caption for an attachment.
