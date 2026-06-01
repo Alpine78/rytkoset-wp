@@ -103,6 +103,32 @@ Tämä ei tarkoita, että WooCommerce-checkout tai Mollie-lisäosan paikallinen 
 
 Localhost-ympäristössä `Store coming soon` -tila voi estää vierailijakassan näkyvyyden. Jos kassaa testataan ilman kirjautumista, tila pitää kytkeä paikallisesti väliaikaisesti pois ja palauttaa testin jälkeen.
 
+## Maksusähköpostin aihe (#324)
+
+Mollien lähettämän tilisiirron maksusähköpostin (`noreply@mollie.com`) aiheessa näkyi
+englanninkielinen tilausviittaus, esim. `Maksutiedot tilauksestasi "Order 1093"`.
+
+Aiheen lainattu osa on **maksun kuvaus**, jonka Mollie-lisäosa lähettää Mollien API:lle.
+Kuvaus muodostetaan lisäosan `PaymentDescriptionMiddleware`-luokassa asetuksesta
+`WooCommerce → Settings → Mollie Settings → Advanced → API Payment Description`,
+jonka oletusarvo on `{orderNumber}`. Tällä oletusarvolla lisäosa käyttää käännettävää
+lähdetekstiä `_x( 'Order {orderNumber}', 'Payment description for {orderNumber}', 'mollie-payments-for-woocommerce' )`,
+josta englanninkielinen "Order" tulee.
+
+**Ratkaisu (toteutettu koodissa):** `inc/woocommerce-mollie.php` lisää `gettext_with_context`-suodattimen
+(`rytkoset_theme_mollie_finnish_contexts`), joka kääntää tämän lähdetekstin suomeksi
+`Tilaus {orderNumber}`, kun WordPressin locale on `fi`. Mollie korvaa `{orderNumber}`-paikkamerkin
+tilausnumerolla, joten aiheeksi tulee `Maksutiedot tilauksestasi "Tilaus 1093"`.
+
+Ratkaisu pidettiin teemassa (versionhallinnassa) eikä WooCommerce-asetuksessa, jotta se
+toimii automaattisesti jokaisessa ympäristössä eikä häviä asetusten resetoituessa.
+Käännös vaikuttaa, kun "API Payment Description" -asetus on oletusarvossa `{orderNumber}`;
+jos asetukseen syötetään oma kuvausteksti, se ohittaa käännöksen.
+
+Vaihtoehtoinen koodittomuus: saman lopputuloksen saa myös asettamalla "API Payment Description"
+-kenttään arvon `Tilaus {orderNumber}`, mutta tämä asetus elää tietokannassa ja pitäisi tehdä
+erikseen jokaiseen ympäristöön.
+
 ## Lähteet
 
 - Mollie WooCommerce plugin: https://wordpress.org/plugins/mollie-payments-for-woocommerce/

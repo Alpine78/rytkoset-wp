@@ -11,6 +11,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - `search.php`: hakutulossivu tuloslistalla (tyyppi, päivämäärä, otsikko, katkelma), tulosmäärällä ja tyhjän haun lomakkeella (#323).
 
 ### Fixed
+- Mollien maksusähköpostin aiheen englanninkielinen `Order ####` suomennettiin muotoon `Tilaus ####`: `inc/woocommerce-mollie.php` käsittelee `gettext_with_context`-suodattimella Mollie-lisäosan maksukuvauksen lähdetekstin `Order {orderNumber}` ja kääntää sen `Tilaus {orderNumber}`, jolloin Mollien lähettämän maksusähköpostin aiheeksi tulee esim. `Maksutiedot tilauksestasi "Tilaus 1093"` (#324).
 - Mobiilihakuformi (≤920px) vuosi viewportin yli vasemmalle, koska formi oli positioitu suhteessa pieneen hakupainikkeeseen. Formi positioituu nyt `.site-header__primary-inner` -elementtiin (`position: relative`) ja `left: 0; right: 0; box-sizing: border-box` pinssaa sen tarkasti headerin leveyteen (#323).
 
 ### Added
