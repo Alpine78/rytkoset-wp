@@ -397,6 +397,28 @@
   flex: 0 0 auto;
 }
 
+/* On narrow viewports the search button sits mid-header, so the form
+   (right: 0 relative to the button) overflows the left viewport edge.
+   Promote the full-width primary-inner to be the positioning context so
+   the form drops below the entire nav bar and spans the container. */
+@media (max-width: 920px) {
+  .site-header__primary-inner {
+    position: relative;
+  }
+
+  .site-header__search {
+    position: static;
+  }
+
+  .site-header__search-form {
+    top: 100%;
+    left: 0;
+    right: 0;
+    width: auto;
+    box-sizing: border-box;
+  }
+}
+
 /* Accessible screen reader text + skip link */
 .screen-reader-text {
   position: absolute;
