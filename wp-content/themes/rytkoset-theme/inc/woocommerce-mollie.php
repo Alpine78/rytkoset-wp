@@ -400,6 +400,41 @@ function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 's
 }
 
 /**
+ * Renders a notice confirming that a Mollie payment confirmation email was sent.
+ *
+ * @param int $order_id WooCommerce order ID.
+ * @return void
+ */
+function rytkoset_theme_render_mollie_thankyou_email_sent_notice( $order_id ) {
+	$order = wc_get_order( $order_id );
+
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+
+	$billing_email = $order->get_billing_email();
+	$style         = 'margin:16px 0;padding:16px 20px;background:#eef6e8;border-top:3px solid #4a7c00;color:#1d2327;border-radius:4px;';
+
+	echo '<div class="rytkoset-mollie-email-sent-notice" style="' . esc_attr( $style ) . '">';
+
+	if ( '' !== $billing_email ) {
+		echo esc_html(
+			sprintf(
+				/* translators: %s: customer billing email address. */
+				__( 'Lasku ja maksutiedot on lähetetty sähköpostiisi %s.', 'rytkoset-theme' ),
+				$billing_email
+			)
+		);
+	} else {
+		echo esc_html__( 'Lasku ja maksutiedot on lähetetty sähköpostiisi.', 'rytkoset-theme' );
+	}
+
+	echo ' ';
+	echo esc_html__( 'Lähettäjä on Rytkösten sukuseura ry, sähköpostiosoite noreply@mollie.com. Jos viesti ei näy saapuneissa, tarkista roskapostisuodatin.', 'rytkoset-theme' );
+	echo '</div>';
+}
+
+/**
  * Renders the RF reference notice on Mollie thank-you pages.
  *
  * @param int $order_id WooCommerce order ID.
@@ -435,9 +470,11 @@ function rytkoset_theme_render_mollie_email_rf_reference_notice( $order, $sent_t
 	rytkoset_theme_render_mollie_rf_reference_notice( $order, 'email', $plain_text );
 }
 
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_render_mollie_thankyou_email_sent_notice', 8 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_start_mollie_thankyou_instruction_buffer', 9 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_end_mollie_thankyou_instruction_buffer', 11 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_banktransfer', 'rytkoset_theme_render_mollie_thankyou_rf_reference_notice', 12 );
+add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_render_mollie_thankyou_email_sent_notice', 8 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_start_mollie_thankyou_instruction_buffer', 9 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_end_mollie_thankyou_instruction_buffer', 11 );
 add_action( 'woocommerce_thankyou_mollie_wc_gateway_paybybank', 'rytkoset_theme_render_mollie_thankyou_rf_reference_notice', 12 );
