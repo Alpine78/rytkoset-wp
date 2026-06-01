@@ -12,6 +12,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ### Fixed
 - Ostoskorin tyhjän korin `Uutta kaupassa` -tuotesuositusten napit yhtenäistettiin kaupan etusivun keltaiseen CTA-tyyliin ja tasattiin samaan riviin (#317).
+- Kaupan, ostoskorin ja kassan leveysrajoitus (`.section__narrow`, 720px) poistettiin, jotta 4-sarakkeinen tuoteruudukko ei purista nappeja päällekkäin (#317).
+- Kaupan tuoteruudukon mobiilinäkymä korjattiin: WooCommercen `woocommerce-smallscreen.css` pakotti `li.product`-leveydeksi 48 % korkeammalla spesifisyydellä, jolloin tuotekuvat jäivät puolikkaan sarakkeen levyisiksi; teema ohittaa sen nyt samalla `[class*="columns-"]`-selektorilla (#317).
+- Kaupan tuotelistan korttityyli yhtenäistettiin ostoskorin tuotesuositusten kanssa: otsikot navy-värisinä ja paksumpina, hinnat teeman sinisellä ja napit yhtenäisellä vähimmäisleveydellä (#317).
 - WooCommerce-ilmoitusten tumman teeman värit vakioitiin, jotta ostoskoriin lisäyksen ilmoitusteksti säilyy luettavana (#317).
 - WooCommerce-tuotesivuilta poistettiin geneerisen yksittäissivupohjan julkaisupäivämäärä (#317).
 - Mollien kassamaksutapojen ja luottokorttikenttien englanninkielisiä tekstejä suomennettiin (#317).
