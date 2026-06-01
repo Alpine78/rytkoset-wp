@@ -56,6 +56,41 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 add_filter( 'gettext', 'rytkoset_theme_mollie_finnish_strings', 10, 3 );
 
 /**
+ * Suomentaa Mollien maksukuvauksen, joka näkyy Mollien maksusähköpostin aiheessa.
+ *
+ * Mollie-lisäosa lähettää maksun kuvaukseksi käännettävän merkkijonon
+ * `_x( 'Order {orderNumber}', 'Payment description for {orderNumber}', ... )`,
+ * kun "API Payment Description" -asetus on oletusarvossa `{orderNumber}`.
+ * Mollien palvelimilta lähtevä maksusähköposti käyttää tätä kuvausta aiheessaan,
+ * jolloin suomenkieliselle vastaanottajalle näkyy englanninkielinen "Order ####".
+ * Käännetään lähdeteksti suomeksi, jolloin aiheeksi tulee "Tilaus ####".
+ *
+ * @param string $translated Alkuperäinen käännös.
+ * @param string $original   Lähdeteksti.
+ * @param string $context    Käännöksen konteksti.
+ * @param string $domain     Tekstidomain.
+ * @return string
+ */
+function rytkoset_theme_mollie_finnish_contexts( $translated, $original, $context, $domain ) {
+	if ( 'mollie-payments-for-woocommerce' !== $domain ) {
+		return $translated;
+	}
+
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	if ( 0 !== strpos( (string) $locale, 'fi' ) ) {
+		return $translated;
+	}
+
+	if ( 'Order {orderNumber}' === $original && 'Payment description for {orderNumber}' === $context ) {
+		return 'Tilaus {orderNumber}';
+	}
+
+	return $translated;
+}
+add_filter( 'gettext_with_context', 'rytkoset_theme_mollie_finnish_contexts', 10, 4 );
+
+/**
  * Keeps selected Mollie gateway titles understandable for Finnish checkout users.
  *
  * @param string $title      Payment gateway title.
