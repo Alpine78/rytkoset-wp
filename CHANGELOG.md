@@ -7,6 +7,12 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- `search.php`: hakutulossivu tuloslistalla (tyyppi, päivämäärä, otsikko, katkelma), tulosmäärällä ja tyhjän haun lomakkeella (#323).
+
+### Fixed
+- Mobiilihakuformi (≤920px) vuosi viewportin yli vasemmalle, koska formi oli positioitu suhteessa pieneen hakupainikkeeseen. Formi positioituu nyt `.site-header__primary-inner` -elementtiin (`position: relative`) ja `left: 0; right: 0; box-sizing: border-box` pinssaa sen tarkasti headerin leveyteen (#323).
+
+### Added
 - `wp-content/maintenance.php`: branded maintenance page that overrides WordPress's default maintenance screen. Navy hero with gold accent, Newsreader/Manrope fonts, cream illustration card, pulsing status badge, return-time chip, and social links — matching the site's visual language. Reads `get_theme_mod()` for concept (`uudistus`/`huolto`/`talkoot`), return text, contact email, and custom logo.
 - Customizer section **Huoltotila** (in `inc/customizer-contact.php`): settings for maintenance concept and optional return-time text.
 
