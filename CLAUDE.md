@@ -88,6 +88,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 | `inc/gallery-albums.php`               | Gallery Album CPT and gallery stack logic                                                                                                                      |
 | `inc/media-library.php`                | Media library ordering by album                                                                                                                                |
 | `inc/digital-magazines.php`            | Digital magazine download pages                                                                                                                                |
+| `inc/email.php`                        | Default mail sender (`Rytkösten sukuseura ry` / `rytkoset_theme_get_contact_email()`) for theme-sent `wp_mail()`; overrides only WordPress's default sender via `wp_mail_from`/`wp_mail_from_name`             |
 | `inc/icons.php`                        | Inline SVG icon helper (`rytkoset_theme_inline_icon`) — reads `currentColor` glyphs from `assets/icons/{social,ui}/`                                           |
 | `inc/share.php`                        | Share buttons (Facebook, X, WhatsApp); icons via `rytkoset_theme_inline_icon`                                                                                  |
 | `inc/social-links.php`                 | Social media links in header/footer; icons inlined via `rytkoset_theme_inline_icon`                                                                            |
