@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- `inc/woocommerce-product-sync.php`: WooCommerce-tuotesynkka tukee nyt `variable`-tuotteiden vientiä, dry-run-esikatselua ja tuontia parent-SKU:n sekä variaatio-SKU:iden perusteella; puuttuvat `pa_*`-termit luodaan olemassa olevaan taksonomiaan ja SKU:ttomat variaatiot estetään (#240).
 - `inc/email.php`: teeman lähettämien `wp_mail()`-viestien (tapahtumailmoittautumiset, järjestäjäilmoitukset, osallistujaviestintä) oletuslähettäjäksi `Rytkösten sukuseura ry` / `rytkoset_theme_get_contact_email()` (`info@rytkoset.net`). Suodattimet korvaavat vain WordPressin oletuslähettäjän (`WordPress <wordpress@…>`), joten WooCommercen omat tilausviestit ja AcyMailing säilyvät koskemattomina.
 - `search.php`: hakutulossivu tuloslistalla (tyyppi, päivämäärä, otsikko, katkelma), tulosmäärällä ja tyhjän haun lomakkeella (#323).
 
