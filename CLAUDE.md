@@ -79,7 +79,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 
 | File                                   | Contents                                                                                                                                                       |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `inc/security.php`                     | Security hardening: blocks user enumeration via REST `/wp/v2/users` (logged-out) and `?author=N` redirects; toggle with `rytkoset_theme_enable_security_hardening`                                          |
+| `inc/security.php`                     | Security hardening: blocks user enumeration (REST `/wp/v2/users` logged-out, `?author=N` redirects) and disables XML-RPC (`xmlrpc_enabled`, pingback methods, `X-Pingback` header); toggles `rytkoset_theme_enable_security_hardening` / `rytkoset_theme_disable_xmlrpc`        |
 | `inc/events.php`                       | Event CPT, meta field registration and getters                                                                                                                 |
 | `inc/event-registrations.php`          | Free event registration CPT and form                                                                                                                           |
 | `inc/event-registration-privacy.php`   | Privacy Tools export, erasure and anonymization for free event registrations                                                                                   |

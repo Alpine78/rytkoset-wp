@@ -95,3 +95,72 @@ if ( ! function_exists( 'rytkoset_theme_block_author_enumeration' ) ) {
 	}
 }
 add_action( 'template_redirect', 'rytkoset_theme_block_author_enumeration' );
+
+if ( ! function_exists( 'rytkoset_theme_xmlrpc_disabled' ) ) {
+	/**
+	 * Onko XML-RPC poistettu käytöstä.
+	 *
+	 * `xmlrpc.php` on yleinen brute-force- ja DDoS-vahvistuskohde
+	 * (`system.multicall`, `pingback.ping`). Sivusto ei käytä XML-RPC:tä
+	 * (ei Jetpackia eikä mobiilisovellusliitäntää), joten se voidaan estää.
+	 *
+	 * @return bool
+	 */
+	function rytkoset_theme_xmlrpc_disabled() {
+		if ( ! rytkoset_theme_security_hardening_enabled() ) {
+			return false;
+		}
+
+		return (bool) apply_filters( 'rytkoset_theme_disable_xmlrpc', true );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_remove_pingback_methods' ) ) {
+	/**
+	 * Poistaa pingback-metodit XML-RPC-rajapinnasta.
+	 *
+	 * `pingback.ping` mahdollistaa sivuston käytön DDoS-heijastimena;
+	 * poistetaan myös vaikka itse XML-RPC olisi muuten päällä.
+	 *
+	 * @param array $methods XML-RPC-metodit.
+	 * @return array
+	 */
+	function rytkoset_theme_remove_pingback_methods( $methods ) {
+		if ( ! rytkoset_theme_xmlrpc_disabled() ) {
+			return $methods;
+		}
+
+		unset( $methods['pingback.ping'] );
+		unset( $methods['pingback.extensions.getPingbacks'] );
+
+		return $methods;
+	}
+}
+add_filter( 'xmlrpc_methods', 'rytkoset_theme_remove_pingback_methods' );
+
+if ( ! function_exists( 'rytkoset_theme_remove_pingback_header' ) ) {
+	/**
+	 * Poistaa `X-Pingback`-otsakkeen, joka mainostaa XML-RPC-päätepistettä.
+	 *
+	 * @param array $headers HTTP-otsakkeet.
+	 * @return array
+	 */
+	function rytkoset_theme_remove_pingback_header( $headers ) {
+		if ( ! rytkoset_theme_xmlrpc_disabled() ) {
+			return $headers;
+		}
+
+		unset( $headers['X-Pingback'] );
+
+		return $headers;
+	}
+}
+add_filter( 'wp_headers', 'rytkoset_theme_remove_pingback_header' );
+
+// Estää kaikki todennusta vaativat XML-RPC-metodit (mm. system.multicall).
+add_filter(
+	'xmlrpc_enabled',
+	function ( $enabled ) {
+		return rytkoset_theme_xmlrpc_disabled() ? false : $enabled;
+	}
+);
