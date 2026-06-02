@@ -7,6 +7,31 @@ Kyseessä on oikea tuotantoprojekti. Päätavoite on ylläpidettävä, suomenkie
 WordPress-sivusto ei-teknisille käyttäjille. Sivusto tukee sisältöjä,
 tapahtumia, mediaa, jäsenmaksuja ja viestintää.
 
+Tuotantosivusto:
+
+- `https://rytkoset.net`
+
+Dev-ympäristö:
+
+- `https://dev.rytkoset.net`
+
+## Mitä projekti osoittaa
+
+Tämä repo toimii esimerkkinä käytännönläheisestä WordPress-kehityksestä, jossa
+painotus on ylläpidettävyydessä, pienissä toimitettavissa kokonaisuuksissa ja
+WordPressin omien rakenteiden hyödyntämisessä.
+
+Teknisiä nostoja:
+
+- custom WordPress -teema ilman raskasta frontend-frameworkia
+- Docker-pohjainen paikallinen kehitysympäristö
+- GitHub Actions -pohjainen PHP-validointi ja FTPS-deploy
+- custom post type -toteutukset tapahtumille, ilmoittautumisille ja gallerioille
+- WooCommerce-laajennukset jäsenmaksuille ja maksullisille tapahtumille
+- AcyMailing-uutiskirjeintegraatio
+- PhotoSwipe 5 -galleria WordPressin mediatiedostojen päällä
+- saavutettavuus- ja ylläpidettävyysdokumentaatio
+
 ## Nykyinen rajaus
 
 Versionhallinnassa oleva varsinainen koodi on custom-teema:
@@ -128,9 +153,9 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/tietosuoja.md` - tietosuojamuistiinpanot
 - `docs/migration-guide.md` - migraatiomuistiinpanot
 
-## Työskentelyohjeet
+## Muu repo-dokumentaatio
 
-Projektin työskentely- ja agenttiohjeet ovat erillisissä tiedostoissa:
+Muut repo-ohjeet ovat erillisissä tiedostoissa:
 
 - `AGENTS.md` - AI-avusteisen kehityksen säännöt ja projektin kehitysperiaatteet
 - `CONTRIBUTING.md` - commit-viestien formaatti
