@@ -25,7 +25,7 @@ ZIP-paketti sisältää:
 - `products.json` — tuotteet rakenteisena JSON-listana
 - `files/` — downloadable-tuotteiden tiedostot (jos tuotteilla on ladattavia tiedostoja)
 
-Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste.
+Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste. Variaatiotuotteilla myös jokaisella variaatiolla pitää olla oma SKU. Jos yksikin valitun variaatiotuotteen variaatio on ilman SKU:ta, vienti estetään selkeällä virheilmoituksella.
 
 ### 2. Tuonti (kohdeympäristö, esim. dev)
 
@@ -42,9 +42,9 @@ Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste.
 | **Uusi** | SKU:ta ei ole kohdeympäristössä — tuote luodaan | päällä |
 | **Päivitetään** | SKU löytyy, kentissä eroja — muuttuvat kentät listataan | päällä |
 | **Identtinen** | SKU löytyy, ei eroja — tuonti ei tee mitään | pois |
-| **VIRHE** | Esim. downloadable-tiedosto puuttuu paketista — tuontia ei sallita | pois (lukittu) |
+| **VIRHE** | Esim. downloadable-tiedosto puuttuu paketista, variaatiolta puuttuu SKU tai `pa_*`-attribuuttitaksonomia puuttuu kohteesta — tuontia ei sallita | pois (lukittu) |
 
-Päivitettävillä tuotteilla esikatselu näyttää kenttäkohtaisen diffin (`vanha → uusi`), joten korvattavat arvot näkee ennen tuontia.
+Päivitettävillä tuotteilla esikatselu näyttää kenttäkohtaisen diffin (`vanha → uusi`), joten korvattavat arvot näkee ennen tuontia. Variaatiotuotteilla esikatselu näyttää lisäksi variaatiokohtaisesti uudet ja päivittyvät variaatiot, niiden attribuuttiarvot sekä hinnan muutokset.
 
 ## Tunnistus: SKU
 
@@ -59,6 +59,23 @@ Tuotteet tunnistetaan **SKU:n** perusteella, ei WordPressin post ID:n. Tämä ta
 Ydinkentät: nimi, slug, status, tuotetyyppi, normaali- ja alennushinta, lyhyt kuvaus ja kuvaus, `Virtual`, `Downloadable`, kategoriat ja tagit.
 
 Kategoriat ja tagit siirretään slugilla. Jos kohdeympäristöstä puuttuu kategoria, se luodaan automaattisesti.
+
+### Variaatiotuotteet
+
+Formaatti `1.1` tukee WooCommercen `variable`-tuotteita. Parent-tuotteelta siirtyvät:
+
+- attribuuttimääritykset (`pa_*`-taksonomia-attribuutit ja custom-attribuutit)
+- oletusattribuutit
+- variaatiot listana: SKU, status, attribuuttiarvot, normaali hinta ja alennushinta
+
+Tuonti luo `WC_Product_Variable`-tuotteen, kun `type` on `variable`. Olemassa oleva parent-tuote tunnistetaan SKU:lla. Variaatiot tunnistetaan ja päivitetään omalla SKU:lla; puuttuvat variaatiot luodaan parentin alle.
+
+Turvallisuusrajaukset:
+
+- Kohteessa olevia mutta paketista puuttuvia variaatioita ei poisteta eikä arkistoida.
+- Puuttuvat termit luodaan olemassa olevaan `pa_*`-taksonomiaan.
+- Puuttuvaa globaalia WooCommerce-attribuuttitaksonomiaa ei luoda automaattisesti; esikatselu näyttää virheen.
+- SKU:ttomia variaatioita ei viedä eikä tuoda, koska päivitystä ei voi tehdä turvallisesti SKU-pohjaisesti.
 
 ### Custom product meta -avaimet
 
@@ -92,7 +109,6 @@ Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonniss
 
 Työkalu **ei** tällä hetkellä:
 
-- siirrä variable productseja (vaihtelevia tuotteita) — vain `simple`-tuotteet
 - siirrä tilauksia, käyttäjiä, sivuja tai muuta post-dataa
 - tee automaattista ajastettua synkkausta — siirto on aina manuaalinen
 - toimi kaksisuuntaisesti — siirto on push-tyyppinen (lähde → kohde)
@@ -105,3 +121,5 @@ Työkalu **ei** tällä hetkellä:
 - Downloadable-tuote siirtyy tiedostoineen; puuttuva tiedosto estää tuonnin `VIRHE`-tilalla.
 - Puuttuva kategoria luodaan kohdeympäristöön automaattisesti.
 - Custom meta -avaimet (`_rytkoset_membership_*`, `_rytkoset_registration_*`) säilyvät siirrossa.
+- Variaatiotuote voidaan viedä ja tuoda parent-SKU:n sekä variaatio-SKU:iden perusteella.
+- Variaation hinnan muutos näkyy esikatselussa variaatiokohtaisena muutoksena.
