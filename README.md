@@ -15,6 +15,33 @@ Dev-ympäristö:
 
 - `https://dev.rytkoset.net`
 
+## About this project (English summary)
+
+Production WordPress site for a Finnish family association (Rytkösten sukuseura ry).
+The repository contains a hand-built custom theme — no page builder, no heavy
+frontend framework — together with the project documentation. Highlights: custom
+post types for events, registrations and photo galleries; WooCommerce extensions
+for memberships and paid events; an AcyMailing newsletter integration; a Dockerized
+local environment; and GitHub Actions for PHP validation and FTPS deploys.
+
+It is also a hands-on study in **AI-assisted ("agentic") development** — see the
+section below. The rest of this README is in Finnish, matching the project's own
+language.
+
+## Kuvakaappaukset
+
+![Etusivu](docs/screenshots/Frontpage.png)
+
+_Etusivu — split-hero ja vuorottelevat vaaleat/tummat sisältöbändit._
+
+![Tapahtumasivu](docs/screenshots/Event.png)
+
+_Yksittäisen tapahtuman sivu._
+
+![GitHub Projects -taulu](docs/screenshots/GitHub-project.png)
+
+_Työn etenemistä seurataan yksityisellä GitHub Projects -taululla epic → feature → task -mallilla._
+
 ## Mitä projekti osoittaa
 
 Tämä repo toimii esimerkkinä käytännönläheisestä WordPress-kehityksestä, jossa
@@ -32,6 +59,27 @@ Teknisiä nostoja:
 - PhotoSwipe 5 -galleria WordPressin mediatiedostojen päällä
 - saavutettavuus- ja ylläpidettävyysdokumentaatio
 
+## AI-avusteinen kehitys
+
+Projekti on toteutettu pitkälti AI-avusteisesti, ja se on samalla toiminut
+oppimisalustana agenttiselle kehitykselle. Työkalut ovat vaihtuneet projektin
+edetessä:
+
+- **ChatGPT** — alkuvaiheen suunnittelu, arkkitehtuuripohdinta ja ensimmäiset toteutukset.
+- **Codex** — siirtyminen agenttisempaan, repoa suoraan muokkaavaan työskentelyyn.
+- **Claude Code** — rinnakkainen tekoälytyökalu (käytössä noin toukokuusta 2026): suunnittelu, toteutus, koodikatselmointi ja dokumentointi.
+- **Claude Design** — ulkoasun suunnittelu.
+
+Repo on rakennettu tukemaan tätä työtapaa:
+
+- `AGENTS.md` — projektin kehitysperiaatteet ja AI-yhteistyön säännöt
+- `CLAUDE.md` — Claude Coden tekninen ohjeistus ja arkkitehtuurimuistiinpanot
+- issue- ja epic-pohjainen GitHub Projects -taulu sekä PR- ja issue-pohjat
+- pieni, katselmoitava etenemismalli (conventional commits, manuaalinen `CHANGELOG.md`)
+
+Tavoitteena ei ole ollut antaa AI:n generoida valmiita kokonaisuuksia, vaan käyttää
+sitä ajattelun ja katselmoinnin kumppanina — pienin, ymmärrettävin askelin.
+
 ## Nykyinen rajaus
 
 Versionhallinnassa oleva varsinainen koodi on custom-teema:
@@ -48,6 +96,7 @@ Keskeiset toiminnallisuudet:
 - tapahtumat, maksuttomat ilmoittautumiset, osallistujahallinta ja viestintä
 - WooCommerce-jäsenmaksut ja maksulliset tapahtumamaksut
 - AcyMailing-uutiskirjeintegraatio
+- digilehdet HTML-sisältönä (lehdet ja jutut, arkisto `/digilehdet/`)
 
 Claude Coden tekninen ohjeistus on tiedostossa `CLAUDE.md`. Tarkemmat
 ominaisuusohjeet ovat hakemistossa `docs/`.
@@ -78,6 +127,12 @@ Kontit:
 
 Vain `wp-content/` on mountattu hostilta konttiin. Teemamuutokset näkyvät ilman
 kontin uudelleenrakennusta.
+
+Ensimmäinen käynnistys:
+
+- Tietokannan tunnukset tulevat suoraan `docker-compose.yml`-tiedostosta — erillistä `.env`-tiedostoa ei tarvita paikallisesti.
+- WordPressin ydin tulee Docker-imagesta (`wordpress:6.8.3-php8.3-apache`). Tietokanta on alussa tyhjä, joten ensimmäisellä käynnillä `http://localhost:8000` ohjaa WordPressin asennusvelhoon.
+- Lisäosat (WooCommerce, AcyMailing) eivät ole repossa, vaan ne asennetaan WordPressin kautta. Teema toimii ilman niitäkin, mutta osa toiminnoista vaatii ne. PhotoSwipe 5 on vendoroitu teemaan (`assets/vendor/photoswipe/`).
 
 ## Validointi
 
@@ -141,6 +196,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 
 - `docs/design-system.md` - design-tokenit ja frontend-käytännöt
 - `docs/events.md` - tapahtuma-CPT ja ilmoittautumisvirta
+- `docs/digital-magazines.md` - digilehtien sisältömalli ja julkinen näkymä
 - `docs/event-participants-admin.md` - osallistujahallinta
 - `docs/event-participants-messaging.md` - tapahtumaviestien lähetysjono
 - `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
