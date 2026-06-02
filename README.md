@@ -1,237 +1,144 @@
-# 🐦 Rytköset.net – WordPress-projekti
+# Rytköset.net WordPress-projekti
 
-Tämä repository sisältää Rytkösten Sukuseura ry:n uuden WordPress-sivuston kehityksen.  
-Projektissa käytetään Docker-kehitysympäristöä, erillistä Joomla-importtia, staging-ympäristöä (`dev.rytkoset.net`) sekä GitHub Actions -pohjaista CI/CD-putkea.
+Tämä repository sisältää Rytkösten sukuseura ry:n verkkosivuston WordPress-teeman
+ja projektidokumentaation.
 
----
+Kyseessä on oikea tuotantoprojekti. Päätavoite on ylläpidettävä, suomenkielinen
+WordPress-sivusto ei-teknisille käyttäjille. Sivusto tukee sisältöjä,
+tapahtumia, mediaa, jäsenmaksuja ja viestintää.
 
-## 🚀 Kehitysympäristö (Docker)
+## Nykyinen rajaus
 
-Paikallinen kehitys tehdään Dockerilla. Projektissa on kolme konttia:
+Versionhallinnassa oleva varsinainen koodi on custom-teema:
 
-- **wordpress** – PHP 8.3 + Apache  
-- **db** – MariaDB 10.11 (WordPress)  
-- **joomla-db** – MariaDB 10.11 (Joomla-migraatiota varten)
+- `wp-content/themes/rytkoset-theme/`
 
-### Käynnistä kontit
+WordPressin ydintiedostot, asennetut lisäosat ja tuotannon mediatiedostot eivät
+ole tässä repossa.
 
-    docker compose up -d
+Keskeiset toiminnallisuudet:
 
-### Sammuta kontit
+- sivut, blogi/uutiset ja navigaatio
+- galleria-albumit ja PhotoSwipe 5
+- tapahtumat, maksuttomat ilmoittautumiset, osallistujahallinta ja viestintä
+- WooCommerce-jäsenmaksut ja maksulliset tapahtumamaksut
+- AcyMailing-uutiskirjeintegraatio
 
-    docker compose down
+Claude Coden tekninen ohjeistus on tiedostossa `CLAUDE.md`. Tarkemmat
+ominaisuusohjeet ovat hakemistossa `docs/`.
 
-WordPress dev-ympäristö löytyy osoitteesta:
+## Paikallinen kehitys
 
-- http://localhost:8000
+Paikallinen ympäristö toimii Docker Composella.
 
-### Konttien tiivistelmä
+- Mitä tekee: käynnistää WordPressin, MariaDB:n ja valinnaisen Joomla-migraatiokannan.
+- Kohde: paikallinen Docker-ympäristö.
+- Komento: `docker compose up -d`
 
-- `wordpress` – itse WordPress + custom-teema  
-- `db` – WordPressin tietokanta  
-- `joomla-db` – Joomla-datan väliaikaista migraatiota varten
+WordPress löytyy paikallisesti osoitteesta:
 
----
+- `http://localhost:8000`
 
-## 📦 Joomla-migraatio (valinnainen)
+Ympäristön pysäytys:
 
-Migraatio suoritetaan `joomla-db`-konttiin.
+- Mitä tekee: pysäyttää paikalliset Docker-kontit.
+- Kohde: paikallinen Docker-ympäristö.
+- Komento: `docker compose down`
 
-1. **Kopioi Joomla SQL dump konttiin**
+Kontit:
 
-       docker cp _db-dumps/joomla.sql rytkoset-joomla-db:/joomla.sql
+- `rytkoset-wp` - WordPress / PHP 8.3 / Apache
+- `rytkoset-db` - MariaDB 10.11 WordPressille
+- `rytkoset-joomla-db` - MariaDB 10.11 valinnaiseen Joomla-migraatiotyöhön
 
-2. **Aja SQL sisään**
+Vain `wp-content/` on mountattu hostilta konttiin. Teemamuutokset näkyvät ilman
+kontin uudelleenrakennusta.
 
-       docker exec -it rytkoset-joomla-db bash
-       mysql -u root -p joomla_db < /joomla.sql
+## Validointi
 
-3. **Suorita FG Joomla Premium -import WordPressin administa**
+Projektissa ei ole Node-pohjaista build-vaihetta.
 
-   - *Tools → FG Joomla to WordPress → Run Import*  
-   - Migraatio tuo käyttäjät, foorumit, aiheet ja viestit WordPressiin (bbPress).
+Tarkista PHP-syntaksi ennen PR:ää tai deployta:
 
----
+- Mitä tekee: ajaa PHP-syntaksitarkistuksen kaikille teeman PHP-tiedostoille.
+- Kohde: `wp-content/themes/rytkoset-theme/`.
+- Komento: `find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l`
 
-## 🌱 Staging / dev-ympäristö
+GitHub Actions ajaa saman tarkistuksen workflowlla `.github/workflows/php-ci.yml`
+pull requesteille ja `main`-branchin pusheille.
 
-Staging-ympäristöä käytetään hallituksen katselmointeihin:
+## Branchit ja deployt
 
-- 🔗 https://dev.rytkoset.net
+Branch-malli:
 
-Dev-ympäristössä:
+- `dev` deployaa automaattisesti `dev.rytkoset.net`-ympäristöön, kun teematiedostot muuttuvat.
+- `main` on pääasiallinen integraatiobranch, eikä se deployaa automaattisesti deviin.
 
-- Teema (`wp-content/themes/rytkoset-theme`) päivittyy automaattisesti GitHub-deployn kautta
-- Sisältö (käyttäjät, foorumipostaukset jne.) voidaan päivittää tuotannosta All-in-One Migrationilla
+Dev-deploy:
 
-Admin-tunnus devissä on oma erillinen käyttäjänsä, joka säilytetään myös importtien yli.
+- Workflow: `.github/workflows/deploy-dev.yml`
+- Trigger: push `dev`-branchiin
+- Polkurajaus: `wp-content/themes/rytkoset-theme/**`
+- Menetelmä: FTPS
+- Kohde: `dev.rytkoset.net`
 
----
+Tuotantodeploy:
 
-## 🔁 Dev-sisällön päivittäminen tuotannosta
+- Workflow: `.github/workflows/deploy-production.yml`
+- Trigger: manuaalinen `workflow_dispatch`
+- Oletuslähde: `main`
+- Menetelmä: FTPS
+- Kohde: `rytkoset.net`
 
-Stagingin sisällöt voidaan päivittää tuotannosta **All-in-One Migration** -lisäosalla.
+Tuotantoon ei deployata automaattisesti. Tämä on tarkoituksellinen rajaus.
 
-1. Ota **export** tuotantoympäristöstä
-2. **Nosta upload-limiittejä webhotellin PHP-asetuksista**  
-   (post\_max\_size, upload\_max\_filesize jne. – `.htaccess` ei tässä ympäristössä riitä)
-3. Aja **import deviin** (All-in-One Migration → Import)
-4. Valitse: **“Replace matching content only”**  
-   → Dev-admin ja muut dev-spesifiset käyttäjät säilyvät
+## Projektin rakenne
 
-Dev on nyt sisällöltään 1:1 kopio tuotannosta, mutta teema ja koodi elävät GitHub-repon mukana.
+Tärkeät polut:
 
----
-
-## ⚙️ CI/CD – Automaattinen teeman deploy deviin
-
-Kun `main`-branchiin tulee muutos, joka koskee hakemistoa
-
-- `wp-content/themes/rytkoset-theme/**`
-
-GitHub Actions:
-
-1. Checkouttaa repositorion
-2. Deployaa teeman FTPS:llä
-3. Päivittää `dev.rytkoset.net` -instanssin teeman
-
-**Workflow:** `.github/workflows/deploy-dev.yml`
-
-Ydinsisältö:
-
-    name: Deploy theme to dev.rytkoset.net
-
-    on:
-      push:
-        branches:
-          - main
-        paths:
-          - 'wp-content/themes/rytkoset-theme/**'
-
-    jobs:
-      deploy:
-        runs-on: ubuntu-latest
-
-        steps:
-          - name: Checkout repo
-            uses: actions/checkout@v4
-
-          - name: Deploy via FTP
-            uses: SamKirkland/FTP-Deploy-Action@v4.3.4
-            with:
-              server: ${{ secrets.FTP_HOST }}
-              username: ${{ secrets.FTP_USERNAME }}
-              password: ${{ secrets.FTP_PASSWORD }}
-              port: ${{ secrets.FTP_PORT }}
-              protocol: ftps
-              local-dir: wp-content/themes/rytkoset-theme/
-              server-dir: /wp-content/themes/rytkoset-theme/
-              log-level: standard
-
----
-
-## 🧩 Arkkitehtuurikaavio (Mermaid)
-
-    flowchart TD
-        A[Local dev Docker<br>WP + DB + Joomla-DB] -->|Git push| B[GitHub main branch]
-        B --> C[GitHub Actions<br>CI/CD pipeline]
-        C -->|FTPS deploy| D[dev.rytkoset.net<br>Staging environment]
-        D --> E[Hallituksen testaus & hyväksyntä]
-        E -->|Manuaalinen julkaisu| F[Tuotantopalvelin rytkoset.net]
-
----
-
-## Roadmap & projektinhallinta
-
-- GitHub Projects (roadmap + tehtävätaulu): https://github.com/Alpine78/rytkoset-wp/projects
-- Epicit ja alitehtävät on jaettu taululle; hallitus voi seurata etenemistä tilojen (Backlog → Next → In Progress → Done) kautta.
-
-### Nykytila — toukokuu 2026
-
-**Valmiit:**
-- Teeman peruslayout, header/footer, navigaatio, responsiivisuus ✅
-- Media-albumit (PhotoSwipe-galleria), YouTube-videoiden upotus ✅
-- WooCommerce: jäsenmaksutuotteet, digitaaliset tuotteet, Tampere 2026 -tapahtumamaksu ✅
-- Dev/staging (Docker + CI/CD + FTPS) toimii ✅
-
-**Käynnissä:**
-- Header/footer-uudistus ja valikon refaktorointi
-- EPIC 5 (Tapahtumat): CSV-vienti ja pienet viimeistelytehtävät
-- Mollie MobilePay -käyttöönotto ja Mollie tuotantoon
-
-**Seuraavaksi:**
-- Sukuseuran esittelysivut (historia, hallitus, yhteystiedot)
-- Blogin arkistonäkymä ja postaussivupohja
-- Saavutettavuustestaus (WCAG 2.1 AA)
-- Uutiskirjeet (AcyMailing)
-- Tietosuojaseloste ja julkaisuvalmius
-
----
-
-## Projektin rakenne & teknologiat
-
-**Teknologiapino**
-
-- WordPress 6.x + custom-teema `rytkoset-theme`
-- PHP 8.3 + Apache (Docker `wordpress` -kontti)
-- MariaDB 10.11 (`db`) + erillinen `joomla-db` migraatiota varten
-- FG Joomla Premium -importteri migraatioon
-- GitHub Actions + FTPS deploy dev.rytkoset.netiin
-
-**Hakemistorakenne**
-
-- Teema: `wp-content/themes/rytkoset-theme/`
-- Mahdolliset omat plugin-toteutukset: `wp-content/plugins/rytkoset-plugin/`
-- Teeman assetit: `wp-content/themes/rytkoset-theme/assets/` (css, js, icons)
-- Dokumentaatio: `docs/`
-- Joomla-dumpit: `_db-dumps/joomla.sql`
-
----
-
-## 🧱 Pääepicit
-
-Projektia seurataan GitHub-issuilla ja epiceillä.
-
-| Epic | Tila | Kuvaus |
-|------|------|--------|
-| EPIC 1 | ✅ Valmis | Perusrakenne & navigaatio — teema, header/footer, navigaatio |
-| EPIC 2 | ✅ Valmis | Media — albumit, PhotoSwipe-galleria, YouTube-videot |
-| EPIC 3 | 🔄 Pääosin valmis | WooCommerce — jäsenmaksut, tuotteet, Mollie-maksut |
-| EPIC 4 | 🔄 Käynnissä | Blogi & sisältösivut — esittelysivut, hallitus, blogi |
-| EPIC 5 | 🔄 Käynnissä | Tapahtumat & ilmoittautumiset — CPT, lomakkeet, organizer-työkalut |
-| EPIC 6 | 📋 Backlog | Saavutettavuus — WCAG 2.1 AA, kontrastit, ARIA, lomakkeet |
-| EPIC 7 | 📋 Backlog | Uutiskirjeet & AcyMailing — pohjat, mailing-listat, lähetykset |
-| EPIC 8 | 📋 Backlog | Julkaisuvalmius — tietosuoja, turvallisuus, suorituskyky |
-| Digilehti | 📋 Backlog | Digilehtien käyttöoikeudet ja hinnoittelu |
-
-### Rajaukset
-- Sivusto on yksikielinen (suomi). Monikielisyys ja kieliversioita hyödyntävät lisäosat (esim. Polylang, MultilingualPress) eivät ole osa projektin laajuutta eikä niitä ole tarkoitus asentaa.
-
----
-
-### Sisällönhallinnan muistilaput
-
-- [Ensisijaisen valikon päivitys ja testaaminen](docs/menu-structure.md)
-
----
-
-## 📦 Content-tyypit
-
-Sisällöt ryhmitellään mm. seuraaviin tyyppeihin:
-
-- `content: pages`
-- `content: blog`
-- `content: sukuseura`
-- `events: core`
-- `events: registration`
-- `events: organizer-tools`
-
----
-
-## 📤 Julkaisuprosessi
-
-1. Kehitä Docker-ympäristössä (`localhost:8000`)
-2. Commit → push → automaattinen deploy deviin (`dev.rytkoset.net`)
-3. Hallitus käy dev-version läpi ja hyväksyy muutokset
-4. Teeman päivitys julkaistaan tuotantoon **manuaalisesti** (webhotellin WP-instanssi)
-5. Päivityshistoria kirjataan `CHANGELOG.md`-tiedostoon
+- `wp-content/themes/rytkoset-theme/` - custom-teema
+- `wp-content/themes/rytkoset-theme/inc/` - teeman toiminnalliset moduulit
+- `wp-content/themes/rytkoset-theme/assets/` - CSS, JavaScript, ikonit ja kuvat
+- `wp-content/maintenance.php` - brändätty WordPressin huoltotilasivu
+- `docs/` - ominaisuus- ja ylläpitodokumentaatio
+- `.github/workflows/` - CI- ja deploy-workflowt
+- `CHANGELOG.md` - manuaalinen muutoshistoria
+- `AGENTS.md` - repo-ohjeet AI-avusteiseen kehitykseen
+- `CLAUDE.md` - tekniset arkkitehtuurimuistiinpanot
+
+Teeman moduuleissa on muun muassa tapahtumat, ilmoittautumiset, galleriat,
+mediajärjestys, uutiskirje, WooCommerce-toiminnot, kirjautumissivun brändäys,
+SEO-metatiedot, some-linkit ja Customizer-asetukset.
+
+## Dokumentaatio
+
+Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
+
+- `docs/design-system.md` - design-tokenit ja frontend-käytännöt
+- `docs/events.md` - tapahtuma-CPT ja ilmoittautumisvirta
+- `docs/event-participants-admin.md` - osallistujahallinta
+- `docs/event-participants-messaging.md` - tapahtumaviestien lähetysjono
+- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
+- `docs/media-saavutettavuus.md` - median ja gallerioiden saavutettavuus
+- `docs/woocommerce-setup.md` - WooCommercen perusasetukset
+- `docs/woocommerce-membership-products.md` - jäsenmaksutuotteet
+- `docs/woocommerce-tampere-2026-management.md` - Tampere 2026 -hallinta
+- `docs/woocommerce-mollie-payments.md` - Mollie-maksut
+- `docs/woocommerce-saavutettavuus.md` - WooCommerce-saavutettavuus
+- `docs/tietosuoja.md` - tietosuojamuistiinpanot
+- `docs/migration-guide.md` - migraatiomuistiinpanot
+
+## Työskentelyohjeet
+
+Projektin työskentely- ja agenttiohjeet ovat erillisissä tiedostoissa:
+
+- `AGENTS.md` - AI-avusteisen kehityksen säännöt ja projektin kehitysperiaatteet
+- `CONTRIBUTING.md` - commit-viestien formaatti
+- `CLAUDE.md` - Claude Coden tekninen ohjeistus
+
+## Valinnainen Joomla-migraatiokanta
+
+`joomla-db`-kontti on olemassa vain migraatiotyötä varten. Se ei kuulu normaaliin
+teemakehitykseen.
+
+Lue `docs/migration-guide.md` ennen kuin muutat tähän liittyviä asioita.
