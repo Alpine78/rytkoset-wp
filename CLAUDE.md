@@ -79,6 +79,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 
 | File                                   | Contents                                                                                                                                                       |
 | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `inc/security.php`                     | Security hardening: blocks user enumeration (REST `/wp/v2/users` logged-out, `?author=N` redirects), disables XML-RPC (`xmlrpc_enabled`, pingback methods, `X-Pingback` header), sends frontend security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` via `send_headers`; HSTS/CSP left to server). Toggles `rytkoset_theme_enable_security_hardening` / `rytkoset_theme_disable_xmlrpc`; headers filterable via `rytkoset_theme_security_headers`        |
 | `inc/events.php`                       | Event CPT, meta field registration and getters                                                                                                                 |
 | `inc/event-registrations.php`          | Free event registration CPT and form                                                                                                                           |
 | `inc/event-registration-privacy.php`   | Privacy Tools export, erasure and anonymization for free event registrations                                                                                   |
@@ -184,3 +185,5 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 `docs/media-saavutettavuus.md` documents admin-facing media accessibility rules: alt-text guidance, the gallery alt-fallback chain (`rytkoset_theme_get_gallery_image_alt()`), automatic iframe titles for album videos, and PhotoSwipe keyboard shortcuts.
 
 `docs/woocommerce-saavutettavuus.md` is a developer-facing audit of the WooCommerce-related a11y surface: cart link aria-label, the custom listbox sort widget, custom quantity controls, Tampere 2026 / membership checkout notices, and the third-party boundaries (Mollie hosted page, WC Checkout Block).
+
+`docs/tietoturva.md` documents the theme's security hardening (`inc/security.php`: user enumeration blocking, XML-RPC disabling, frontend security headers) and the server/ops-level checklist (2FA, login throttling, updates, backups, HSTS/CSP, uploads protection). Read it before changing `inc/security.php`.
