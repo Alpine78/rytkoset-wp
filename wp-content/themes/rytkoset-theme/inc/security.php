@@ -164,3 +164,50 @@ add_filter(
 		return rytkoset_theme_xmlrpc_disabled() ? false : $enabled;
 	}
 );
+
+if ( ! function_exists( 'rytkoset_theme_send_security_headers' ) ) {
+	/**
+	 * Lähettää selaintason tietoturvaotsakkeet etusivun pyynnöille.
+	 *
+	 * Vain sisältöä rikkomattomat otsakkeet. HSTS jätetään palvelin-/HTTPS-tasolle
+	 * ja Content-Security-Policy palvelintyöksi, koska tiukka CSP rikkoisi
+	 * wp-adminin, WooCommercen ja Mollien hostatun iframen.
+	 *
+	 * X-Frame-Options (SAMEORIGIN) estää sivuston upottamisen toisen sivuston
+	 * kehykseen (clickjacking); albumivideoiden YouTube-iframet ovat oman
+	 * sivun lapsia, joten ne säilyvät.
+	 */
+	function rytkoset_theme_send_security_headers() {
+		if ( ! rytkoset_theme_security_hardening_enabled() ) {
+			return;
+		}
+
+		// wp-admin lähettää omat otsakkeensa; ei puututa hallintaan eikä editoriin.
+		if ( is_admin() ) {
+			return;
+		}
+
+		$headers = array(
+			'X-Content-Type-Options' => 'nosniff',
+			'X-Frame-Options'        => 'SAMEORIGIN',
+			'Referrer-Policy'        => 'strict-origin-when-cross-origin',
+			'Permissions-Policy'     => 'geolocation=(), microphone=(), camera=()',
+		);
+
+		/**
+		 * Suodata lähetettävät tietoturvaotsakkeet. Tyhjä arvo ohittaa otsakkeen.
+		 *
+		 * @param array $headers Otsakenimi => arvo.
+		 */
+		$headers = apply_filters( 'rytkoset_theme_security_headers', $headers );
+
+		foreach ( $headers as $name => $value ) {
+			if ( '' === $value ) {
+				continue;
+			}
+
+			header( sprintf( '%s: %s', $name, $value ) );
+		}
+	}
+}
+add_action( 'send_headers', 'rytkoset_theme_send_security_headers' );
