@@ -94,7 +94,10 @@ if ( ! function_exists( 'rytkoset_theme_block_author_enumeration' ) ) {
 		exit;
 	}
 }
-add_action( 'template_redirect', 'rytkoset_theme_block_author_enumeration' );
+// Prioriteetti 0 ajaa eston ennen coren redirect_canonical()-funktiota
+// (template_redirect, prioriteetti 10), joka muutoin ohjaisi `?author=N` ->
+// `/author/<slug>/` ja paljastaisi kirjautumisnimen jo ennen tätä estoa.
+add_action( 'template_redirect', 'rytkoset_theme_block_author_enumeration', 0 );
 
 if ( ! function_exists( 'rytkoset_theme_xmlrpc_disabled' ) ) {
 	/**
