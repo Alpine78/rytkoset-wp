@@ -46,7 +46,58 @@ function rytkoset_theme_product_sync_get_temp_base_dir() {
  * Vienti-formaatti versio. Bumppaa jos JSON-rakenne muuttuu.
  */
 function rytkoset_theme_product_sync_get_format_version() {
-	return '1.1';
+	return '1.2';
+}
+
+/**
+ * Serialisoi tuotteen/variaation varastotiedot siirtoformaattiin.
+ *
+ * Sama rakenne sekä simple-tuotteille että variaatioille (WC_Product_Variation
+ * perii WC_Product). `manage_stock` luetaan `edit`-kontekstissa, jotta saadaan
+ * kohteen oma asetus eikä variaation `parent`-johdannaista.
+ *
+ * @param WC_Product $product Tuote tai variaatio.
+ * @return array{manage_stock: bool, stock_status: string, stock_quantity: int|float|null, backorders: string}
+ */
+function rytkoset_theme_product_sync_serialize_stock( $product ) {
+	return array(
+		'manage_stock'   => (bool) $product->get_manage_stock( 'edit' ),
+		'stock_status'   => (string) $product->get_stock_status(),
+		'stock_quantity' => $product->get_stock_quantity( 'edit' ),
+		'backorders'     => (string) $product->get_backorders( 'edit' ),
+	);
+}
+
+/**
+ * Asettaa varastotiedot tuotteelle/variaatiolle tuonnissa (ennen save():a).
+ *
+ * Ohitetaan kokonaan, jos tulevassa datassa ei ole `stock_status`-kenttää (vanhat
+ * 1.0/1.1-paketit) — silloin kohteen varastotilaa ei muuteta.
+ *
+ * @param WC_Product $product  Tuote tai variaatio.
+ * @param array      $incoming Tuleva (variaatio)data.
+ * @return void
+ */
+function rytkoset_theme_product_sync_apply_stock( $product, $incoming ) {
+	if ( ! array_key_exists( 'stock_status', $incoming ) ) {
+		return; // Taaksepäinyhteensopivuus: vanha paketti ilman varastokenttiä.
+	}
+
+	$manage = ! empty( $incoming['manage_stock'] );
+	$product->set_manage_stock( $manage );
+
+	if ( array_key_exists( 'backorders', $incoming ) && '' !== (string) $incoming['backorders'] ) {
+		$product->set_backorders( (string) $incoming['backorders'] );
+	}
+
+	if ( $manage ) {
+		$qty = $incoming['stock_quantity'] ?? null;
+		$product->set_stock_quantity( ( null === $qty || '' === $qty ) ? null : wc_stock_amount( $qty ) );
+	} else {
+		$product->set_stock_quantity( null );
+	}
+
+	$product->set_stock_status( (string) $incoming['stock_status'] );
 }
 
 /**
@@ -450,6 +501,8 @@ function rytkoset_theme_product_sync_serialize_product( $product ) {
 		'downloadable_files' => $downloads,
 	);
 
+	$data = array_merge( $data, rytkoset_theme_product_sync_serialize_stock( $product ) );
+
 	if ( $product instanceof WC_Product_Variable ) {
 		$variable_data = rytkoset_theme_product_sync_serialize_variable_product_data( $product );
 		if ( is_wp_error( $variable_data ) ) {
@@ -522,12 +575,15 @@ function rytkoset_theme_product_sync_serialize_variable_product_data( $product )
 			);
 		}
 
-		$variations[] = array(
-			'sku'           => $variation_sku,
-			'status'        => (string) $variation->get_status(),
-			'attributes'    => rytkoset_theme_product_sync_normalize_variation_attributes( $variation->get_variation_attributes() ),
-			'regular_price' => (string) $variation->get_regular_price(),
-			'sale_price'    => (string) $variation->get_sale_price(),
+		$variations[] = array_merge(
+			array(
+				'sku'           => $variation_sku,
+				'status'        => (string) $variation->get_status(),
+				'attributes'    => rytkoset_theme_product_sync_normalize_variation_attributes( $variation->get_variation_attributes() ),
+				'regular_price' => (string) $variation->get_regular_price(),
+				'sale_price'    => (string) $variation->get_sale_price(),
+			),
+			rytkoset_theme_product_sync_serialize_stock( $variation )
 		);
 	}
 
@@ -667,9 +723,9 @@ function rytkoset_theme_product_sync_handle_upload() {
 	}
 
 	$version = isset( $manifest['version'] ) ? (string) $manifest['version'] : '';
-	if ( ! in_array( $version, array( '1.0', '1.1' ), true ) ) {
+	if ( ! in_array( $version, array( '1.0', '1.1', '1.2' ), true ) ) {
 		rytkoset_theme_product_sync_rrmdir( $session_dir );
-		wp_die( sprintf( esc_html__( 'Tuntematon manifestin versio: %s. Tuetut versiot: 1.0, 1.1', 'rytkoset-theme' ), esc_html( $version ) ) );
+		wp_die( sprintf( esc_html__( 'Tuntematon manifestin versio: %s. Tuetut versiot: 1.0, 1.1, 1.2', 'rytkoset-theme' ), esc_html( $version ) ) );
 	}
 
 	$diffs = array();
@@ -901,6 +957,19 @@ function rytkoset_theme_product_sync_compare_variations( $existing, $incoming ) 
 			}
 		}
 
+		// Varastotila vain jos paketissa on kenttä (1.2+) — ei turhaa muutosta vanhoille paketeille.
+		if ( array_key_exists( 'stock_status', $variation ) ) {
+			$current_stock = (string) $existing_variation->get_stock_status();
+			$next_stock    = (string) $variation['stock_status'];
+			if ( $current_stock !== $next_stock ) {
+				$row['changed'][] = array(
+					'field' => 'stock_status',
+					'from'  => $current_stock,
+					'to'    => $next_stock,
+				);
+			}
+		}
+
 		$row['status'] = empty( $row['changed'] ) ? 'identical' : 'update';
 		$changes[]     = $row;
 	}
@@ -990,6 +1059,10 @@ function rytkoset_theme_product_sync_compare_fields( $existing, $incoming ) {
 	if ( 'variable' !== (string) ( $incoming['type'] ?? '' ) ) {
 		$scalar_map['regular_price'] = 'get_regular_price';
 		$scalar_map['sale_price']    = 'get_sale_price';
+		// Vain jos paketissa on varastokenttä (1.2+) — vanhat paketit eivät näytä turhaa muutosta.
+		if ( array_key_exists( 'stock_status', $incoming ) ) {
+			$scalar_map['stock_status'] = 'get_stock_status';
+		}
 	}
 
 	if ( (string) $existing->get_type() !== (string) ( $incoming['type'] ?? 'simple' ) ) {
@@ -1438,6 +1511,7 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 		$product->set_sale_price( (string) ( $incoming['sale_price'] ?? '' ) );
 		$product->set_virtual( ! empty( $incoming['virtual'] ) );
 		$product->set_downloadable( ! empty( $incoming['downloadable'] ) );
+		rytkoset_theme_product_sync_apply_stock( $product, $incoming );
 	}
 	$product->set_short_description( (string) ( $incoming['short_description'] ?? '' ) );
 	$product->set_description( (string) ( $incoming['description'] ?? '' ) );
@@ -1731,6 +1805,7 @@ function rytkoset_theme_product_sync_import_variations( $product, $variations ) 
 		$variation->set_attributes( $attributes );
 		$variation->set_regular_price( (string) ( $incoming_variation['regular_price'] ?? '' ) );
 		$variation->set_sale_price( (string) ( $incoming_variation['sale_price'] ?? '' ) );
+		rytkoset_theme_product_sync_apply_stock( $variation, $incoming_variation );
 
 		$saved = $variation->save();
 		if ( ! $saved ) {
