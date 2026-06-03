@@ -419,6 +419,67 @@ function rytkoset_theme_product_sync_handle_export() {
 add_action( 'admin_post_rytkoset_product_sync_export', 'rytkoset_theme_product_sync_handle_export' );
 
 /**
+ * Ratkaisee downloadable-tiedoston URL:n/polun absoluuttiseksi poluksi ja varmistaa,
+ * että se on WordPressin uploads-hakemiston sisällä (WooCommercen downloads-alue).
+ *
+ * Polku kanonisoidaan `realpath()`:lla (purkaa `..`-segmentit ja symlinkit), ja
+ * tulosta verrataan uploads-basedirin canonical-polkuun. Näin vienti ei voi
+ * sisältää tiedostoja uploads-alueen ulkopuolelta (esim. `/wp-config.php`,
+ * `..`-traversaali tai uploads-alueelta ulos osoittava symlink).
+ *
+ * @param string $file_url Downloadin tiedosto-URL tai -polku.
+ * @return string|WP_Error|null Validoitu absoluuttinen polku; `WP_Error` jos uploads-alueen
+ *                              ulkopuolella; `null` jos tiedosto puuttuu (ohitetaan kuten ennen).
+ */
+function rytkoset_theme_product_sync_resolve_download_path( $file_url ) {
+	$file_url = (string) $file_url;
+	if ( '' === $file_url ) {
+		return null;
+	}
+
+	$uploads = wp_upload_dir();
+	if ( ! empty( $uploads['error'] ) ) {
+		return new WP_Error( 'rytkoset_psync_uploads_error', __( 'Uploads-hakemistoa ei voitu määrittää viennille.', 'rytkoset-theme' ) );
+	}
+
+	$uploads_basedir = trailingslashit( $uploads['basedir'] );
+	$uploads_baseurl = trailingslashit( $uploads['baseurl'] );
+
+	if ( 0 === strpos( $file_url, $uploads_baseurl ) ) {
+		$candidate = $uploads_basedir . substr( $file_url, strlen( $uploads_baseurl ) );
+	} elseif ( 0 === strpos( $file_url, $uploads_basedir ) ) {
+		$candidate = $file_url;
+	} elseif ( 0 === strpos( $file_url, '/' ) ) {
+		$candidate = ABSPATH . ltrim( $file_url, '/' );
+	} else {
+		$candidate = $uploads_basedir . $file_url;
+	}
+
+	$real         = realpath( $candidate );
+	$real_uploads = realpath( $uploads['basedir'] );
+
+	// Tiedosto puuttuu tai ei ole luettavissa → ohitetaan (ei lisätä pakettiin).
+	// Tuonti merkitsee puuttuvan tiedoston VIRHE-tilaan.
+	if ( false === $real || false === $real_uploads ) {
+		return null;
+	}
+
+	$real_uploads = trailingslashit( $real_uploads );
+	if ( 0 !== strpos( trailingslashit( $real ), $real_uploads ) ) {
+		return new WP_Error(
+			'rytkoset_psync_download_out_of_scope',
+			sprintf(
+				/* translators: %s: download file url/path */
+				__( 'Ladattava tiedosto on uploads-hakemiston ulkopuolella eikä sitä voi viedä: %s', 'rytkoset-theme' ),
+				$file_url
+			)
+		);
+	}
+
+	return $real;
+}
+
+/**
  * Serialisoi WC_Product siirtoformaattiin.
  *
  * @param WC_Product $product Tuote.
@@ -454,31 +515,27 @@ function rytkoset_theme_product_sync_serialize_product( $product ) {
 		}
 	}
 
-	$downloads      = array();
-	$files_to_add   = array();
-	$uploads        = wp_upload_dir();
-	$uploads_basedir = trailingslashit( $uploads['basedir'] );
-	$uploads_baseurl = trailingslashit( $uploads['baseurl'] );
+	$downloads    = array();
+	$files_to_add = array();
 
 	if ( $product->is_downloadable() ) {
 		foreach ( $product->get_downloads() as $download ) {
 			$file_url  = (string) $download->get_file();
 			$file_name = wp_basename( $file_url );
 
-			$abs_path = '';
-			if ( 0 === strpos( $file_url, $uploads_baseurl ) ) {
-				$abs_path = $uploads_basedir . substr( $file_url, strlen( $uploads_baseurl ) );
-			} elseif ( 0 === strpos( $file_url, '/' ) ) {
-				$abs_path = ABSPATH . ltrim( $file_url, '/' );
-			}
-
 			$downloads[] = array(
 				'name'     => (string) $download->get_name(),
 				'filename' => $file_name,
 			);
 
-			if ( '' !== $abs_path && file_exists( $abs_path ) ) {
-				$files_to_add[ $file_name ] = $abs_path;
+			// Ratkaise ja rajaa polku uploads-alueelle (Zip-vienti ei saa karata sen ulkopuolelle).
+			$resolved = rytkoset_theme_product_sync_resolve_download_path( $file_url );
+			if ( is_wp_error( $resolved ) ) {
+				return $resolved; // Uploads-alueen ulkopuolinen tiedosto → estä koko tuotteen vienti.
+			}
+
+			if ( null !== $resolved ) {
+				$files_to_add[ $file_name ] = $resolved;
 			}
 		}
 	}
