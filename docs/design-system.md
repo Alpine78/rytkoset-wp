@@ -69,6 +69,7 @@ Dark theme overrides all of the above in the `:root[data-theme="dark"]` block â€
 - `.card` â€” surface background, `--radius-l`, `--shadow-card`; lifts on hover with `translateY(-2px)`. Child elements `.card__title`, `.card__text`, `.card__link`
 - Cards for content types follow the `*-card` / `*-card__media` / `*-card__body` pattern (see `.blog-card`, `.event-card`)
 - Form fields: `min-height: 48px`, `--radius-medium`, `1px` neutral border, accent focus outline
+- WordPress table block (`.wp-block-table.is-style-stripes`, used for content tables like the magazine table of contents): core paints striped rows with a fixed light gray, so `components.css` overrides the odd-row `td`/`th` background with `--color-surface-muted` (follows light/dark mode). Right-aligned cells (`.has-text-align-right`) get `white-space: nowrap` so multi-digit numbers don't break mid-number in narrow columns
 
 ## Focus & accessibility
 
