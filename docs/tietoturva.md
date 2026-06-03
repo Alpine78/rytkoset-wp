@@ -36,12 +36,12 @@ Erikseen kytkettävissä suodattimella `rytkoset_theme_disable_xmlrpc`.
 
 Lähetetään etusivun pyynnöille (`send_headers`); wp-admin ohitetaan. Muokattavissa suodattimella `rytkoset_theme_security_headers`.
 
-| Otsake | Arvo | Suoja |
-| --- | --- | --- |
-| `X-Content-Type-Options` | `nosniff` | Estää MIME-tyypin arvauksen |
-| `X-Frame-Options` | `SAMEORIGIN` | Clickjacking-suoja |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Rajoittaa referrer-tiedon vuotamista |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` | Estää käyttämättömät selainominaisuudet |
+| Otsake                   | Arvo                                       | Suoja                                   |
+| ------------------------ | ------------------------------------------ | --------------------------------------- |
+| `X-Content-Type-Options` | `nosniff`                                  | Estää MIME-tyypin arvauksen             |
+| `X-Frame-Options`        | `SAMEORIGIN`                               | Clickjacking-suoja                      |
+| `Referrer-Policy`        | `strict-origin-when-cross-origin`          | Rajoittaa referrer-tiedon vuotamista    |
+| `Permissions-Policy`     | `geolocation=(), microphone=(), camera=()` | Estää käyttämättömät selainominaisuudet |
 
 > **HSTS** (`Strict-Transport-Security`) ja **Content-Security-Policy** on jätetty tarkoituksella pois teemasta. HSTS kuuluu HTTPS-/palvelintasolle, ja tiukka CSP rikkoisi helposti wp-adminin, WooCommercen ja Mollien hostatun maksu-iframen. Nämä hoidetaan palvelintasolla, ks. alla.
 
