@@ -34,6 +34,15 @@ body.woocommerce-checkout .section .container.section__narrow {
   max-width: none;
 }
 
+/* Product category / tag archives render through the same narrow page wrapper
+   but get no distinguishing body class here, so target the reading column that
+   actually holds a product loop. The .woocommerce.columns-* wrapper is unique to
+   archive/shop loops (single product pages wrap related products without it), so
+   this widens listings without touching the single product reading width. */
+.section .container.section__narrow:has(.woocommerce[class*="columns-"] ul.products) {
+  max-width: none;
+}
+
 .woocommerce .woocommerce-message,
 .woocommerce .woocommerce-info,
 .woocommerce .woocommerce-error,
@@ -690,6 +699,19 @@ body.woocommerce-cart .wc-block-grid__product-add-to-cart .wp-block-button__link
 .woocommerce-page ul.products li.product .button.rytkoset-sold-individually-in-cart {
   padding-right: 1.15rem;
   padding-left: 1.15rem;
+}
+
+/* Related products render inside the single product page's 720px reading column
+   (.section__narrow), unlike the shop/cart pages which restore the full
+   container width. Four columns there shrink each cell below the
+   "Lisää ostoskoriin" button width, so the buttons overflow their cells and
+   visually merge. Use two columns on the single product page; the ≤880px /
+   ≤560px breakpoints below already collapse the grid further. */
+@media (min-width: 881px) {
+  body.single-product .related.products ul.products,
+  body.single-product .upsells.products ul.products {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .woocommerce .rytkoset-shop-select-native,
