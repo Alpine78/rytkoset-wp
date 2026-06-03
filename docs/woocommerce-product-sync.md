@@ -99,7 +99,7 @@ Lista on filtteröitävissä koodista: `rytkoset_theme_product_sync_meta_keys`.
 
 ## Downloadable-tuotteet
 
-Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonnissa:
+Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Viennissä ladattavien tiedostojen polut kanonisoidaan `realpath()`:lla ja rajataan WordPressin uploads-hakemistoon: uploads-alueen ulkopuolinen tiedosto (absoluuttinen, root-relatiivinen, `..`-traversaali tai ulos osoittava symlink) **estää tuotteen viennin** selkeällä virheellä, joten uploads-alueen ulkopuolista ei voi vahingossa pakata mukaan. Puuttuvat tiedostot ohitetaan (tuonti merkitsee ne **VIRHE**-tilaan). Tuonnissa:
 
 - Jos tiedosto puuttuu paketista → tuote merkitään esikatselussa **VIRHE**-tilaan eikä sitä voi tuoda. Rikkinäistä tuotetta ei luoda hiljaisesti.
 - Jos tiedosto löytyy → se kopioidaan kohdeympäristön `wp-content/uploads/woocommerce_uploads/`-hakemistoon ja liitetään tuotteeseen.
