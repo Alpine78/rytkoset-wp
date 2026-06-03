@@ -109,6 +109,7 @@ Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonniss
 - Moduuli: `wp-content/themes/rytkoset-theme/inc/woocommerce-product-sync.php`
 - Vaatii palvelimelta PHP:n `ZipArchive`-laajennuksen.
 - Ladattu ZIP puretaan väliaikaisesti hakemistoon `wp-content/uploads/rytkoset-product-sync/`. Hakemisto siivotaan automaattisesti tuonnin jälkeen.
+- **ZIP-entryjen validointi (Zip Slip -suojaus):** paketin entryt tarkistetaan ennen purkua. Sallitaan vain `manifest.json`, `products.json` ja `files/<perusnimi>` (sallitulla tiedostopäätteellä). Absoluuttiset polut, asemakirjaimet, `..`-hakemistotraversaali, null-tavut ja muut odottamattomat tiedostot/hakemistot hylkäävät koko tuonnin, eikä mitään kirjoiteta levylle. Vain hyväksytyt entryt puretaan, ja hylätty paketti siivoaa sessiohakemiston.
 - Esikatselu-sessio säilyy transientissa 1 tunnin. Sen jälkeen ZIP pitää ladata uudelleen.
 - Tunnistus käyttää WooCommercen omaa `wc_get_product_id_by_sku()`-funktiota.
 

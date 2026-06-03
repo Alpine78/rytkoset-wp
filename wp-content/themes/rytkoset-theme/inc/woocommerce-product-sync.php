@@ -659,6 +659,83 @@ function rytkoset_theme_product_sync_render_import_tab( $token ) {
 }
 
 /**
+ * Validoi ZIP-paketin entryt ennen purkamista (Zip Slip / path traversal -suojaus).
+ *
+ * Sallii vain vientiformaatin odottamat entryt: `manifest.json`, `products.json` ja
+ * `files/<perusnimi>`, joilla on WordPressin sallima tiedostopääte. Hylkää
+ * absoluuttiset polut, asemakirjaimet, hakemistotraversaalin (`..`), null-tavut ja
+ * kaikki muut odottamattomat tiedostot/hakemistot. Mitään ei kirjoiteta levylle
+ * tässä — palauttaa vain hyväksytyt entry-nimet purettavaksi.
+ *
+ * @param ZipArchive $zip Avattu arkisto.
+ * @return array{0: array<int, string>, 1: string} [hyväksytyt entry-nimet, virheviesti tai '']
+ */
+function rytkoset_theme_product_sync_validate_zip_entries( $zip ) {
+	$allowed_root = array( 'manifest.json', 'products.json' );
+	$allowed_mimes = get_allowed_mime_types();
+	$safe_entries = array();
+
+	for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+		$name = $zip->getNameIndex( $i );
+
+		if ( false === $name || '' === $name ) {
+			return array( array(), __( 'ZIP-entryn nimeä ei voitu lukea.', 'rytkoset-theme' ) );
+		}
+
+		// Null-tavu entry-nimessä → hylkää.
+		if ( false !== strpos( $name, "\0" ) ) {
+			return array( array(), __( 'Virheellinen entry-nimi ZIP-paketissa.', 'rytkoset-theme' ) );
+		}
+
+		// Normalisoi takakenot kenoiksi tarkistuksia varten (Windows-tyyliset polut).
+		$normalized = str_replace( '\\', '/', $name );
+
+		// Absoluuttinen polku tai asemakirjain (esim. /etc/passwd, C:\...) → hylkää.
+		if ( '/' === substr( $normalized, 0, 1 ) || preg_match( '#^[a-zA-Z]:#', $normalized ) ) {
+			return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Absoluuttinen polku ei ole sallittu: %s', 'rytkoset-theme' ), $name ) );
+		}
+
+		// Hakemistotraversaali (.. segmenttinä) → hylkää.
+		if ( in_array( '..', explode( '/', $normalized ), true ) ) {
+			return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Hakemistotraversaali ei ole sallittu: %s', 'rytkoset-theme' ), $name ) );
+		}
+
+		// Hakemistoentry (päättyy /): salli vain "files/", jonka purku syntyy joka tapauksessa tiedostoista.
+		if ( '/' === substr( $normalized, -1 ) ) {
+			if ( 'files/' === $normalized ) {
+				continue;
+			}
+			return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Odottamaton hakemisto ZIP-paketissa: %s', 'rytkoset-theme' ), $name ) );
+		}
+
+		// Sallitut juuritiedostot.
+		if ( in_array( $normalized, $allowed_root, true ) ) {
+			$safe_entries[] = $name;
+			continue;
+		}
+
+		// files/<perusnimi>: vain yksi taso ja sallittu tiedostopääte.
+		if ( 0 === strpos( $normalized, 'files/' ) ) {
+			$relative = substr( $normalized, strlen( 'files/' ) );
+			if ( '' === $relative || false !== strpos( $relative, '/' ) ) {
+				return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Odottamaton tiedosto files-hakemistossa: %s', 'rytkoset-theme' ), $name ) );
+			}
+			$filetype = wp_check_filetype( $relative, $allowed_mimes );
+			if ( empty( $filetype['ext'] ) ) {
+				return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Tiedostotyyppi ei ole sallittu: %s', 'rytkoset-theme' ), $name ) );
+			}
+			$safe_entries[] = $name;
+			continue;
+		}
+
+		// Kaikki muu → hylkää.
+		return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Odottamaton tiedosto ZIP-paketissa: %s', 'rytkoset-theme' ), $name ) );
+	}
+
+	return array( $safe_entries, '' );
+}
+
+/**
  * Käsittelee ZIP-uploadin: purkaa, validoi, laskee diffin, tallentaa transientiin
  * ja ohjaa esikatselu-näkymään.
  *
@@ -697,7 +774,16 @@ function rytkoset_theme_product_sync_handle_upload() {
 		wp_die( esc_html__( 'ZIP-tiedoston avaus epäonnistui.', 'rytkoset-theme' ) );
 	}
 
-	if ( ! $zip->extractTo( $session_dir ) ) {
+	// Tarkista entryt ennen kuin mitään kirjoitetaan levylle (Zip Slip -suojaus).
+	list( $safe_entries, $zip_error ) = rytkoset_theme_product_sync_validate_zip_entries( $zip );
+	if ( '' !== $zip_error ) {
+		$zip->close();
+		rytkoset_theme_product_sync_rrmdir( $session_dir );
+		wp_die( esc_html( $zip_error ) );
+	}
+
+	// Pura vain hyväksytyt entryt confinattuun sessiohakemistoon.
+	if ( empty( $safe_entries ) || ! $zip->extractTo( $session_dir, $safe_entries ) ) {
 		$zip->close();
 		rytkoset_theme_product_sync_rrmdir( $session_dir );
 		wp_die( esc_html__( 'ZIP-tiedoston purku epäonnistui.', 'rytkoset-theme' ) );
