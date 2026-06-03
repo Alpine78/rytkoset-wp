@@ -211,3 +211,78 @@ if ( ! function_exists( 'rytkoset_theme_send_security_headers' ) ) {
 	}
 }
 add_action( 'send_headers', 'rytkoset_theme_send_security_headers' );
+
+if ( ! function_exists( 'rytkoset_theme_render_registration_honeypot' ) ) {
+	/**
+	 * Renderöi piilotetun honeypot-kentän rekisteröitymislomakkeeseen.
+	 *
+	 * Ihminen ei näe kenttää (piilotettu pois ruudulta, aria-hidden,
+	 * tabindex -1), joten se jää tyhjäksi. Lomakkeet automaattisesti
+	 * täyttävät botit kirjoittavat siihen ja paljastuvat. Tarkistus tehdään
+	 * `rytkoset_theme_filter_registration_spam()`-funktiossa.
+	 */
+	function rytkoset_theme_render_registration_honeypot() {
+		if ( ! rytkoset_theme_security_hardening_enabled() ) {
+			return;
+		}
+		?>
+		<p class="rytkoset-hp-field" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+			<label for="rytkoset_url"><?php esc_html_e( 'Jätä tämä kenttä tyhjäksi', 'rytkoset-theme' ); ?></label>
+			<input type="text" name="rytkoset_url" id="rytkoset_url" value="" tabindex="-1" autocomplete="off" />
+		</p>
+		<?php
+	}
+}
+add_action( 'register_form', 'rytkoset_theme_render_registration_honeypot' );
+
+if ( ! function_exists( 'rytkoset_theme_filter_registration_spam' ) ) {
+	/**
+	 * Hylkää roskarekisteröinnit: täytetty honeypot tai estetty sähköpostidomain.
+	 *
+	 * Estetyt domain-päätteet ovat oletuksena uhkapeli-TLD:itä, joita
+	 * sukuseuran jäsenet eivät käytä. Listaa voi laajentaa suodattimella
+	 * `rytkoset_theme_blocked_registration_email_patterns`.
+	 *
+	 * @param WP_Error $errors               Rekisteröinnin virheet.
+	 * @param string   $sanitized_user_login Käyttäjätunnus.
+	 * @param string   $user_email           Sähköpostiosoite.
+	 * @return WP_Error
+	 */
+	function rytkoset_theme_filter_registration_spam( $errors, $sanitized_user_login, $user_email ) {
+		if ( ! rytkoset_theme_security_hardening_enabled() ) {
+			return $errors;
+		}
+
+		// Honeypot: piilokentän pitää olla tyhjä.
+		if ( ! empty( $_POST['rytkoset_url'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Anti-spam check on the public registration form.
+			$errors->add( 'rytkoset_spam', __( 'Rekisteröityminen estettiin. Yritä uudelleen.', 'rytkoset-theme' ) );
+			return $errors;
+		}
+
+		/**
+		 * Suodata estetyt sähköpostidomainin päätteet (esim. `.casino`).
+		 * Vertailu tehdään domainin loppuosaan.
+		 *
+		 * @param array $patterns Estetyt päätteet/domainit.
+		 */
+		$blocked = apply_filters(
+			'rytkoset_theme_blocked_registration_email_patterns',
+			array( '.casino', '.bet', '.poker' )
+		);
+
+		$email  = strtolower( $user_email );
+		$at     = strrpos( $email, '@' );
+		$domain = false !== $at ? substr( $email, $at + 1 ) : $email;
+
+		foreach ( $blocked as $pattern ) {
+			$pattern = strtolower( (string) $pattern );
+			if ( '' !== $pattern && str_ends_with( $domain, $pattern ) ) {
+				$errors->add( 'rytkoset_blocked_email', __( 'Tällä sähköpostiosoitteella ei voi rekisteröityä.', 'rytkoset-theme' ) );
+				break;
+			}
+		}
+
+		return $errors;
+	}
+}
+add_filter( 'registration_errors', 'rytkoset_theme_filter_registration_spam', 10, 3 );

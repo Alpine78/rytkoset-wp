@@ -36,14 +36,23 @@ Erikseen kytkettävissä suodattimella `rytkoset_theme_disable_xmlrpc`.
 
 Lähetetään etusivun pyynnöille (`send_headers`); wp-admin ohitetaan. Muokattavissa suodattimella `rytkoset_theme_security_headers`.
 
-| Otsake | Arvo | Suoja |
-| --- | --- | --- |
-| `X-Content-Type-Options` | `nosniff` | Estää MIME-tyypin arvauksen |
-| `X-Frame-Options` | `SAMEORIGIN` | Clickjacking-suoja |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | Rajoittaa referrer-tiedon vuotamista |
-| `Permissions-Policy` | `geolocation=(), microphone=(), camera=()` | Estää käyttämättömät selainominaisuudet |
+| Otsake                   | Arvo                                       | Suoja                                   |
+| ------------------------ | ------------------------------------------ | --------------------------------------- |
+| `X-Content-Type-Options` | `nosniff`                                  | Estää MIME-tyypin arvauksen             |
+| `X-Frame-Options`        | `SAMEORIGIN`                               | Clickjacking-suoja                      |
+| `Referrer-Policy`        | `strict-origin-when-cross-origin`          | Rajoittaa referrer-tiedon vuotamista    |
+| `Permissions-Policy`     | `geolocation=(), microphone=(), camera=()` | Estää käyttämättömät selainominaisuudet |
 
 > **HSTS** (`Strict-Transport-Security`) ja **Content-Security-Policy** on jätetty tarkoituksella pois teemasta. HSTS kuuluu HTTPS-/palvelintasolle, ja tiukka CSP rikkoisi helposti wp-adminin, WooCommercen ja Mollien hostatun maksu-iframen. Nämä hoidetaan palvelintasolla, ks. alla.
+
+### Roskarekisteröitymisten esto
+
+Sivustolla on avoin WordPress-rekisteröityminen (*Asetukset → Yleiset → Jäsenyys*). Roskabotit (esim. uhkapelidomainit, nimi+satunnaisnumero -tunnukset) löytävät rekisteröitymislomakkeen automaattisesti. Kevyt suoja ilman kolmannen osapuolen liitännäisiä:
+
+- **Honeypot-kenttä:** rekisteröitymislomakkeeseen (`register_form`) lisätään piilotettu tekstikenttä, jota ihminen ei näe (pois ruudulta, `aria-hidden`, `tabindex="-1"`). Lomakkeet automaattisesti täyttävät botit kirjoittavat siihen ja paljastuvat; rekisteröityminen hylätään `registration_errors`-suodattimessa.
+- **Estetyt sähköpostidomainit:** rekisteröityminen tunnetuilla uhkapeli-TLD:illä (`.casino`, `.bet`, `.poker`) estetään. Listaa voi laajentaa suodattimella `rytkoset_theme_blocked_registration_email_patterns` (vertailu domainin loppuosaan).
+
+> Tämä ei korvaa palvelintason kirjautumisrajoitusta. Jos roskarekisteröinnit jatkuvat suuressa mittakaavassa, harkitse CAPTCHAa tai rekisteröitymisen sulkemista kokonaan (WooCommercen tilin luonti kassalla on erillinen asetus ja säilyy).
 
 ### Testaus dev-ympäristössä
 
@@ -53,6 +62,7 @@ Kirjautuneena ulos:
 - `https://dev.rytkoset.net/?author=1` → ohjaus etusivulle.
 - `https://dev.rytkoset.net/xmlrpc.php` (POST `system.listMethods`) → ei `pingback.ping`-metodia; todennetut metodit palauttavat virheen.
 - `curl -I https://dev.rytkoset.net/` → neljä tietoturvaotsaketta näkyvät; `X-Pingback` puuttuu.
+- Rekisteröityminen `.casino`-osoitteella → hylätään virheilmoituksella; honeypot-kentän täyttäminen (esim. devtoolsilla) → rekisteröityminen estyy. Tavallinen osoite ja tyhjä honeypot → rekisteröityminen onnistuu normaalisti.
 
 Kirjautuneena: wp-admin ja blokkieditori toimivat normaalisti.
 
