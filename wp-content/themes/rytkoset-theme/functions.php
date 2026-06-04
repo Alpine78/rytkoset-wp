@@ -28,6 +28,7 @@ require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
+require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
