@@ -31,6 +31,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - Taulukkolohkon oikealle tasatut solut (sukulehtien sisällysluettelon sivunumerot) eivät enää katkea kesken numeron (27 → "2"/"7"): `white-space: nowrap` soluille `.wp-block-table td/th.has-text-align-right`.
 - Yksittäisen tuotteen "Tutustu myös" -ruudukko on kaksisarakkeinen (`@media (min-width: 881px)`), jotteivät `Lisää ostoskoriin` -napit ylivuoda ja sulaudu 720px:n lukusarakkeessa.
 - Tuoteosastojen ja -tagien arkistot palautuvat täysleveyteen (`.section__narrow:has(.woocommerce[class*="columns-"] ul.products)`), jottei tuoteruudukko ahtaudu eivätkä napit ylivuoda.
+- `front-page.php`: etusivun Tampere 2026 - "Ilmoittaudu"-nappi haki tuotteen osoitteen kovakoodatusta `/tuote/…`-polusta, joka rikkoutui kun WooCommercen tuotekestolinkki vaihdettiin rakenteeseen `/kauppa/%product_cat%/`. Osoite haetaan nyt dynaamisesti SKU:lla (`get_permalink()`), joten nappi toimii kestolinkkirakenteesta riippumatta; varalla kaupan etusivu.
 
 ### Added
 - `wp-content/maintenance.php`: branded maintenance page that overrides WordPress's default maintenance screen. Navy hero with gold accent, Newsreader/Manrope fonts, cream illustration card, pulsing status badge, return-time chip, and social links — matching the site's visual language. Reads `get_theme_mod()` for concept (`uudistus`/`huolto`/`talkoot`), return text, contact email, and custom logo.

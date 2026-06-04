@@ -58,8 +58,15 @@
           Suvun väki kokoontuu Tampereelle loppukesästä. Luvassa juhlaohjelmaa, sukukokous ja
           yhteistä aikaa. Tarkempi ohjelma julkaistaan pian. Ilmoittaudu mukaan ja varmista paikkasi vuoden 2026 sukujuhlissa!
         </p>
+        <?php
+        // Hae osallistumismaksutuotteen osoite dynaamisesti SKU:lla, jottei se
+        // riipu WooCommercen kestolinkkirakenteesta (esim. /tuote/ vs /kauppa/%product_cat%/).
+        $rytkoset_tampere_sku        = function_exists( 'rytkoset_theme_get_tampere_2026_registration_sku' ) ? rytkoset_theme_get_tampere_2026_registration_sku() : '';
+        $rytkoset_tampere_product_id = ( '' !== $rytkoset_tampere_sku && function_exists( 'wc_get_product_id_by_sku' ) ) ? wc_get_product_id_by_sku( $rytkoset_tampere_sku ) : 0;
+        $rytkoset_tampere_url        = $rytkoset_tampere_product_id ? get_permalink( $rytkoset_tampere_product_id ) : home_url( '/kauppa/' );
+        ?>
         <div class="home-feature__actions">
-          <a href="<?php echo esc_url( home_url('/tuote/tampere-2026-osallistumismaksu/') ); ?>" class="btn btn--primary">
+          <a href="<?php echo esc_url( $rytkoset_tampere_url ); ?>" class="btn btn--primary">
             Ilmoittaudu
           </a>
           <a href="<?php echo esc_url( home_url('/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/') ); ?>" class="btn btn--outline">
