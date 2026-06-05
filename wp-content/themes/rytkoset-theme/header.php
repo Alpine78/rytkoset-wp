@@ -17,6 +17,14 @@
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 
+<?php $is_dev_site = rytkoset_theme_is_dev_site(); ?>
+<?php if ( $is_dev_site ) : ?>
+    <div class="site-dev-banner" role="note">
+        <span class="site-dev-banner__label"><?php esc_html_e( 'Testisivusto', 'rytkoset-theme' ); ?></span>
+        <span class="site-dev-banner__text"><?php esc_html_e( 'Voit rauhassa kokeilla ilmoittautumista ja verkkokauppaa. Oikeat tapahtumat ja maksut tehdään varsinaisella sivustolla.', 'rytkoset-theme' ); ?></span>
+    </div>
+<?php endif; ?>
+
 <a class="skip-link screen-reader-text" href="#primary">
     <?php esc_html_e( 'Siirry suoraan sisältöön', 'rytkoset-theme' ); ?>
 </a>
@@ -126,6 +134,11 @@
                         <?php endif; ?>
                     </span>
                 </a>
+                <?php if ( $is_dev_site ) : ?>
+                    <span class="site-env-badge" aria-label="<?php esc_attr_e( 'Testisivusto', 'rytkoset-theme' ); ?>">
+                        <?php esc_html_e( 'TESTI', 'rytkoset-theme' ); ?>
+                    </span>
+                <?php endif; ?>
             </div><!-- .site-branding -->
 
             <div class="site-nav-wrapper">
