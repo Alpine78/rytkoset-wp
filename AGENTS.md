@@ -274,6 +274,31 @@ Focus:
 - clear scope
 - visible progress
 
+### GitHub Ticket Workflow
+
+When creating GitHub issues for this repository:
+
+- Repository: `Alpine78/rytkoset-wp`
+- Project: `Sukuseuran nettisivu-uudistus` / GitHub Project `Alpine78/3`
+- Always add the issue to the project
+- Assign issues to `Alpine78` unless told otherwise
+- Do not set a milestone unless explicitly requested
+- Do not set a parent issue unless the relationship is clear from the request
+- Set project fields when applicable:
+  - Status: `Next` for actionable near-term tasks, otherwise `Backlog`
+  - Type: `Task`, `Feature`, `Bug`, `Documentation`, `Design`, or `Epic`
+  - Priority: `High`, `Medium`, or `Low`
+- Use existing repository labels; prefer the most specific relevant labels, such as:
+  - `task`
+  - `theme`
+  - `design`
+  - `environment: dev`
+  - `environment: prod`
+  - `woocommerce:*`
+  - `events:*`
+  - `frontend:*`
+  - `testing`
+
 ---
 
 ## 🤖 AI Collaboration Mode (IMPORTANT)
