@@ -176,6 +176,31 @@ function rytkoset_theme_setup() {
 add_action( 'after_setup_theme', 'rytkoset_theme_setup' );
 
 /**
+ * Checks whether the current request should show dev-environment markers.
+ *
+ * The marker is intentionally domain-bound so production never depends on a
+ * manual WordPress setting.
+ *
+ * @return bool True when the current request host is dev.rytkoset.net.
+ */
+function rytkoset_theme_is_dev_site() {
+	$host = '';
+
+	if ( isset( $_SERVER['HTTP_HOST'] ) ) {
+		$host = sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) );
+	}
+
+	if ( '' === $host ) {
+		$host = (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST );
+	}
+
+	$host = strtolower( trim( $host ) );
+	$host = preg_replace( '/:\d+$/', '', $host );
+
+	return 'dev.rytkoset.net' === $host;
+}
+
+/**
  * Builds a safe WooCommerce cart link for the site navigation.
  *
  * @param array $args Markup options.
