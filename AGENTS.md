@@ -73,8 +73,8 @@ Use conventional commits:
 
 ### Commit workflow
 - Do not create commits automatically when a task appears complete
-- First report that the ticket requirements are implemented
-- Then suggest a commit message so the user can review changes in the editor before committing
+- Suggest a conventional commit message at useful review points, including mid-ticket if a coherent partial change is ready to review
+- When the ticket requirements are implemented, report that clearly and suggest the final commit message so the user can review changes in the editor before committing
 
 ### Tool approval discipline
 - Minimize permission prompts.
@@ -298,6 +298,15 @@ When creating GitHub issues for this repository:
   - `events:*`
   - `frontend:*`
   - `testing`
+
+### Pull Request Description Workflow
+
+When a ticket is ready:
+
+- Always provide a PR title and PR description without waiting for a separate request
+- Include a concise summary, key implementation details, and validation performed
+- Mention any validation that could not be run and why
+- Keep the PR description reviewable and tied to the ticket scope
 
 ---
 
