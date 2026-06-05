@@ -46,7 +46,58 @@ function rytkoset_theme_product_sync_get_temp_base_dir() {
  * Vienti-formaatti versio. Bumppaa jos JSON-rakenne muuttuu.
  */
 function rytkoset_theme_product_sync_get_format_version() {
-	return '1.0';
+	return '1.2';
+}
+
+/**
+ * Serialisoi tuotteen/variaation varastotiedot siirtoformaattiin.
+ *
+ * Sama rakenne sekä simple-tuotteille että variaatioille (WC_Product_Variation
+ * perii WC_Product). `manage_stock` luetaan `edit`-kontekstissa, jotta saadaan
+ * kohteen oma asetus eikä variaation `parent`-johdannaista.
+ *
+ * @param WC_Product $product Tuote tai variaatio.
+ * @return array{manage_stock: bool, stock_status: string, stock_quantity: int|float|null, backorders: string}
+ */
+function rytkoset_theme_product_sync_serialize_stock( $product ) {
+	return array(
+		'manage_stock'   => (bool) $product->get_manage_stock( 'edit' ),
+		'stock_status'   => (string) $product->get_stock_status(),
+		'stock_quantity' => $product->get_stock_quantity( 'edit' ),
+		'backorders'     => (string) $product->get_backorders( 'edit' ),
+	);
+}
+
+/**
+ * Asettaa varastotiedot tuotteelle/variaatiolle tuonnissa (ennen save():a).
+ *
+ * Ohitetaan kokonaan, jos tulevassa datassa ei ole `stock_status`-kenttää (vanhat
+ * 1.0/1.1-paketit) — silloin kohteen varastotilaa ei muuteta.
+ *
+ * @param WC_Product $product  Tuote tai variaatio.
+ * @param array      $incoming Tuleva (variaatio)data.
+ * @return void
+ */
+function rytkoset_theme_product_sync_apply_stock( $product, $incoming ) {
+	if ( ! array_key_exists( 'stock_status', $incoming ) ) {
+		return; // Taaksepäinyhteensopivuus: vanha paketti ilman varastokenttiä.
+	}
+
+	$manage = ! empty( $incoming['manage_stock'] );
+	$product->set_manage_stock( $manage );
+
+	if ( array_key_exists( 'backorders', $incoming ) && '' !== (string) $incoming['backorders'] ) {
+		$product->set_backorders( (string) $incoming['backorders'] );
+	}
+
+	if ( $manage ) {
+		$qty = $incoming['stock_quantity'] ?? null;
+		$product->set_stock_quantity( ( null === $qty || '' === $qty ) ? null : wc_stock_amount( $qty ) );
+	} else {
+		$product->set_stock_quantity( null );
+	}
+
+	$product->set_stock_status( (string) $incoming['stock_status'] );
 }
 
 /**
@@ -119,6 +170,59 @@ function rytkoset_theme_product_sync_render_page() {
 		?>
 	</div>
 	<?php
+}
+
+/**
+ * Renderöi variaatiokohtaiset preview-muutokset.
+ *
+ * @param array<int, array> $variation_changes Variaatiodiffit.
+ * @return void
+ */
+function rytkoset_theme_product_sync_render_variation_changes( $variation_changes ) {
+	foreach ( $variation_changes as $variation_change ) {
+		if ( ! is_array( $variation_change ) ) {
+			continue;
+		}
+
+		$status = isset( $variation_change['status'] ) ? (string) $variation_change['status'] : '';
+		if ( 'identical' === $status ) {
+			continue;
+		}
+
+		$sku        = (string) ( $variation_change['sku'] ?? '' );
+		$attributes = (string) ( $variation_change['attributes'] ?? '' );
+		$changed    = isset( $variation_change['changed'] ) && is_array( $variation_change['changed'] ) ? $variation_change['changed'] : array();
+		?>
+		<li>
+			<code><?php echo esc_html( 'variation:' . $sku ); ?></code>
+			<?php if ( 'new' === $status ) : ?>
+				<?php esc_html_e( 'uusi variaatio', 'rytkoset-theme' ); ?>
+				<?php if ( '' !== $attributes ) : ?>
+					(<?php echo esc_html( $attributes ); ?>)
+				<?php endif; ?>
+			<?php else : ?>
+				<?php if ( '' !== $attributes ) : ?>
+					<?php echo esc_html( $attributes ); ?>:
+				<?php endif; ?>
+				<?php
+				$parts = array();
+				foreach ( $changed as $change ) {
+					if ( ! is_array( $change ) ) {
+						continue;
+					}
+					$parts[] = sprintf(
+						'%1$s: %2$s -> %3$s',
+						(string) ( $change['field'] ?? '' ),
+						(string) ( $change['from'] ?? '' ),
+						(string) ( $change['to'] ?? '' )
+					);
+				}
+				echo esc_html( implode( '; ', $parts ) );
+				?>
+			<?php endif; ?>
+		</li>
+		<?php
+	}
 }
 
 /* ============================================================================
@@ -232,6 +336,7 @@ function rytkoset_theme_product_sync_handle_export() {
 
 	$products_data = array();
 	$files_to_add  = array();
+	$export_errors = array();
 
 	foreach ( $product_ids as $product_id ) {
 		$product = wc_get_product( $product_id );
@@ -240,6 +345,16 @@ function rytkoset_theme_product_sync_handle_export() {
 		}
 
 		$serialized = rytkoset_theme_product_sync_serialize_product( $product );
+		if ( is_wp_error( $serialized ) ) {
+			$export_errors[] = sprintf(
+				'%1$s (%2$s): %3$s',
+				$product->get_name(),
+				$product->get_sku(),
+				$serialized->get_error_message()
+			);
+			continue;
+		}
+
 		if ( null === $serialized ) {
 			continue;
 		}
@@ -248,6 +363,16 @@ function rytkoset_theme_product_sync_handle_export() {
 		foreach ( $serialized['files'] as $filename => $abs_path ) {
 			$files_to_add[ $filename ] = $abs_path;
 		}
+	}
+
+	if ( ! empty( $export_errors ) ) {
+		wp_die(
+			wp_kses_post(
+				'<p>' . esc_html__( 'Vienti estettiin seuraavien tuotekohtaisten virheiden vuoksi:', 'rytkoset-theme' ) . '</p><ul><li>'
+				. implode( '</li><li>', array_map( 'esc_html', $export_errors ) )
+				. '</li></ul>'
+			)
+		);
 	}
 
 	if ( empty( $products_data ) ) {
@@ -294,10 +419,71 @@ function rytkoset_theme_product_sync_handle_export() {
 add_action( 'admin_post_rytkoset_product_sync_export', 'rytkoset_theme_product_sync_handle_export' );
 
 /**
+ * Ratkaisee downloadable-tiedoston URL:n/polun absoluuttiseksi poluksi ja varmistaa,
+ * että se on WordPressin uploads-hakemiston sisällä (WooCommercen downloads-alue).
+ *
+ * Polku kanonisoidaan `realpath()`:lla (purkaa `..`-segmentit ja symlinkit), ja
+ * tulosta verrataan uploads-basedirin canonical-polkuun. Näin vienti ei voi
+ * sisältää tiedostoja uploads-alueen ulkopuolelta (esim. `/wp-config.php`,
+ * `..`-traversaali tai uploads-alueelta ulos osoittava symlink).
+ *
+ * @param string $file_url Downloadin tiedosto-URL tai -polku.
+ * @return string|WP_Error|null Validoitu absoluuttinen polku; `WP_Error` jos uploads-alueen
+ *                              ulkopuolella; `null` jos tiedosto puuttuu (ohitetaan kuten ennen).
+ */
+function rytkoset_theme_product_sync_resolve_download_path( $file_url ) {
+	$file_url = (string) $file_url;
+	if ( '' === $file_url ) {
+		return null;
+	}
+
+	$uploads = wp_upload_dir();
+	if ( ! empty( $uploads['error'] ) ) {
+		return new WP_Error( 'rytkoset_psync_uploads_error', __( 'Uploads-hakemistoa ei voitu määrittää viennille.', 'rytkoset-theme' ) );
+	}
+
+	$uploads_basedir = trailingslashit( $uploads['basedir'] );
+	$uploads_baseurl = trailingslashit( $uploads['baseurl'] );
+
+	if ( 0 === strpos( $file_url, $uploads_baseurl ) ) {
+		$candidate = $uploads_basedir . substr( $file_url, strlen( $uploads_baseurl ) );
+	} elseif ( 0 === strpos( $file_url, $uploads_basedir ) ) {
+		$candidate = $file_url;
+	} elseif ( 0 === strpos( $file_url, '/' ) ) {
+		$candidate = ABSPATH . ltrim( $file_url, '/' );
+	} else {
+		$candidate = $uploads_basedir . $file_url;
+	}
+
+	$real         = realpath( $candidate );
+	$real_uploads = realpath( $uploads['basedir'] );
+
+	// Tiedosto puuttuu tai ei ole luettavissa → ohitetaan (ei lisätä pakettiin).
+	// Tuonti merkitsee puuttuvan tiedoston VIRHE-tilaan.
+	if ( false === $real || false === $real_uploads ) {
+		return null;
+	}
+
+	$real_uploads = trailingslashit( $real_uploads );
+	if ( 0 !== strpos( trailingslashit( $real ), $real_uploads ) ) {
+		return new WP_Error(
+			'rytkoset_psync_download_out_of_scope',
+			sprintf(
+				/* translators: %s: download file url/path */
+				__( 'Ladattava tiedosto on uploads-hakemiston ulkopuolella eikä sitä voi viedä: %s', 'rytkoset-theme' ),
+				$file_url
+			)
+		);
+	}
+
+	return $real;
+}
+
+/**
  * Serialisoi WC_Product siirtoformaattiin.
  *
  * @param WC_Product $product Tuote.
- * @return array{data: array, files: array<string, string>}|null
+ * @return array{data: array, files: array<string, string>}|WP_Error|null
  */
 function rytkoset_theme_product_sync_serialize_product( $product ) {
 	$sku = (string) $product->get_sku();
@@ -329,31 +515,27 @@ function rytkoset_theme_product_sync_serialize_product( $product ) {
 		}
 	}
 
-	$downloads      = array();
-	$files_to_add   = array();
-	$uploads        = wp_upload_dir();
-	$uploads_basedir = trailingslashit( $uploads['basedir'] );
-	$uploads_baseurl = trailingslashit( $uploads['baseurl'] );
+	$downloads    = array();
+	$files_to_add = array();
 
 	if ( $product->is_downloadable() ) {
 		foreach ( $product->get_downloads() as $download ) {
 			$file_url  = (string) $download->get_file();
 			$file_name = wp_basename( $file_url );
 
-			$abs_path = '';
-			if ( 0 === strpos( $file_url, $uploads_baseurl ) ) {
-				$abs_path = $uploads_basedir . substr( $file_url, strlen( $uploads_baseurl ) );
-			} elseif ( 0 === strpos( $file_url, '/' ) ) {
-				$abs_path = ABSPATH . ltrim( $file_url, '/' );
-			}
-
 			$downloads[] = array(
 				'name'     => (string) $download->get_name(),
 				'filename' => $file_name,
 			);
 
-			if ( '' !== $abs_path && file_exists( $abs_path ) ) {
-				$files_to_add[ $file_name ] = $abs_path;
+			// Ratkaise ja rajaa polku uploads-alueelle (Zip-vienti ei saa karata sen ulkopuolelle).
+			$resolved = rytkoset_theme_product_sync_resolve_download_path( $file_url );
+			if ( is_wp_error( $resolved ) ) {
+				return $resolved; // Uploads-alueen ulkopuolinen tiedosto → estä koko tuotteen vienti.
+			}
+
+			if ( null !== $resolved ) {
+				$files_to_add[ $file_name ] = $resolved;
 			}
 		}
 	}
@@ -376,10 +558,119 @@ function rytkoset_theme_product_sync_serialize_product( $product ) {
 		'downloadable_files' => $downloads,
 	);
 
+	$data = array_merge( $data, rytkoset_theme_product_sync_serialize_stock( $product ) );
+
+	if ( $product instanceof WC_Product_Variable ) {
+		$variable_data = rytkoset_theme_product_sync_serialize_variable_product_data( $product );
+		if ( is_wp_error( $variable_data ) ) {
+			return $variable_data;
+		}
+
+		$data['attributes']         = $variable_data['attributes'];
+		$data['default_attributes'] = $variable_data['default_attributes'];
+		$data['variations']         = $variable_data['variations'];
+	}
+
 	return array(
 		'data'  => $data,
 		'files' => $files_to_add,
 	);
+}
+
+/**
+ * Serialisoi variable-tuotteen attribuutit ja variaatiot.
+ *
+ * @param WC_Product_Variable $product Variable-tuote.
+ * @return array{attributes: array<int, array>, default_attributes: array<string, string>, variations: array<int, array>}|WP_Error
+ */
+function rytkoset_theme_product_sync_serialize_variable_product_data( $product ) {
+	$attributes = array();
+
+	foreach ( $product->get_attributes() as $attribute ) {
+		if ( ! ( $attribute instanceof WC_Product_Attribute ) ) {
+			continue;
+		}
+
+		$options = array();
+		if ( $attribute->is_taxonomy() ) {
+			foreach ( $attribute->get_options() as $term_id ) {
+				$term = get_term( (int) $term_id, $attribute->get_name() );
+				if ( $term && ! is_wp_error( $term ) ) {
+					$options[] = $term->slug;
+				}
+			}
+		} else {
+			$options = array_map( 'strval', $attribute->get_options() );
+		}
+
+		$attributes[] = array(
+			'name'      => (string) $attribute->get_name(),
+			'taxonomy'  => (bool) $attribute->is_taxonomy(),
+			'position'  => (int) $attribute->get_position(),
+			'visible'   => (bool) $attribute->get_visible(),
+			'variation' => (bool) $attribute->get_variation(),
+			'options'   => $options,
+		);
+	}
+
+	$variations = array();
+	foreach ( $product->get_children() as $variation_id ) {
+		$variation = wc_get_product( (int) $variation_id );
+		if ( ! ( $variation instanceof WC_Product_Variation ) ) {
+			continue;
+		}
+
+		$variation_sku = (string) $variation->get_sku();
+		if ( '' === $variation_sku ) {
+			return new WP_Error(
+				'rytkoset_psync_missing_variation_sku',
+				sprintf(
+					/* translators: %d: variation post ID */
+					__( 'Variaatiolta %d puuttuu SKU. Variaatiotuotteita ei voi synkronoida turvallisesti ilman variaatio-SKU:ta.', 'rytkoset-theme' ),
+					(int) $variation_id
+				)
+			);
+		}
+
+		$variations[] = array_merge(
+			array(
+				'sku'           => $variation_sku,
+				'status'        => (string) $variation->get_status(),
+				'attributes'    => rytkoset_theme_product_sync_normalize_variation_attributes( $variation->get_variation_attributes() ),
+				'regular_price' => (string) $variation->get_regular_price(),
+				'sale_price'    => (string) $variation->get_sale_price(),
+			),
+			rytkoset_theme_product_sync_serialize_stock( $variation )
+		);
+	}
+
+	return array(
+		'attributes'         => $attributes,
+		'default_attributes' => array_map( 'strval', $product->get_default_attributes() ),
+		'variations'         => $variations,
+	);
+}
+
+/**
+ * Normalisoi variaatioattribuutit ilman WooCommercen tallennusprefixiä.
+ *
+ * @param array<string, string> $attributes Attribuutit.
+ * @return array<string, string>
+ */
+function rytkoset_theme_product_sync_normalize_variation_attributes( $attributes ) {
+	$normalized = array();
+
+	foreach ( $attributes as $name => $value ) {
+		$name = preg_replace( '/^attribute_/', '', (string) $name );
+		if ( '' === $name ) {
+			continue;
+		}
+		$normalized[ $name ] = (string) $value;
+	}
+
+	ksort( $normalized );
+
+	return $normalized;
 }
 
 /* ============================================================================
@@ -425,6 +716,83 @@ function rytkoset_theme_product_sync_render_import_tab( $token ) {
 }
 
 /**
+ * Validoi ZIP-paketin entryt ennen purkamista (Zip Slip / path traversal -suojaus).
+ *
+ * Sallii vain vientiformaatin odottamat entryt: `manifest.json`, `products.json` ja
+ * `files/<perusnimi>`, joilla on WordPressin sallima tiedostopääte. Hylkää
+ * absoluuttiset polut, asemakirjaimet, hakemistotraversaalin (`..`), null-tavut ja
+ * kaikki muut odottamattomat tiedostot/hakemistot. Mitään ei kirjoiteta levylle
+ * tässä — palauttaa vain hyväksytyt entry-nimet purettavaksi.
+ *
+ * @param ZipArchive $zip Avattu arkisto.
+ * @return array{0: array<int, string>, 1: string} [hyväksytyt entry-nimet, virheviesti tai '']
+ */
+function rytkoset_theme_product_sync_validate_zip_entries( $zip ) {
+	$allowed_root = array( 'manifest.json', 'products.json' );
+	$allowed_mimes = get_allowed_mime_types();
+	$safe_entries = array();
+
+	for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+		$name = $zip->getNameIndex( $i );
+
+		if ( false === $name || '' === $name ) {
+			return array( array(), __( 'ZIP-entryn nimeä ei voitu lukea.', 'rytkoset-theme' ) );
+		}
+
+		// Null-tavu entry-nimessä → hylkää.
+		if ( false !== strpos( $name, "\0" ) ) {
+			return array( array(), __( 'Virheellinen entry-nimi ZIP-paketissa.', 'rytkoset-theme' ) );
+		}
+
+		// Normalisoi takakenot kenoiksi tarkistuksia varten (Windows-tyyliset polut).
+		$normalized = str_replace( '\\', '/', $name );
+
+		// Absoluuttinen polku tai asemakirjain (esim. /etc/passwd, C:\...) → hylkää.
+		if ( '/' === substr( $normalized, 0, 1 ) || preg_match( '#^[a-zA-Z]:#', $normalized ) ) {
+			return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Absoluuttinen polku ei ole sallittu: %s', 'rytkoset-theme' ), $name ) );
+		}
+
+		// Hakemistotraversaali (.. segmenttinä) → hylkää.
+		if ( in_array( '..', explode( '/', $normalized ), true ) ) {
+			return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Hakemistotraversaali ei ole sallittu: %s', 'rytkoset-theme' ), $name ) );
+		}
+
+		// Hakemistoentry (päättyy /): salli vain "files/", jonka purku syntyy joka tapauksessa tiedostoista.
+		if ( '/' === substr( $normalized, -1 ) ) {
+			if ( 'files/' === $normalized ) {
+				continue;
+			}
+			return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Odottamaton hakemisto ZIP-paketissa: %s', 'rytkoset-theme' ), $name ) );
+		}
+
+		// Sallitut juuritiedostot.
+		if ( in_array( $normalized, $allowed_root, true ) ) {
+			$safe_entries[] = $name;
+			continue;
+		}
+
+		// files/<perusnimi>: vain yksi taso ja sallittu tiedostopääte.
+		if ( 0 === strpos( $normalized, 'files/' ) ) {
+			$relative = substr( $normalized, strlen( 'files/' ) );
+			if ( '' === $relative || false !== strpos( $relative, '/' ) ) {
+				return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Odottamaton tiedosto files-hakemistossa: %s', 'rytkoset-theme' ), $name ) );
+			}
+			$filetype = wp_check_filetype( $relative, $allowed_mimes );
+			if ( empty( $filetype['ext'] ) ) {
+				return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Tiedostotyyppi ei ole sallittu: %s', 'rytkoset-theme' ), $name ) );
+			}
+			$safe_entries[] = $name;
+			continue;
+		}
+
+		// Kaikki muu → hylkää.
+		return array( array(), sprintf( /* translators: %s: zip entry name */ __( 'Odottamaton tiedosto ZIP-paketissa: %s', 'rytkoset-theme' ), $name ) );
+	}
+
+	return array( $safe_entries, '' );
+}
+
+/**
  * Käsittelee ZIP-uploadin: purkaa, validoi, laskee diffin, tallentaa transientiin
  * ja ohjaa esikatselu-näkymään.
  *
@@ -463,7 +831,16 @@ function rytkoset_theme_product_sync_handle_upload() {
 		wp_die( esc_html__( 'ZIP-tiedoston avaus epäonnistui.', 'rytkoset-theme' ) );
 	}
 
-	if ( ! $zip->extractTo( $session_dir ) ) {
+	// Tarkista entryt ennen kuin mitään kirjoitetaan levylle (Zip Slip -suojaus).
+	list( $safe_entries, $zip_error ) = rytkoset_theme_product_sync_validate_zip_entries( $zip );
+	if ( '' !== $zip_error ) {
+		$zip->close();
+		rytkoset_theme_product_sync_rrmdir( $session_dir );
+		wp_die( esc_html( $zip_error ) );
+	}
+
+	// Pura vain hyväksytyt entryt confinattuun sessiohakemistoon.
+	if ( empty( $safe_entries ) || ! $zip->extractTo( $session_dir, $safe_entries ) ) {
 		$zip->close();
 		rytkoset_theme_product_sync_rrmdir( $session_dir );
 		wp_die( esc_html__( 'ZIP-tiedoston purku epäonnistui.', 'rytkoset-theme' ) );
@@ -489,9 +866,9 @@ function rytkoset_theme_product_sync_handle_upload() {
 	}
 
 	$version = isset( $manifest['version'] ) ? (string) $manifest['version'] : '';
-	if ( '1.0' !== $version ) {
+	if ( ! in_array( $version, array( '1.0', '1.1', '1.2' ), true ) ) {
 		rytkoset_theme_product_sync_rrmdir( $session_dir );
-		wp_die( sprintf( esc_html__( 'Tuntematon manifestin versio: %s. Tuetut versiot: 1.0', 'rytkoset-theme' ), esc_html( $version ) ) );
+		wp_die( sprintf( esc_html__( 'Tuntematon manifestin versio: %s. Tuetut versiot: 1.0, 1.1, 1.2', 'rytkoset-theme' ), esc_html( $version ) ) );
 	}
 
 	$diffs = array();
@@ -536,13 +913,16 @@ add_action( 'admin_post_rytkoset_product_sync_upload', 'rytkoset_theme_product_s
  */
 function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
 	$sku           = (string) $incoming['sku'];
+	$type          = isset( $incoming['type'] ) ? (string) $incoming['type'] : 'simple';
 	$existing_id   = wc_get_product_id_by_sku( $sku );
 	$existing      = $existing_id ? wc_get_product( $existing_id ) : null;
 	$status        = $existing ? 'update' : 'new';
 	$changed       = array();
 	$missing_files = array();
+	$errors        = array();
+	$variation_changes = array();
 
-	if ( ! empty( $incoming['downloadable'] ) && ! empty( $incoming['downloadable_files'] ) && is_array( $incoming['downloadable_files'] ) ) {
+	if ( 'variable' !== $type && ! empty( $incoming['downloadable'] ) && ! empty( $incoming['downloadable_files'] ) && is_array( $incoming['downloadable_files'] ) ) {
 		foreach ( $incoming['downloadable_files'] as $file ) {
 			if ( empty( $file['filename'] ) ) {
 				continue;
@@ -555,10 +935,44 @@ function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
 	}
 
 	if ( ! empty( $missing_files ) ) {
+		$errors[] = sprintf(
+			/* translators: %s: comma-separated filenames */
+			__( 'Puuttuvat tiedostot: %s', 'rytkoset-theme' ),
+			implode( ', ', $missing_files )
+		);
+	}
+
+	if ( 'variable' === $type ) {
+		$errors = array_merge( $errors, rytkoset_theme_product_sync_validate_variable_import_data( $incoming ) );
+
+		if ( $existing && ! ( $existing instanceof WC_Product_Variable ) ) {
+			$errors[] = __( 'Kohteessa samalla parent-SKU:lla oleva tuote ei ole variaatiotuote.', 'rytkoset-theme' );
+		}
+
+		if ( $existing instanceof WC_Product_Variable ) {
+			$variation_changes = rytkoset_theme_product_sync_compare_variations( $existing, $incoming );
+		} elseif ( ! empty( $incoming['variations'] ) && is_array( $incoming['variations'] ) ) {
+			foreach ( $incoming['variations'] as $variation ) {
+				if ( ! is_array( $variation ) ) {
+					continue;
+				}
+				$variation_changes[] = array(
+					'sku'        => (string) ( $variation['sku'] ?? '' ),
+					'status'     => 'new',
+					'attributes' => rytkoset_theme_product_sync_format_variation_attributes_for_display( isset( $variation['attributes'] ) && is_array( $variation['attributes'] ) ? $variation['attributes'] : array() ),
+					'changed'    => array(),
+				);
+			}
+		}
+	} elseif ( $existing instanceof WC_Product_Variable ) {
+		$errors[] = __( 'Kohteessa samalla SKU:lla oleva tuote on variaatiotuote, mutta tuontidata ei ole.', 'rytkoset-theme' );
+	}
+
+	if ( ! empty( $errors ) ) {
 		$status = 'error';
 	} elseif ( $existing ) {
 		$changed = rytkoset_theme_product_sync_compare_fields( $existing, $incoming );
-		if ( empty( $changed ) ) {
+		if ( empty( $changed ) && ! rytkoset_theme_product_sync_has_variation_changes( $variation_changes ) ) {
 			$status = 'identical';
 		}
 	}
@@ -569,8 +983,202 @@ function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
 		'status'        => $status,
 		'changed'       => $changed,
 		'missing_files' => $missing_files,
+		'errors'        => $errors,
+		'variation_changes' => $variation_changes,
 		'existing_id'   => $existing_id,
 	);
+}
+
+/**
+ * Tarkistaa variable-tuonnin ehdot ennen preview/import-vaihetta.
+ *
+ * @param array $incoming Tuleva tuotedata.
+ * @return array<int, string>
+ */
+function rytkoset_theme_product_sync_validate_variable_import_data( $incoming ) {
+	$errors = array();
+
+	$attributes = isset( $incoming['attributes'] ) && is_array( $incoming['attributes'] ) ? $incoming['attributes'] : array();
+	foreach ( $attributes as $attribute ) {
+		if ( ! is_array( $attribute ) || empty( $attribute['name'] ) || empty( $attribute['taxonomy'] ) ) {
+			continue;
+		}
+
+		$taxonomy = sanitize_key( (string) $attribute['name'] );
+		if ( 0 === strpos( $taxonomy, 'pa_' ) && ! taxonomy_exists( $taxonomy ) ) {
+			$errors[] = sprintf(
+				/* translators: %s: product attribute taxonomy */
+				__( 'Attribuuttitaksonomia puuttuu kohteesta: %s.', 'rytkoset-theme' ),
+				$taxonomy
+			);
+		}
+	}
+
+	$variations = isset( $incoming['variations'] ) && is_array( $incoming['variations'] ) ? $incoming['variations'] : array();
+	foreach ( $variations as $variation ) {
+		if ( ! is_array( $variation ) ) {
+			continue;
+		}
+
+		$variation_sku = trim( (string) ( $variation['sku'] ?? '' ) );
+		if ( '' === $variation_sku ) {
+			$errors[] = __( 'Variaatiolta puuttuu SKU.', 'rytkoset-theme' );
+		}
+
+		$variation_attributes = isset( $variation['attributes'] ) && is_array( $variation['attributes'] ) ? $variation['attributes'] : array();
+		foreach ( $variation_attributes as $name => $value ) {
+			$taxonomy = sanitize_key( preg_replace( '/^attribute_/', '', (string) $name ) );
+			if ( 0 === strpos( $taxonomy, 'pa_' ) && ! taxonomy_exists( $taxonomy ) ) {
+				$errors[] = sprintf(
+					/* translators: %s: product attribute taxonomy */
+					__( 'Attribuuttitaksonomia puuttuu kohteesta: %s.', 'rytkoset-theme' ),
+					$taxonomy
+				);
+			}
+		}
+	}
+
+	return array_values( array_unique( $errors ) );
+}
+
+/**
+ * Vertaa olemassa olevan variable-tuotteen variaatioita tulevaan dataan.
+ *
+ * @param WC_Product_Variable $existing Olemassa oleva parent-tuote.
+ * @param array               $incoming Tuleva tuotedata.
+ * @return array<int, array>
+ */
+function rytkoset_theme_product_sync_compare_variations( $existing, $incoming ) {
+	$changes         = array();
+	$existing_by_sku = rytkoset_theme_product_sync_get_child_variations_by_sku( $existing );
+	$variations      = isset( $incoming['variations'] ) && is_array( $incoming['variations'] ) ? $incoming['variations'] : array();
+
+	foreach ( $variations as $variation ) {
+		if ( ! is_array( $variation ) ) {
+			continue;
+		}
+
+		$sku        = (string) ( $variation['sku'] ?? '' );
+		$attributes = isset( $variation['attributes'] ) && is_array( $variation['attributes'] ) ? rytkoset_theme_product_sync_normalize_variation_attributes( $variation['attributes'] ) : array();
+		$row        = array(
+			'sku'        => $sku,
+			'status'     => 'new',
+			'attributes' => rytkoset_theme_product_sync_format_variation_attributes_for_display( $attributes ),
+			'changed'    => array(),
+		);
+
+		if ( '' === $sku || ! isset( $existing_by_sku[ $sku ] ) ) {
+			$changes[] = $row;
+			continue;
+		}
+
+		$existing_variation = $existing_by_sku[ $sku ];
+		$current_attrs      = rytkoset_theme_product_sync_normalize_variation_attributes( $existing_variation->get_variation_attributes() );
+
+		if ( $current_attrs !== $attributes ) {
+			$row['changed'][] = array(
+				'field' => 'attributes',
+				'from'  => rytkoset_theme_product_sync_format_variation_attributes_for_display( $current_attrs ),
+				'to'    => rytkoset_theme_product_sync_format_variation_attributes_for_display( $attributes ),
+			);
+		}
+
+		$price_map = array(
+			'status'        => 'get_status',
+			'regular_price' => 'get_regular_price',
+			'sale_price'    => 'get_sale_price',
+		);
+		foreach ( $price_map as $field => $getter ) {
+			$current = (string) $existing_variation->$getter();
+			$next    = (string) ( $variation[ $field ] ?? '' );
+			if ( $current !== $next ) {
+				$row['changed'][] = array(
+					'field' => $field,
+					'from'  => $current,
+					'to'    => $next,
+				);
+			}
+		}
+
+		// Varastotila vain jos paketissa on kenttä (1.2+) — ei turhaa muutosta vanhoille paketeille.
+		if ( array_key_exists( 'stock_status', $variation ) ) {
+			$current_stock = (string) $existing_variation->get_stock_status();
+			$next_stock    = (string) $variation['stock_status'];
+			if ( $current_stock !== $next_stock ) {
+				$row['changed'][] = array(
+					'field' => 'stock_status',
+					'from'  => $current_stock,
+					'to'    => $next_stock,
+				);
+			}
+		}
+
+		$row['status'] = empty( $row['changed'] ) ? 'identical' : 'update';
+		$changes[]     = $row;
+	}
+
+	return $changes;
+}
+
+/**
+ * Palauttaa variable-tuotteen lapsivariaatiot SKU:n mukaan.
+ *
+ * @param WC_Product_Variable $product Parent-tuote.
+ * @return array<string, WC_Product_Variation>
+ */
+function rytkoset_theme_product_sync_get_child_variations_by_sku( $product ) {
+	$variations = array();
+
+	foreach ( $product->get_children() as $variation_id ) {
+		$variation = wc_get_product( (int) $variation_id );
+		if ( ! ( $variation instanceof WC_Product_Variation ) ) {
+			continue;
+		}
+
+		$sku = (string) $variation->get_sku();
+		if ( '' !== $sku ) {
+			$variations[ $sku ] = $variation;
+		}
+	}
+
+	return $variations;
+}
+
+/**
+ * Tarkistaa onko variaatiolistassa tuontia vaativia muutoksia.
+ *
+ * @param array<int, array> $variation_changes Variaatiodiffit.
+ * @return bool
+ */
+function rytkoset_theme_product_sync_has_variation_changes( $variation_changes ) {
+	foreach ( $variation_changes as $change ) {
+		$status = isset( $change['status'] ) ? (string) $change['status'] : '';
+		if ( in_array( $status, array( 'new', 'update', 'error' ), true ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Muotoilee variaatioattribuutit tiiviiksi tekstiksi.
+ *
+ * @param array<string, string> $attributes Attribuutit.
+ * @return string
+ */
+function rytkoset_theme_product_sync_format_variation_attributes_for_display( $attributes ) {
+	if ( empty( $attributes ) ) {
+		return '';
+	}
+
+	ksort( $attributes );
+	$parts = array();
+	foreach ( $attributes as $name => $value ) {
+		$parts[] = $name . '=' . $value;
+	}
+
+	return implode( ', ', $parts );
 }
 
 /**
@@ -587,11 +1195,26 @@ function rytkoset_theme_product_sync_compare_fields( $existing, $incoming ) {
 		'name'              => 'get_name',
 		'slug'              => 'get_slug',
 		'status'            => 'get_status',
-		'regular_price'     => 'get_regular_price',
-		'sale_price'        => 'get_sale_price',
 		'short_description' => 'get_short_description',
 		'description'       => 'get_description',
 	);
+
+	if ( 'variable' !== (string) ( $incoming['type'] ?? '' ) ) {
+		$scalar_map['regular_price'] = 'get_regular_price';
+		$scalar_map['sale_price']    = 'get_sale_price';
+		// Vain jos paketissa on varastokenttä (1.2+) — vanhat paketit eivät näytä turhaa muutosta.
+		if ( array_key_exists( 'stock_status', $incoming ) ) {
+			$scalar_map['stock_status'] = 'get_stock_status';
+		}
+	}
+
+	if ( (string) $existing->get_type() !== (string) ( $incoming['type'] ?? 'simple' ) ) {
+		$changes[] = array(
+			'field' => 'type',
+			'from'  => (string) $existing->get_type(),
+			'to'    => (string) ( $incoming['type'] ?? 'simple' ),
+		);
+	}
 
 	foreach ( $scalar_map as $field => $getter ) {
 		$current = (string) $existing->$getter();
@@ -654,7 +1277,117 @@ function rytkoset_theme_product_sync_compare_fields( $existing, $incoming ) {
 		}
 	}
 
+	if ( 'variable' === (string) ( $incoming['type'] ?? '' ) && $existing instanceof WC_Product_Variable ) {
+		$current_attributes = rytkoset_theme_product_sync_normalize_product_attributes_for_compare( $existing->get_attributes() );
+		$next_attributes    = rytkoset_theme_product_sync_normalize_incoming_product_attributes_for_compare( isset( $incoming['attributes'] ) && is_array( $incoming['attributes'] ) ? $incoming['attributes'] : array() );
+
+		if ( $current_attributes !== $next_attributes ) {
+			$changes[] = array(
+				'field' => 'attributes',
+				'from'  => wp_json_encode( $current_attributes, JSON_UNESCAPED_UNICODE ),
+				'to'    => wp_json_encode( $next_attributes, JSON_UNESCAPED_UNICODE ),
+			);
+		}
+
+		$current_default_attributes = array_map( 'strval', $existing->get_default_attributes() );
+		$next_default_attributes    = isset( $incoming['default_attributes'] ) && is_array( $incoming['default_attributes'] ) ? array_map( 'strval', $incoming['default_attributes'] ) : array();
+		ksort( $current_default_attributes );
+		ksort( $next_default_attributes );
+
+		if ( $current_default_attributes !== $next_default_attributes ) {
+			$changes[] = array(
+				'field' => 'default_attributes',
+				'from'  => wp_json_encode( $current_default_attributes, JSON_UNESCAPED_UNICODE ),
+				'to'    => wp_json_encode( $next_default_attributes, JSON_UNESCAPED_UNICODE ),
+			);
+		}
+	}
+
 	return $changes;
+}
+
+/**
+ * Normalisoi olemassa olevat parent-attribuutit vertailua varten.
+ *
+ * @param array<string, WC_Product_Attribute> $attributes Tuoteattribuutit.
+ * @return array<int, array>
+ */
+function rytkoset_theme_product_sync_normalize_product_attributes_for_compare( $attributes ) {
+	$normalized = array();
+
+	foreach ( $attributes as $attribute ) {
+		if ( ! ( $attribute instanceof WC_Product_Attribute ) ) {
+			continue;
+		}
+
+		$options = array();
+		if ( $attribute->is_taxonomy() ) {
+			foreach ( $attribute->get_options() as $term_id ) {
+				$term = get_term( (int) $term_id, $attribute->get_name() );
+				if ( $term && ! is_wp_error( $term ) ) {
+					$options[] = $term->slug;
+				}
+			}
+		} else {
+			$options = array_map( 'strval', $attribute->get_options() );
+		}
+		sort( $options );
+
+		$normalized[] = array(
+			'name'      => (string) $attribute->get_name(),
+			'taxonomy'  => (bool) $attribute->is_taxonomy(),
+			'position'  => (int) $attribute->get_position(),
+			'visible'   => (bool) $attribute->get_visible(),
+			'variation' => (bool) $attribute->get_variation(),
+			'options'   => $options,
+		);
+	}
+
+	usort(
+		$normalized,
+		function ( $a, $b ) {
+			return strcmp( (string) $a['name'], (string) $b['name'] );
+		}
+	);
+
+	return $normalized;
+}
+
+/**
+ * Normalisoi tuontidatan parent-attribuutit vertailua varten.
+ *
+ * @param array<int, array> $attributes Tuontiattribuutit.
+ * @return array<int, array>
+ */
+function rytkoset_theme_product_sync_normalize_incoming_product_attributes_for_compare( $attributes ) {
+	$normalized = array();
+
+	foreach ( $attributes as $attribute ) {
+		if ( ! is_array( $attribute ) || empty( $attribute['name'] ) ) {
+			continue;
+		}
+
+		$options = isset( $attribute['options'] ) && is_array( $attribute['options'] ) ? array_map( 'strval', $attribute['options'] ) : array();
+		sort( $options );
+
+		$normalized[] = array(
+			'name'      => (string) $attribute['name'],
+			'taxonomy'  => ! empty( $attribute['taxonomy'] ),
+			'position'  => (int) ( $attribute['position'] ?? 0 ),
+			'visible'   => ! empty( $attribute['visible'] ),
+			'variation' => ! empty( $attribute['variation'] ),
+			'options'   => $options,
+		);
+	}
+
+	usort(
+		$normalized,
+		function ( $a, $b ) {
+			return strcmp( (string) $a['name'], (string) $b['name'] );
+		}
+	);
+
+	return $normalized;
 }
 
 /**
@@ -748,19 +1481,15 @@ function rytkoset_theme_product_sync_render_preview( $token, $preview ) {
 						<td><code><?php echo esc_html( $d['sku'] ); ?></code></td>
 						<td><?php echo esc_html( $status_label ); ?></td>
 						<td>
-							<?php if ( 'error' === $status && ! empty( $d['missing_files'] ) ) : ?>
+							<?php if ( 'error' === $status && ( ! empty( $d['errors'] ) || ! empty( $d['missing_files'] ) ) ) : ?>
 								<span style="color:#b32d2e;">
 									<?php
-									printf(
-										/* translators: %s: comma-separated filenames */
-										esc_html__( 'Puuttuvat tiedostot: %s', 'rytkoset-theme' ),
-										esc_html( implode( ', ', $d['missing_files'] ) )
-									);
+									echo esc_html( implode( ' ', isset( $d['errors'] ) && is_array( $d['errors'] ) ? $d['errors'] : array() ) );
 									?>
 								</span>
-							<?php elseif ( 'update' === $status && ! empty( $d['changed'] ) ) : ?>
+							<?php elseif ( 'update' === $status && ( ! empty( $d['changed'] ) || ! empty( $d['variation_changes'] ) ) ) : ?>
 								<ul style="margin:0;padding-left:1rem;">
-									<?php foreach ( $d['changed'] as $change ) : ?>
+									<?php foreach ( isset( $d['changed'] ) && is_array( $d['changed'] ) ? $d['changed'] : array() as $change ) : ?>
 										<li>
 											<code><?php echo esc_html( $change['field'] ); ?></code>:
 											<?php echo esc_html( $change['from'] ); ?>
@@ -768,9 +1497,15 @@ function rytkoset_theme_product_sync_render_preview( $token, $preview ) {
 											<?php echo esc_html( $change['to'] ); ?>
 										</li>
 									<?php endforeach; ?>
+									<?php rytkoset_theme_product_sync_render_variation_changes( isset( $d['variation_changes'] ) && is_array( $d['variation_changes'] ) ? $d['variation_changes'] : array() ); ?>
 								</ul>
 							<?php elseif ( 'new' === $status ) : ?>
 								<em><?php esc_html_e( 'Luodaan uusi tuote', 'rytkoset-theme' ); ?></em>
+								<?php if ( ! empty( $d['variation_changes'] ) ) : ?>
+									<ul style="margin:.25rem 0 0;padding-left:1rem;">
+										<?php rytkoset_theme_product_sync_render_variation_changes( isset( $d['variation_changes'] ) && is_array( $d['variation_changes'] ) ? $d['variation_changes'] : array() ); ?>
+									</ul>
+								<?php endif; ?>
 							<?php else : ?>
 								—
 							<?php endif; ?>
@@ -884,18 +1619,25 @@ add_action( 'admin_post_rytkoset_product_sync_import', 'rytkoset_theme_product_s
  * @return string|WP_Error 'created' | 'updated' | WP_Error.
  */
 function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
-	$sku = (string) $incoming['sku'];
+	$sku  = (string) $incoming['sku'];
+	$type = isset( $incoming['type'] ) ? (string) $incoming['type'] : 'simple';
 
 	$existing_id = wc_get_product_id_by_sku( $sku );
 	if ( $existing_id ) {
 		$product = wc_get_product( $existing_id );
 		$action  = 'updated';
+		if ( 'variable' === $type && ! ( $product instanceof WC_Product_Variable ) ) {
+			return new WP_Error( 'rytkoset_psync_type_mismatch', __( 'Kohteessa samalla parent-SKU:lla oleva tuote ei ole variaatiotuote.', 'rytkoset-theme' ) );
+		}
+		if ( 'variable' !== $type && $product instanceof WC_Product_Variable ) {
+			return new WP_Error( 'rytkoset_psync_type_mismatch', __( 'Kohteessa samalla SKU:lla oleva tuote on variaatiotuote, mutta tuontidata ei ole.', 'rytkoset-theme' ) );
+		}
 	} else {
-		$product = new WC_Product_Simple();
+		$product = 'variable' === $type ? new WC_Product_Variable() : new WC_Product_Simple();
 		$action  = 'created';
 	}
 
-	if ( ! $product instanceof WC_Product ) {
+	if ( ! ( $product instanceof WC_Product ) ) {
 		return new WP_Error( 'rytkoset_psync_invalid_product', __( 'Tuoteobjektin luonti epäonnistui.', 'rytkoset-theme' ) );
 	}
 
@@ -907,10 +1649,13 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 	}
 
 	$product->set_status( (string) ( $incoming['status'] ?? 'publish' ) );
-	$product->set_regular_price( (string) ( $incoming['regular_price'] ?? '' ) );
-	$product->set_sale_price( (string) ( $incoming['sale_price'] ?? '' ) );
-	$product->set_virtual( ! empty( $incoming['virtual'] ) );
-	$product->set_downloadable( ! empty( $incoming['downloadable'] ) );
+	if ( 'variable' !== $type ) {
+		$product->set_regular_price( (string) ( $incoming['regular_price'] ?? '' ) );
+		$product->set_sale_price( (string) ( $incoming['sale_price'] ?? '' ) );
+		$product->set_virtual( ! empty( $incoming['virtual'] ) );
+		$product->set_downloadable( ! empty( $incoming['downloadable'] ) );
+		rytkoset_theme_product_sync_apply_stock( $product, $incoming );
+	}
 	$product->set_short_description( (string) ( $incoming['short_description'] ?? '' ) );
 	$product->set_description( (string) ( $incoming['description'] ?? '' ) );
 
@@ -958,6 +1703,21 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 	}
 	$product->set_tag_ids( $tag_ids );
 
+	if ( 'variable' === $type ) {
+		$validation_errors = rytkoset_theme_product_sync_validate_variable_import_data( $incoming );
+		if ( ! empty( $validation_errors ) ) {
+			return new WP_Error( 'rytkoset_psync_invalid_variable', implode( ' ', $validation_errors ) );
+		}
+
+		$attributes = rytkoset_theme_product_sync_build_product_attributes( isset( $incoming['attributes'] ) && is_array( $incoming['attributes'] ) ? $incoming['attributes'] : array() );
+		if ( is_wp_error( $attributes ) ) {
+			return $attributes;
+		}
+
+		$product->set_attributes( $attributes );
+		$product->set_default_attributes( rytkoset_theme_product_sync_prepare_default_attributes( isset( $incoming['default_attributes'] ) && is_array( $incoming['default_attributes'] ) ? $incoming['default_attributes'] : array() ) );
+	}
+
 	// Custom metat — kopioi vain whitelistatut avaimet.
 	$incoming_meta = isset( $incoming['meta'] ) && is_array( $incoming['meta'] ) ? $incoming['meta'] : array();
 	foreach ( rytkoset_theme_product_sync_get_meta_keys() as $key ) {
@@ -969,7 +1729,7 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 	}
 
 	// Downloadable: kopioi tiedostot uploads/woocommerce_uploads/-hakemistoon.
-	if ( ! empty( $incoming['downloadable'] ) && ! empty( $incoming['downloadable_files'] ) && is_array( $incoming['downloadable_files'] ) ) {
+	if ( 'variable' !== $type && ! empty( $incoming['downloadable'] ) && ! empty( $incoming['downloadable_files'] ) && is_array( $incoming['downloadable_files'] ) ) {
 		$downloads = array();
 		foreach ( $incoming['downloadable_files'] as $file ) {
 			if ( empty( $file['filename'] ) ) {
@@ -994,7 +1754,7 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 			$downloads[] = $download;
 		}
 		$product->set_downloads( $downloads );
-	} elseif ( empty( $incoming['downloadable'] ) ) {
+	} elseif ( 'variable' !== $type && empty( $incoming['downloadable'] ) ) {
 		$product->set_downloads( array() );
 	}
 
@@ -1003,7 +1763,251 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 		return new WP_Error( 'rytkoset_psync_save_failed', __( 'Tuotteen tallennus epäonnistui.', 'rytkoset-theme' ) );
 	}
 
+	if ( 'variable' === $type ) {
+		$variation_result = rytkoset_theme_product_sync_import_variations( $product, isset( $incoming['variations'] ) && is_array( $incoming['variations'] ) ? $incoming['variations'] : array() );
+		if ( is_wp_error( $variation_result ) ) {
+			return $variation_result;
+		}
+	}
+
 	return $action;
+}
+
+/**
+ * Rakentaa WooCommercen parent-attribuutit tuontidatasta.
+ *
+ * @param array<int, array> $incoming_attributes Tuontiattribuutit.
+ * @return array<string, WC_Product_Attribute>|WP_Error
+ */
+function rytkoset_theme_product_sync_build_product_attributes( $incoming_attributes ) {
+	$attributes = array();
+
+	foreach ( $incoming_attributes as $incoming_attribute ) {
+		if ( ! is_array( $incoming_attribute ) || empty( $incoming_attribute['name'] ) ) {
+			continue;
+		}
+
+		$is_taxonomy = ! empty( $incoming_attribute['taxonomy'] );
+		$name        = $is_taxonomy ? sanitize_key( (string) $incoming_attribute['name'] ) : sanitize_text_field( (string) $incoming_attribute['name'] );
+		$options_raw = isset( $incoming_attribute['options'] ) && is_array( $incoming_attribute['options'] ) ? $incoming_attribute['options'] : array();
+
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$options = array();
+		if ( $is_taxonomy ) {
+			if ( ! taxonomy_exists( $name ) ) {
+				return new WP_Error(
+					'rytkoset_psync_missing_attribute_taxonomy',
+					sprintf(
+						/* translators: %s: product attribute taxonomy */
+						__( 'Attribuuttitaksonomia puuttuu kohteesta: %s.', 'rytkoset-theme' ),
+						$name
+					)
+				);
+			}
+
+			foreach ( $options_raw as $option ) {
+				$term_id = rytkoset_theme_product_sync_ensure_attribute_term( $name, (string) $option );
+				if ( is_wp_error( $term_id ) ) {
+					return $term_id;
+				}
+				$options[] = $term_id;
+			}
+		} else {
+			$options = array_map( 'strval', $options_raw );
+		}
+
+		$attribute = new WC_Product_Attribute();
+		$attribute->set_id( $is_taxonomy ? rytkoset_theme_product_sync_get_attribute_taxonomy_id( $name ) : 0 );
+		$attribute->set_name( $name );
+		$attribute->set_options( $options );
+		$attribute->set_position( (int) ( $incoming_attribute['position'] ?? 0 ) );
+		$attribute->set_visible( ! empty( $incoming_attribute['visible'] ) );
+		$attribute->set_variation( ! empty( $incoming_attribute['variation'] ) );
+
+		$attributes[ $name ] = $attribute;
+	}
+
+	return $attributes;
+}
+
+/**
+ * Palauttaa WooCommercen globaalin attribuutin ID:n taksonomianimestä.
+ *
+ * @param string $taxonomy Attribuuttitaksonomia, esim. pa_color.
+ * @return int
+ */
+function rytkoset_theme_product_sync_get_attribute_taxonomy_id( $taxonomy ) {
+	if ( ! function_exists( 'wc_attribute_taxonomy_id_by_name' ) ) {
+		return 0;
+	}
+
+	return (int) wc_attribute_taxonomy_id_by_name( preg_replace( '/^pa_/', '', $taxonomy ) );
+}
+
+/**
+ * Luo puuttuvan attribuuttitermin olemassa olevaan taksonomiaan.
+ *
+ * @param string $taxonomy Attribuuttitaksonomia.
+ * @param string $value    Termiarvo tai slug.
+ * @return int|WP_Error
+ */
+function rytkoset_theme_product_sync_ensure_attribute_term( $taxonomy, $value ) {
+	$slug = sanitize_title( $value );
+	if ( '' === $slug ) {
+		return new WP_Error( 'rytkoset_psync_empty_attribute_term', __( 'Attribuuttitermin arvo puuttuu.', 'rytkoset-theme' ) );
+	}
+
+	$term = get_term_by( 'slug', $slug, $taxonomy );
+	if ( $term && ! is_wp_error( $term ) ) {
+		return (int) $term->term_id;
+	}
+
+	$created = wp_insert_term( $value, $taxonomy, array( 'slug' => $slug ) );
+	if ( is_wp_error( $created ) ) {
+		return $created;
+	}
+
+	return (int) $created['term_id'];
+}
+
+/**
+ * Valmistelee parent-tuotteen oletusattribuutit.
+ *
+ * @param array<string, string> $default_attributes Oletusattribuutit.
+ * @return array<string, string>
+ */
+function rytkoset_theme_product_sync_prepare_default_attributes( $default_attributes ) {
+	$prepared = array();
+
+	foreach ( $default_attributes as $name => $value ) {
+		$name = sanitize_key( preg_replace( '/^attribute_/', '', (string) $name ) );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$prepared[ $name ] = 0 === strpos( $name, 'pa_' ) ? sanitize_title( (string) $value ) : (string) $value;
+	}
+
+	return $prepared;
+}
+
+/**
+ * Luo tai päivittää variable-tuotteen variaatiot SKU-pohjaisesti.
+ *
+ * @param WC_Product $product    Parent-tuote.
+ * @param array      $variations Tuontivariaatiot.
+ * @return true|WP_Error
+ */
+function rytkoset_theme_product_sync_import_variations( $product, $variations ) {
+	if ( ! ( $product instanceof WC_Product_Variable ) ) {
+		return new WP_Error( 'rytkoset_psync_invalid_parent', __( 'Variaatioita voi tuoda vain variaatiotuotteelle.', 'rytkoset-theme' ) );
+	}
+
+	$parent_id       = (int) $product->get_id();
+	$existing_by_sku = rytkoset_theme_product_sync_get_child_variations_by_sku( $product );
+
+	foreach ( $variations as $incoming_variation ) {
+		if ( ! is_array( $incoming_variation ) ) {
+			continue;
+		}
+
+		$sku = trim( (string) ( $incoming_variation['sku'] ?? '' ) );
+		if ( '' === $sku ) {
+			return new WP_Error( 'rytkoset_psync_missing_variation_sku', __( 'Variaatiolta puuttuu SKU.', 'rytkoset-theme' ) );
+		}
+
+		if ( isset( $existing_by_sku[ $sku ] ) ) {
+			$variation = $existing_by_sku[ $sku ];
+		} else {
+			$global_id = wc_get_product_id_by_sku( $sku );
+			if ( $global_id ) {
+				return new WP_Error(
+					'rytkoset_psync_variation_sku_conflict',
+					sprintf(
+						/* translators: %s: variation SKU */
+						__( 'Variaatio-SKU on jo käytössä toisen tuotteen alla: %s.', 'rytkoset-theme' ),
+						$sku
+					)
+				);
+			}
+
+			$variation = new WC_Product_Variation();
+			$variation->set_parent_id( $parent_id );
+		}
+
+		$attributes = rytkoset_theme_product_sync_prepare_variation_attributes( isset( $incoming_variation['attributes'] ) && is_array( $incoming_variation['attributes'] ) ? $incoming_variation['attributes'] : array() );
+		if ( is_wp_error( $attributes ) ) {
+			return $attributes;
+		}
+
+		$variation->set_sku( $sku );
+		$variation->set_status( (string) ( $incoming_variation['status'] ?? 'publish' ) );
+		$variation->set_attributes( $attributes );
+		$variation->set_regular_price( (string) ( $incoming_variation['regular_price'] ?? '' ) );
+		$variation->set_sale_price( (string) ( $incoming_variation['sale_price'] ?? '' ) );
+		rytkoset_theme_product_sync_apply_stock( $variation, $incoming_variation );
+
+		$saved = $variation->save();
+		if ( ! $saved ) {
+			return new WP_Error(
+				'rytkoset_psync_variation_save_failed',
+				sprintf(
+					/* translators: %s: variation SKU */
+					__( 'Variaation tallennus epäonnistui: %s.', 'rytkoset-theme' ),
+					$sku
+				)
+			);
+		}
+	}
+
+	WC_Product_Variable::sync( $parent_id );
+	wc_delete_product_transients( $parent_id );
+
+	return true;
+}
+
+/**
+ * Valmistelee variaation attribuutit ja luo puuttuvat termit.
+ *
+ * @param array<string, string> $attributes Tuontiattribuutit.
+ * @return array<string, string>|WP_Error
+ */
+function rytkoset_theme_product_sync_prepare_variation_attributes( $attributes ) {
+	$prepared = array();
+
+	foreach ( rytkoset_theme_product_sync_normalize_variation_attributes( $attributes ) as $name => $value ) {
+		$name = sanitize_key( $name );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		if ( 0 === strpos( $name, 'pa_' ) ) {
+			if ( ! taxonomy_exists( $name ) ) {
+				return new WP_Error(
+					'rytkoset_psync_missing_attribute_taxonomy',
+					sprintf(
+						/* translators: %s: product attribute taxonomy */
+						__( 'Attribuuttitaksonomia puuttuu kohteesta: %s.', 'rytkoset-theme' ),
+						$name
+					)
+				);
+			}
+
+			$term_id = rytkoset_theme_product_sync_ensure_attribute_term( $name, (string) $value );
+			if ( is_wp_error( $term_id ) ) {
+				return $term_id;
+			}
+
+			$prepared[ $name ] = sanitize_title( (string) $value );
+		} else {
+			$prepared[ $name ] = (string) $value;
+		}
+	}
+
+	return $prepared;
 }
 
 /**

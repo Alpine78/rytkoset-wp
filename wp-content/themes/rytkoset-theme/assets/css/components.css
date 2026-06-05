@@ -1743,3 +1743,22 @@
   flex-direction: column;
   gap: 1.5rem;
 }
+
+/* WordPress table block (e.g. magazine table of contents in product descriptions).
+   WordPress core paints is-style-stripes rows with a fixed light gray, which is
+   unreadable in the dark theme. Override with the adaptive surface token so the
+   stripe contrast follows light/dark mode. */
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) td,
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) th {
+  background-color: var(--color-surface-muted);
+  border-color: var(--color-border-neutral);
+}
+
+/* Keep right-aligned cells (e.g. magazine page numbers) on one line. A long
+   title in the first column can squeeze the number column to a few pixels, and
+   WordPress's overflow-wrap:anywhere then breaks multi-digit numbers mid-number
+   (27 -> 2/7). */
+.wp-block-table td.has-text-align-right,
+.wp-block-table th.has-text-align-right {
+  white-space: nowrap;
+}

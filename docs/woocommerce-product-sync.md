@@ -25,7 +25,7 @@ ZIP-paketti sisältää:
 - `products.json` — tuotteet rakenteisena JSON-listana
 - `files/` — downloadable-tuotteiden tiedostot (jos tuotteilla on ladattavia tiedostoja)
 
-Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste.
+Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste. Variaatiotuotteilla myös jokaisella variaatiolla pitää olla oma SKU. Jos yksikin valitun variaatiotuotteen variaatio on ilman SKU:ta, vienti estetään selkeällä virheilmoituksella.
 
 ### 2. Tuonti (kohdeympäristö, esim. dev)
 
@@ -42,9 +42,9 @@ Tuotteilta joilta puuttuu SKU **ei viedä** — SKU on pakollinen tunniste.
 | **Uusi** | SKU:ta ei ole kohdeympäristössä — tuote luodaan | päällä |
 | **Päivitetään** | SKU löytyy, kentissä eroja — muuttuvat kentät listataan | päällä |
 | **Identtinen** | SKU löytyy, ei eroja — tuonti ei tee mitään | pois |
-| **VIRHE** | Esim. downloadable-tiedosto puuttuu paketista — tuontia ei sallita | pois (lukittu) |
+| **VIRHE** | Esim. downloadable-tiedosto puuttuu paketista, variaatiolta puuttuu SKU tai `pa_*`-attribuuttitaksonomia puuttuu kohteesta — tuontia ei sallita | pois (lukittu) |
 
-Päivitettävillä tuotteilla esikatselu näyttää kenttäkohtaisen diffin (`vanha → uusi`), joten korvattavat arvot näkee ennen tuontia.
+Päivitettävillä tuotteilla esikatselu näyttää kenttäkohtaisen diffin (`vanha → uusi`), joten korvattavat arvot näkee ennen tuontia. Variaatiotuotteilla esikatselu näyttää lisäksi variaatiokohtaisesti uudet ja päivittyvät variaatiot, niiden attribuuttiarvot, hinnan sekä varastotilan (`stock_status`) muutokset.
 
 ## Tunnistus: SKU
 
@@ -56,9 +56,33 @@ Tuotteet tunnistetaan **SKU:n** perusteella, ei WordPressin post ID:n. Tämä ta
 
 ## Siirrettävät kentät
 
-Ydinkentät: nimi, slug, status, tuotetyyppi, normaali- ja alennushinta, lyhyt kuvaus ja kuvaus, `Virtual`, `Downloadable`, kategoriat ja tagit.
+Ydinkentät: nimi, slug, status, tuotetyyppi, normaali- ja alennushinta, lyhyt kuvaus ja kuvaus, `Virtual`, `Downloadable`, kategoriat ja tagit. Simple-tuotteilta siirtyvät myös varastotiedot (ks. [Varastotila](#varastotila-formaatti-12)).
 
 Kategoriat ja tagit siirretään slugilla. Jos kohdeympäristöstä puuttuu kategoria, se luodaan automaattisesti.
+
+### Variaatiotuotteet
+
+Formaatti `1.1`+ tukee WooCommercen `variable`-tuotteita. Parent-tuotteelta siirtyvät:
+
+- attribuuttimääritykset (`pa_*`-taksonomia-attribuutit ja custom-attribuutit)
+- oletusattribuutit
+- variaatiot listana: SKU, status, attribuuttiarvot, normaali hinta, alennushinta ja varastotiedot (ks. [Varastotila](#varastotila-formaatti-12))
+
+Tuonti luo `WC_Product_Variable`-tuotteen, kun `type` on `variable`. Olemassa oleva parent-tuote tunnistetaan SKU:lla. Variaatiot tunnistetaan ja päivitetään omalla SKU:lla; puuttuvat variaatiot luodaan parentin alle.
+
+Turvallisuusrajaukset:
+
+- Kohteessa olevia mutta paketista puuttuvia variaatioita ei poisteta eikä arkistoida.
+- Puuttuvat termit luodaan olemassa olevaan `pa_*`-taksonomiaan.
+- Puuttuvaa globaalia WooCommerce-attribuuttitaksonomiaa ei luoda automaattisesti; esikatselu näyttää virheen.
+- SKU:ttomia variaatioita ei viedä eikä tuoda, koska päivitystä ei voi tehdä turvallisesti SKU-pohjaisesti.
+
+### Varastotila (formaatti 1.2)
+
+Sekä simple-tuotteiden että variaatioiden varastotiedot siirtyvät: `stock_status` (`instock` / `outofstock` / `onbackorder`), `manage_stock`, `stock_quantity` ja `backorders`. Esimerkiksi t-paidan koot, joista vain XL ja XXL ovat varastossa, siirtyvät oikein eikä jokaista kokoa tarvitse korjata käsin kohteessa.
+
+- **Varasto on ympäristökohtaista:** tuonti **yliajaa** valittujen tuotteiden varastotilan lähteen mukaiseksi. Esikatselu näyttää `stock_status`-muutoksen ennen tuontia, joten korvautuva tila näkyy etukäteen.
+- **Taaksepäinyhteensopivuus:** vanhoissa `1.0`/`1.1`-paketeissa ei ole varastokenttiä — ne tuodaan kuten ennen eivätkä muuta kohteen varastotilaa.
 
 ### Custom product meta -avaimet
 
@@ -75,7 +99,7 @@ Lista on filtteröitävissä koodista: `rytkoset_theme_product_sync_meta_keys`.
 
 ## Downloadable-tuotteet
 
-Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonnissa:
+Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Viennissä ladattavien tiedostojen polut kanonisoidaan `realpath()`:lla ja rajataan WordPressin uploads-hakemistoon: uploads-alueen ulkopuolinen tiedosto (absoluuttinen, root-relatiivinen, `..`-traversaali tai ulos osoittava symlink) **estää tuotteen viennin** selkeällä virheellä, joten uploads-alueen ulkopuolista ei voi vahingossa pakata mukaan. Puuttuvat tiedostot ohitetaan (tuonti merkitsee ne **VIRHE**-tilaan). Tuonnissa:
 
 - Jos tiedosto puuttuu paketista → tuote merkitään esikatselussa **VIRHE**-tilaan eikä sitä voi tuoda. Rikkinäistä tuotetta ei luoda hiljaisesti.
 - Jos tiedosto löytyy → se kopioidaan kohdeympäristön `wp-content/uploads/woocommerce_uploads/`-hakemistoon ja liitetään tuotteeseen.
@@ -85,6 +109,7 @@ Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonniss
 - Moduuli: `wp-content/themes/rytkoset-theme/inc/woocommerce-product-sync.php`
 - Vaatii palvelimelta PHP:n `ZipArchive`-laajennuksen.
 - Ladattu ZIP puretaan väliaikaisesti hakemistoon `wp-content/uploads/rytkoset-product-sync/`. Hakemisto siivotaan automaattisesti tuonnin jälkeen.
+- **ZIP-entryjen validointi (Zip Slip -suojaus):** paketin entryt tarkistetaan ennen purkua. Sallitaan vain `manifest.json`, `products.json` ja `files/<perusnimi>` (sallitulla tiedostopäätteellä). Absoluuttiset polut, asemakirjaimet, `..`-hakemistotraversaali, null-tavut ja muut odottamattomat tiedostot/hakemistot hylkäävät koko tuonnin, eikä mitään kirjoiteta levylle. Vain hyväksytyt entryt puretaan, ja hylätty paketti siivoaa sessiohakemiston.
 - Esikatselu-sessio säilyy transientissa 1 tunnin. Sen jälkeen ZIP pitää ladata uudelleen.
 - Tunnistus käyttää WooCommercen omaa `wc_get_product_id_by_sku()`-funktiota.
 
@@ -92,7 +117,6 @@ Downloadable-tuotteiden tiedostot pakataan ZIP:in `files/`-hakemistoon. Tuonniss
 
 Työkalu **ei** tällä hetkellä:
 
-- siirrä variable productseja (vaihtelevia tuotteita) — vain `simple`-tuotteet
 - siirrä tilauksia, käyttäjiä, sivuja tai muuta post-dataa
 - tee automaattista ajastettua synkkausta — siirto on aina manuaalinen
 - toimi kaksisuuntaisesti — siirto on push-tyyppinen (lähde → kohde)
@@ -105,3 +129,6 @@ Työkalu **ei** tällä hetkellä:
 - Downloadable-tuote siirtyy tiedostoineen; puuttuva tiedosto estää tuonnin `VIRHE`-tilalla.
 - Puuttuva kategoria luodaan kohdeympäristöön automaattisesti.
 - Custom meta -avaimet (`_rytkoset_membership_*`, `_rytkoset_registration_*`) säilyvät siirrossa.
+- Variaatiotuote voidaan viedä ja tuoda parent-SKU:n sekä variaatio-SKU:iden perusteella.
+- Variaation hinnan muutos näkyy esikatselussa variaatiokohtaisena muutoksena.
+- Variaatioiden ja simple-tuotteiden `stock_status` siirtyy viennissä ja tuonnissa, ja muutos näkyy esikatselussa. Vanhat `1.0`/`1.1`-paketit eivät yliaja kohteen varastotilaa.

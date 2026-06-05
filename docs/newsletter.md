@@ -130,6 +130,77 @@ Testaa käyttöönoton jälkeen:
 
 Jos frontendissä näkyy virhe `You are not allowed to modify this user`, testaa lomake kirjautumattomana tai käytä kirjautuneen WordPress-käyttäjän omaa sähköpostiosoitetta. AcyMailing voi estää tilanteen, jossa kirjautunut käyttäjä yrittää tilata tai muokata eri sähköpostiosoitteen tilausta.
 
+## Tuotantoonvienti ja ensimmäinen lähetys
+
+Tämä checklist kattaa tiketin `#109`: tuotannon listojen ja asetusten tarkistus, ensimmäisen oikean lähetyksen suunnittelu, hallittu lähetys ja havaintojen kirjaaminen.
+
+Ennen lähetystä tarkista tuotannossa:
+
+- AcyMailing-lisenssi on kytketty ja automaattinen lähetysprosessi on aktiivinen.
+- AcyMailingin oma web-cron-palvelu toimii: `Last Cron` päivittyy AcyMailingin palvelun IP:stä ja testikampanja lähtee jonosta automaattisesti.
+- Kohdelista on `Rytkoset.net GDPR`; älä lähetä oletuslistalle `Newsletters` tai hallituksen sisäiselle listalle, ellei lähetyksen tarkoitus erikseen sitä vaadi.
+- Footerin shortcode-lomake käyttää samaa kohdelistaa kuin opt-in-paikat.
+- Tilaajien määrä ja vastaanottajalista on silmäilty ennen lähetystä; poista selvästi virheelliset tai testiosoitteet.
+- Lähettäjän nimi, lähettäjän osoite ja vastausosoite ovat sukuseuran hyväksymät.
+- Uutiskirjeen kieli, otsikko, esikatseluteksti, linkit ja tietosuojalinkki on tarkistettu.
+- Testilähetys on lähetetty vähintään yhdelle ylläpitäjän omalle osoitteelle ja tarkistettu mobiilissa sekä desktopissa.
+- Lähetysnopeus huomioi palvelun noin 18 sähköpostin tuntirajan; jos vastaanottajia on paljon, käytä AcyMailingin jonoa/automaattista lähetysprosessia äläkä pakota koko lähetystä kerralla.
+
+### cPanel-cron
+
+AcyMailingin oma web-cron-palvelu on ensisijainen ratkaisu tässä tuotantokäytössä. cPanel-cronia ei tarvita uutiskirjejonon käsittelyyn, jos AcyMailingin oma web-cron päivittyy ja testilähetys lähtee jonosta automaattisesti.
+
+AcyMailingin oma web-cron-palvelu on käytössä, jos AcyMailingin `Last Cron` -kohdassa näkyy viimeisin ajokerta ja `Triggered from the IP` on AcyMailingin palvelun IP, esimerkiksi `178.23.155.178`. Silloin AcyMailingin palvelin triggeröi sivustoa, eikä cPanel-cron ole välttämättä tarpeellinen ensimmäistä lähetystä varten.
+
+Tuotannossa 5.6.2026 testikampanja `Testiuutiskirje` lähti AcyMailingin web-cronin kautta: 3 viestiä käsiteltiin, 3 onnistui ja 0 epäonnistui. Tämä riittää vahvistamaan, että automaattinen lähetysprosessi toimii ensimmäistä oikeaa lähetystä varten.
+
+Jos vanhassa cPanel-cronissa on Joomla-ajan URL, esimerkiksi `option=com_acym`, sen voi poistaa sen jälkeen, kun AcyMailingin web-cron on todettu toimivaksi. Älä korvaa sitä uudella cPanel-cronilla, ellei AcyMailingin oma web-cron lakkaa toimimasta tai lähetysjono ei etene.
+
+Jos cPanel-cron tarvitaan myöhemmin fallbackiksi:
+
+1. Avaa AcyMailingin asetuksista CRON-/Queue process -kohta.
+2. Kopioi AcyMailingin näyttämä tuotannon CRON-URL. Älä kirjoita osoitetta käsin äläkä tallenna sitä repoon, koska osoite voi sisältää sivustokohtaisen avaimen.
+3. Testaa URL avaamalla se selaimessa kirjautuneena ylläpitäjänä. AcyMailingin pitää näyttää onnistunut cron-triggeröinti tai päivittää viimeisin ajokerta.
+4. Avaa cPanelissa `Cron Jobs`.
+5. Valitse ajoväli AcyMailingin asetuksen mukaan. Käytä mieluummin samaa tai harvempaa väliä kuin AcyMailingin lähetysprosessin oma väli.
+6. Lisää komento muodossa:
+
+```bash
+wget -q -O /dev/null "https://example.com/ACYMAILING_CRON_URL" >/dev/null 2>&1
+```
+
+Jos palvelimella ei ole `wget`-komentoa, käytä vastaavaa `curl`-komentoa:
+
+```bash
+curl -fsS "https://example.com/ACYMAILING_CRON_URL" >/dev/null 2>&1
+```
+
+Pidä URL lainausmerkeissä, koska CRON-URL voi sisältää `&`-merkkejä. Ensimmäisen ajon jälkeen tarkista AcyMailingista viimeisin cron-ajo ja jonon eteneminen. Jos cPanel lähettää cron-outputin sähköpostiin, hiljennys `>/dev/null 2>&1` estää turhat ilmoitukset vasta, kun toiminta on todettu.
+
+Ensimmäisen oikean lähetyksen sisältösuunnitelma kannattaa pitää kevyenä:
+
+- lyhyt tervehdys
+- miksi vastaanottaja saa viestin
+- yksi ensisijainen asia tai toimintakehotus
+- linkki sivustolle
+- tieto siitä, miten tilauksen voi perua
+
+Lähetyksen aikana:
+
+1. Tee viimeinen vastaanottajalistan tarkistus juuri ennen lähetystä.
+2. Lähetä tai ajasta viesti AcyMailingin kautta.
+3. Älä muuta listoja, lomakkeita tai AcyMailing-asetuksia kesken lähetyksen.
+4. Tarkista lähetyksen jälkeen AcyMailingin raportista lähetetyt, epäonnistuneet ja mahdolliset bounce-/unsubscribe-havainnot.
+
+Kirjaa ensimmäisen lähetyksen jälkeen jatkoa varten:
+
+- lähetyksen päivämäärä ja kellonaika
+- kohdelista
+- vastaanottajien määrä
+- lähetyksen aihe
+- havaittu tekninen ongelma, jos sellainen tuli vastaan
+- jatkotoimenpide, jos bounceja, virheellisiä osoitteita tai palautetta tuli
+
 ## Rajaukset
 
 Tämä MVP ei sisällä:
