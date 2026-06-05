@@ -8,6 +8,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ### Changed
 - `README.md`: päivitetty projektin nykyinen paikallinen kehitys, branch/deploy-malli, validointi, rakenne ja dokumentaatiolinkit; poistettu vanhentunut `main` -> dev -deploy-kuvaus ja rajattu agentti-/työskentelyohjeet viittauksiksi `AGENTS.md`, `CONTRIBUTING.md` ja `CLAUDE.md` -tiedostoihin.
+- `docs/newsletter.md`: lisätty AcyMailingin tuotantoonviennin ja ensimmäisen oikean uutiskirjelähetyksen checklist: listat, todettu web-cron/automaattinen lähetysprosessi, cPanel-cron fallbackina, testilähetys, vastaanottajien tarkistus, lähetysnopeus ja jälkiseuranta (#109).
 
 ### Added
 - `inc/woocommerce-product-sync.php`: WooCommerce-tuotesynkka tukee nyt `variable`-tuotteiden vientiä, dry-run-esikatselua ja tuontia parent-SKU:n sekä variaatio-SKU:iden perusteella; puuttuvat `pa_*`-termit luodaan olemassa olevaan taksonomiaan ja SKU:ttomat variaatiot estetään (#240).
