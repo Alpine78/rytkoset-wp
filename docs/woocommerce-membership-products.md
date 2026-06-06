@@ -23,8 +23,10 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Vuosijäsenmaksujen tuotekuvauksissa kerrotaan:
   - jäsenyys on voimassa sukukokousten välisen ajan
   - nykyinen kausi on `2023 - 2026`
-- Kassalle on lisätty ohjeteksti tilanteisiin, joissa korissa on jäsenmaksutuote:
-  - kaikkien jäsenten nimet tulee kirjoittaa `Lisätietoja`-kenttään
+  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet kirjoitetaan tilauksen muistiinpanoon
+- Kassalle on lisätty ohjeteksti kaikille jäsenmaksutuotteille, myös ainaisjäsenmaksulle:
+  - tilaaja valitsee `Lisää muistiinpano tilaukseesi`
+  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet kirjoitetaan muistiinpanoon
   - tiedot voidaan kirjata jäsenrekisteriin
 
 ## Tekniset huomiot
@@ -40,8 +42,9 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Kassalla näytettävä nimiohje määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
 - Nimiohjeen metadata on käytössä vain vuosijäsenmaksutuotteilla.
-- Teema näyttää kassaohjeen vain silloin, kun korissa on tuote, jolla tuo metadata on käytössä.
-- `Ainaisjäsenmaksu` ei näytä vuosijäsenmaksujen lisätieto-ohjetta kassalla.
+- Teema näyttää kassaohjeen silloin, kun korissa on jäsenmaksutuotteeksi merkitty tuote.
+- Checkout Blockin tilausmuistiinpano käyttää WooCommercen omaa valintatekstiä `Lisää muistiinpano tilaukseesi`.
+- `Ainaisjäsenmaksu` näyttää saman jäsenrekisteriohjeen kuin vuosijäsenmaksut.
 - Kassaohjeen renderöinti tehdään teemassa, koska WooCommerce Block Checkout ei näyttänyt luotettavasti normaalia sivusisältöä nykyisessä teemassa.
 - WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
 

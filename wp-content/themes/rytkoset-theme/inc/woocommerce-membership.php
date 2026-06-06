@@ -269,12 +269,11 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_membership_product_fields' );
 
 /**
- * Returns true when the current cart contains a membership product
- * that requires member names in the order note.
+ * Returns true when the current cart contains a membership product.
  *
  * @return bool
  */
-function rytkoset_theme_cart_requires_member_names() {
+function rytkoset_theme_cart_has_membership_product() {
 	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 		return false;
 	}
@@ -286,7 +285,7 @@ function rytkoset_theme_cart_requires_member_names() {
 			continue;
 		}
 
-		if ( rytkoset_theme_membership_product_requires_member_names( $product ) ) {
+		if ( rytkoset_theme_is_membership_product( $product ) ) {
 			return true;
 		}
 	}
@@ -301,7 +300,7 @@ function rytkoset_theme_cart_requires_member_names() {
  */
 function rytkoset_theme_get_membership_checkout_notice_markup() {
 	$notice_text = html_entity_decode(
-		'<strong>J&auml;sen- ja perhej&auml;senmaksu:</strong> Kirjoita kaikkien j&auml;senten nimet kassalla Lis&auml;tietoja-kentt&auml;&auml;n, jotta tiedot voidaan kirjata j&auml;senrekisteriin.',
+		'<strong>J&auml;senmaksu:</strong> Valitse kassalla <strong>Lis&auml;&auml; muistiinpano tilaukseesi</strong> ja kirjoita muistiinpanoon j&auml;senen tai j&auml;senten nimet ja s&auml;hk&ouml;postiosoitteet, jotta tiedot voidaan kirjata j&auml;senrekisteriin.',
 		ENT_QUOTES,
 		'UTF-8'
 	);
