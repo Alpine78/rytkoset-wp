@@ -26,6 +26,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 - `inc/woocommerce-shop-categories.php`: kaupan kategoriapalkki — kevyt linkkirivi (`Kaikki` + ei-tyhjät tuotekategoriat) tuotelistan yläpuolella kaupan etusivulla ja kategoriaarkistoissa (`woocommerce_before_shop_loop`). Korostaa nykyisen näkymän (`aria-current`), sulkee pois Uncategorized-kategorian eikä vaadi kategoriakuvia. Tyylit `shop.css`:ssä (`.rytkoset-shop-cats`, mukautuu vaaleaan/tummaan teemaan ja kapenee mobiilissa).
 
 ### Fixed
+- WooCommercen identtiset virheilmoitukset suodatetaan ennen sessioon tallentamista, joten jo ostoskorissa olevan yksittäin myytävän jäsenmaksutuotteen uusi lisäysyritys ei enää näytä samaa ilmoitusta kahdesti (#359).
 - Blogikirjoituksen kategorialinkki avaa nyt kategorian oman arkistosivun, joka listaa kyseisen kategorian julkaisut olemassa olevilla blogikorteilla sen sijaan, että WordPress putoaisi kovakoodattuun `index.php`-tervetulonäkymään (#359).
 - Foorumin kategoria- ja aihelistaukset piilottavat viimeisimmän kirjoittajan tiedot suunnitelluissa mobiili- ja tablettileveyksissä, joten tiedot eivät enää puristu kapeaan avatar-sarakkeeseen. Työpöydällä aihelistan viimeisimmät kirjoittajat asettuvat yhtenäiseen sarakkeeseen. Uuden aiheen lomake käyttää tummassa teemassa tummia pintoja, luettavia kenttä- ja painikevärejä sekä näkyviä focus-tiloja (#359).
 - Kaupan tuotelistan nimet ja hinnat käyttävät tummassa teemassa riittävän kontrastisia teemavärejä (#359).

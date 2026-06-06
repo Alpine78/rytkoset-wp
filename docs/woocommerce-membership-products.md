@@ -43,6 +43,7 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Teema näyttää kassaohjeen vain silloin, kun korissa on tuote, jolla tuo metadata on käytössä.
 - `Ainaisjäsenmaksu` ei näytä vuosijäsenmaksujen lisätieto-ohjetta kassalla.
 - Kassaohjeen renderöinti tehdään teemassa, koska WooCommerce Block Checkout ei näyttänyt luotettavasti normaalia sivusisältöä nykyisessä teemassa.
+- WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
 
 ## Jäsenmaksutilausten käsittelymalli
 
@@ -102,6 +103,7 @@ Suositeltu toimintamalli:
 - Kassasivulle syötetään teeman kautta jäsenmaksuohje oikeassa sessiossa.
 - `Ainaisjäsenmaksu` voidaan lisätä ostoskoriin ja `Kassa`-sivu latautuu oikein.
 - `Ainaisjäsenmaksu` ei aktivoi vuosijäsenmaksujen kassaohjetta.
+- Yksittäin myytävän jäsenmaksutuotteen uusi lisäysyritys ei tuota kahta samaa ostoskori-ilmoitusta.
 - Jäsenmaksutuotteet tunnistetaan adminissa jäsenmaksumetadatan perusteella.
 - WooCommerce Orders -lista näyttää jäsenmaksutilauksille `Jäsenmaksu`-sarakkeen arvon.
 - Jäsenmaksutilauksen admin-näkymässä näkyy käsittelyyn tarkoitettu `Jäsenmaksu`-laatikko.

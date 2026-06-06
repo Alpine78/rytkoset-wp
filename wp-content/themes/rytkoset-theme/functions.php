@@ -412,6 +412,21 @@ function rytkoset_theme_get_sold_individually_cart_product_ids() {
 }
 
 /**
+ * Estää saman WooCommerce-virheilmoituksen lisäämisen sessioon kahdesti.
+ *
+ * @param string $message Lisättävä virheilmoitus.
+ * @return string
+ */
+function rytkoset_theme_deduplicate_woocommerce_error_notice( $message ) {
+	if ( ! function_exists( 'wc_has_notice' ) || ! is_string( $message ) ) {
+		return $message;
+	}
+
+	return wc_has_notice( $message, 'error' ) ? '' : $message;
+}
+add_filter( 'woocommerce_add_error', 'rytkoset_theme_deduplicate_woocommerce_error_notice' );
+
+/**
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
