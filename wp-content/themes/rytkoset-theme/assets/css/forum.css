@@ -356,7 +356,6 @@
   .cat-row {
     grid-template-columns: 48px minmax(0, 1fr) 72px 72px;
   }
-  .cat-row__latest { display: none; }
 }
 @media (max-width: 560px) {
   .cat-row {
@@ -452,6 +451,10 @@
 }
 .cat-row__latest-meta strong { color: var(--color-text); font-weight: 600; }
 
+@media (max-width: 900px) {
+  .cat-row__latest { display: none; }
+}
+
 /* -----------------------------------------------------------------
    Avatar initials
    ----------------------------------------------------------------- */
@@ -546,7 +549,7 @@
 
 .topic-row {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 92px 92px minmax(160px, auto);
+  grid-template-columns: 48px minmax(0, 1fr) 92px 92px 200px;
   gap: 18px;
   align-items: center;
   padding: 18px 6px;
@@ -556,7 +559,6 @@
 .topic-row:hover { background: #fafbfd; }
 @media (max-width: 860px) {
   .topic-row { grid-template-columns: 40px minmax(0, 1fr) 72px 72px; }
-  .topic-row__latest { display: none; }
 }
 @media (max-width: 560px) {
   .topic-row { grid-template-columns: 36px 1fr; gap: 12px; }
@@ -647,6 +649,10 @@
 .topic-row__latest-time {
   font-size: 12px;
   color: var(--color-text-mute);
+}
+
+@media (max-width: 860px) {
+  .topic-row__latest { display: none; }
 }
 
 /* Pagination */
