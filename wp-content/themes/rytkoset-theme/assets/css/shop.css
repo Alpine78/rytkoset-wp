@@ -991,6 +991,7 @@ body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li a:
   top: calc(100% + 0.5rem);
   left: 0;
   z-index: 50;
+  box-sizing: border-box;
   width: max(100%, 15rem);
   max-width: calc(100vw - 2rem);
   max-height: min(19rem, calc(100vh - 8rem));
@@ -1133,6 +1134,98 @@ body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li a:
 }
 
 @media (max-width: 560px) {
+  body.single-product .summary,
+  body.single-product .summary form.variations_form {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .woocommerce div.product form.cart .variations,
+  .woocommerce-page div.product form.cart .variations,
+  .woocommerce div.product form.cart .variations tbody,
+  .woocommerce-page div.product form.cart .variations tbody,
+  .woocommerce div.product form.cart .variations tr,
+  .woocommerce-page div.product form.cart .variations tr,
+  .woocommerce div.product form.cart .variations th.label,
+  .woocommerce-page div.product form.cart .variations th.label,
+  .woocommerce div.product form.cart .variations td.value,
+  .woocommerce-page div.product form.cart .variations td.value {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .woocommerce div.product form.cart .variations tr,
+  .woocommerce-page div.product form.cart .variations tr {
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .woocommerce div.product form.cart .variations th.label,
+  .woocommerce-page div.product form.cart .variations th.label,
+  .woocommerce div.product form.cart .variations td.value,
+  .woocommerce-page div.product form.cart .variations td.value {
+    padding: 0;
+    text-align: left;
+  }
+
+  .woocommerce div.product form.cart .variations select + .rytkoset-shop-select,
+  .woocommerce-page div.product form.cart .variations select + .rytkoset-shop-select,
+  .woocommerce div.product form.cart .variations .rytkoset-shop-select__trigger,
+  .woocommerce-page div.product form.cart .variations .rytkoset-shop-select__trigger {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .woocommerce div.product form.cart .variations .rytkoset-shop-select__menu,
+  .woocommerce-page div.product form.cart .variations .rytkoset-shop-select__menu {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .woocommerce div.product form.cart .reset_variations,
+  .woocommerce-page div.product form.cart .reset_variations {
+    display: inline-block;
+    margin-top: 0.5rem;
+  }
+
+  .woocommerce div.product form.cart .single_variation,
+  .woocommerce-page div.product form.cart .single_variation {
+    margin-bottom: 1rem;
+  }
+
+  .woocommerce div.product form.cart .variations_button,
+  .woocommerce-page div.product form.cart .variations_button {
+    clear: both;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .woocommerce div.product form.cart .variations_button .quantity,
+  .woocommerce-page div.product form.cart .variations_button .quantity {
+    float: none;
+    align-self: flex-start;
+    width: auto;
+    margin: 0;
+  }
+
+  .woocommerce div.product form.cart .variations_button .single_add_to_cart_button,
+  .woocommerce-page div.product form.cart .variations_button .single_add_to_cart_button {
+    float: none;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  body.single-product .product_meta,
+  body.single-product .product_meta .sku_wrapper {
+    overflow-wrap: anywhere;
+  }
+
   .woocommerce ul.products,
   .woocommerce-page ul.products,
   body.woocommerce-cart .wc-block-grid__products {
