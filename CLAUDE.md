@@ -62,6 +62,8 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | ---------------------------- | --------------------------------------------------- |
 | `front-page.php`             | Front page                                          |
 | `page.php`                   | Static pages                                        |
+| `page-blogi.php`             | Blog landing page and all published posts           |
+| `category.php`               | Blog category archive using the main category query |
 | `single.php`                 | Blog post                                           |
 | `single-rytkoset_event.php`  | Single event                                        |
 | `single-gallery_album.php`   | Single album                                        |

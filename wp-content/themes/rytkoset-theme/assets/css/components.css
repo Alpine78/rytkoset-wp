@@ -1016,17 +1016,23 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  width: 100%;
+  max-width: 56rem;
+  box-sizing: border-box;
+  margin: clamp(2rem, 5vw, 3.5rem) auto 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--share-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface-alt);
+  box-shadow: var(--shadow-card);
   color: var(--share-fg);
-  border-top: 1px solid var(--share-border);
-  padding-top: 1rem;
-  margin-top: 1.5rem;
 }
 
 .share__heading {
-  margin: 0 0 4px;
+  margin: 0 0 0.25rem;
   font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 1.05rem;
+  font-weight: 700;
+  font-size: 1.25rem;
   letter-spacing: -0.01em;
   color: var(--share-fg);
 }
@@ -1170,8 +1176,11 @@
 }
 
 .share__url-link {
+  flex: 1 1 16rem;
+  min-width: 0;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
   padding: 6px 10px;
@@ -1182,11 +1191,14 @@
   font-size: 0.78rem;
   color: var(--share-fg-mute);
   cursor: pointer;
-  max-width: 36ch;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.share__url-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .share__url-link:hover,
@@ -1316,7 +1328,7 @@
 @media (max-width: 759px) {
   .share {
     gap: 10px;
-    padding-top: 0.9rem;
+    padding: 1.25rem;
   }
 
   /* Mobiilissa rivistä näytetään vain kanavalista; CTA, erotin ja

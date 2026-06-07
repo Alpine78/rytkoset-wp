@@ -1,6 +1,6 @@
 <?php
 /**
- * Default post index and archive fallback.
+ * Blog category archive.
  *
  * @package rytkoset-theme
  */
@@ -13,8 +13,10 @@ get_header();
 
 global $wp_query;
 
-$archive_title       = is_home() ? __( 'Blogi', 'rytkoset-theme' ) : get_the_archive_title();
-$archive_description = is_archive() ? get_the_archive_description() : '';
+$blog_page        = get_page_by_path( 'blogi' );
+$blog_url         = $blog_page instanceof WP_Post ? get_permalink( $blog_page ) : home_url( '/blogi/' );
+$category_name    = single_cat_title( '', false );
+$category_excerpt = category_description();
 ?>
 
 <main id="primary" class="site-main" tabindex="-1">
@@ -23,14 +25,16 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 			<nav class="breadcrumb" aria-label="<?php esc_attr_e( 'Murupolku', 'rytkoset-theme' ); ?>">
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Etusivu', 'rytkoset-theme' ); ?></a>
 				<span aria-hidden="true">/</span>
-				<span><?php echo esc_html( wp_strip_all_tags( $archive_title ) ); ?></span>
+				<a href="<?php echo esc_url( $blog_url ); ?>"><?php esc_html_e( 'Blogi', 'rytkoset-theme' ); ?></a>
+				<span aria-hidden="true">/</span>
+				<span><?php echo esc_html( $category_name ); ?></span>
 			</nav>
 
 			<header class="section__header blog-archive__header">
-				<h1 class="section__title"><?php echo wp_kses_post( $archive_title ); ?></h1>
-				<?php if ( $archive_description ) : ?>
+				<h1 class="section__title"><?php echo esc_html( $category_name ); ?></h1>
+				<?php if ( $category_excerpt ) : ?>
 					<div class="section__description">
-						<?php echo wp_kses_post( $archive_description ); ?>
+						<?php echo wp_kses_post( $category_excerpt ); ?>
 					</div>
 				<?php endif; ?>
 			</header>
@@ -95,12 +99,12 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 
 				if ( $pagination ) :
 					?>
-					<nav class="pagination blog-pagination" aria-label="<?php esc_attr_e( 'Arkiston sivutus', 'rytkoset-theme' ); ?>">
+					<nav class="pagination blog-pagination" aria-label="<?php esc_attr_e( 'Kategorian sivutus', 'rytkoset-theme' ); ?>">
 						<?php echo wp_kses_post( $pagination ); ?>
 					</nav>
 				<?php endif; ?>
 			<?php else : ?>
-				<p><?php esc_html_e( 'Sisältöä ei löytynyt.', 'rytkoset-theme' ); ?></p>
+				<p><?php esc_html_e( 'Tässä kategoriassa ei ole vielä julkaistuja kirjoituksia.', 'rytkoset-theme' ); ?></p>
 			<?php endif; ?>
 		</div>
 	</section>
