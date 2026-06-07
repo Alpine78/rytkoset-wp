@@ -771,6 +771,129 @@ body.woocommerce-cart .wc-block-grid__product-add-to-cart .wp-block-button__link
   }
 }
 
+/* Product details tabs: replace WooCommerce's fixed light surfaces with the
+   theme palette so the controls and panels remain readable in both themes. */
+.woocommerce div.product .woocommerce-tabs,
+.woocommerce-page div.product .woocommerce-tabs {
+  margin-top: 2.5rem;
+}
+
+.woocommerce div.product .woocommerce-tabs ul.tabs,
+.woocommerce-page div.product .woocommerce-tabs ul.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border-bottom: 1px solid var(--color-border-neutral);
+}
+
+.woocommerce div.product .woocommerce-tabs ul.tabs::before,
+.woocommerce-page div.product .woocommerce-tabs ul.tabs::before {
+  display: none;
+}
+
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li {
+  margin: 0 0 -1px;
+  padding: 0;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-medium) var(--radius-medium) 0 0;
+  background: var(--color-surface-alt);
+  color: var(--color-text-mute);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li::before,
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li::after,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li::before,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li::after {
+  display: none;
+}
+
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li a,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li a {
+  display: block;
+  padding: 0.75rem 1.1rem;
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li:hover,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+}
+
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li.active,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li.active {
+  border-color: var(--color-border-neutral);
+  border-bottom-color: var(--color-surface);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+body.single-product .woocommerce div.product .woocommerce-tabs ul.tabs li a:focus-visible,
+body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li a:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: none;
+  border-radius: calc(var(--radius-medium) - 1px) calc(var(--radius-medium) - 1px) 0 0;
+  box-shadow: inset var(--shop-focus-ring);
+}
+
+.woocommerce div.product .woocommerce-tabs .panel,
+.woocommerce-page div.product .woocommerce-tabs .panel {
+  margin: 0;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--color-border-neutral);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-medium) var(--radius-medium);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.woocommerce div.product .woocommerce-tabs .panel > :first-child,
+.woocommerce-page div.product .woocommerce-tabs .panel > :first-child {
+  margin-top: 0;
+}
+
+.woocommerce div.product .woocommerce-tabs .panel > :last-child,
+.woocommerce-page div.product .woocommerce-tabs .panel > :last-child {
+  margin-bottom: 0;
+}
+
+.woocommerce div.product .woocommerce-tabs table.shop_attributes,
+.woocommerce-page div.product .woocommerce-tabs table.shop_attributes {
+  margin-bottom: 0;
+  border-top-color: var(--color-border-neutral);
+}
+
+.woocommerce div.product .woocommerce-tabs table.shop_attributes th,
+.woocommerce div.product .woocommerce-tabs table.shop_attributes td,
+.woocommerce-page div.product .woocommerce-tabs table.shop_attributes th,
+.woocommerce-page div.product .woocommerce-tabs table.shop_attributes td {
+  border-bottom-color: var(--color-border-neutral);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.woocommerce div.product .woocommerce-tabs table.shop_attributes tr:nth-child(even) th,
+.woocommerce div.product .woocommerce-tabs table.shop_attributes tr:nth-child(even) td,
+.woocommerce-page div.product .woocommerce-tabs table.shop_attributes tr:nth-child(even) th,
+.woocommerce-page div.product .woocommerce-tabs table.shop_attributes tr:nth-child(even) td {
+  background: var(--color-surface-alt);
+}
+
 .woocommerce .rytkoset-shop-select-native,
 .woocommerce-page .rytkoset-shop-select-native {
   position: absolute !important;
