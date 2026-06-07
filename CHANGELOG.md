@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Changed
+- `docs/woocommerce-membership-products.md`: korjattu ainaisjäsenmaksun kassakäytön testausohje vastaamaan toteutusta; myös ainaisjäsenmaksu aktivoi jäsenrekisteriin tarvittavien tietojen muistiinpano-ohjeen (#359).
 - `README.md`: päivitetty projektin nykyinen paikallinen kehitys, branch/deploy-malli, validointi, rakenne ja dokumentaatiolinkit; poistettu vanhentunut `main` -> dev -deploy-kuvaus ja rajattu agentti-/työskentelyohjeet viittauksiksi `AGENTS.md`, `CONTRIBUTING.md` ja `CLAUDE.md` -tiedostoihin.
 - `docs/newsletter.md`: lisätty AcyMailingin tuotantoonviennin ja ensimmäisen oikean uutiskirjelähetyksen checklist: listat, todettu web-cron/automaattinen lähetysprosessi, cPanel-cron fallbackina, testilähetys, vastaanottajien tarkistus, lähetysnopeus ja jälkiseuranta (#109).
 

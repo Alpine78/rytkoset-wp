@@ -105,7 +105,7 @@ Suositeltu toimintamalli:
 - `Kassa`-sivu latautuu jäsenmaksutuotteen kanssa.
 - Kassasivulle syötetään teeman kautta jäsenmaksuohje oikeassa sessiossa.
 - `Ainaisjäsenmaksu` voidaan lisätä ostoskoriin ja `Kassa`-sivu latautuu oikein.
-- `Ainaisjäsenmaksu` ei aktivoi vuosijäsenmaksujen kassaohjetta.
+- `Ainaisjäsenmaksu` aktivoi saman jäsenrekisteriohjeen kuin vuosijäsenmaksut.
 - Yksittäin myytävän jäsenmaksutuotteen uusi lisäysyritys ei tuota kahta samaa ostoskori-ilmoitusta.
 - Jäsenmaksutuotteet tunnistetaan adminissa jäsenmaksumetadatan perusteella.
 - WooCommerce Orders -lista näyttää jäsenmaksutilauksille `Jäsenmaksu`-sarakkeen arvon.
