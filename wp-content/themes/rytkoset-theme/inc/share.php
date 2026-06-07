@@ -91,35 +91,37 @@ function rytkoset_theme_get_share_links( $post_id = null ) {
 }
 
 /**
- * Selvittää, näytetäänkö jakonapit galleriasivulla.
+ * Selvittää, näytetäänkö jakonapit tavallisella sisältösivulla.
  *
  * @param WP_Post|int|null $post Viesti tai ID; oletuksena nykyinen.
  * @return bool
  */
-function rytkoset_theme_should_show_gallery_share( $post = null ) {
+function rytkoset_theme_should_show_page_share( $post = null ) {
 	$post = get_post( $post );
 
-	if ( ! $post || 'page' !== $post->post_type ) {
+	if ( ! $post || 'page' !== $post->post_type || 'publish' !== $post->post_status ) {
 		return false;
 	}
 
-	$gallery_slugs = array( 'valokuvat', 'galleria', 'galleriat' );
+	$excluded_page_ids = array_filter(
+		array(
+			(int) get_option( 'page_on_front' ),
+			(int) get_option( 'page_for_posts' ),
+			(int) get_option( 'wp_page_for_privacy_policy' ),
+		)
+	);
 
-	if ( in_array( $post->post_name, $gallery_slugs, true ) ) {
-		return true;
+	if ( function_exists( 'wc_get_page_id' ) ) {
+		foreach ( array( 'shop', 'cart', 'checkout', 'myaccount' ) as $page_key ) {
+			$page_id = wc_get_page_id( $page_key );
+
+			if ( $page_id > 0 ) {
+				$excluded_page_ids[] = $page_id;
+			}
+		}
 	}
 
-	$content = $post->post_content;
-
-	if ( function_exists( 'has_block' ) && has_block( 'gallery', $post ) ) {
-		return true;
-	}
-
-	if ( has_shortcode( $content, 'gallery' ) ) {
-		return true;
-	}
-
-	return false;
+	return ! in_array( (int) $post->ID, array_unique( $excluded_page_ids ), true );
 }
 
 /**
@@ -279,7 +281,7 @@ function rytkoset_theme_share_buttons( $args = array() ) {
 				aria-label="<?php esc_attr_e( 'Kopioi linkki', 'rytkoset-theme' ); ?>"
 			>
 				<?php echo rytkoset_theme_get_share_icon( 'copy' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				<?php echo esc_html( $url_label ); ?>
+				<span class="share__url-text"><?php echo esc_html( $url_label ); ?></span>
 			</button>
 		</div>
 

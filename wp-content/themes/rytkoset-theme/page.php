@@ -25,10 +25,10 @@ get_header();
                                         </div>
 
                                         <?php
-                                        if ( rytkoset_theme_should_show_gallery_share( get_the_ID() ) ) {
+                                        if ( rytkoset_theme_should_show_page_share( get_the_ID() ) ) {
                                                 rytkoset_theme_share_buttons(
                                                         array(
-                                                                'heading' => __( 'Jaa galleria', 'rytkoset-theme' ),
+                                                                'heading' => __( 'Jaa sivu', 'rytkoset-theme' ),
                                                                 'post_id' => get_the_ID(),
                                                         )
                                                 );

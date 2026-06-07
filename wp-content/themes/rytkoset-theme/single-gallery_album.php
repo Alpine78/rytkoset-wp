@@ -207,9 +207,11 @@ if ( have_posts() ) :
 			</section>
 		</article>
 
-		<section class="section">
+		<section class="section album-comments-section">
 			<div class="container section__wide">
-				<?php comments_template(); ?>
+				<div class="album-comments">
+					<?php comments_template(); ?>
+				</div>
 			</div>
 		</section>
 		<?php
