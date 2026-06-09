@@ -1,5 +1,9 @@
 name: Deploy theme to dev.rytkoset.net
 
+# Tietoturva: kaikki actionit on pinnattu commit-SHA:han (ei muuttuvia @v*-tageja),
+# koska deploy käyttää FTPS-secrettejä. Versio on SHA:n perässä kommenttina.
+# Politiikka: docs/tietoturva.md → "Käyttöönoton tietoturva (GitHub Actions)".
+
 on:
   push:
     branches:
