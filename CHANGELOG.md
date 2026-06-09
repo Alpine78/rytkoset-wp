@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Changed
+- `style.css` / `functions.php`: teeman CSS-moduulit ladataan nyt erillisinä `wp_enqueue_style()`-kutsuina `@import`-ketjun sijaan. `@import` lataa moduulit sarjallisesti ja renderöintiä estäen; erilliset enqueuet latautuvat rinnakkain. Kaskadijärjestys (base → layout/components → … → responsive viimeisenä) säilytetään riippuvuusketjulla, ja sivukohtaiset tyylit (shop, forum, digital-magazine, gallery) riippuvat viimeisestä moduulista kuten ennenkin. Cache-bustaus `filemtime()`-pohjaisesti. Ei build-stepiä (#343).
 - `assets/css/nav.css`: poistettu orpo tiedosto. Sitä ei ladattu mistään (ei `style.css`:n `@import`-listassa eikä `wp_enqueue_style()`-kutsussa); navigaatio ladataan moduuleina `nav.base.css`, `nav.desktop.css`, `nav.account.css` ja `nav.mobile.css`. Kuollutta koodia navigaation refaktoroinnista, ei toiminnallista vaikutusta (#341).
 - `docs/woocommerce-membership-products.md`: korjattu ainaisjäsenmaksun kassakäytön testausohje vastaamaan toteutusta; myös ainaisjäsenmaksu aktivoi jäsenrekisteriin tarvittavien tietojen muistiinpano-ohjeen (#359).
 - `README.md`: päivitetty projektin nykyinen paikallinen kehitys, branch/deploy-malli, validointi, rakenne ja dokumentaatiolinkit; poistettu vanhentunut `main` -> dev -deploy-kuvaus ja rajattu agentti-/työskentelyohjeet viittauksiksi `AGENTS.md`, `CONTRIBUTING.md` ja `CLAUDE.md` -tiedostoihin.

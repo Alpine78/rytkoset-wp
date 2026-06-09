@@ -110,22 +110,29 @@ All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `ry
 
 ### CSS structure
 
-`style.css` imports all modules; no build step:
+No build step. `style.css` holds only the theme header — the core CSS modules are enqueued separately in `functions.php` (`rytkoset_theme_scripts`) via a `$css_modules` loop that chains each module's `deps` to the previous one, preserving cascade order (base → layout/components → … → responsive last). Page-specific styles (shop, forum, digital-magazine, gallery) depend on the last core module so they load after it. Cache-busted with `filemtime()`. The modules in cascade order:
 
 ```
+# Core modules, loaded site-wide in cascade order:
 assets/css/base.css          # Typography, color variables, base elements
 assets/css/layout.css        # Containers, grids, sections
+assets/css/hero.css          # Front page hero section (split layout with illustration)
+assets/css/home.css          # Front page content bands (alternating light/dark, feature + story)
+assets/css/404.css           # 404 page
 assets/css/components.css    # Buttons, cards, general components
 assets/css/nav.base.css      # Shared navigation styles
 assets/css/nav.desktop.css   # Desktop navigation
-assets/css/nav.mobile.css    # Mobile navigation (hamburger)
 assets/css/nav.account.css   # User/account menu
-assets/css/hero.css          # Front page hero section (split layout with illustration)
-assets/css/home.css          # Front page content bands (alternating light/dark, feature + story)
-assets/css/gallery.css       # Gallery and albums
+assets/css/nav.mobile.css    # Mobile navigation (hamburger)
 assets/css/footer.css        # Footer
-assets/css/login.css         # WP login page branding
-assets/css/responsive.css    # Media queries
+assets/css/responsive.css    # Media queries (last)
+
+# Page-specific modules, enqueued conditionally:
+assets/css/shop.css          # WooCommerce shop/cart/checkout
+assets/css/forum.css         # bbPress forum
+assets/css/digital-magazine.css  # Digital magazine pages
+assets/css/gallery.css       # Gallery and albums
+assets/css/login.css         # WP login page branding (enqueued in inc/login.php)
 ```
 
 Use CSS variables for colors and spacing. No Bootstrap dependency.
