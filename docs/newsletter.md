@@ -1,6 +1,6 @@
 # Uutiskirjeet ja AcyMailing
 
-Tämä dokumentti kuvaa uutiskirjeen tilauspaikkojen MVP-toteutuksen tiketille `#266`.
+Tämä dokumentti kuvaa uutiskirjeen tilauspaikkojen MVP-toteutuksen sekä ylläpitäjän perusprosessin uutiskirjeen laatimiseen, lähettämiseen ja listojen hallintaan.
 
 ## Käyttötarkoitus
 
@@ -17,6 +17,118 @@ Uudet yleiset uutiskirjetilaukset ohjataan olemassa olevalle AcyMailing-listalle
 - `Rytkoset.net GDPR`
 
 Uutta listaa ei luoda tätä MVP:tä varten. AcyMailingissa voi näkyä myös muita listoja, kuten hallituksen lista tai oletuksena syntynyt `Newsletters`, mutta niitä ei käytetä footerin yleiseen uutiskirjetilaukseen.
+
+## Uutiskirjeen laatiminen ja lähettäminen
+
+Tee varsinainen uutiskirjelähetys aina tuotannon WordPressissä (`rytkoset.net`). Kehitysympäristöä (`dev.rytkoset.net`) voi käyttää ulkoasun kokeiluun, mutta siellä ei pidä aktivoida tuotannon automaattista lähetystä tai käyttää oikeaa vastaanottajalistaa.
+
+### 1. Luo kampanja
+
+1. Avaa WordPress-adminissa `AcyMailing > Kampanjat` (`Campaigns`).
+2. Luo uusi tavallinen kertaluonteinen kampanja tai kopioi aiempi, toimivaksi todettu uutiskirje.
+3. Anna kampanjalle ylläpidossa tunnistettava nimi ja vastaanottajalle näkyvä aihe.
+4. Tarkista lähettäjän nimeksi `Rytkösten sukuseura ry` ja käytä hyväksyttyä sukuseuran sähköpostiosoitetta.
+5. Valitse vastaanottajalistaksi `Rytkoset.net GDPR`, ellei kyse ole erikseen sovitusta sisäisestä viestistä.
+
+Älä lähetä yleistä uutiskirjettä AcyMailingin oletuslistalle `Newsletters` tai hallituksen sisäiselle listalle.
+
+### 2. Laadi sisältö
+
+Pidä viesti lyhyenä ja helposti silmäiltävänä:
+
+- selkeä otsikko ja esikatseluteksti
+- lyhyt tervehdys
+- tärkein asia ensimmäisenä
+- yksi selkeä toimintakehotus tai ensisijainen linkki
+- linkit sivustolle mieluummin kuin pitkät tekstikokonaisuudet sähköpostissa
+- tieto siitä, miksi vastaanottaja saa viestin
+- toimiva tilauksen peruutuslinkki
+
+Käytä olemassa olevaa hyväksyttyä uutiskirjepohjaa. Älä poista AcyMailingin dynaamisia tilauksen peruutus- tai selainversion linkkejä. Essential-lisenssillä `Built with AcyMailing` -brändäyksen voi poistaa kohdasta `AcyMailing > Asetukset > Sähköpostiasetukset > Sähköpostieditori`.
+
+### 3. Tarkista ennen lähetystä
+
+1. Avaa kampanjan esikatselu.
+2. Lähetä AcyMailingin `Lähetä testi` -toiminnolla viesti vähintään yhdelle ylläpitäjän omalle osoitteelle.
+3. Tarkista testiviesti sekä puhelimella että tietokoneella.
+4. Avaa kaikki linkit ja tarkista, että ne johtavat tuotantoon eivätkä `dev.rytkoset.net`-osoitteeseen.
+5. Tarkista lähettäjä, vastausosoite, aihe, esikatseluteksti, kohdelista ja vastaanottajien määrä.
+6. Varmista, että peruutuslinkki ja selainversiolinkki näkyvät viestin lopussa.
+
+Testilähetys ei lisää kampanjaa varsinaiseen lähetysjonoon eikä korvaa kohdelistan tarkistusta.
+
+### 4. Lähetä kampanja
+
+1. Valitse lähetys heti tai ajastettuna.
+2. Hyväksy kampanjan vastaanottajalista ja lisää viesti AcyMailingin lähetysjonoon.
+3. Älä yritä pakottaa kaikkia viestejä lähtemään kerralla. Tuotannon automaattinen lähetysprosessi purkaa jonoa asetetulla nopeudella.
+4. Tarkista lähetyksen käynnistyttyä `AcyMailing > Asetukset > Jonoprosessi`: `Last Cron` päivittyy ja raportissa näkyy käsiteltyjen viestien määrä.
+5. Tarkista lähetyksen valmistuttua kampanjan tilastoista onnistuneet ja epäonnistuneet lähetykset sekä mahdolliset peruutukset ja palautuneet viestit.
+
+Jos lähetysjono ei etene seuraavan automaattisen cron-ajon jälkeen, älä luo kampanjaa uudelleen. Tarkista ensin cron, jono ja raportti, jotta sama viesti ei lähde vastaanottajille kahdesti.
+
+## Tilaajien ja listojen hallinta
+
+### Tilaajan tarkistaminen
+
+1. Avaa `AcyMailing > Tilaajat` (`Subscribers`).
+2. Hae henkilö sähköpostiosoitteella.
+3. Avaa tilaaja ja tarkista, mille listoille osoite kuuluu sekä onko tilaus aktiivinen, vahvistamaton, peruttu tai estetty.
+
+Sama sähköpostiosoite voi näkyä AcyMailingissa vain yhtenä tilaajana, vaikka se liittyisi useaan listaan.
+
+### Tilaajan lisääminen
+
+Suositeltu tapa on, että henkilö tilaa uutiskirjeen itse sivuston lomakkeella tai vapaaehtoisella opt-in-valinnalla. Lisää osoite ylläpidosta vain, jos henkilön suostumus on tiedossa:
+
+1. Avaa `AcyMailing > Tilaajat`.
+2. Luo uusi tilaaja tai avaa olemassa oleva.
+3. Syötä ja tarkista sähköpostiosoite.
+4. Liitä tilaaja listalle `Rytkoset.net GDPR`.
+5. Tallenna.
+
+Älä lisää jäsenrekisterin, tapahtuman tai verkkokaupan osoitteita uutiskirjelistalle ilman erillistä uutiskirjesuostumusta.
+
+### Tilauksen poistaminen
+
+Vastaanottajan kannattaa ensisijaisesti käyttää uutiskirjeen omaa `Peruuta tilaus` -linkkiä. Ylläpitäjä voi tarvittaessa avata tilaajan ja poistaa hänen tilauksensa listalta `Rytkoset.net GDPR`.
+
+Älä poista koko tilaajatietuetta vain siksi, että henkilö peruu yhden listan tilauksen. Älä myöskään aktivoi peruttua tai estettyä tilausta uudelleen ilman uutta suostumusta.
+
+### Listojen perushallinta
+
+Listat löytyvät kohdasta `AcyMailing > Listat` (`Lists`):
+
+- `Rytkoset.net GDPR` on yleisen uutiskirjeen tuotantolista.
+- Hallituksen tai muun rajatun ryhmän listaa käytetään vain kyseisen ryhmän viestintään.
+- Oletuslistaa `Newsletters` ei käytetä yleisen uutiskirjeen lähetyksiin.
+- Älä nimeä, poista tai yhdistä `Rytkoset.net GDPR` -listaa ilman, että footer-lomakkeen ja teeman opt-inien toiminta tarkistetaan uudelleen.
+
+Ennen CSV-tuontia ota varmuuskopio, varmista suostumuksen peruste ja tee ensin pieni koetuonti. Älä tuo WordPress-käyttäjiä tai vanhaa jäsenrekisteriä kokonaisuutena uutiskirjelistalle.
+
+## Lähetysasetukset ja rajat
+
+Tuotannon perusasetukset:
+
+- AcyMailing Essential -lisenssi on kytketty vain tuotantoon.
+- Automaattiset tehtävät ja AcyMailingin oma web-cron ovat tuotannossa aktiivisia.
+- Kehitysympäristön automaattiset tehtävät pidetään deaktivoituina.
+- Jonoprosessi lähettää yhden 18 viestin erän tunnissa eli enintään noin 18 sähköpostia tunnissa.
+- Viestien välinen odotus voi olla `0` sekuntia, koska tuntiraja tehdään eräkoon ja ajovälin avulla.
+- Lähetys on sallittu ympäri vuorokauden, ellei ylläpito erikseen rajaa lähetysaikaa.
+- Epäonnistuneita lähetyksiä yritetään enintään asetettu määrä; toistuvasti epäonnistuvia osoitteita ei pidä palauttaa aktiivisiksi ilman syyn selvitystä.
+- `Send a report`: vähintään `Only if an error occurs`.
+- `Save the report`: `Only if AcyMailing executes an action`.
+
+Esimerkiksi 180 vastaanottajan kampanja kestää noin 10 tuntia nopeudella 18 viestiä tunnissa. Kampanja kannattaa siksi lisätä jonoon riittävän aikaisin. AcyMailingin lisäksi myös muut sivuston sähköpostit käyttävät samaa palveluntarjoajan lähetyskapasiteettia, joten suurta uutiskirjelähetystä ei kannata ajoittaa samaan aikaan tapahtumien massaviestinnän kanssa.
+
+Tuotannossa cronin toiminta tunnistetaan kohdasta `AcyMailing > Asetukset > Jonoprosessi`:
+
+- `Last Run Time` päivittyy
+- `Triggered from the IP` on AcyMailingin palvelun IP `178.23.155.178`
+- raportissa näkyy käsiteltyjen, onnistuneiden ja epäonnistuneiden viestien määrä
+
+Erillistä cPanel-cronia ei tarvita niin kauan kuin AcyMailingin oma web-cron toimii ja lähetysjono etenee.
 
 ## Footer-lomakkeen käyttöönotto
 
@@ -152,7 +264,7 @@ AcyMailingin oma web-cron-palvelu on ensisijainen ratkaisu tässä tuotantokäyt
 
 AcyMailingin oma web-cron-palvelu on käytössä, jos AcyMailingin `Last Cron` -kohdassa näkyy viimeisin ajokerta ja `Triggered from the IP` on AcyMailingin palvelun IP, esimerkiksi `178.23.155.178`. Silloin AcyMailingin palvelin triggeröi sivustoa, eikä cPanel-cron ole välttämättä tarpeellinen ensimmäistä lähetystä varten.
 
-Tuotannossa 5.6.2026 testikampanja `Testiuutiskirje` lähti AcyMailingin web-cronin kautta: 3 viestiä käsiteltiin, 3 onnistui ja 0 epäonnistui. Tämä riittää vahvistamaan, että automaattinen lähetysprosessi toimii ensimmäistä oikeaa lähetystä varten.
+Tuotannossa 9.6.2026 lisenssin siirron jälkeen testikampanja lähti AcyMailingin web-cronin kautta: 3 viestiä käsiteltiin, 3 onnistui ja 0 epäonnistui. Tämä vahvistaa, että automaattinen lähetysprosessi toimii ilman erillistä cPanel-cronia.
 
 Jos vanhassa cPanel-cronissa on Joomla-ajan URL, esimerkiksi `option=com_acym`, sen voi poistaa sen jälkeen, kun AcyMailingin web-cron on todettu toimivaksi. Älä korvaa sitä uudella cPanel-cronilla, ellei AcyMailingin oma web-cron lakkaa toimimasta tai lähetysjono ei etene.
 
@@ -177,20 +289,7 @@ curl -fsS "https://example.com/ACYMAILING_CRON_URL" >/dev/null 2>&1
 
 Pidä URL lainausmerkeissä, koska CRON-URL voi sisältää `&`-merkkejä. Ensimmäisen ajon jälkeen tarkista AcyMailingista viimeisin cron-ajo ja jonon eteneminen. Jos cPanel lähettää cron-outputin sähköpostiin, hiljennys `>/dev/null 2>&1` estää turhat ilmoitukset vasta, kun toiminta on todettu.
 
-Ensimmäisen oikean lähetyksen sisältösuunnitelma kannattaa pitää kevyenä:
-
-- lyhyt tervehdys
-- miksi vastaanottaja saa viestin
-- yksi ensisijainen asia tai toimintakehotus
-- linkki sivustolle
-- tieto siitä, miten tilauksen voi perua
-
-Lähetyksen aikana:
-
-1. Tee viimeinen vastaanottajalistan tarkistus juuri ennen lähetystä.
-2. Lähetä tai ajasta viesti AcyMailingin kautta.
-3. Älä muuta listoja, lomakkeita tai AcyMailing-asetuksia kesken lähetyksen.
-4. Tarkista lähetyksen jälkeen AcyMailingin raportista lähetetyt, epäonnistuneet ja mahdolliset bounce-/unsubscribe-havainnot.
+Varsinainen ylläpitäjän lähetysprosessi on kuvattu tämän dokumentin kohdassa [Uutiskirjeen laatiminen ja lähettäminen](#uutiskirjeen-laatiminen-ja-lähettäminen).
 
 Kirjaa ensimmäisen lähetyksen jälkeen jatkoa varten:
 

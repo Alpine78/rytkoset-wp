@@ -1,5 +1,9 @@
 name: Deploy theme to dev.rytkoset.net
 
+# Tietoturva: kaikki actionit on pinnattu commit-SHA:han (ei muuttuvia @v*-tageja),
+# koska deploy käyttää FTPS-secrettejä. Versio on SHA:n perässä kommenttina.
+# Politiikka: docs/tietoturva.md → "Käyttöönoton tietoturva (GitHub Actions)".
+
 on:
   push:
     branches:
@@ -13,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}

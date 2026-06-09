@@ -1,5 +1,9 @@
 name: Deploy theme to production
 
+# Tietoturva: kaikki actionit on pinnattu commit-SHA:han (ei muuttuvia @v*-tageja),
+# koska deploy käyttää tuotannon FTPS-secrettejä. Versio on SHA:n perässä kommenttina.
+# Politiikka: docs/tietoturva.md → "Käyttöönoton tietoturva (GitHub Actions)".
+
 on:
   workflow_dispatch:
     inputs:
@@ -23,12 +27,12 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           ref: ${{ inputs.source_ref }}
 
       - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: "8.3"
           coverage: none
@@ -38,7 +42,7 @@ jobs:
           find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
 
       - name: Deploy via FTPS
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        uses: SamKirkland/FTP-Deploy-Action@110f9186c050f71550953127052e77650219c287 # v4.4.0
         with:
           server: ${{ secrets.PROD_FTP_HOST }}
           username: ${{ secrets.PROD_FTP_USERNAME }}

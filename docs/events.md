@@ -104,6 +104,8 @@ Yhteenvetokortissa näytetään täytetyt perustiedot:
 
 Jos linkitetyn WooCommerce-tuotteen ilmoittautuminen on päättynyt tai tuote ei muuten ole ostettavissa, tapahtumasivu näyttää tilaviestinä syyn eikä tarjoa aktiivista maksupainiketta.
 
+**Roskapostisuoja (maksuton lomake):** lomakkeessa on piilotettu honeypot-kenttä ja kevyt IP-kohtainen lähetysrajoitus (oletus 5 lähetystä / 10 min samasta IP-osoitteesta). Rajan ylittävä lähetys hylätään ennen tallennusta ja kuittisähköpostia, jottei lomakkeen toistolla voi synnyttää rajatonta määrää kuittiviestejä tai ilmoittautumistietueita. Tavallinen yksittäinen ilmoittautuminen ei osu rajaan. Rajan ja aikaikkunan voi säätää suodattimilla `rytkoset_theme_event_registration_rate_limit` ja `rytkoset_theme_event_registration_rate_limit_window`. Jos järjestäjä testaa lomaketta toistuvasti samasta verkosta ja saa viestin "Liian monta ilmoittautumisyritystä", kyse on tästä rajasta — odota aikaikkunan verran. (Käänteisen proxyn takana raja kohdistuu proxyn IP:hen; ks. `docs/tietoturva.md`.)
+
 Tapahtuma-arkistossa `/tapahtumat/` tapahtumat jaetaan kolmeen osioon:
 
 1. Tulevat tapahtumat

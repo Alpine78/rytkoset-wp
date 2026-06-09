@@ -9,6 +9,7 @@ Sivustolla käsitellään henkilötietoja (tapahtumailmoittautumiset, jäsenyyde
 Repossa on versioituna vain `wp-content/`. WordPress-core, liitännäiset, palvelimen `.htaccess` ja palvelinkonfiguraatio ovat repon ulkopuolella. Siksi tietoturva jakautuu kahteen osaan:
 
 - **Teemakoodi** (`inc/security.php`) — alla "Toteutetut kovennukset".
+- **Käyttöönotto / CI** (`.github/workflows/`) — alla "Käyttöönoton tietoturva (GitHub Actions)".
 - **Palvelin / ylläpito** — alla "Palvelintason checklist". Näitä ei voi toteuttaa teemassa.
 
 ## Toteutetut kovennukset (teemakoodi)
@@ -21,6 +22,7 @@ Estää bottiverkkoja keräämästä kirjautumisnimiä brute-force-hyökkäyksi�
 
 - **REST API:** `/wp/v2/users` ja `/wp/v2/users/<id>` poistetaan kirjautumattomilta (`rest_endpoints`-suodatin). Kirjautuneet käyttäjät säilyttävät pääsyn, joten wp-admin ja blokkieditorin tekijävalinta toimivat normaalisti.
 - **`?author=N`:** numerokysely ohjataan etusivulle (301) ennen kuin WordPress paljastaa kirjautumisnimen `/author/<slug>/`-osoitteena. `/author/<slug>/`-arkistot säilyvät ennallaan.
+- **Käyttäjäsitemap:** coren `/wp-sitemap-users-1.xml` poistetaan (`wp_sitemaps_add_provider`-suodatin). WordPress 5.5+ listaa siinä kaikki julkaisseet tekijät ja paljastaa heidän `/author/<nicename>/`-arkistonsa. Muut sitemapit (postit, sivut, taksonomiat) säilyvät.
 
 ### XML-RPC estetty
 
@@ -54,17 +56,43 @@ Sivustolla on avoin WordPress-rekisteröityminen (*Asetukset → Yleiset → Jä
 
 > Tämä ei korvaa palvelintason kirjautumisrajoitusta. Jos roskarekisteröinnit jatkuvat suuressa mittakaavassa, harkitse CAPTCHAa tai rekisteröitymisen sulkemista kokonaan (WooCommercen tilin luonti kassalla on erillinen asetus ja säilyy).
 
+### CSV-kaavainjektion esto (osallistujavienti)
+
+Osallistujalistan CSV-vienti (`Events > Participants`, `inc/event-participants-admin.php`) sisältää osallistujien itse syöttämiä kenttiä (nimi, sähköposti, puhelin, ruokavalio/huomiot, yhteyshenkilö). Taulukkolaskenta (Excel, LibreOffice, Google Sheets) tulkitsee `=`, `+`, `-`, `@` tai sarkain-/rivinvaihtomerkillä alkavan solun **kaavaksi**, joten haitallinen ilmoittautuja voisi piilottaa CSV:hen ajettavan kaavan (CSV-injektio, CWE-1236).
+
+- **Neutralisointi:** `rytkoset_theme_csv_neutralize_formula()` lisää kaavamerkillä alkavan solun eteen heittomerkin (`'`). Taulukkolaskenta käsittelee sen tekstimerkkinä ja piilottaa sen, joten esim. puhelinnumero `+358401234567` näkyy normaalisti mutta `=HYPERLINK(...)` jää passiiviseksi tekstiksi. Sovelletaan jokaiseen datasoluun `array_map`-kutsulla ennen `fputcsv`:ää.
+
+> Manuaalinen tarkistus: lisää osallistujaksi nimi tai huomio-kenttä arvolla `=1+1` tai `@SUM(...)`, vie CSV ja avaa Excelissä — solu näkyy tekstinä (`'=1+1`), ei laskettuna kaavana. Tavalliset `+`-alkuiset puhelinnumerot näkyvät oikein.
+
+### Ilmoittautumislomakkeen lähetysrajoitus (mail abuse)
+
+Maksuttoman tapahtuman julkinen ilmoittautumislomake (`inc/event-registrations.php`) lähettää onnistuneesta lähetyksestä kuittisähköpostin. Ilman rajoitusta honeypotin ohittava botti voisi lähettää lomakkeen toistuvasti ja synnyttää rajattomasti kuittiviestejä (uhrin postilaatikon pommitus, isännän ~18 sähköpostia/h -rajan polttaminen) ja ilmoittautumistietueita.
+
+- **Per-IP-throttle:** rullaava ikkuna (oletus 5 lähetystä / 10 min) `REMOTE_ADDR`-osoitetta kohden, tallennettuna transienttiin. Rajan ylittävä lähetys hylätään ennen tallennusta ja sähköpostia. Tavallinen yksittäinen ilmoittautuminen ei osu rajaan. Säädettävissä suodattimilla `rytkoset_theme_event_registration_rate_limit` ja `rytkoset_theme_event_registration_rate_limit_window`.
+- **Rajoitteet:** vain `REMOTE_ADDR` (väärennettäviä forwarded-otsakkeita ei luoteta). Käänteisen proxyn takana raja kohdistuu proxyn IP:hen, mikä heikentää suojaa — tämä on palvelintason huoli. IP-kierrätys voi kiertää rajan, joten kyseessä on kevyt mitigaatio, ei tae.
+
 ### Testaus dev-ympäristössä
 
 Kirjautuneena ulos:
 
 - `https://dev.rytkoset.net/wp-json/wp/v2/users` → `rest_no_route` (404), ei käyttäjälistaa.
 - `https://dev.rytkoset.net/?author=1` → ohjaus etusivulle.
+- `https://dev.rytkoset.net/wp-sitemap-users-1.xml` → 404; `https://dev.rytkoset.net/wp-sitemap.xml`-hakemistossa ei users-riviä (muut sitemapit näkyvät).
 - `https://dev.rytkoset.net/xmlrpc.php` (POST `system.listMethods`) → ei `pingback.ping`-metodia; todennetut metodit palauttavat virheen.
 - `curl -I https://dev.rytkoset.net/` → neljä tietoturvaotsaketta näkyvät; `X-Pingback` puuttuu.
 - Rekisteröityminen `.casino`-osoitteella → hylätään virheilmoituksella; honeypot-kentän täyttäminen (esim. devtoolsilla) → rekisteröityminen estyy. Tavallinen osoite ja tyhjä honeypot → rekisteröityminen onnistuu normaalisti.
 
 Kirjautuneena: wp-admin ja blokkieditori toimivat normaalisti.
+
+## Käyttöönoton tietoturva (GitHub Actions)
+
+Teema viedään dev- ja tuotantoympäristöön GitHub Actions -työnkuluilla ([`deploy-dev.yml`](../.github/workflows/deploy-dev.yml), [`deploy-production.yml`](../.github/workflows/deploy-production.yml)). Molemmat käyttävät kolmannen osapuolen FTPS-deploy-actionia ja saavat FTPS-tunnukset GitHub-secretteinä (dev: `FTP_*`, tuotanto: `PROD_FTP_*`). Jos action viitataan **muuttuvalla** versiotagilla (esim. `@v4.4.0`), tagin uudelleenkohdennus tai actionin toimitusketjun kompromissi voisi vuotaa deploy-tunnukset tai muuttaa vietäviä tiedostoja kesken hyväksytyn julkaisun (supply chain, CWE-829).
+
+- **SHA-pinnays:** kaikki actionit — sekä kolmannen osapuolen `SamKirkland/FTP-Deploy-Action` että first-party `actions/checkout` ja `shivammathur/setup-php` — on kiinnitetty tarkistettuun commit-SHA:han, ja perään on kommentoitu vastaava versio (esim. `@110f9186…c287 # v4.4.0`). SHA on muuttumaton, joten ajettava koodi ei voi vaihtua tagin alta.
+- **Versiopäivitykset tarkoituksella:** kun action päivitetään, vaihdetaan SHA uuteen tarkistettuun arvoon ja päivitetään versiokommentti. Secrettejä käyttävissä askelissa ei käytetä `@v*`-tageja. Versiokommentti pitää Dependabotin/manuaalisen päivityksen luettavana.
+- **Ops-jatkotoimi:** jos tagit olivat aiemmin alttiina, harkitse tuotannon FTPS-tunnusten (`PROD_FTP_*`) rotaatiota pinnauksen jälkeen. Tarkista ja päivitä pinnatut SHA:t hallitusti.
+
+> Toteutettu PR #369:ssä (Codex-scanin löydökset 2 ja 5; tiketit #348 ja #349).
 
 ## Palvelintason checklist (ylläpito)
 

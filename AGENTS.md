@@ -73,8 +73,8 @@ Use conventional commits:
 
 ### Commit workflow
 - Do not create commits automatically when a task appears complete
-- First report that the ticket requirements are implemented
-- Then suggest a commit message so the user can review changes in the editor before committing
+- Suggest a conventional commit message at useful review points, including mid-ticket if a coherent partial change is ready to review
+- When the ticket requirements are implemented, report that clearly and suggest the final commit message so the user can review changes in the editor before committing
 
 ### Tool approval discipline
 - Minimize permission prompts.
@@ -273,6 +273,40 @@ Focus:
 - small issues
 - clear scope
 - visible progress
+
+### GitHub Ticket Workflow
+
+When creating GitHub issues for this repository:
+
+- Repository: `Alpine78/rytkoset-wp`
+- Project: `Sukuseuran nettisivu-uudistus` / GitHub Project `Alpine78/3`
+- Always add the issue to the project
+- Assign issues to `Alpine78` unless told otherwise
+- Do not set a milestone unless explicitly requested
+- Do not set a parent issue unless the relationship is clear from the request
+- Set project fields when applicable:
+  - Status: `Next` for actionable near-term tasks, otherwise `Backlog`
+  - Type: `Task`, `Feature`, `Bug`, `Documentation`, `Design`, or `Epic`
+  - Priority: `High`, `Medium`, or `Low`
+- Use existing repository labels; prefer the most specific relevant labels, such as:
+  - `task`
+  - `theme`
+  - `design`
+  - `environment: dev`
+  - `environment: prod`
+  - `woocommerce:*`
+  - `events:*`
+  - `frontend:*`
+  - `testing`
+
+### Pull Request Description Workflow
+
+When a ticket is ready:
+
+- Always provide a PR title and PR description without waiting for a separate request
+- Include a concise summary, key implementation details, and validation performed
+- Mention any validation that could not be run and why
+- Keep the PR description reviewable and tied to the ticket scope
 
 ---
 
