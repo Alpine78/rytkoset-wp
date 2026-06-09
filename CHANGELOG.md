@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Changed
+- `assets/css/nav.css`: poistettu orpo tiedosto. Sitä ei ladattu mistään (ei `style.css`:n `@import`-listassa eikä `wp_enqueue_style()`-kutsussa); navigaatio ladataan moduuleina `nav.base.css`, `nav.desktop.css`, `nav.account.css` ja `nav.mobile.css`. Kuollutta koodia navigaation refaktoroinnista, ei toiminnallista vaikutusta (#341).
 - `docs/woocommerce-membership-products.md`: korjattu ainaisjäsenmaksun kassakäytön testausohje vastaamaan toteutusta; myös ainaisjäsenmaksu aktivoi jäsenrekisteriin tarvittavien tietojen muistiinpano-ohjeen (#359).
 - `README.md`: päivitetty projektin nykyinen paikallinen kehitys, branch/deploy-malli, validointi, rakenne ja dokumentaatiolinkit; poistettu vanhentunut `main` -> dev -deploy-kuvaus ja rajattu agentti-/työskentelyohjeet viittauksiksi `AGENTS.md`, `CONTRIBUTING.md` ja `CLAUDE.md` -tiedostoihin.
 - `docs/newsletter.md`: lisätty AcyMailingin tuotantoonviennin ja ensimmäisen oikean uutiskirjelähetyksen checklist: listat, todettu web-cron/automaattinen lähetysprosessi, cPanel-cron fallbackina, testilähetys, vastaanottajien tarkistus, lähetysnopeus ja jälkiseuranta (#109).
