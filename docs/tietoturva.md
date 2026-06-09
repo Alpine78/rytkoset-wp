@@ -9,6 +9,7 @@ Sivustolla käsitellään henkilötietoja (tapahtumailmoittautumiset, jäsenyyde
 Repossa on versioituna vain `wp-content/`. WordPress-core, liitännäiset, palvelimen `.htaccess` ja palvelinkonfiguraatio ovat repon ulkopuolella. Siksi tietoturva jakautuu kahteen osaan:
 
 - **Teemakoodi** (`inc/security.php`) — alla "Toteutetut kovennukset".
+- **Käyttöönotto / CI** (`.github/workflows/`) — alla "Käyttöönoton tietoturva (GitHub Actions)".
 - **Palvelin / ylläpito** — alla "Palvelintason checklist". Näitä ei voi toteuttaa teemassa.
 
 ## Toteutetut kovennukset (teemakoodi)
@@ -82,6 +83,16 @@ Kirjautuneena ulos:
 - Rekisteröityminen `.casino`-osoitteella → hylätään virheilmoituksella; honeypot-kentän täyttäminen (esim. devtoolsilla) → rekisteröityminen estyy. Tavallinen osoite ja tyhjä honeypot → rekisteröityminen onnistuu normaalisti.
 
 Kirjautuneena: wp-admin ja blokkieditori toimivat normaalisti.
+
+## Käyttöönoton tietoturva (GitHub Actions)
+
+Teema viedään dev- ja tuotantoympäristöön GitHub Actions -työnkuluilla ([`deploy-dev.yml`](../.github/workflows/deploy-dev.yml), [`deploy-production.yml`](../.github/workflows/deploy-production.yml)). Molemmat käyttävät kolmannen osapuolen FTPS-deploy-actionia ja saavat FTPS-tunnukset GitHub-secretteinä (dev: `FTP_*`, tuotanto: `PROD_FTP_*`). Jos action viitataan **muuttuvalla** versiotagilla (esim. `@v4.4.0`), tagin uudelleenkohdennus tai actionin toimitusketjun kompromissi voisi vuotaa deploy-tunnukset tai muuttaa vietäviä tiedostoja kesken hyväksytyn julkaisun (supply chain, CWE-829).
+
+- **SHA-pinnays:** kaikki actionit — sekä kolmannen osapuolen `SamKirkland/FTP-Deploy-Action` että first-party `actions/checkout` ja `shivammathur/setup-php` — on kiinnitetty tarkistettuun commit-SHA:han, ja perään on kommentoitu vastaava versio (esim. `@110f9186…c287 # v4.4.0`). SHA on muuttumaton, joten ajettava koodi ei voi vaihtua tagin alta.
+- **Versiopäivitykset tarkoituksella:** kun action päivitetään, vaihdetaan SHA uuteen tarkistettuun arvoon ja päivitetään versiokommentti. Secrettejä käyttävissä askelissa ei käytetä `@v*`-tageja. Versiokommentti pitää Dependabotin/manuaalisen päivityksen luettavana.
+- **Ops-jatkotoimi:** jos tagit olivat aiemmin alttiina, harkitse tuotannon FTPS-tunnusten (`PROD_FTP_*`) rotaatiota pinnauksen jälkeen. Tarkista ja päivitä pinnatut SHA:t hallitusti.
+
+> Toteutettu PR #369:ssä (Codex-scanin löydökset 2 ja 5; tiketit #348 ja #349).
 
 ## Palvelintason checklist (ylläpito)
 
