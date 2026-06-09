@@ -8,33 +8,10 @@ Version: 1.0.0
 Text Domain: rytkoset-theme
 */
 
-/* Perustyylit ja värit */
-@import url("assets/css/base.css");
-
-/* Layout: containerit, sectionit, gridit */
-@import url("assets/css/layout.css");
-
-/* Hero-osio etusivulla */
-@import url("assets/css/hero.css");
-
-/* Etusivun sisältölohkot (vaalea/tumma-vuorottelu) */
-@import url("assets/css/home.css");
-
-/* 404-sivu (kadonnut oksa sukupuussa) */
-@import url("assets/css/404.css");
-
-/* Komponentit: napit, kortit jne. */
-@import url("assets/css/components.css");
-
-/* Navigaatio: header + mobiilivalikko */
-@import url("assets/css/nav.base.css");
-@import url("assets/css/nav.desktop.css");
-@import url("assets/css/nav.account.css");
-@import url("assets/css/nav.mobile.css");
-
-/* Footer */
-@import url("assets/css/footer.css?v=266-3");
-
-
-/* Media queryt */
-@import url("assets/css/responsive.css");
+/*
+ * Teeman CSS-moduulit ladataan erillisinä wp_enqueue_style()-kutsuina
+ * functions.php:ssä (rytkoset_theme_scripts), ei @import-ketjuna.
+ * @import lataa moduulit sarjallisesti ja renderöintiä estäen; erilliset
+ * enqueuet latautuvat rinnakkain. Kaskadijärjestys säilytetään
+ * riippuvuusketjulla (base → … → responsive viimeisenä).
+ */

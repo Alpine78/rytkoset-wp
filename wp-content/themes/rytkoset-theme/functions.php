@@ -432,13 +432,52 @@ add_filter( 'woocommerce_add_error', 'rytkoset_theme_deduplicate_woocommerce_err
 function rytkoset_theme_scripts() {
 	$theme_version = wp_get_theme()->get( 'Version' );
 
-    // Teeman päätyyli (style.css) – WordPress hoitaa tämän usein automaattisesti, mutta tehdään eksplisiittisesti.
+    // Teeman päätyyli (style.css) – sisältää enää teemaotsakkeen. Pidetään
+    // enqueutettuna moduuliketjun juurena (ja jotta WordPress näkee teeman tyylin).
     wp_enqueue_style(
         'rytkoset-theme-style',
         get_stylesheet_uri(),
         array(),
         $theme_version
     );
+
+    // Teeman CSS-moduulit kaskadijärjestyksessä. Korvaa style.css:n vanhan
+    // @import-ketjun erillisillä enqueueilla, jotta selain voi ladata moduulit
+    // rinnakkain. Jokainen moduuli riippuu edellisestä, joten latausjärjestys
+    // (base → layout/components → … → responsive viimeisenä) säilyy.
+    $css_modules = array(
+        'rytkoset-theme-base'        => 'base.css',
+        'rytkoset-theme-layout'      => 'layout.css',
+        'rytkoset-theme-hero'        => 'hero.css',
+        'rytkoset-theme-home'        => 'home.css',
+        'rytkoset-theme-404'         => '404.css',
+        'rytkoset-theme-components'  => 'components.css',
+        'rytkoset-theme-nav-base'    => 'nav.base.css',
+        'rytkoset-theme-nav-desktop' => 'nav.desktop.css',
+        'rytkoset-theme-nav-account' => 'nav.account.css',
+        'rytkoset-theme-nav-mobile'  => 'nav.mobile.css',
+        'rytkoset-theme-footer'      => 'footer.css',
+        'rytkoset-theme-responsive'  => 'responsive.css',
+    );
+
+    $previous_css_handle = 'rytkoset-theme-style';
+    foreach ( $css_modules as $handle => $filename ) {
+        $module_path    = get_template_directory() . '/assets/css/' . $filename;
+        $module_version = file_exists( $module_path ) ? (string) filemtime( $module_path ) : $theme_version;
+
+        wp_enqueue_style(
+            $handle,
+            get_template_directory_uri() . '/assets/css/' . $filename,
+            array( $previous_css_handle ),
+            $module_version
+        );
+
+        $previous_css_handle = $handle;
+    }
+
+    // Ehdolliset (sivukohtaiset) tyylit ladataan moduuliketjun jälkeen, jotta
+    // ne pääsevät yliajamaan perustyylit kuten ennenkin.
+    $core_css_dependency = $previous_css_handle;
 
     // Mobiilivalikon JS
     wp_enqueue_script(
@@ -470,7 +509,7 @@ function rytkoset_theme_scripts() {
 		wp_enqueue_style(
 			'rytkoset-theme-shop',
 			get_template_directory_uri() . '/assets/css/shop.css',
-			array( 'rytkoset-theme-style' ),
+			array( $core_css_dependency ),
 			$shop_style_version
 		);
 
@@ -498,7 +537,7 @@ function rytkoset_theme_scripts() {
 		wp_enqueue_style(
 			'rytkoset-theme-forum',
 			get_template_directory_uri() . '/assets/css/forum.css',
-			array( 'rytkoset-theme-style' ),
+			array( $core_css_dependency ),
 			$theme_version
 		);
 	}
@@ -507,7 +546,7 @@ function rytkoset_theme_scripts() {
 		wp_enqueue_style(
 			'rytkoset-theme-digital-magazine',
 			get_template_directory_uri() . '/assets/css/digital-magazine.css',
-			array( 'rytkoset-theme-style' ),
+			array( $core_css_dependency ),
 			$theme_version
 		);
 	}
@@ -560,7 +599,7 @@ function rytkoset_theme_scripts() {
         wp_enqueue_style(
             'rytkoset-theme-gallery',
             get_template_directory_uri() . '/assets/css/gallery.css',
-            array( 'rytkoset-theme-style' ),
+            array( $core_css_dependency ),
             $theme_version
         );
 
