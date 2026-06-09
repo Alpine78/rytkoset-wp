@@ -5,9 +5,10 @@
  * Estää käyttäjien luetteloinnin (user enumeration), jolla bottiverkot
  * keräävät kirjautumisnimiä brute-force-hyökkäyksiä varten.
  *
- * Tämä siivu kattaa kaksi klassista automaattisen luetteloinnin vektoria:
+ * Tämä siivu kattaa automaattisen luetteloinnin vektorit:
  *   1. REST API:n `/wp/v2/users` -kokoelma kirjautumattomilta käyttäjiltä
  *   2. `?author=N` -numerokyselyllä tehtävä kirjautumisnimen paljastus
+ *   3. Coren käyttäjäsitemap `/wp-sitemap-users-1.xml`
  *
  * Kirjautuneiden käyttäjien toiminta säilyy ennallaan (mm. wp-admin,
  * blokkieditorin tekijävalinta). Voidaan poistaa kokonaan käytöstä
@@ -98,6 +99,30 @@ if ( ! function_exists( 'rytkoset_theme_block_author_enumeration' ) ) {
 // (template_redirect, prioriteetti 10), joka muutoin ohjaisi `?author=N` ->
 // `/author/<slug>/` ja paljastaisi kirjautumisnimen jo ennen tätä estoa.
 add_action( 'template_redirect', 'rytkoset_theme_block_author_enumeration', 0 );
+
+if ( ! function_exists( 'rytkoset_theme_remove_users_sitemap_provider' ) ) {
+	/**
+	 * Poistaa coren käyttäjäsitemapin (`/wp-sitemap-users-1.xml`).
+	 *
+	 * WordPress 5.5+ julkaisee sitemapin, joka listaa kaikki julkaistuja
+	 * postauksia tehneet tekijät ja paljastaa heidän `/author/<nicename>/`
+	 * -arkistonsa. Tämä on REST- ja `?author=N`-estoista erillinen, edelleen
+	 * avoin käyttäjien luettelointivektori. Muut sitemap-providerit (postit,
+	 * sivut, taksonomiat) säilyvät.
+	 *
+	 * @param WP_Sitemaps_Provider $provider Sitemap-provider.
+	 * @param string               $name     Providerin nimi.
+	 * @return WP_Sitemaps_Provider|false `false` poistaa providerin.
+	 */
+	function rytkoset_theme_remove_users_sitemap_provider( $provider, $name ) {
+		if ( ! rytkoset_theme_security_hardening_enabled() ) {
+			return $provider;
+		}
+
+		return ( 'users' === $name ) ? false : $provider;
+	}
+}
+add_filter( 'wp_sitemaps_add_provider', 'rytkoset_theme_remove_users_sitemap_provider', 10, 2 );
 
 if ( ! function_exists( 'rytkoset_theme_xmlrpc_disabled' ) ) {
 	/**

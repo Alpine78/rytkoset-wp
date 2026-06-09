@@ -21,6 +21,7 @@ Estää bottiverkkoja keräämästä kirjautumisnimiä brute-force-hyökkäyksi�
 
 - **REST API:** `/wp/v2/users` ja `/wp/v2/users/<id>` poistetaan kirjautumattomilta (`rest_endpoints`-suodatin). Kirjautuneet käyttäjät säilyttävät pääsyn, joten wp-admin ja blokkieditorin tekijävalinta toimivat normaalisti.
 - **`?author=N`:** numerokysely ohjataan etusivulle (301) ennen kuin WordPress paljastaa kirjautumisnimen `/author/<slug>/`-osoitteena. `/author/<slug>/`-arkistot säilyvät ennallaan.
+- **Käyttäjäsitemap:** coren `/wp-sitemap-users-1.xml` poistetaan (`wp_sitemaps_add_provider`-suodatin). WordPress 5.5+ listaa siinä kaikki julkaisseet tekijät ja paljastaa heidän `/author/<nicename>/`-arkistonsa. Muut sitemapit (postit, sivut, taksonomiat) säilyvät.
 
 ### XML-RPC estetty
 
@@ -68,6 +69,7 @@ Kirjautuneena ulos:
 
 - `https://dev.rytkoset.net/wp-json/wp/v2/users` → `rest_no_route` (404), ei käyttäjälistaa.
 - `https://dev.rytkoset.net/?author=1` → ohjaus etusivulle.
+- `https://dev.rytkoset.net/wp-sitemap-users-1.xml` → 404; `https://dev.rytkoset.net/wp-sitemap.xml`-hakemistossa ei users-riviä (muut sitemapit näkyvät).
 - `https://dev.rytkoset.net/xmlrpc.php` (POST `system.listMethods`) → ei `pingback.ping`-metodia; todennetut metodit palauttavat virheen.
 - `curl -I https://dev.rytkoset.net/` → neljä tietoturvaotsaketta näkyvät; `X-Pingback` puuttuu.
 - Rekisteröityminen `.casino`-osoitteella → hylätään virheilmoituksella; honeypot-kentän täyttäminen (esim. devtoolsilla) → rekisteröityminen estyy. Tavallinen osoite ja tyhjä honeypot → rekisteröityminen onnistuu normaalisti.
