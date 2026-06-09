@@ -495,6 +495,33 @@ function rytkoset_theme_get_event_participants_csv_filename( $event_id, $selecte
 }
 
 /**
+ * Neutralizes a value before writing it to a CSV cell so spreadsheet software
+ * (Excel, LibreOffice, Google Sheets) does not interpret participant-provided
+ * input as a formula (CSV injection, CWE-1236).
+ *
+ * If the value starts with a formula trigger character (= + - @) or a leading
+ * tab/carriage return, a single quote is prepended. Spreadsheet software treats
+ * the leading apostrophe as a text marker and hides it, so e.g. a phone number
+ * "+358401234567" still displays correctly while "=HYPERLINK(...)" is inert.
+ *
+ * @param string $value Cell value.
+ * @return string Neutralized value.
+ */
+function rytkoset_theme_csv_neutralize_formula( $value ) {
+	$value = (string) $value;
+
+	if ( '' === $value ) {
+		return $value;
+	}
+
+	if ( in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
+		return "'" . $value;
+	}
+
+	return $value;
+}
+
+/**
  * Sends the unified event participant list as a CSV download.
  *
  * @return void
@@ -571,8 +598,11 @@ function rytkoset_theme_export_event_participants_csv() {
 			? __( 'Maksullinen', 'rytkoset-theme' )
 			: __( 'Maksuton', 'rytkoset-theme' );
 
-		fputcsv(
-			$output,
+		// Neutralisoi kaikki solut kaavainjektiota vastaan (CWE-1236); osallistujan
+		// syöttämät kentät (nimi, sähköposti, puhelin, huomiot, yhteyshenkilö) voivat
+		// alkaa taulukkolaskennan kaavamerkillä.
+		$cells = array_map(
+			'rytkoset_theme_csv_neutralize_formula',
 			array(
 				(string) ( $row['event_title'] ?? '' ),
 				(string) ( $row['name'] ?? '' ),
@@ -587,9 +617,10 @@ function rytkoset_theme_export_event_participants_csv() {
 				(string) ( $row['contact_name'] ?? '' ),
 				(string) ( $row['contact_email'] ?? '' ),
 				isset( $row['order_number'] ) && null !== $row['order_number'] ? (string) $row['order_number'] : '',
-			),
-			';'
+			)
 		);
+
+		fputcsv( $output, $cells, ';' );
 	}
 
 	fclose( $output );

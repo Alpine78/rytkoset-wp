@@ -54,6 +54,14 @@ Sivustolla on avoin WordPress-rekisteröityminen (*Asetukset → Yleiset → Jä
 
 > Tämä ei korvaa palvelintason kirjautumisrajoitusta. Jos roskarekisteröinnit jatkuvat suuressa mittakaavassa, harkitse CAPTCHAa tai rekisteröitymisen sulkemista kokonaan (WooCommercen tilin luonti kassalla on erillinen asetus ja säilyy).
 
+### CSV-kaavainjektion esto (osallistujavienti)
+
+Osallistujalistan CSV-vienti (`Events > Participants`, `inc/event-participants-admin.php`) sisältää osallistujien itse syöttämiä kenttiä (nimi, sähköposti, puhelin, ruokavalio/huomiot, yhteyshenkilö). Taulukkolaskenta (Excel, LibreOffice, Google Sheets) tulkitsee `=`, `+`, `-`, `@` tai sarkain-/rivinvaihtomerkillä alkavan solun **kaavaksi**, joten haitallinen ilmoittautuja voisi piilottaa CSV:hen ajettavan kaavan (CSV-injektio, CWE-1236).
+
+- **Neutralisointi:** `rytkoset_theme_csv_neutralize_formula()` lisää kaavamerkillä alkavan solun eteen heittomerkin (`'`). Taulukkolaskenta käsittelee sen tekstimerkkinä ja piilottaa sen, joten esim. puhelinnumero `+358401234567` näkyy normaalisti mutta `=HYPERLINK(...)` jää passiiviseksi tekstiksi. Sovelletaan jokaiseen datasoluun `array_map`-kutsulla ennen `fputcsv`:ää.
+
+> Manuaalinen tarkistus: lisää osallistujaksi nimi tai huomio-kenttä arvolla `=1+1` tai `@SUM(...)`, vie CSV ja avaa Excelissä — solu näkyy tekstinä (`'=1+1`), ei laskettuna kaavana. Tavalliset `+`-alkuiset puhelinnumerot näkyvät oikein.
+
 ### Testaus dev-ympäristössä
 
 Kirjautuneena ulos:
