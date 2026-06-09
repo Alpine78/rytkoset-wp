@@ -69,6 +69,7 @@ The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. Wo
 | `single-gallery_album.php`   | Single album                                        |
 | `archive-rytkoset_event.php` | Event archive (`/tapahtumat`)                       |
 | `archive-gallery_album.php`  | Album archive (`/albumit`)                          |
+| `coming-soon.php`            | WooCommerce "Tulossa pian" page (forced via `inc/coming-soon.php`) |
 | `header.php` / `footer.php`  | Site header; footer = pre-footer band + slim footer |
 
 Front page (#289): `front-page.php` builds a Claude Design layout — a split hero (`.hero__content--split`) with a welcome illustration, a Sukujuhlat **feature** band as the showpiece (date/location chips + floating badge), then alternating light/dark content bands (Albumit, Jäsenyys, Kauppa, Sukututkimus/Viljo). Band tones use the `--home-band-*` tokens (`assets/css/base.css`) which adapt to the dark theme; styles live in `assets/css/home.css`. Illustrations are theme assets under `assets/images/home/`.
@@ -77,7 +78,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 
 ### functions.php and inc/ modules
 
-`functions.php` (~580 lines) contains theme setup, asset enqueue, header/nav helpers, and shared WooCommerce helpers (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Domain-specific logic is split into modules under `inc/`:
+`functions.php` (~880 lines) contains theme setup, asset enqueue, header/nav helpers, the cart link markup helper (`rytkoset_theme_get_cart_link_markup`), bbPress presentation helpers (`rytkoset_theme_forum_avatar`, `rytkoset_theme_forum_color`, `rytkoset_theme_forum_icon`, `rytkoset_theme_bbp_author_name`), and shared WooCommerce helpers (`get_order_from_admin_screen_object`, `get_supported_order_statuses`). Domain-specific logic is split into modules under `inc/`:
 
 | File                                   | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -105,6 +106,7 @@ Footer (Footer C, #278): `footer.php` renders a pre-footer newsletter band above
 | `inc/woocommerce-product-sync.php`     | WooCommerce product sync tool for local <-> dev                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `inc/woocommerce-shop-categories.php`  | Shop category bar: lightweight category link row above the product loop on shop + product category archives (`woocommerce_before_shop_loop`); styles in `shop.css` (`.rytkoset-shop-cats`)                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `inc/customizer-contact.php`           | Customizer contact fields for footer and admin email; maintenance mode concept and return-text settings                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `inc/coming-soon.php`                  | Forces WooCommerce's "Tulossa pian" (coming-soon) page to use the theme's own `coming-soon.php` instead of WC's registered block template, via the `coming-soon_template` filter                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
@@ -145,7 +147,7 @@ Use CSS variables for colors and spacing. No Bootstrap dependency.
 
 ## Custom Post Types
 
-### Event (`event`)
+### Event (`rytkoset_event`)
 
 - Slug: `/tapahtumat/`
 - Registered in: `inc/events.php`
