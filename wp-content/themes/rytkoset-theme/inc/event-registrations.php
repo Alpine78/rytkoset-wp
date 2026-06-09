@@ -622,6 +622,91 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
 }
 
 /**
+ * Returns the client IP for the current request.
+ *
+ * Uses only `REMOTE_ADDR`; forwarded headers (`X-Forwarded-For` etc.) are not
+ * trusted because they are client-spoofable. Behind a reverse proxy this may be
+ * the proxy address, which weakens the per-IP throttle — that is an ops concern,
+ * not a correctness one.
+ *
+ * @return string Validated IP, or empty string when unavailable.
+ */
+function rytkoset_theme_get_event_registration_client_ip() {
+	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+	return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
+}
+
+/**
+ * Maximum free-event registration submissions allowed per IP within the window.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_event_registration_rate_limit() {
+	return (int) apply_filters( 'rytkoset_theme_event_registration_rate_limit', 5 );
+}
+
+/**
+ * Rolling window (seconds) for the per-IP submission rate limit.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_event_registration_rate_limit_window() {
+	return (int) apply_filters( 'rytkoset_theme_event_registration_rate_limit_window', 10 * MINUTE_IN_SECONDS );
+}
+
+/**
+ * Whether the current client IP has exceeded the submission rate limit.
+ *
+ * Lightweight abuse control: a bot bypassing the honeypot could otherwise submit
+ * the public form repeatedly and trigger unbounded receipt emails (mail abuse,
+ * burning the documented ~18 emails/hour host limit) and database writes. A
+ * rolling window of attempt timestamps is stored in a per-IP transient. A
+ * legitimate one-off registration never hits the limit. IP rotation can evade
+ * this, so it is a mitigation, not a hard guarantee. When no IP is available
+ * (e.g. CLI) the request is not blocked. Records the attempt when not limited.
+ *
+ * @return bool True when the submission should be blocked.
+ */
+function rytkoset_theme_event_registration_is_rate_limited() {
+	$ip = rytkoset_theme_get_event_registration_client_ip();
+
+	if ( '' === $ip ) {
+		return false;
+	}
+
+	$limit  = rytkoset_theme_get_event_registration_rate_limit();
+	$window = rytkoset_theme_get_event_registration_rate_limit_window();
+
+	if ( $limit <= 0 || $window <= 0 ) {
+		return false;
+	}
+
+	$key  = 'rytkoset_evt_reg_rl_' . md5( $ip );
+	$now  = time();
+	$hits = get_transient( $key );
+	$hits = is_array( $hits )
+		? array_values(
+			array_filter(
+				$hits,
+				static function ( $timestamp ) use ( $now, $window ) {
+					return ( $now - (int) $timestamp ) < $window;
+				}
+			)
+		)
+		: array();
+
+	if ( count( $hits ) >= $limit ) {
+		return true;
+	}
+
+	$hits[] = $now;
+	set_transient( $key, $hits, $window );
+
+	return false;
+}
+
+/**
  * Redirects back to the event page with a frontend registration error.
  *
  * @param int    $event_id Event post ID.
@@ -668,6 +753,12 @@ function rytkoset_theme_handle_event_registration_submission() {
 
 	if ( ! rytkoset_theme_event_can_show_free_registration_form( $event_id ) ) {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_event' );
+	}
+
+	// Lightweight per-IP throttle so repeated submissions cannot trigger
+	// unbounded receipt emails or database writes. Checked before save + email.
+	if ( rytkoset_theme_event_registration_is_rate_limited() ) {
+		rytkoset_theme_handle_event_registration_error( $event_id, 'rate_limited' );
 	}
 
 	$name  = isset( $_POST['registration_name'] ) ? sanitize_text_field( wp_unslash( $_POST['registration_name'] ) ) : '';
@@ -779,6 +870,7 @@ function rytkoset_theme_get_event_registration_feedback() {
 		'invalid_email'      => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
 		'missing_consent'    => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
 		'already_registered' => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
+		'rate_limited'       => __( 'Liian monta ilmoittautumisyritystä lyhyessä ajassa. Odota hetki ja yritä uudelleen.', 'rytkoset-theme' ),
 	);
 
 	return array(
