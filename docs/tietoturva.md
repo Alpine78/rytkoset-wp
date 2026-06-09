@@ -63,6 +63,13 @@ Osallistujalistan CSV-vienti (`Events > Participants`, `inc/event-participants-a
 
 > Manuaalinen tarkistus: lisää osallistujaksi nimi tai huomio-kenttä arvolla `=1+1` tai `@SUM(...)`, vie CSV ja avaa Excelissä — solu näkyy tekstinä (`'=1+1`), ei laskettuna kaavana. Tavalliset `+`-alkuiset puhelinnumerot näkyvät oikein.
 
+### Ilmoittautumislomakkeen lähetysrajoitus (mail abuse)
+
+Maksuttoman tapahtuman julkinen ilmoittautumislomake (`inc/event-registrations.php`) lähettää onnistuneesta lähetyksestä kuittisähköpostin. Ilman rajoitusta honeypotin ohittava botti voisi lähettää lomakkeen toistuvasti ja synnyttää rajattomasti kuittiviestejä (uhrin postilaatikon pommitus, isännän ~18 sähköpostia/h -rajan polttaminen) ja ilmoittautumistietueita.
+
+- **Per-IP-throttle:** rullaava ikkuna (oletus 5 lähetystä / 10 min) `REMOTE_ADDR`-osoitetta kohden, tallennettuna transienttiin. Rajan ylittävä lähetys hylätään ennen tallennusta ja sähköpostia. Tavallinen yksittäinen ilmoittautuminen ei osu rajaan. Säädettävissä suodattimilla `rytkoset_theme_event_registration_rate_limit` ja `rytkoset_theme_event_registration_rate_limit_window`.
+- **Rajoitteet:** vain `REMOTE_ADDR` (väärennettäviä forwarded-otsakkeita ei luoteta). Käänteisen proxyn takana raja kohdistuu proxyn IP:hen, mikä heikentää suojaa — tämä on palvelintason huoli. IP-kierrätys voi kiertää rajan, joten kyseessä on kevyt mitigaatio, ei tae.
+
 ### Testaus dev-ympäristössä
 
 Kirjautuneena ulos:
