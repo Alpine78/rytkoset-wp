@@ -14,6 +14,57 @@
 defined( 'ABSPATH' ) || exit;
 
 // ---------------------------------------------------------------------------
+// HTTP-otsakkeet — huoltotila on oikea 503-vastaus, ei 200.
+// WordPressin ydin ei lähetä otsakkeita, kun tämä tiedosto on olemassa, joten
+// teemme sen itse. Funktiokutsut suojataan, koska WordPress on vasta osittain
+// ladattu. Tämä on ennen kaikkea tulostusta, jotta otsakkeet ehtivät matkaan.
+// ---------------------------------------------------------------------------
+
+if ( ! headers_sent() ) {
+	header( 'Content-Type: text/html; charset=utf-8' );
+	if ( function_exists( 'status_header' ) ) {
+		status_header( 503 );
+	} else {
+		header( ( isset( $_SERVER['SERVER_PROTOCOL'] ) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.1' ) . ' 503 Service Unavailable', true, 503 );
+	}
+	header( 'Retry-After: 3600' );
+	if ( function_exists( 'nocache_headers' ) ) {
+		nocache_headers();
+	} else {
+		header( 'Cache-Control: no-cache, must-revalidate, max-age=0' );
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Escaping-varafunktiot — WordPressin formatting.php (esc_url/esc_html/esc_attr)
+// latautuu vasta wp_maintenance()-kutsun jälkeen, joten ne eivät ole vielä
+// käytettävissä, kun tämä tiedosto ajetaan oikeasta .maintenance-tilasta.
+// Määritellään kevyet, turvalliset varafunktiot, jos ne puuttuvat. WordPress
+// ajaa die() tämän inkluusion jälkeen, joten redeclare-riskiä ei ole.
+// ---------------------------------------------------------------------------
+
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_attr' ) ) {
+	function esc_attr( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_url' ) ) {
+	function esc_url( $url ) {
+		$url = (string) $url;
+		// Salli vain turvalliset protokollat sekä suhteelliset, mailto- ja ankkuri-URLit.
+		if ( '' !== $url && ! preg_match( '#^(https?:|mailto:|/|\#)#i', $url ) ) {
+			return '';
+		}
+		return htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Perustiedot — WordPressin osittain ladattu tila tarjoaa nämä.
 // ---------------------------------------------------------------------------
 
