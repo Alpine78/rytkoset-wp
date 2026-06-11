@@ -818,6 +818,11 @@ function rytkoset_theme_product_sync_handle_upload() {
 		wp_die( esc_html__( 'Tilapäishakemiston luonti epäonnistui.', 'rytkoset-theme' ) );
 	}
 
+	// Suojaa temp-perushakemisto suoralta selailulta ja siivoa kesken jätetyt
+	// esikatselusessiot ennen uuden purkamista (ei erillistä cronia).
+	rytkoset_theme_product_sync_protect_dir( $base_dir );
+	rytkoset_theme_product_sync_cleanup_stale_sessions();
+
 	$token       = wp_generate_password( 24, false, false );
 	$session_dir = trailingslashit( $base_dir ) . get_current_user_id() . '-' . $token;
 
@@ -2033,6 +2038,10 @@ function rytkoset_theme_product_sync_copy_download_file( $source, $filename ) {
 		return new WP_Error( 'rytkoset_psync_mkdir_failed', __( 'Tilapäishakemiston luonti epäonnistui.', 'rytkoset-theme' ) );
 	}
 
+	// Varmista WooCommercen mukaiset suojaustiedostot, jos sync loi hakemiston
+	// ennen WooCommercea (estää ladattavien tuotetiedostojen suoran selailun).
+	rytkoset_theme_product_sync_protect_dir( $dest_dir );
+
 	$dest_path = trailingslashit( $dest_dir ) . wp_unique_filename( $dest_dir, $filename );
 
 	if ( ! copy( $source, $dest_path ) ) {
@@ -2108,6 +2117,75 @@ function rytkoset_theme_product_sync_render_report( $report ) {
 /* ============================================================================
  * APUFUNKTIOT
  * ============================================================================ */
+
+/**
+ * Luo hakemistoon WooCommerce-tyyliset suojaustiedostot (tyhjä index.html ja
+ * `deny from all` -.htaccess), jos ne puuttuvat. Estää hakemistolistauksen ja
+ * tiedostojen suoran selailun uploads-alueella (vrt. WC_Install::create_files()).
+ *
+ * @param string $dir Hakemistopolku (oltava jo olemassa).
+ * @return void
+ */
+function rytkoset_theme_product_sync_protect_dir( $dir ) {
+	$files = array(
+		'.htaccess'  => 'deny from all',
+		'index.html' => '',
+	);
+
+	foreach ( $files as $name => $content ) {
+		$path = trailingslashit( $dir ) . $name;
+		if ( file_exists( $path ) ) {
+			continue;
+		}
+		$handle = @fopen( $path, 'wb' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+		if ( $handle ) {
+			fwrite( $handle, $content ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
+			fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		}
+	}
+}
+
+/**
+ * Siivoaa orpoutuneet sessiohakemistot temp-perushakemistosta.
+ *
+ * Kesken jätetty esikatselu jättää puretun ZIP-sisällön (ml. ladattavien
+ * tuotteiden tiedostot) levylle, koska sessiohakemisto siivotaan vain
+ * onnistuneen tuonnin tai validointivirheen yhteydessä. Poistaa yli 2 tuntia
+ * vanhat sessiohakemistot — pidempi kuin esikatselu-transientin
+ * HOUR_IN_SECONDS-elinikä, joten aktiivista esikatselua ei poisteta alta.
+ * Suojaustiedostot (index.html, .htaccess) ovat tiedostoja, joten ne säilyvät.
+ *
+ * @return void
+ */
+function rytkoset_theme_product_sync_cleanup_stale_sessions() {
+	$base = rytkoset_theme_product_sync_get_temp_base_dir();
+	if ( ! is_dir( $base ) ) {
+		return;
+	}
+
+	$items = scandir( $base );
+	if ( false === $items ) {
+		return;
+	}
+
+	$max_age = 2 * HOUR_IN_SECONDS;
+	$now     = time();
+
+	foreach ( $items as $item ) {
+		if ( '.' === $item || '..' === $item ) {
+			continue;
+		}
+		$path = trailingslashit( $base ) . $item;
+		if ( ! is_dir( $path ) ) {
+			continue; // Suojaustiedostot säilyvät; vain sessiohakemistot siivotaan.
+		}
+		$mtime = filemtime( $path );
+		if ( false === $mtime || ( $now - $mtime ) < $max_age ) {
+			continue;
+		}
+		rytkoset_theme_product_sync_rrmdir( $path );
+	}
+}
 
 /**
  * Poistaa rekursiivisesti tilapäishakemiston.
