@@ -81,6 +81,47 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 }
 
 /**
+ * Returns all supported-status WooCommerce orders, fetched once per request.
+ *
+ * `rytkoset_theme_get_event_paid_participants()` is called once per event, and
+ * the "all events" participants/messaging/CSV views iterate every event. Without
+ * caching that is O(events × all orders): each call re-queries and re-hydrates
+ * the full order set. A request-level static cache fetches the orders once and
+ * lets each event filter the in-memory list, removing the repeated query.
+ *
+ * @return WC_Order[]
+ */
+function rytkoset_theme_get_cached_paid_orders() {
+	static $orders = null;
+
+	if ( null !== $orders ) {
+		return $orders;
+	}
+
+	if ( ! function_exists( 'wc_get_orders' ) ) {
+		$orders = array();
+
+		return $orders;
+	}
+
+	$orders = wc_get_orders(
+		array(
+			'limit'   => -1,
+			'orderby' => 'date',
+			'order'   => 'DESC',
+			'return'  => 'objects',
+			'status'  => rytkoset_theme_get_supported_order_statuses(),
+		)
+	);
+
+	if ( ! is_array( $orders ) ) {
+		$orders = array();
+	}
+
+	return $orders;
+}
+
+/**
  * Returns normalized rows for paid event participants.
  *
  * Looks up orders that contain the WooCommerce product linked to the event.
@@ -105,17 +146,8 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 	}
 
 	$is_tampere_2026 = rytkoset_theme_is_tampere_2026_registration_product( wc_get_product( $product_id ) );
-	$statuses        = rytkoset_theme_get_supported_order_statuses();
 
-	$orders = wc_get_orders(
-		array(
-			'limit'   => -1,
-			'orderby' => 'date',
-			'order'   => 'DESC',
-			'return'  => 'objects',
-			'status'  => $statuses,
-		)
-	);
+	$orders = rytkoset_theme_get_cached_paid_orders();
 
 	$rows = array();
 
