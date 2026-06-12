@@ -113,6 +113,44 @@ function rytkoset_theme_mollie_gateway_title( $title, $gateway_id ) {
 add_filter( 'woocommerce_gateway_title', 'rytkoset_theme_mollie_gateway_title', 10, 2 );
 
 /**
+ * Moves Mollie's bank-rail gateways to the end of the checkout payment list.
+ *
+ * Mollie settles bank transfer and Pay by Bank through a foreign (NL) account,
+ * which trips the "approve foreign payment / pick a country" step in some
+ * Finnish banks (e.g. POP Pankki) and exposes the hyphenated RF reference that
+ * Finnish banks reject. Cards, Apple Pay and MobilePay have neither problem,
+ * so surface them first and keep the bank-rail methods as a last-resort
+ * fallback. Relative order is otherwise preserved.
+ *
+ * @param array<string, WC_Payment_Gateway> $gateways Available gateways keyed by ID.
+ * @return array<string, WC_Payment_Gateway>
+ */
+function rytkoset_theme_demote_mollie_bank_gateways( $gateways ) {
+	if ( ! is_array( $gateways ) || empty( $gateways ) ) {
+		return $gateways;
+	}
+
+	$demoted_ids = array(
+		'mollie_wc_gateway_banktransfer',
+		'mollie_wc_gateway_paybybank',
+	);
+
+	$primary = array();
+	$demoted = array();
+
+	foreach ( $gateways as $gateway_id => $gateway ) {
+		if ( in_array( $gateway_id, $demoted_ids, true ) ) {
+			$demoted[ $gateway_id ] = $gateway;
+		} else {
+			$primary[ $gateway_id ] = $gateway;
+		}
+	}
+
+	return $primary + $demoted;
+}
+add_filter( 'woocommerce_available_payment_gateways', 'rytkoset_theme_demote_mollie_bank_gateways', 20 );
+
+/**
  * Forces Mollie Components to use Finnish locale when WordPress reports plain "fi".
  *
  * Mollie Components accepts "fi_FI", while WordPress can store the Finnish site
@@ -414,7 +452,7 @@ function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 's
 
 	$message = sprintf(
 		/* translators: %s: RF reference instruction. */
-		__( 'Maksunvälittäjänä toimii Mollie, ja tilisiirto maksetaan hollantilaiseen pankkiin – tämä on normaalia. Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
+		__( 'Maksunvälittäjänä toimii Mollie, ja tilisiirto maksetaan hollantilaiseen pankkiin – tämä on normaalia. Joissakin suomalaisissa pankeissa ulkomaanmaksu pitää hyväksyä erikseen ennen maksamista, ja maksun yhteydessä voi joutua valitsemaan maan. Helpoiten maksat kortilla tai MobilePaylla, jolloin näitä lisävaiheita ei tarvita. Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
 		$reference_instruction
 	);
 
