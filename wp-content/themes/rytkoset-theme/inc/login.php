@@ -90,7 +90,7 @@ function rytkoset_theme_get_login_layout_config() {
 			'brandHeadline'  => __( 'Sukulaisten oma kohtaamispaikka.', 'rytkoset-theme' ),
 			'brandLede'      => __( 'Kirjaudu sisään ja jatka matkaa suvun tarinoiden, kuvien ja tapahtumien parissa.', 'rytkoset-theme' ),
 			'switchText'     => __( 'Ei vielä tunnusta?', 'rytkoset-theme' ),
-			'switchLinkText' => __( 'Luo oma käyttäjätunnuksesi', 'rytkoset-theme' ),
+			'switchLinkText' => __( 'Rekisteröidy', 'rytkoset-theme' ),
 			'switchLinkUrl'  => wp_registration_url(),
 		),
 		'register' => array(
