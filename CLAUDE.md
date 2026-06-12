@@ -23,13 +23,27 @@ Three containers: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `r
 
 ## Linting and CI
 
-No separate build step. PHP syntax validation:
+No separate build step. Two checks run in CI for every PR and `main` push (`.github/workflows/php-ci.yml`):
+
+**1. PHP syntax validation** (`php -l`) — hard gate:
 
 ```bash
 find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
 ```
 
-GitHub Actions runs this automatically for every PR and `main` push (`.github/workflows/php-ci.yml`).
+**2. WordPress Coding Standards** (PHP_CodeSniffer + WPCS) — currently warns only (`continue-on-error: true`).
+
+phpcs is a Composer dev dependency (`composer.json`; the only Composer use in the repo). The ruleset lives in `phpcs.xml.dist` (base `WordPress-Core` + `WordPress.Security`, targets the theme + `wp-content/maintenance.php`, excludes `assets/vendor/`, text domain `rytkoset-theme`, prefix `rytkoset_theme`). Run locally:
+
+```bash
+composer install          # once, installs phpcs + WPCS into vendor/ (gitignored)
+composer run lint         # phpcs — report violations
+composer run lint:fix     # phpcbf — auto-fix whitespace/indentation
+```
+
+The existing codebase still has style/alignment violations being cleaned up in batches (#377), so phpcs is non-blocking for now; tighten to a hard failure once the baseline is clear. Auto-fixing indentation on template files (embedded HTML/CSS) is intentionally deferred — only pure-PHP modules have been reindented to tabs so far.
+
+> Note: phpcbf's `Generic.WhiteSpace.DisallowSpaceIndent` converts leading spaces to tabs at the configured tab width. The PHP modules use 8-space-per-level source indentation, so reindent with `--tab-width=8` to get one tab per level (matching the rest of the codebase) rather than two.
 
 ## Deploy
 
