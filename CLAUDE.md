@@ -23,13 +23,27 @@ Three containers: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `r
 
 ## Linting and CI
 
-No separate build step. PHP syntax validation:
+No separate build step. Two checks run in CI for every PR and `main` push (`.github/workflows/php-ci.yml`):
+
+**1. PHP syntax validation** (`php -l`) — hard gate:
 
 ```bash
 find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
 ```
 
-GitHub Actions runs this automatically for every PR and `main` push (`.github/workflows/php-ci.yml`).
+**2. WordPress Coding Standards** (PHP_CodeSniffer + WPCS) — currently warns only (`continue-on-error: true`).
+
+phpcs is a Composer dev dependency (`composer.json`; the only Composer use in the repo). The ruleset lives in `phpcs.xml.dist` (base `WordPress-Core` + `WordPress.Security`, targets the theme + `wp-content/maintenance.php`, excludes `assets/vendor/`, text domain `rytkoset-theme`, prefix `rytkoset_theme`). Run locally:
+
+```bash
+composer install          # once, installs phpcs + WPCS into vendor/ (gitignored)
+composer run lint         # phpcs — report violations
+composer run lint:fix     # phpcbf — auto-fix whitespace/indentation
+```
+
+The existing codebase still has style/alignment violations being cleaned up in batches (#377), so phpcs is non-blocking for now; tighten to a hard failure once the baseline is clear. Auto-fixing indentation on template files (embedded HTML/CSS) is intentionally deferred — only pure-PHP modules have been reindented to tabs so far.
+
+> Note: phpcbf's `Generic.WhiteSpace.DisallowSpaceIndent` converts leading spaces to tabs at the configured tab width. The PHP modules use 8-space-per-level source indentation, so reindent with `--tab-width=8` to get one tab per level (matching the rest of the codebase) rather than two.
 
 ## Deploy
 
@@ -54,7 +68,7 @@ Do not create commits automatically â€” report the implementation first, su
 
 The theme `wp-content/themes/rytkoset-theme/` is the only versioned codebase. WordPress core and plugins are not in the repo.
 
-`wp-content/maintenance.php` overrides WordPress's built-in maintenance page (shown when a `.maintenance` file exists in the WordPress root, or during core/plugin updates). It is a self-contained PHP/HTML file â€” all CSS is inline, Google Fonts are loaded directly, and theme assets are referenced via `WP_CONTENT_URL`. It reads `get_theme_mod()` values (`rytkoset_theme_maintenance_concept`, `rytkoset_theme_maintenance_return_text`, `rytkoset_theme_contact_email`, `custom_logo`) which are available because WordPress's options and theme APIs load before maintenance mode is triggered. Customizer settings are under **Huoltotila** in the WordPress Customizer.
+`wp-content/maintenance.php` overrides WordPress's built-in maintenance page (shown when a `.maintenance` file exists in the WordPress root, or during core/plugin updates). It is a self-contained PHP/HTML file â€” all CSS is inline, Google Fonts are loaded directly, and theme assets are referenced via `WP_CONTENT_URL`. It reads Customizer values (`rytkoset_theme_maintenance_concept`, `rytkoset_theme_maintenance_return_text`, `rytkoset_theme_contact_email`, `custom_logo`) plus `blogname`/`home`/`siteurl`. **Important:** WordPress runs `wp_maintenance()` very early (`wp-settings.php` line ~79), *before* `option.php`, `$wpdb`, `formatting.php` and the theme/options APIs load — so `get_option()`, `get_theme_mod()`, `esc_*()`, `status_header()` etc. are **not** available. The file therefore: (1) sends `503` + `Retry-After` + no-cache headers itself (`status_header`/`nocache_headers` with raw `header()` fallbacks, #374); (2) defines lightweight `esc_html`/`esc_attr`/`esc_url` fallbacks; (3) opens a DB connection via `require_wp_db()` and reads the needed options + theme mods (`theme_mods_<stylesheet>`, unserialized) directly with `$wpdb`, building the logo URL from `_wp_attached_file` + uploads base URL (#382). Loading `option.php`/`formatting.php` early was rejected: each real `esc_*`/`get_option` call pulls a long dependency chain (`esc_sql` → `kses.php` → UTF-8 helpers) that fatals in the partially-loaded state. Customizer settings are under **Huoltotila** in the WordPress Customizer.
 
 ### Template hierarchy
 

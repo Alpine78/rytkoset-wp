@@ -1,0 +1,19 @@
+{
+	"name": "rytkoset/rytkoset-wp",
+	"description": "Rytkösten sukuseura ry — WordPress-teeman kehitystyökalut (PHP_CodeSniffer / WordPress Coding Standards).",
+	"type": "project",
+	"license": "proprietary",
+	"require-dev": {
+		"wp-coding-standards/wpcs": "^3.1",
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0"
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	},
+	"scripts": {
+		"lint": "phpcs",
+		"lint:fix": "phpcbf"
+	}
+}

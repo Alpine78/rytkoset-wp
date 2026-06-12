@@ -314,68 +314,68 @@ function rytkoset_theme_the_logo( $args = array() ) {
  * @return string Uloskirjautumis-URL.
  */
 function rytkoset_theme_get_logout_url() {
-        return wp_logout_url( home_url( '/' ) );
+	return wp_logout_url( home_url( '/' ) );
 }
 
 /**
  * Fallback-kutsu kirjautuneiden tilivalikolle.
  */
 function rytkoset_theme_account_menu_logged_in_fallback() {
-        $current_user = wp_get_current_user();
+	$current_user = wp_get_current_user();
 
-        if ( ! $current_user instanceof WP_User ) {
-                return;
-        }
+	if ( ! $current_user instanceof WP_User ) {
+		return;
+	}
 
-        $display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
-        $profile_url  = admin_url( 'profile.php' );
-        $avatar       = wp_kses_post( get_avatar( $current_user->ID, 40 ) );
+	$display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
+	$profile_url  = admin_url( 'profile.php' );
+	$avatar       = wp_kses_post( get_avatar( $current_user->ID, 40 ) );
 
-        echo '<ul class="account-nav__list">';
-        echo '<li class="menu-item menu-item-has-children account-menu__user">';
-        echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false" aria-label="' . esc_attr( sprintf( __( 'Avaa tilivalikko (%s)', 'rytkoset-theme' ), $display_name ) ) . '">';
-        echo '<span class="account-menu__avatar">' . $avatar . '</span>';
-        echo '<span class="account-menu__meta">';
-        echo '<span class="account-menu__greeting">' . esc_html__( 'Kirjautunut', 'rytkoset-theme' ) . '</span>';
-        echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
-        echo '</span>';
-        echo '</button>';
-        echo '<ul class="sub-menu" aria-label="' . esc_attr__( 'Tilivalikko', 'rytkoset-theme' ) . '">';
-        echo '<li class="menu-item">';
-        echo '<a href="' . esc_url( $profile_url ) . '">';
-        echo esc_html__( 'Muokkaa profiilia', 'rytkoset-theme' );
-        echo '</a>';
-        echo '</li>';
-        echo '<li class="menu-item">';
-        echo '<a href="' . esc_url( rytkoset_theme_get_logout_url() ) . '">';
-        echo esc_html__( 'Kirjaudu ulos', 'rytkoset-theme' );
-        echo '</a>';
-        echo '</li>';
-        echo '</ul>';
-        echo '</li>';
-        echo '</ul>';
+	echo '<ul class="account-nav__list">';
+	echo '<li class="menu-item menu-item-has-children account-menu__user">';
+	echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false" aria-label="' . esc_attr( sprintf( __( 'Avaa tilivalikko (%s)', 'rytkoset-theme' ), $display_name ) ) . '">';
+	echo '<span class="account-menu__avatar">' . $avatar . '</span>';
+	echo '<span class="account-menu__meta">';
+	echo '<span class="account-menu__greeting">' . esc_html__( 'Kirjautunut', 'rytkoset-theme' ) . '</span>';
+	echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
+	echo '</span>';
+	echo '</button>';
+	echo '<ul class="sub-menu" aria-label="' . esc_attr__( 'Tilivalikko', 'rytkoset-theme' ) . '">';
+	echo '<li class="menu-item">';
+	echo '<a href="' . esc_url( $profile_url ) . '">';
+	echo esc_html__( 'Muokkaa profiilia', 'rytkoset-theme' );
+	echo '</a>';
+	echo '</li>';
+	echo '<li class="menu-item">';
+	echo '<a href="' . esc_url( rytkoset_theme_get_logout_url() ) . '">';
+	echo esc_html__( 'Kirjaudu ulos', 'rytkoset-theme' );
+	echo '</a>';
+	echo '</li>';
+	echo '</ul>';
+	echo '</li>';
+	echo '</ul>';
 }
 
 /**
  * Fallback-kutsu vierailijoiden tilivalikolle.
  */
 function rytkoset_theme_account_menu_logged_out_fallback() {
-        echo '<ul class="account-nav__list">';
-        echo '<li class="menu-item">';
-        echo '<a href="' . esc_url( wp_login_url() ) . '">';
-        echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
-        echo '</a>';
-        echo '</li>';
+	echo '<ul class="account-nav__list">';
+	echo '<li class="menu-item">';
+	echo '<a href="' . esc_url( wp_login_url() ) . '">';
+	echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
+	echo '</a>';
+	echo '</li>';
 
-        if ( get_option( 'users_can_register' ) && wp_registration_url() ) {
-                echo '<li class="menu-item">';
-                echo '<a href="' . esc_url( wp_registration_url() ) . '">';
-                echo esc_html__( 'Rekisteröidy', 'rytkoset-theme' );
-                echo '</a>';
-                echo '</li>';
-        }
+	if ( get_option( 'users_can_register' ) && wp_registration_url() ) {
+		echo '<li class="menu-item">';
+		echo '<a href="' . esc_url( wp_registration_url() ) . '">';
+		echo esc_html__( 'Rekisteröidy', 'rytkoset-theme' );
+		echo '</a>';
+		echo '</li>';
+	}
 
-        echo '</ul>';
+	echo '</ul>';
 }
 
 /**
@@ -435,10 +435,10 @@ function rytkoset_theme_scripts() {
     // Teeman päätyyli (style.css) – sisältää enää teemaotsakkeen. Pidetään
     // enqueutettuna moduuliketjun juurena (ja jotta WordPress näkee teeman tyylin).
     wp_enqueue_style(
-        'rytkoset-theme-style',
-        get_stylesheet_uri(),
-        array(),
-        $theme_version
+	'rytkoset-theme-style',
+	get_stylesheet_uri(),
+	array(),
+	$theme_version
     );
 
     // Teeman CSS-moduulit kaskadijärjestyksessä. Korvaa style.css:n vanhan
@@ -446,33 +446,33 @@ function rytkoset_theme_scripts() {
     // rinnakkain. Jokainen moduuli riippuu edellisestä, joten latausjärjestys
     // (base → layout/components → … → responsive viimeisenä) säilyy.
     $css_modules = array(
-        'rytkoset-theme-base'        => 'base.css',
-        'rytkoset-theme-layout'      => 'layout.css',
-        'rytkoset-theme-hero'        => 'hero.css',
-        'rytkoset-theme-home'        => 'home.css',
-        'rytkoset-theme-404'         => '404.css',
-        'rytkoset-theme-components'  => 'components.css',
-        'rytkoset-theme-nav-base'    => 'nav.base.css',
-        'rytkoset-theme-nav-desktop' => 'nav.desktop.css',
-        'rytkoset-theme-nav-account' => 'nav.account.css',
-        'rytkoset-theme-nav-mobile'  => 'nav.mobile.css',
-        'rytkoset-theme-footer'      => 'footer.css',
-        'rytkoset-theme-responsive'  => 'responsive.css',
+	'rytkoset-theme-base'        => 'base.css',
+	'rytkoset-theme-layout'      => 'layout.css',
+	'rytkoset-theme-hero'        => 'hero.css',
+	'rytkoset-theme-home'        => 'home.css',
+	'rytkoset-theme-404'         => '404.css',
+	'rytkoset-theme-components'  => 'components.css',
+	'rytkoset-theme-nav-base'    => 'nav.base.css',
+	'rytkoset-theme-nav-desktop' => 'nav.desktop.css',
+	'rytkoset-theme-nav-account' => 'nav.account.css',
+	'rytkoset-theme-nav-mobile'  => 'nav.mobile.css',
+	'rytkoset-theme-footer'      => 'footer.css',
+	'rytkoset-theme-responsive'  => 'responsive.css',
     );
 
     $previous_css_handle = 'rytkoset-theme-style';
     foreach ( $css_modules as $handle => $filename ) {
-        $module_path    = get_template_directory() . '/assets/css/' . $filename;
-        $module_version = file_exists( $module_path ) ? (string) filemtime( $module_path ) : $theme_version;
+	$module_path    = get_template_directory() . '/assets/css/' . $filename;
+	$module_version = file_exists( $module_path ) ? (string) filemtime( $module_path ) : $theme_version;
 
-        wp_enqueue_style(
-            $handle,
-            get_template_directory_uri() . '/assets/css/' . $filename,
-            array( $previous_css_handle ),
-            $module_version
-        );
+	wp_enqueue_style(
+	    $handle,
+	    get_template_directory_uri() . '/assets/css/' . $filename,
+	    array( $previous_css_handle ),
+	    $module_version
+	);
 
-        $previous_css_handle = $handle;
+	$previous_css_handle = $handle;
     }
 
     // Ehdolliset (sivukohtaiset) tyylit ladataan moduuliketjun jälkeen, jotta
@@ -481,22 +481,22 @@ function rytkoset_theme_scripts() {
 
     // Mobiilivalikon JS
     wp_enqueue_script(
-        'rytkoset-theme-main',
-        get_template_directory_uri() . '/assets/js/main.js',
-        array(),
-        $theme_version,
-        true // footer
+	'rytkoset-theme-main',
+	get_template_directory_uri() . '/assets/js/main.js',
+	array(),
+	$theme_version,
+	true // footer
     );
 
     // Jakopainikkeiden JS (Web Share API + clipboard-fallback)
     if ( is_singular() ) {
-        wp_enqueue_script(
-            'rytkoset-theme-share',
-            get_template_directory_uri() . '/assets/js/share.js',
-            array(),
-            $theme_version,
-            true // footer
-        );
+	wp_enqueue_script(
+	    'rytkoset-theme-share',
+	    get_template_directory_uri() . '/assets/js/share.js',
+	    array(),
+	    $theme_version,
+	    true // footer
+	);
     }
 
 	if (
@@ -576,78 +576,78 @@ function rytkoset_theme_scripts() {
 
     // Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
     if (
-        is_post_type_archive( 'gallery_album' )
-        || is_singular( 'gallery_album' )
-        || get_query_var( 'gallery_album' )
-        || 'gallery_album' === get_query_var( 'post_type' )
+	is_post_type_archive( 'gallery_album' )
+	|| is_singular( 'gallery_album' )
+	|| get_query_var( 'gallery_album' )
+	|| 'gallery_album' === get_query_var( 'post_type' )
     ) {
-        $photoswipe_version = '5.4.4';
-        $photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
+	$photoswipe_version = '5.4.4';
+	$photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
 
-        // WooCommerce registers PhotoSwipe 4 under legacy handles that clash
-        // with the theme gallery. Remove them on album pages so the theme can
-        // load PhotoSwipe 5 consistently.
-        wp_dequeue_script( 'wc-photoswipe' );
-        wp_deregister_script( 'wc-photoswipe' );
-        wp_dequeue_script( 'wc-photoswipe-ui-default' );
-        wp_deregister_script( 'wc-photoswipe-ui-default' );
-        wp_dequeue_style( 'photoswipe' );
-        wp_deregister_style( 'photoswipe' );
-        wp_dequeue_style( 'photoswipe-default-skin' );
-        wp_deregister_style( 'photoswipe-default-skin' );
+	// WooCommerce registers PhotoSwipe 4 under legacy handles that clash
+	// with the theme gallery. Remove them on album pages so the theme can
+	// load PhotoSwipe 5 consistently.
+	wp_dequeue_script( 'wc-photoswipe' );
+	wp_deregister_script( 'wc-photoswipe' );
+	wp_dequeue_script( 'wc-photoswipe-ui-default' );
+	wp_deregister_script( 'wc-photoswipe-ui-default' );
+	wp_dequeue_style( 'photoswipe' );
+	wp_deregister_style( 'photoswipe' );
+	wp_dequeue_style( 'photoswipe-default-skin' );
+	wp_deregister_style( 'photoswipe-default-skin' );
 
-        wp_enqueue_style(
-            'rytkoset-theme-gallery',
-            get_template_directory_uri() . '/assets/css/gallery.css',
-            array( $core_css_dependency ),
-            $theme_version
-        );
+	wp_enqueue_style(
+	    'rytkoset-theme-gallery',
+	    get_template_directory_uri() . '/assets/css/gallery.css',
+	    array( $core_css_dependency ),
+	    $theme_version
+	);
 
-        wp_enqueue_style(
-            'rytkoset-photoswipe-style',
-            $photoswipe_base . '/photoswipe.css',
-            array(),
-            $photoswipe_version
-        );
+	wp_enqueue_style(
+	    'rytkoset-photoswipe-style',
+	    $photoswipe_base . '/photoswipe.css',
+	    array(),
+	    $photoswipe_version
+	);
 
-        wp_enqueue_script(
-            'rytkoset-photoswipe-core',
-            $photoswipe_base . '/photoswipe.umd.min.js',
-            array(),
-            $photoswipe_version,
-            true
-        );
+	wp_enqueue_script(
+	    'rytkoset-photoswipe-core',
+	    $photoswipe_base . '/photoswipe.umd.min.js',
+	    array(),
+	    $photoswipe_version,
+	    true
+	);
 
-        wp_enqueue_script(
-            'rytkoset-photoswipe-lightbox',
-            $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
-            array( 'rytkoset-photoswipe-core' ),
-            $photoswipe_version,
-            true
-        );
+	wp_enqueue_script(
+	    'rytkoset-photoswipe-lightbox',
+	    $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
+	    array( 'rytkoset-photoswipe-core' ),
+	    $photoswipe_version,
+	    true
+	);
 
-        wp_enqueue_script(
-            'rytkoset-photoswipe-init',
-            get_template_directory_uri() . '/assets/js/photoswipe-init.js',
-            array( 'rytkoset-photoswipe-lightbox' ),
-            $theme_version,
-            true
-        );
+	wp_enqueue_script(
+	    'rytkoset-photoswipe-init',
+	    get_template_directory_uri() . '/assets/js/photoswipe-init.js',
+	    array( 'rytkoset-photoswipe-lightbox' ),
+	    $theme_version,
+	    true
+	);
 
-        wp_add_inline_script(
-            'rytkoset-photoswipe-init',
-            'window.rytkosetPhotoSwipe = ' . wp_json_encode(
-                array(
-                    'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
-                    'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
-                    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
-                    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
-                    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
-                    'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
-                )
-            ) . ';',
-            'before'
-        );
+	wp_add_inline_script(
+	    'rytkoset-photoswipe-init',
+	    'window.rytkosetPhotoSwipe = ' . wp_json_encode(
+		array(
+		    'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
+		    'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
+		    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
+		    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
+		    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
+		    'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
+		)
+	    ) . ';',
+	    'before'
+	);
     }
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
@@ -770,7 +770,7 @@ function rytkoset_theme_forum_avatar( $display_name, $size = 'md' ) {
 	$words  = array_values( array_filter( explode( ' ', $name ) ) );
 	if ( count( $words ) >= 2 ) {
 		$initials = mb_strtoupper( mb_substr( $words[0], 0, 1 ) ) .
-		            mb_strtoupper( mb_substr( end( $words ), 0, 1 ) );
+			    mb_strtoupper( mb_substr( end( $words ), 0, 1 ) );
 	} else {
 		$initials = mb_strtoupper( mb_substr( $name, 0, 2 ) );
 	}

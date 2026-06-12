@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<ruleset name="Rytköset Theme">
+	<description>WordPress Coding Standards Rytkösten sukuseuran teemalle.</description>
+
+	<!-- Tarkistuskohteet: teema ja erillinen huoltotilasivu. -->
+	<file>wp-content/themes/rytkoset-theme</file>
+	<file>wp-content/maintenance.php</file>
+
+	<!-- Vain PHP-tiedostot. -->
+	<arg name="extensions" value="php"/>
+
+	<!-- Näytä sniff-koodit (s) ja edistyminen (p), värit päälle. -->
+	<arg value="ps"/>
+	<arg name="colors"/>
+
+	<!-- Vendoroidut kirjastot ovat kolmannen osapuolen koodia. -->
+	<exclude-pattern>*/assets/vendor/*</exclude-pattern>
+
+	<!-- Aloitus: ydintyyli + tietoturva. Kiristetään myöhemmin (#377). -->
+	<rule ref="WordPress-Core"/>
+	<rule ref="WordPress.Security"/>
+
+	<!-- Teeman tekstidomain i18n-tarkistuksiin. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="rytkoset-theme"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Projektin globaali prefix. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="rytkoset_theme"/>
+				<element value="rytkoset"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Tuettu WordPress-minimiversio deprekaatiotarkistuksiin. -->
+	<config name="minimum_wp_version" value="6.0"/>
+</ruleset>

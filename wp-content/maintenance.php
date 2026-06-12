@@ -14,43 +14,174 @@
 defined( 'ABSPATH' ) || exit;
 
 // ---------------------------------------------------------------------------
-// Perustiedot — WordPressin osittain ladattu tila tarjoaa nämä.
+// HTTP-otsakkeet — huoltotila on oikea 503-vastaus, ei 200.
+// WordPressin ydin ei lähetä otsakkeita, kun tämä tiedosto on olemassa, joten
+// teemme sen itse. Funktiokutsut suojataan, koska WordPress on vasta osittain
+// ladattu. Tämä on ennen kaikkea tulostusta, jotta otsakkeet ehtivät matkaan.
 // ---------------------------------------------------------------------------
 
-$mnt_site_name    = function_exists( 'get_option' ) ? (string) get_option( 'blogname', 'Rytkösten sukuseura' ) : 'Rytkösten sukuseura';
-$mnt_home_url     = function_exists( 'home_url' ) ? esc_url( home_url( '/' ) ) : '/';
-$mnt_login_url    = function_exists( 'wp_login_url' ) ? esc_url( wp_login_url() ) : '/wp-login.php';
-$mnt_theme_url    = defined( 'WP_CONTENT_URL' ) ? WP_CONTENT_URL . '/themes/rytkoset-theme' : '/wp-content/themes/rytkoset-theme';
-
-// Yhteyssähköposti
-$mnt_email = 'info@rytkoset.net';
-if ( function_exists( 'get_theme_mod' ) ) {
-	$mnt_email_raw = get_theme_mod( 'rytkoset_theme_contact_email', 'info@rytkoset.net' );
-	if ( function_exists( 'sanitize_email' ) && $mnt_email_raw ) {
-		$mnt_email = sanitize_email( $mnt_email_raw ) ?: 'info@rytkoset.net';
+if ( ! headers_sent() ) {
+	header( 'Content-Type: text/html; charset=utf-8' );
+	if ( function_exists( 'status_header' ) ) {
+		status_header( 503 );
+	} else {
+		header( ( isset( $_SERVER['SERVER_PROTOCOL'] ) ? $_SERVER['SERVER_PROTOCOL'] : 'HTTP/1.1' ) . ' 503 Service Unavailable', true, 503 );
+	}
+	header( 'Retry-After: 3600' );
+	if ( function_exists( 'nocache_headers' ) ) {
+		nocache_headers();
+	} else {
+		header( 'Cache-Control: no-cache, must-revalidate, max-age=0' );
 	}
 }
 
-// Viestisävy (customizer-asetus)
+// ---------------------------------------------------------------------------
+// Tietokantayhteys — $wpdb ei ole vielä käytettävissä, kun WordPress ajaa
+// tämän wp_maintenance()-kutsusta (wp-settings.php pystyttää $wpdb:n vasta
+// tämän jälkeen). require_wp_db() (load.php, ladattu) avaa yhteyden pelkillä
+// wp-config.php:n DB-vakioilla.
+//
+// Emme lataa option.php:tä emmekä formatting.php:tä: get_option() →
+// wp_load_alloptions() vaatii esc_sql():n, ja oikeat esc_*-funktiot vetävät
+// edelleen kses.php:n ja UTF-8-apufunktiot — pitkä, hauras riippuvuusketju,
+// joka ajetaan WordPressin vasta osittain ladatussa tilassa. Sen sijaan luemme
+// tarvittavat optiot suoraan kannasta alla ja käytämme kevyitä esc_*-
+// varafunktioita (määritellään seuraavassa lohkossa).
+// ---------------------------------------------------------------------------
+
+if ( ! isset( $GLOBALS['wpdb'] ) && function_exists( 'require_wp_db' ) ) {
+	require_wp_db();
+}
+
+// ---------------------------------------------------------------------------
+// Escaping-varafunktiot — WordPressin formatting.php (esc_url/esc_html/esc_attr)
+// latautuu vasta wp_maintenance()-kutsun jälkeen, joten ne eivät ole vielä
+// käytettävissä, kun tämä tiedosto ajetaan oikeasta .maintenance-tilasta.
+// Määritellään kevyet, turvalliset varafunktiot, jos ne puuttuvat. WordPress
+// ajaa die() tämän inkluusion jälkeen, joten redeclare-riskiä ei ole.
+// ---------------------------------------------------------------------------
+
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_attr' ) ) {
+	function esc_attr( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+if ( ! function_exists( 'esc_url' ) ) {
+	function esc_url( $url ) {
+		$url = (string) $url;
+		// Salli vain turvalliset protokollat sekä suhteelliset, mailto- ja ankkuri-URLit.
+		if ( '' !== $url && ! preg_match( '#^(https?:|mailto:|/|\#)#i', $url ) ) {
+			return '';
+		}
+		return htmlspecialchars( $url, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Perustiedot ja Customizer-asetukset — luetaan suoraan kannasta $wpdb:llä.
+// get_option()/get_theme_mod() eivät ole käytettävissä tässä vaiheessa, joten
+// haetaan tarvittavat option-rivit yhdellä kyselyllä. Theme mods ovat
+// serialisoituna wp_options-rivillä theme_mods_<stylesheet>. Jos $wpdb ei ole
+// käytettävissä tai kysely epäonnistuu, kaikki putoaa oletuksiin.
+// ---------------------------------------------------------------------------
+
+$mnt_wpdb    = isset( $GLOBALS['wpdb'] ) ? $GLOBALS['wpdb'] : null;
+$mnt_prefix  = isset( $GLOBALS['table_prefix'] ) ? (string) $GLOBALS['table_prefix'] : 'wp_';
+$mnt_options = array();
+
+if ( null !== $mnt_wpdb ) {
+	$mnt_rows = $mnt_wpdb->get_results(
+		"SELECT option_name, option_value FROM `{$mnt_prefix}options`
+		 WHERE option_name IN ( 'blogname', 'home', 'siteurl', 'stylesheet', 'upload_url_path' )",
+		ARRAY_A
+	);
+	if ( is_array( $mnt_rows ) ) {
+		foreach ( $mnt_rows as $mnt_row ) {
+			$mnt_options[ $mnt_row['option_name'] ] = $mnt_row['option_value'];
+		}
+	}
+}
+
+// Sivuston nimi
+$mnt_site_name = isset( $mnt_options['blogname'] ) && '' !== trim( (string) $mnt_options['blogname'] )
+	? (string) $mnt_options['blogname']
+	: 'Rytkösten sukuseura';
+
+// URLit (kevyt rtrim, koska trailingslashit (formatting.php) ei ole ladattu)
+$mnt_home_raw  = isset( $mnt_options['home'] ) ? (string) $mnt_options['home'] : '';
+$mnt_home_url  = '' !== $mnt_home_raw ? esc_url( rtrim( $mnt_home_raw, '/' ) . '/' ) : '/';
+$mnt_site_raw  = isset( $mnt_options['siteurl'] ) ? (string) $mnt_options['siteurl'] : '';
+$mnt_login_url = '' !== $mnt_site_raw ? esc_url( rtrim( $mnt_site_raw, '/' ) . '/wp-login.php' ) : '/wp-login.php';
+$mnt_theme_url = defined( 'WP_CONTENT_URL' ) ? WP_CONTENT_URL . '/themes/rytkoset-theme' : '/wp-content/themes/rytkoset-theme';
+
+// Theme mods (Customizer): serialisoitu array rivillä theme_mods_<stylesheet>.
+$mnt_theme_mods = array();
+if ( null !== $mnt_wpdb ) {
+	$mnt_stylesheet = isset( $mnt_options['stylesheet'] ) && '' !== $mnt_options['stylesheet']
+		? (string) $mnt_options['stylesheet']
+		: 'rytkoset-theme';
+	$mnt_mods_raw = $mnt_wpdb->get_var(
+		$mnt_wpdb->prepare(
+			"SELECT option_value FROM `{$mnt_prefix}options` WHERE option_name = %s LIMIT 1",
+			'theme_mods_' . $mnt_stylesheet
+		)
+	);
+	if ( is_string( $mnt_mods_raw ) && '' !== $mnt_mods_raw ) {
+		// theme_mods on luotetusti ylläpidon tallentama scalar-array; estetään
+		// silti objektien deserialisointi varmuuden vuoksi.
+		$mnt_mods_decoded = unserialize( $mnt_mods_raw, array( 'allowed_classes' => false ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize
+		if ( is_array( $mnt_mods_decoded ) ) {
+			$mnt_theme_mods = $mnt_mods_decoded;
+		}
+	}
+}
+
+// Yhteyssähköposti — sanitize_email ei ole käytettävissä, joten validoidaan
+// natiivilla filter_var():lla ja escapataan vasta tulostuksessa.
+$mnt_email = 'info@rytkoset.net';
+if ( ! empty( $mnt_theme_mods['rytkoset_theme_contact_email'] ) && is_string( $mnt_theme_mods['rytkoset_theme_contact_email'] ) ) {
+	$mnt_email_candidate = trim( $mnt_theme_mods['rytkoset_theme_contact_email'] );
+	if ( filter_var( $mnt_email_candidate, FILTER_VALIDATE_EMAIL ) ) {
+		$mnt_email = $mnt_email_candidate;
+	}
+}
+
+// Viestisävy ja paluuteksti (customizer-asetukset)
 $mnt_concept     = 'uudistus';
 $mnt_return_text = '';
-if ( function_exists( 'get_theme_mod' ) ) {
-	$concept_raw = get_theme_mod( 'rytkoset_theme_maintenance_concept', 'uudistus' );
-	if ( in_array( $concept_raw, array( 'uudistus', 'huolto', 'talkoot' ), true ) ) {
-		$mnt_concept = $concept_raw;
-	}
-	$mnt_return_text = (string) get_theme_mod( 'rytkoset_theme_maintenance_return_text', '' );
+if ( isset( $mnt_theme_mods['rytkoset_theme_maintenance_concept'] )
+	&& in_array( $mnt_theme_mods['rytkoset_theme_maintenance_concept'], array( 'uudistus', 'huolto', 'talkoot' ), true )
+) {
+	$mnt_concept = $mnt_theme_mods['rytkoset_theme_maintenance_concept'];
+}
+if ( isset( $mnt_theme_mods['rytkoset_theme_maintenance_return_text'] ) ) {
+	$mnt_return_text = (string) $mnt_theme_mods['rytkoset_theme_maintenance_return_text'];
 }
 
-// Logo-URL (customizer custom_logo)
+// Logo-URL (customizer custom_logo). wp_get_attachment_image_src / wp_upload_dir
+// eivät ole käytettävissä, joten haetaan liitetiedoston polku suoraan kannasta
+// ja rakennetaan URL uploads-perus-URL:sta. _wp_attached_file sisältää jo
+// vuosi/kuukausi-alihakemiston.
 $mnt_logo_url = '';
-if ( function_exists( 'get_theme_mod' ) && function_exists( 'wp_get_attachment_image_src' ) ) {
-	$logo_id = get_theme_mod( 'custom_logo' );
-	if ( $logo_id ) {
-		$logo_src = wp_get_attachment_image_src( (int) $logo_id, 'full' );
-		if ( is_array( $logo_src ) && ! empty( $logo_src[0] ) ) {
-			$mnt_logo_url = esc_url( $logo_src[0] );
+$mnt_logo_id  = isset( $mnt_theme_mods['custom_logo'] ) ? (int) $mnt_theme_mods['custom_logo'] : 0;
+if ( $mnt_logo_id > 0 && null !== $mnt_wpdb ) {
+	$mnt_attached = $mnt_wpdb->get_var(
+		$mnt_wpdb->prepare(
+			"SELECT meta_value FROM `{$mnt_prefix}postmeta` WHERE post_id = %d AND meta_key = '_wp_attached_file' LIMIT 1",
+			$mnt_logo_id
+		)
+	);
+	if ( is_string( $mnt_attached ) && '' !== $mnt_attached ) {
+		$mnt_uploads_baseurl = isset( $mnt_options['upload_url_path'] ) ? (string) $mnt_options['upload_url_path'] : '';
+		if ( '' === $mnt_uploads_baseurl ) {
+			$mnt_uploads_baseurl = ( defined( 'WP_CONTENT_URL' ) ? WP_CONTENT_URL : '/wp-content' ) . '/uploads';
 		}
+		$mnt_logo_url = esc_url( rtrim( $mnt_uploads_baseurl, '/' ) . '/' . ltrim( $mnt_attached, '/' ) );
 	}
 }
 

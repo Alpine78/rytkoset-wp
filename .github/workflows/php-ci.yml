@@ -18,7 +18,19 @@ jobs:
         with:
           php-version: "8.3"
           coverage: none
+          tools: composer
 
       - name: Lint PHP files in theme
         run: |
           find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Install Composer dev dependencies (PHPCS + WPCS)
+        run: composer install --no-interaction --no-progress
+
+      # WordPress Coding Standards. Warns only for now (continue-on-error):
+      # the existing codebase still has style/alignment violations that are
+      # cleaned up in batches (#377). Tighten to a hard failure once the
+      # baseline is clear. `php -l` above stays a hard gate.
+      - name: PHP_CodeSniffer (WordPress Coding Standards)
+        continue-on-error: true
+        run: composer run lint
