@@ -397,6 +397,9 @@ body.login .forgetmenot {
   justify-content: space-between;
   gap: 12px;
   margin: 6px 0 22px;
+  /* Room for the checkbox focus ring (outline 3px + offset 2px) so it stays
+     inside the form's left edge instead of protruding past it. */
+  padding-left: 5px;
 }
 body.login .forgetmenot label {
   display: inline-flex;
