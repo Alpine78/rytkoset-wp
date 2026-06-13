@@ -7,6 +7,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * Returns a cache-busting version for a local theme asset.
+ *
+ * @param string $file_path Absolute filesystem path to the asset.
+ * @return string
+ */
+function rytkoset_theme_get_asset_version( $file_path ) {
+	$modified_time = is_file( $file_path ) ? filemtime( $file_path ) : false;
+
+	return false !== $modified_time
+		? (string) $modified_time
+		: (string) wp_get_theme()->get( 'Version' );
+}
+
 require_once get_template_directory() . '/inc/security.php';
 require_once get_template_directory() . '/inc/icons.php';
 require_once get_template_directory() . '/inc/social-links.php';
@@ -430,15 +444,13 @@ add_filter( 'woocommerce_add_error', 'rytkoset_theme_deduplicate_woocommerce_err
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
-	$theme_version = wp_get_theme()->get( 'Version' );
-
     // Teeman päätyyli (style.css) – sisältää enää teemaotsakkeen. Pidetään
     // enqueutettuna moduuliketjun juurena (ja jotta WordPress näkee teeman tyylin).
     wp_enqueue_style(
 	'rytkoset-theme-style',
 	get_stylesheet_uri(),
 	array(),
-	$theme_version
+	rytkoset_theme_get_asset_version( get_stylesheet_directory() . '/style.css' )
     );
 
     // Teeman CSS-moduulit kaskadijärjestyksessä. Korvaa style.css:n vanhan
@@ -462,14 +474,13 @@ function rytkoset_theme_scripts() {
 
     $previous_css_handle = 'rytkoset-theme-style';
     foreach ( $css_modules as $handle => $filename ) {
-	$module_path    = get_template_directory() . '/assets/css/' . $filename;
-	$module_version = file_exists( $module_path ) ? (string) filemtime( $module_path ) : $theme_version;
+	$module_path = get_template_directory() . '/assets/css/' . $filename;
 
 	wp_enqueue_style(
 	    $handle,
 	    get_template_directory_uri() . '/assets/css/' . $filename,
 	    array( $previous_css_handle ),
-	    $module_version
+	    rytkoset_theme_get_asset_version( $module_path )
 	);
 
 	$previous_css_handle = $handle;
@@ -484,7 +495,7 @@ function rytkoset_theme_scripts() {
 	'rytkoset-theme-main',
 	get_template_directory_uri() . '/assets/js/main.js',
 	array(),
-	$theme_version,
+	rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/main.js' ),
 	true // footer
     );
 
@@ -494,7 +505,7 @@ function rytkoset_theme_scripts() {
 	    'rytkoset-theme-share',
 	    get_template_directory_uri() . '/assets/js/share.js',
 	    array(),
-	    $theme_version,
+	    rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/share.js' ),
 	    true // footer
 	);
     }
@@ -503,21 +514,18 @@ function rytkoset_theme_scripts() {
 		function_exists( 'is_woocommerce' )
 		&& ( is_woocommerce() || is_cart() || is_checkout() )
 	) {
-		$shop_style_path    = get_template_directory() . '/assets/css/shop.css';
-		$shop_style_version = file_exists( $shop_style_path ) ? (string) filemtime( $shop_style_path ) : $theme_version;
-
 		wp_enqueue_style(
 			'rytkoset-theme-shop',
 			get_template_directory_uri() . '/assets/css/shop.css',
 			array( $core_css_dependency ),
-			$shop_style_version
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/shop.css' )
 		);
 
 		wp_enqueue_script(
 			'rytkoset-theme-shop-select',
 			get_template_directory_uri() . '/assets/js/shop-select.js',
 			array(),
-			$theme_version,
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/shop-select.js' ),
 			true
 		);
 
@@ -538,7 +546,7 @@ function rytkoset_theme_scripts() {
 			'rytkoset-theme-forum',
 			get_template_directory_uri() . '/assets/css/forum.css',
 			array( $core_css_dependency ),
-			$theme_version
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/forum.css' )
 		);
 	}
 
@@ -547,7 +555,7 @@ function rytkoset_theme_scripts() {
 			'rytkoset-theme-digital-magazine',
 			get_template_directory_uri() . '/assets/css/digital-magazine.css',
 			array( $core_css_dependency ),
-			$theme_version
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/digital-magazine.css' )
 		);
 	}
 
@@ -581,8 +589,8 @@ function rytkoset_theme_scripts() {
 	|| get_query_var( 'gallery_album' )
 	|| 'gallery_album' === get_query_var( 'post_type' )
     ) {
-	$photoswipe_version = '5.4.4';
-	$photoswipe_base    = get_template_directory_uri() . '/assets/vendor/photoswipe';
+	$photoswipe_base      = get_template_directory_uri() . '/assets/vendor/photoswipe';
+	$photoswipe_base_path = get_template_directory() . '/assets/vendor/photoswipe';
 
 	// WooCommerce registers PhotoSwipe 4 under legacy handles that clash
 	// with the theme gallery. Remove them on album pages so the theme can
@@ -600,21 +608,21 @@ function rytkoset_theme_scripts() {
 	    'rytkoset-theme-gallery',
 	    get_template_directory_uri() . '/assets/css/gallery.css',
 	    array( $core_css_dependency ),
-	    $theme_version
+	    rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/gallery.css' )
 	);
 
 	wp_enqueue_style(
 	    'rytkoset-photoswipe-style',
 	    $photoswipe_base . '/photoswipe.css',
 	    array(),
-	    $photoswipe_version
+	    rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe.css' )
 	);
 
 	wp_enqueue_script(
 	    'rytkoset-photoswipe-core',
 	    $photoswipe_base . '/photoswipe.umd.min.js',
 	    array(),
-	    $photoswipe_version,
+	    rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe.umd.min.js' ),
 	    true
 	);
 
@@ -622,7 +630,7 @@ function rytkoset_theme_scripts() {
 	    'rytkoset-photoswipe-lightbox',
 	    $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
 	    array( 'rytkoset-photoswipe-core' ),
-	    $photoswipe_version,
+	    rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-lightbox.umd.min.js' ),
 	    true
 	);
 
@@ -630,7 +638,7 @@ function rytkoset_theme_scripts() {
 	    'rytkoset-photoswipe-init',
 	    get_template_directory_uri() . '/assets/js/photoswipe-init.js',
 	    array( 'rytkoset-photoswipe-lightbox' ),
-	    $theme_version,
+	    rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/photoswipe-init.js' ),
 	    true
 	);
 
@@ -638,8 +646,16 @@ function rytkoset_theme_scripts() {
 	    'rytkoset-photoswipe-init',
 	    'window.rytkosetPhotoSwipe = ' . wp_json_encode(
 		array(
-		    'dynamicCaptionCssUrl' => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.css',
-		    'dynamicCaptionJsUrl'  => $photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js',
+		    'dynamicCaptionCssUrl' => add_query_arg(
+			'ver',
+			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-dynamic-caption-plugin.css' ),
+			$photoswipe_base . '/photoswipe-dynamic-caption-plugin.css'
+		    ),
+		    'dynamicCaptionJsUrl'  => add_query_arg(
+			'ver',
+			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-dynamic-caption-plugin.esm.js' ),
+			$photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js'
+		    ),
 		    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
 		    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
 		    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
