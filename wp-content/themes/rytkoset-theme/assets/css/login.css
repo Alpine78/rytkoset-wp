@@ -357,13 +357,18 @@ body.login input[type="email"]:focus {
    karkaa väärään paikkaan rekisteröinnissä ja salasanan nollauksessa). */
 body.login .wp-pwd { position: relative; }
 body.login .wp-pwd .input { padding-right: 50px; }
-body.login .wp-hide-pw {
+/* Selector must outweigh WordPress's own `.login .wp-pwd button.wp-hide-pw`
+   (specificity 0,3,1), which forces top:0 and leaves our translateY(-50%) to
+   push the button ~20px above the field. Pin the button to the input's height
+   so the icon centers on the field regardless of the strength meter / caps
+   warning WordPress nests inside .wp-pwd. */
+body.login .wp-pwd button.wp-hide-pw {
   position: absolute;
-  top: 50%;
+  top: 0;
   right: 8px;
-  transform: translateY(-50%);
   width: 38px;
-  height: 38px;
+  height: 50px; /* = form .input min-height; centers the icon on the field */
+  transform: none;
   display: grid;
   place-items: center;
   margin: 0;
