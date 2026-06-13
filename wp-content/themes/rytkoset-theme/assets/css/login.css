@@ -351,8 +351,11 @@ body.login input[type="email"]:focus {
   box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.20);
 }
 
-/* Salasanan näytä/piilota — WP:n natiivi .wp-pwd + .wp-hide-pw */
-body.login .user-pass-wrap .wp-pwd { position: relative; }
+/* Salasanan näytä/piilota — WP:n natiivi .wp-pwd + .wp-hide-pw.
+   Asemointikonteksti kaikille .wp-pwd-laatikoille (kirjautuminen käyttää
+   .user-pass-wrap-käärettä, mutta nollaus/asetus ei — ilman tätä silmänappi
+   karkaa väärään paikkaan rekisteröinnissä ja salasanan nollauksessa). */
+body.login .wp-pwd { position: relative; }
 body.login .wp-pwd .input { padding-right: 50px; }
 body.login .wp-hide-pw {
   position: absolute;
@@ -400,14 +403,17 @@ body.login .forgetmenot label {
   color: var(--auth-text-mute);
   cursor: pointer;
 }
+/* Natiivi checkbox: pelkkä accent-color + koko, jotta selaimen oma valintamerkki
+   piirtyy. Aiempi border/background-ylikirjoitus esti ruksin näkymisen. */
 body.login .forgetmenot input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   margin: 0;
-  border-radius: 6px;
-  border: 1.5px solid var(--auth-field-border);
-  background: var(--auth-field-bg);
   accent-color: var(--color-primary);
+  cursor: pointer;
+}
+:root[data-theme="dark"] body.login .forgetmenot input[type="checkbox"] {
+  accent-color: var(--color-accent);
 }
 body.login .forgetmenot input[type="checkbox"]:focus-visible {
   outline: 3px solid var(--color-accent);

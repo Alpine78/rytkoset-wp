@@ -297,6 +297,24 @@ function rytkoset_theme_login_layout_script() {
 					loginEl.appendChild(sw);
 				}
 			}
+
+			/* ---- Salasanan nollaus/asetus: peitetty tyhjä kenttä ----
+			   Poistetaan WP:n automaattisesti generoima salasana (data-pw),
+			   selkokielinen näyttö (data-reveal -> type=text) ja "Luo salasana"
+			   -nappi. Salasanamanageri tunnistaa kentän, kun se on type=password.
+			   Silmäikoni (.wp-hide-pw), vahvuusmittari ja vaatimusteksti jäävät. */
+			if (action === 'resetpass' || action === 'rp') {
+				var pass1 = loginEl.querySelector('#pass1');
+				if (pass1) {
+					pass1.removeAttribute('data-reveal');
+					pass1.removeAttribute('data-pw');
+					pass1.value = '';
+					pass1.setAttribute('type', 'password');
+					pass1.setAttribute('autocomplete', 'new-password');
+				}
+				var genBtn = loginEl.querySelector('.wp-generate-pw');
+				if (genBtn && genBtn.parentNode) genBtn.parentNode.removeChild(genBtn);
+			}
 		});
 	</script>
 	<?php
