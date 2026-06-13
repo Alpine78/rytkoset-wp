@@ -315,6 +315,24 @@ function rytkoset_theme_login_layout_script() {
 				var genBtn = loginEl.querySelector('.wp-generate-pw');
 				if (genBtn && genBtn.parentNode) genBtn.parentNode.removeChild(genBtn);
 			}
+
+			/* ---- Silmäikonin kohdistus: nollaus-/asetusnäkymässä WP upottaa
+			   vahvuusmittarin (#pass-strength-result) ja Caps Lock -varoituksen
+			   .wp-pwd-laatikon sisään, jolloin laatikko on kenttää korkeampi eikä
+			   absoluuttisesti asemoitu näytä/piilota-nappi enää keskity kenttään.
+			   Siirretään huomautukset .wp-pwd:n ulkopuolelle, jolloin laatikon
+			   korkeus vastaa kenttää (kuten kirjautumisnäkymässä). ---- */
+			var pwd = loginEl.querySelector('.wp-pwd');
+			if (pwd && pwd.parentNode) {
+				var ref = pwd;
+				['#pass-strength-result', '#caps-warning'].forEach(function (sel) {
+					var node = pwd.querySelector(sel);
+					if (node) {
+						ref.parentNode.insertBefore(node, ref.nextSibling);
+						ref = node;
+					}
+				});
+			}
 		});
 	</script>
 	<?php
