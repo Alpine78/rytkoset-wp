@@ -11,20 +11,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Tyylitellään kirjautumissivu teeman mukaiseksi.
  */
 function rytkoset_theme_login_assets() {
-	$theme_version = wp_get_theme()->get( 'Version' );
-
 	wp_enqueue_style(
 		'rytkoset-theme-base',
 		get_template_directory_uri() . '/assets/css/base.css',
 		array(),
-		$theme_version
+		rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/base.css' )
 	);
 
 	wp_enqueue_style(
 		'rytkoset-theme-login',
 		get_template_directory_uri() . '/assets/css/login.css',
 		array( 'rytkoset-theme-base' ),
-		$theme_version
+		rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/login.css' )
 	);
 
 }

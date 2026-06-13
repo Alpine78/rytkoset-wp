@@ -124,6 +124,8 @@ All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `ry
 
 ### CSS structure
 
+All local theme CSS/JS assets, including login assets and vendored PhotoSwipe files, use `rytkoset_theme_get_asset_version()` for `filemtime()`-based cache busting with the theme version as a missing-file fallback.
+
 No build step. `style.css` holds only the theme header â€” the core CSS modules are enqueued separately in `functions.php` (`rytkoset_theme_scripts`) via a `$css_modules` loop that chains each module's `deps` to the previous one, preserving cascade order (base â†’ layout/components â†’ â€¦ â†’ responsive last). Page-specific styles (shop, forum, digital-magazine, gallery) depend on the last core module so they load after it. Cache-busted with `filemtime()`. The modules in cascade order:
 
 ```
