@@ -9,6 +9,7 @@
  *   1. REST API:n `/wp/v2/users` -kokoelma kirjautumattomilta käyttäjiltä
  *   2. `?author=N` -numerokyselyllä tehtävä kirjautumisnimen paljastus
  *   3. Coren käyttäjäsitemap `/wp-sitemap-users-1.xml`
+ *   4. `wp-login.php`:n tunnuksen olemassaolon paljastavat virheilmoitukset
  *
  * Kirjautuneiden käyttäjien toiminta säilyy ennallaan (mm. wp-admin,
  * blokkieditorin tekijävalinta). Voidaan poistaa kokonaan käytöstä
@@ -123,6 +124,47 @@ if ( ! function_exists( 'rytkoset_theme_remove_users_sitemap_provider' ) ) {
 	}
 }
 add_filter( 'wp_sitemaps_add_provider', 'rytkoset_theme_remove_users_sitemap_provider', 10, 2 );
+
+if ( ! function_exists( 'rytkoset_theme_filter_login_errors' ) ) {
+	/**
+	 * Yhdistää tunnuksen olemassaolon paljastavat kirjautumisvirheet.
+	 *
+	 * Tuntematon käyttäjänimi tai sähköposti ja olemassa olevan tunnuksen
+	 * väärä salasana näyttävät saman viestin. Muut wp-login.php:n virheet
+	 * ja ilmoitukset säilyvät ennallaan.
+	 *
+	 * @param WP_Error $errors Kirjautumissivun virheet ja ilmoitukset.
+	 * @return WP_Error
+	 */
+	function rytkoset_theme_filter_login_errors( $errors ) {
+		if ( ! rytkoset_theme_security_hardening_enabled() || ! is_wp_error( $errors ) ) {
+			return $errors;
+		}
+
+		$credential_error_codes = array(
+			'invalid_username',
+			'invalid_email',
+			'incorrect_password',
+		);
+		$matched_error_codes    = array_intersect( $credential_error_codes, $errors->get_error_codes() );
+
+		if ( empty( $matched_error_codes ) ) {
+			return $errors;
+		}
+
+		foreach ( $matched_error_codes as $error_code ) {
+			$errors->remove( $error_code );
+		}
+
+		$errors->add(
+			'rytkoset_invalid_credentials',
+			__( 'Kirjautuminen epäonnistui. Tarkista käyttäjätunnus tai sähköpostiosoite ja salasana.', 'rytkoset-theme' )
+		);
+
+		return $errors;
+	}
+}
+add_filter( 'wp_login_errors', 'rytkoset_theme_filter_login_errors' );
 
 if ( ! function_exists( 'rytkoset_theme_xmlrpc_disabled' ) ) {
 	/**
