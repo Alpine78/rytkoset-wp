@@ -36,7 +36,7 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 		}
 
 		if ( '' === $email || ! is_email( $email ) ) {
-			$skipped++;
+			++$skipped;
 			continue;
 		}
 
@@ -256,7 +256,7 @@ function rytkoset_theme_get_event_messaging_pending_recipient_count( $job ) {
 
 	foreach ( $recipients as $recipient ) {
 		if ( 'pending' === (string) ( $recipient['status'] ?? 'pending' ) ) {
-			$count++;
+			++$count;
 		}
 	}
 
@@ -314,7 +314,7 @@ function rytkoset_theme_enqueue_event_messaging_job( $args ) {
 		return '';
 	}
 
-	$body = trim( (string) ( $args['body'] ?? '' ) );
+	$body    = trim( (string) ( $args['body'] ?? '' ) );
 	$subject = sanitize_text_field( (string) ( $args['subject'] ?? '' ) );
 
 	if ( '' === $subject || '' === $body ) {
@@ -506,7 +506,7 @@ function rytkoset_theme_process_event_messaging_queue() {
 					}
 
 					$job['last_sent_at'] = $sent_at;
-					$available--;
+					--$available;
 				}
 			}
 
@@ -551,8 +551,10 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 		wp_die( esc_html__( 'Sinulla ei ole oikeutta tarkastella tätä sivua.', 'rytkoset-theme' ) );
 	}
 
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin list filters.
 	$selected_event  = isset( $_GET['event_id'] ) ? absint( wp_unslash( $_GET['event_id'] ) ) : 0;
 	$selected_status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	$status_options = rytkoset_theme_get_event_participants_admin_status_options();
 
@@ -571,11 +573,13 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 	$skipped_count   = $result['skipped'];
 	$recipient_count = count( $recipients );
 
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only redirect feedback set by nonce-protected messaging actions.
 	$notice = isset( $_GET['messaging_notice'] ) ? sanitize_key( wp_unslash( $_GET['messaging_notice'] ) ) : '';
 	$sent   = isset( $_GET['sent'] ) ? absint( wp_unslash( $_GET['sent'] ) ) : 0;
 	$failed = isset( $_GET['failed'] ) ? absint( wp_unslash( $_GET['failed'] ) ) : 0;
 	$skip   = isset( $_GET['skipped'] ) ? absint( wp_unslash( $_GET['skipped'] ) ) : 0;
 	$queued = isset( $_GET['queued'] ) ? absint( wp_unslash( $_GET['queued'] ) ) : 0;
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	$queue_entries     = rytkoset_theme_get_event_messaging_queue();
 	$recent_attempts   = rytkoset_theme_get_event_messaging_send_attempts();
@@ -877,7 +881,7 @@ function rytkoset_theme_send_event_participants_message() {
 	$event_id        = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
 	$selected_status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
 	$subject         = isset( $_POST['subject'] ) ? sanitize_text_field( wp_unslash( $_POST['subject'] ) ) : '';
-	$body_raw        = isset( $_POST['body'] ) ? (string) wp_unslash( $_POST['body'] ) : '';
+	$body_raw        = isset( $_POST['body'] ) ? (string) wp_unslash( $_POST['body'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized with wp_strip_all_tags() on the next line.
 	$body            = trim( wp_strip_all_tags( $body_raw ) );
 
 	$status_options = rytkoset_theme_get_event_participants_admin_status_options();

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$search_terms = function_exists( 'bbp_get_search_terms' ) ? bbp_get_search_terms() : '';
+$rytkoset_search_terms = function_exists( 'bbp_get_search_terms' ) ? bbp_get_search_terms() : '';
 ?>
 <div id="bbpress-forums" class="forum-scope forum-page">
 <div class="forum-page__inner">
@@ -26,8 +26,9 @@ $search_terms = function_exists( 'bbp_get_search_terms' ) ? bbp_get_search_terms
 	</nav>
 
 	<h1 class="forum-h1">
-		<?php if ( $search_terms ) : ?>
-			<?php printf( esc_html__( 'Haku: &ldquo;%s&rdquo;', 'rytkoset-theme' ), esc_html( $search_terms ) ); ?>
+		<?php if ( $rytkoset_search_terms ) : ?>
+			<?php /* translators: %s: forum search term. */ ?>
+			<?php printf( esc_html__( 'Haku: &ldquo;%s&rdquo;', 'rytkoset-theme' ), esc_html( $rytkoset_search_terms ) ); ?>
 		<?php else : ?>
 			<?php esc_html_e( 'Haku', 'rytkoset-theme' ); ?>
 		<?php endif; ?>
@@ -48,7 +49,7 @@ $search_terms = function_exists( 'bbp_get_search_terms' ) ? bbp_get_search_terms
 					type="search"
 					name="bbp_search"
 					placeholder="<?php esc_attr_e( 'Etsi foorumilta…', 'rytkoset-theme' ); ?>"
-					value="<?php echo esc_attr( $search_terms ); ?>"
+					value="<?php echo esc_attr( $rytkoset_search_terms ); ?>"
 				/>
 			</form>
 			<?php endif; ?>
@@ -77,8 +78,9 @@ $search_terms = function_exists( 'bbp_get_search_terms' ) ? bbp_get_search_terms
 
 		<div class="bbp-template-notice">
 			<p>
-				<?php if ( $search_terms ) : ?>
-					<?php printf( esc_html__( 'Haulla &ldquo;%s&rdquo; ei löytynyt tuloksia.', 'rytkoset-theme' ), esc_html( $search_terms ) ); ?>
+				<?php if ( $rytkoset_search_terms ) : ?>
+					<?php /* translators: %s: forum search term. */ ?>
+					<?php printf( esc_html__( 'Haulla &ldquo;%s&rdquo; ei löytynyt tuloksia.', 'rytkoset-theme' ), esc_html( $rytkoset_search_terms ) ); ?>
 				<?php else : ?>
 					<?php esc_html_e( 'Kirjoita hakusana yllä olevaan kenttään.', 'rytkoset-theme' ); ?>
 				<?php endif; ?>

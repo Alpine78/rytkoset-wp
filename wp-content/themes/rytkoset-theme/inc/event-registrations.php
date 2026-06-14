@@ -632,7 +632,7 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
  * @return string Validated IP, or empty string when unavailable.
  */
 function rytkoset_theme_get_event_registration_client_ip() {
-	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Validated with FILTER_VALIDATE_IP below.
 
 	return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '';
 }
@@ -690,7 +690,7 @@ function rytkoset_theme_event_registration_is_rate_limited() {
 			array_filter(
 				$hits,
 				static function ( $timestamp ) use ( $now, $window ) {
-					return ( $now - (int) $timestamp ) < $window;
+								return ( $now - (int) $timestamp ) < $window;
 				}
 			)
 		)
@@ -774,7 +774,7 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_email' );
 	}
 
-	$gdpr_consent = isset( $_POST['registration_gdpr_consent'] ) && '1' === wp_unslash( $_POST['registration_gdpr_consent'] );
+	$gdpr_consent = isset( $_POST['registration_gdpr_consent'] ) && '1' === wp_unslash( $_POST['registration_gdpr_consent'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Exact allowlisted comparison.
 
 	if ( ! $gdpr_consent ) {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'missing_consent' );
@@ -849,6 +849,7 @@ function rytkoset_theme_get_event_registration_error_field( $error_code ) {
  * @return array
  */
 function rytkoset_theme_get_event_registration_feedback() {
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only redirect feedback set by the nonce-protected registration action.
 	$status = isset( $_GET['registration_status'] ) ? sanitize_key( wp_unslash( $_GET['registration_status'] ) ) : '';
 
 	if ( 'success' === $status ) {
@@ -864,7 +865,8 @@ function rytkoset_theme_get_event_registration_feedback() {
 		return array();
 	}
 
-	$error    = isset( $_GET['registration_error'] ) ? sanitize_key( wp_unslash( $_GET['registration_error'] ) ) : '';
+	$error = isset( $_GET['registration_error'] ) ? sanitize_key( wp_unslash( $_GET['registration_error'] ) ) : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	$messages = array(
 		'missing_name'       => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
 		'invalid_email'      => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
@@ -957,13 +959,13 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 		return;
 	}
 
-	$invalid_field   = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
+	$invalid_field = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
 		? $feedback['field']
 		: '';
-	$invalid_attrs   = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
-	$name_invalid    = 'name' === $invalid_field ? $invalid_attrs : '';
-	$email_invalid   = 'email' === $invalid_field ? $invalid_attrs : '';
-	$gdpr_invalid    = 'gdpr' === $invalid_field ? $invalid_attrs : '';
+	$invalid_attrs = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
+	$name_invalid  = 'name' === $invalid_field ? $invalid_attrs : '';
+	$email_invalid = 'email' === $invalid_field ? $invalid_attrs : '';
+	$gdpr_invalid  = 'gdpr' === $invalid_field ? $invalid_attrs : '';
 	?>
 	<section class="event-registration" aria-labelledby="<?php echo esc_attr( $form_id . '-title' ); ?>">
 		<h2 id="<?php echo esc_attr( $form_id . '-title' ); ?>" class="event-registration__title">

@@ -13,10 +13,10 @@ get_header();
 
 global $wp_query;
 
-$blog_page        = get_page_by_path( 'blogi' );
-$blog_url         = $blog_page instanceof WP_Post ? get_permalink( $blog_page ) : home_url( '/blogi/' );
-$category_name    = single_cat_title( '', false );
-$category_excerpt = category_description();
+$rytkoset_blog_page        = get_page_by_path( 'blogi' );
+$rytkoset_blog_url         = $rytkoset_blog_page instanceof WP_Post ? get_permalink( $rytkoset_blog_page ) : home_url( '/blogi/' );
+$rytkoset_category_name    = single_cat_title( '', false );
+$rytkoset_category_excerpt = category_description();
 ?>
 
 <main id="primary" class="site-main" tabindex="-1">
@@ -25,16 +25,16 @@ $category_excerpt = category_description();
 			<nav class="breadcrumb" aria-label="<?php esc_attr_e( 'Murupolku', 'rytkoset-theme' ); ?>">
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Etusivu', 'rytkoset-theme' ); ?></a>
 				<span aria-hidden="true">/</span>
-				<a href="<?php echo esc_url( $blog_url ); ?>"><?php esc_html_e( 'Blogi', 'rytkoset-theme' ); ?></a>
+				<a href="<?php echo esc_url( $rytkoset_blog_url ); ?>"><?php esc_html_e( 'Blogi', 'rytkoset-theme' ); ?></a>
 				<span aria-hidden="true">/</span>
-				<span><?php echo esc_html( $category_name ); ?></span>
+				<span><?php echo esc_html( $rytkoset_category_name ); ?></span>
 			</nav>
 
 			<header class="section__header blog-archive__header">
-				<h1 class="section__title"><?php echo esc_html( $category_name ); ?></h1>
-				<?php if ( $category_excerpt ) : ?>
+				<h1 class="section__title"><?php echo esc_html( $rytkoset_category_name ); ?></h1>
+				<?php if ( $rytkoset_category_excerpt ) : ?>
 					<div class="section__description">
-						<?php echo wp_kses_post( $category_excerpt ); ?>
+						<?php echo wp_kses_post( $rytkoset_category_excerpt ); ?>
 					</div>
 				<?php endif; ?>
 			</header>
@@ -44,10 +44,10 @@ $category_excerpt = category_description();
 					<?php
 					while ( have_posts() ) :
 						the_post();
-						$excerpt = trim( get_the_excerpt() );
+						$rytkoset_excerpt = trim( get_the_excerpt() );
 
-						if ( '' === $excerpt ) {
-							$excerpt = wp_strip_all_tags( get_the_content() );
+						if ( '' === $rytkoset_excerpt ) {
+							$rytkoset_excerpt = wp_strip_all_tags( get_the_content() );
 						}
 						?>
 						<article <?php post_class( 'blog-card' ); ?>>
@@ -72,8 +72,8 @@ $category_excerpt = category_description();
 									<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 								</h2>
 
-								<?php if ( '' !== $excerpt ) : ?>
-									<p class="blog-card__excerpt"><?php echo esc_html( wp_trim_words( $excerpt, 32 ) ); ?></p>
+								<?php if ( '' !== $rytkoset_excerpt ) : ?>
+									<p class="blog-card__excerpt"><?php echo esc_html( wp_trim_words( $rytkoset_excerpt, 32 ) ); ?></p>
 								<?php endif; ?>
 
 								<a class="btn btn--light blog-card__link" href="<?php the_permalink(); ?>">
@@ -87,7 +87,7 @@ $category_excerpt = category_description();
 				</div>
 
 				<?php
-				$pagination = paginate_links(
+				$rytkoset_pagination = paginate_links(
 					array(
 						'total'     => (int) $wp_query->max_num_pages,
 						'current'   => max( 1, (int) get_query_var( 'paged' ) ),
@@ -97,10 +97,10 @@ $category_excerpt = category_description();
 					)
 				);
 
-				if ( $pagination ) :
+				if ( $rytkoset_pagination ) :
 					?>
 					<nav class="pagination blog-pagination" aria-label="<?php esc_attr_e( 'Kategorian sivutus', 'rytkoset-theme' ); ?>">
-						<?php echo wp_kses_post( $pagination ); ?>
+						<?php echo wp_kses_post( $rytkoset_pagination ); ?>
 					</nav>
 				<?php endif; ?>
 			<?php else : ?>

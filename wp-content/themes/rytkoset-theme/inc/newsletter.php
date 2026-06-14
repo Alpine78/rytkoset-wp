@@ -205,18 +205,21 @@ if ( ! function_exists( 'rytkoset_theme_email_has_newsletter_subscription' ) ) {
 		$list_table   = $wpdb->prefix . 'acym_user_has_list';
 		$placeholders = implode( ',', array_fill( 0, count( $list_ids ), '%d' ) );
 		$query_args   = array_merge( array( $email ), $list_ids );
-		$query        = $wpdb->prepare(
+		// phpcs:disable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders -- Internal table names and a prepared, integer-only placeholder list.
+		$query              = $wpdb->prepare(
 			"SELECT COUNT(*)
 			 FROM {$user_table} AS acym_user
 			 INNER JOIN {$list_table} AS acym_list
 				ON acym_list.user_id = acym_user.id
 			 WHERE acym_user.email = %s
 				AND acym_list.status = 1
-				AND acym_list.list_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names and placeholders are generated internally.
+				AND acym_list.list_id IN ({$placeholders})",
 			$query_args
 		);
+		$subscription_count = (int) $wpdb->get_var( $query );
+		// phpcs:enable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders
 
-		return (int) $wpdb->get_var( $query ) > 0;
+		return $subscription_count > 0;
 	}
 }
 
@@ -251,18 +254,21 @@ if ( ! function_exists( 'rytkoset_theme_current_user_has_newsletter_subscription
 
 		$placeholders = implode( ',', array_fill( 0, count( $list_ids ), '%d' ) );
 		$query_args   = array_merge( array( get_current_user_id(), $email ), $list_ids );
-		$query        = $wpdb->prepare(
+		// phpcs:disable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders -- Internal table names and a prepared, integer-only placeholder list.
+		$query              = $wpdb->prepare(
 			"SELECT COUNT(*)
 			 FROM {$user_table} AS acym_user
 			 INNER JOIN {$list_table} AS acym_list
 				ON acym_list.user_id = acym_user.id
 			 WHERE (acym_user.cms_id = %d OR acym_user.email = %s)
 				AND acym_list.status = 1
-				AND acym_list.list_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names and placeholders are generated internally.
+				AND acym_list.list_id IN ({$placeholders})",
 			$query_args
 		);
+		$subscription_count = (int) $wpdb->get_var( $query );
+		// phpcs:enable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders
 
-		return (int) $wpdb->get_var( $query ) > 0;
+		return $subscription_count > 0;
 	}
 }
 
@@ -303,18 +309,21 @@ if ( ! function_exists( 'rytkoset_theme_user_has_newsletter_subscription' ) ) {
 		$list_table   = $wpdb->prefix . 'acym_user_has_list';
 		$placeholders = implode( ',', array_fill( 0, count( $list_ids ), '%d' ) );
 		$query_args   = array_merge( array( $user_id, sanitize_email( $user->user_email ) ), $list_ids );
-		$query        = $wpdb->prepare(
+		// phpcs:disable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders -- Internal table names and a prepared, integer-only placeholder list.
+		$query              = $wpdb->prepare(
 			"SELECT COUNT(*)
 			 FROM {$user_table} AS acym_user
 			 INNER JOIN {$list_table} AS acym_list
 				ON acym_list.user_id = acym_user.id
 			 WHERE (acym_user.cms_id = %d OR acym_user.email = %s)
 				AND acym_list.status = 1
-				AND acym_list.list_id IN ({$placeholders})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names and placeholders are generated internally.
+				AND acym_list.list_id IN ({$placeholders})",
 			$query_args
 		);
+		$subscription_count = (int) $wpdb->get_var( $query );
+		// phpcs:enable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders
 
-		return (int) $wpdb->get_var( $query ) > 0;
+		return $subscription_count > 0;
 	}
 }
 
@@ -399,8 +408,8 @@ if ( ! function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
 			return new WP_Error( 'acymailing_missing', __( 'AcyMailing ei ole käytettävissä.', 'rytkoset-theme' ) );
 		}
 
-		$user_class = new \AcyMailing\Classes\UserClass();
-		$user_class->checkVisitor = false;
+		$user_class               = new \AcyMailing\Classes\UserClass();
+		$user_class->checkVisitor = false; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- AcyMailing public API property.
 
 		if ( function_exists( 'acym_setVar' ) ) {
 			acym_setVar( 'acy_source', $source );
@@ -409,8 +418,8 @@ if ( ! function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
 		$subscriber = $user_class->getOneByEmail( $email );
 
 		if ( empty( $subscriber ) ) {
-			$subscriber = new stdClass();
-			$subscriber->email = $email;
+			$subscriber         = new stdClass();
+			$subscriber->email  = $email;
 			$subscriber->source = $source;
 
 			if ( $cms_user_id > 0 ) {

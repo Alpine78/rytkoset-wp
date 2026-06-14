@@ -17,19 +17,23 @@ if ( post_password_required() ) {
 	<?php if ( have_comments() ) : ?>
 		<h2 class="comments-title">
 			<?php
-			$comment_count = get_comments_number();
-			if ( '1' === $comment_count ) {
-				printf(
-					/* translators: %s: post title */
-					esc_html__( '1 kommentti aiheeseen "%s"', 'rytkoset-theme' ),
-					'<span>' . get_the_title() . '</span>'
+			$rytkoset_comment_count = get_comments_number();
+			if ( '1' === $rytkoset_comment_count ) {
+				echo wp_kses_post(
+					sprintf(
+						/* translators: %s: post title */
+						__( '1 kommentti aiheeseen "%s"', 'rytkoset-theme' ),
+						'<span>' . esc_html( get_the_title() ) . '</span>'
+					)
 				);
 			} else {
-				printf(
-					/* translators: 1: number of comments, 2: post title */
-					esc_html( _n( '%1$s kommentti aiheeseen "%2$s"', '%1$s kommenttia aiheeseen "%2$s"', $comment_count, 'rytkoset-theme' ) ),
-					number_format_i18n( $comment_count ),
-					'<span>' . get_the_title() . '</span>'
+				echo wp_kses_post(
+					sprintf(
+						/* translators: 1: number of comments, 2: post title */
+						_n( '%1$s kommentti aiheeseen "%2$s"', '%1$s kommenttia aiheeseen "%2$s"', $rytkoset_comment_count, 'rytkoset-theme' ),
+						number_format_i18n( $rytkoset_comment_count ),
+						'<span>' . esc_html( get_the_title() ) . '</span>'
+					)
 				);
 			}
 			?>
@@ -39,15 +43,22 @@ if ( post_password_required() ) {
 			<?php
 			wp_list_comments(
 				array(
-					'style'      => 'ol',
-					'short_ping' => true,
+					'style'       => 'ol',
+					'short_ping'  => true,
 					'avatar_size' => 44,
 				)
 			);
 			?>
 		</ol>
 
-		<?php the_comments_pagination( array( 'prev_text' => '&larr;', 'next_text' => '&rarr;' ) ); ?>
+		<?php
+		the_comments_pagination(
+			array(
+				'prev_text' => '&larr;',
+				'next_text' => '&rarr;',
+			)
+		);
+		?>
 
 	<?php endif; ?>
 

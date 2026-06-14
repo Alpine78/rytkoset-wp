@@ -86,11 +86,11 @@ function rytkoset_theme_register_maintenance_customizer( $wp_customize ) {
 	$wp_customize->add_control(
 		'rytkoset_theme_maintenance_concept',
 		array(
-			'label'   => __( 'Viestin sävy', 'rytkoset-theme' ),
+			'label'       => __( 'Viestin sävy', 'rytkoset-theme' ),
 			'description' => __( '"Uudistus" kertoo uudesta ilmeestä, "Huolto" on lyhyt huoltokatko ja "Talkoot" korostaa yhdessä tekemistä.', 'rytkoset-theme' ),
-			'section' => 'rytkoset_theme_maintenance',
-			'type'    => 'select',
-			'choices' => array(
+			'section'     => 'rytkoset_theme_maintenance',
+			'type'        => 'select',
+			'choices'     => array(
 				'uudistus' => __( 'Uudistus — sivusto päivittyy', 'rytkoset-theme' ),
 				'huolto'   => __( 'Huolto — lyhyt huoltokatko', 'rytkoset-theme' ),
 				'talkoot'  => __( 'Talkoot — sivustoa rakennetaan', 'rytkoset-theme' ),

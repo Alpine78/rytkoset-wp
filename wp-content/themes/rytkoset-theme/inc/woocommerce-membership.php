@@ -239,14 +239,16 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 		return;
 	}
 
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the product edit nonce before this hook runs.
 	$is_membership_product = isset( $_POST[ rytkoset_theme_get_membership_product_meta_key() ] ) ? 'yes' : 'no';
 	$requires_names        = isset( $_POST[ rytkoset_theme_get_member_names_required_meta_key() ] ) ? 'yes' : 'no';
 	$type                  = isset( $_POST[ rytkoset_theme_get_membership_type_meta_key() ] )
-		? rytkoset_theme_normalize_membership_type( wp_unslash( $_POST[ rytkoset_theme_get_membership_type_meta_key() ] ) )
+		? rytkoset_theme_normalize_membership_type( wp_unslash( $_POST[ rytkoset_theme_get_membership_type_meta_key() ] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Normalizer returns only allowlisted membership types.
 		: '';
 	$period                = isset( $_POST[ rytkoset_theme_get_membership_period_meta_key() ] )
 		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_membership_period_meta_key() ] ) )
 		: '';
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 	$product->update_meta_data( rytkoset_theme_get_membership_product_meta_key(), $is_membership_product );
 	$product->update_meta_data( rytkoset_theme_get_member_names_required_meta_key(), $requires_names );

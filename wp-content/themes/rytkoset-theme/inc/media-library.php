@@ -30,9 +30,11 @@ function rytkoset_theme_sort_media_library_by_filename( $query ) {
 	}
 
 	// Respect explicit admin sorting from column headers or query parameters.
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only Media Library sorting parameters.
 	if ( isset( $_GET['orderby'] ) || isset( $_GET['order'] ) ) {
 		return;
 	}
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	$query->set( 'orderby', 'title' );
 	$query->set( 'order', 'ASC' );
@@ -49,6 +51,7 @@ add_action( 'pre_get_posts', 'rytkoset_theme_sort_media_library_by_filename' );
  * @return array
  */
 function rytkoset_theme_sort_media_modal_by_filename( $query_args ) {
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only media modal query parameters.
 	$action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : '';
 
 	if ( 'query-attachments' !== $action ) {
@@ -58,8 +61,9 @@ function rytkoset_theme_sort_media_modal_by_filename( $query_args ) {
 	$request_query = array();
 
 	if ( isset( $_REQUEST['query'] ) && is_array( $_REQUEST['query'] ) ) {
-		$request_query = wp_unslash( $_REQUEST['query'] );
+		$request_query = wp_unslash( $_REQUEST['query'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Individual allowlisted values are sanitized below.
 	}
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	$requested_orderby = isset( $request_query['orderby'] ) ? sanitize_key( $request_query['orderby'] ) : '';
 	$requested_order   = isset( $request_query['order'] ) ? strtoupper( sanitize_key( $request_query['order'] ) ) : '';

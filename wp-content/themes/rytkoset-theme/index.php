@@ -13,8 +13,8 @@ get_header();
 
 global $wp_query;
 
-$archive_title       = is_home() ? __( 'Blogi', 'rytkoset-theme' ) : get_the_archive_title();
-$archive_description = is_archive() ? get_the_archive_description() : '';
+$rytkoset_archive_title       = is_home() ? __( 'Blogi', 'rytkoset-theme' ) : get_the_archive_title();
+$rytkoset_archive_description = is_archive() ? get_the_archive_description() : '';
 ?>
 
 <main id="primary" class="site-main" tabindex="-1">
@@ -23,14 +23,14 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 			<nav class="breadcrumb" aria-label="<?php esc_attr_e( 'Murupolku', 'rytkoset-theme' ); ?>">
 				<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Etusivu', 'rytkoset-theme' ); ?></a>
 				<span aria-hidden="true">/</span>
-				<span><?php echo esc_html( wp_strip_all_tags( $archive_title ) ); ?></span>
+				<span><?php echo esc_html( wp_strip_all_tags( $rytkoset_archive_title ) ); ?></span>
 			</nav>
 
 			<header class="section__header blog-archive__header">
-				<h1 class="section__title"><?php echo wp_kses_post( $archive_title ); ?></h1>
-				<?php if ( $archive_description ) : ?>
+				<h1 class="section__title"><?php echo wp_kses_post( $rytkoset_archive_title ); ?></h1>
+				<?php if ( $rytkoset_archive_description ) : ?>
 					<div class="section__description">
-						<?php echo wp_kses_post( $archive_description ); ?>
+						<?php echo wp_kses_post( $rytkoset_archive_description ); ?>
 					</div>
 				<?php endif; ?>
 			</header>
@@ -40,10 +40,10 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 					<?php
 					while ( have_posts() ) :
 						the_post();
-						$excerpt = trim( get_the_excerpt() );
+						$rytkoset_excerpt = trim( get_the_excerpt() );
 
-						if ( '' === $excerpt ) {
-							$excerpt = wp_strip_all_tags( get_the_content() );
+						if ( '' === $rytkoset_excerpt ) {
+							$rytkoset_excerpt = wp_strip_all_tags( get_the_content() );
 						}
 						?>
 						<article <?php post_class( 'blog-card' ); ?>>
@@ -68,8 +68,8 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 									<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 								</h2>
 
-								<?php if ( '' !== $excerpt ) : ?>
-									<p class="blog-card__excerpt"><?php echo esc_html( wp_trim_words( $excerpt, 32 ) ); ?></p>
+								<?php if ( '' !== $rytkoset_excerpt ) : ?>
+									<p class="blog-card__excerpt"><?php echo esc_html( wp_trim_words( $rytkoset_excerpt, 32 ) ); ?></p>
 								<?php endif; ?>
 
 								<a class="btn btn--light blog-card__link" href="<?php the_permalink(); ?>">
@@ -83,7 +83,7 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 				</div>
 
 				<?php
-				$pagination = paginate_links(
+				$rytkoset_pagination = paginate_links(
 					array(
 						'total'     => (int) $wp_query->max_num_pages,
 						'current'   => max( 1, (int) get_query_var( 'paged' ) ),
@@ -93,10 +93,10 @@ $archive_description = is_archive() ? get_the_archive_description() : '';
 					)
 				);
 
-				if ( $pagination ) :
+				if ( $rytkoset_pagination ) :
 					?>
 					<nav class="pagination blog-pagination" aria-label="<?php esc_attr_e( 'Arkiston sivutus', 'rytkoset-theme' ); ?>">
-						<?php echo wp_kses_post( $pagination ); ?>
+						<?php echo wp_kses_post( $rytkoset_pagination ); ?>
 					</nav>
 				<?php endif; ?>
 			<?php else : ?>

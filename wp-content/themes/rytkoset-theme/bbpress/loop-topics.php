@@ -12,27 +12,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 while ( bbp_topics() ) :
 	bbp_the_topic();
 
-	$topic_id       = bbp_get_topic_id();
-	$starter_name   = bbp_get_topic_author_display_name( $topic_id );
-	$is_sticky      = function_exists( 'bbp_is_topic_sticky' ) && bbp_is_topic_sticky( $topic_id );
-	$is_super_sticky = function_exists( 'bbp_is_topic_super_sticky' ) && bbp_is_topic_super_sticky( $topic_id );
-	$is_pinned      = $is_sticky || $is_super_sticky;
+	$rytkoset_topic_id        = bbp_get_topic_id();
+	$rytkoset_starter_name    = bbp_get_topic_author_display_name( $rytkoset_topic_id );
+	$rytkoset_is_sticky       = function_exists( 'bbp_is_topic_sticky' ) && bbp_is_topic_sticky( $rytkoset_topic_id );
+	$rytkoset_is_super_sticky = function_exists( 'bbp_is_topic_super_sticky' ) && bbp_is_topic_super_sticky( $rytkoset_topic_id );
+	$rytkoset_is_pinned       = $rytkoset_is_sticky || $rytkoset_is_super_sticky;
 
 	// Last reply author.
-	$last_active_id = function_exists( 'bbp_get_topic_last_active_id' ) ? (int) bbp_get_topic_last_active_id( $topic_id ) : 0;
-	$last_name      = '';
-	if ( $last_active_id ) {
-		$last_name = function_exists( 'rytkoset_theme_bbp_author_name' ) ? rytkoset_theme_bbp_author_name( $last_active_id ) : '';
+	$rytkoset_last_active_id = function_exists( 'bbp_get_topic_last_active_id' ) ? (int) bbp_get_topic_last_active_id( $rytkoset_topic_id ) : 0;
+	$rytkoset_last_name      = '';
+	if ( $rytkoset_last_active_id ) {
+		$rytkoset_last_name = function_exists( 'rytkoset_theme_bbp_author_name' ) ? rytkoset_theme_bbp_author_name( $rytkoset_last_active_id ) : '';
 	}
-	if ( ! $last_name ) {
-		$last_name = $starter_name;
+	if ( ! $rytkoset_last_name ) {
+		$rytkoset_last_name = $rytkoset_starter_name;
 	}
 	?>
 	<div class="topic-row">
 
 		<?php /* Starter avatar */ ?>
 		<div class="topic-row__avatar" aria-hidden="true">
-			<?php echo function_exists( 'rytkoset_theme_forum_avatar' ) ? rytkoset_theme_forum_avatar( $starter_name, 'lg' ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<?php echo function_exists( 'rytkoset_theme_forum_avatar' ) ? rytkoset_theme_forum_avatar( $rytkoset_starter_name, 'lg' ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 		</div>
 
 		<?php /* Title + tags + meta */ ?>
@@ -41,7 +41,7 @@ while ( bbp_topics() ) :
 				<a href="<?php bbp_topic_permalink(); ?>" class="topic-row__title">
 					<?php bbp_topic_title(); ?>
 				</a>
-				<?php if ( $is_pinned ) : ?>
+				<?php if ( $rytkoset_is_pinned ) : ?>
 					<span class="topic-row__tags">
 						<span class="topic-tag topic-tag--pinned">
 							<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -55,7 +55,7 @@ while ( bbp_topics() ) :
 			</div>
 			<div class="topic-row__meta">
 				<?php esc_html_e( 'Aloittaja', 'rytkoset-theme' ); ?>
-				<strong><?php echo esc_html( $starter_name ); ?></strong>
+				<strong><?php echo esc_html( $rytkoset_starter_name ); ?></strong>
 			</div>
 		</div>
 
@@ -73,9 +73,9 @@ while ( bbp_topics() ) :
 
 		<?php /* Latest reply */ ?>
 		<div class="topic-row__latest">
-			<?php echo function_exists( 'rytkoset_theme_forum_avatar' ) ? rytkoset_theme_forum_avatar( $last_name ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<?php echo function_exists( 'rytkoset_theme_forum_avatar' ) ? rytkoset_theme_forum_avatar( $rytkoset_last_name ) : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
 			<div class="topic-row__latest-text">
-				<div class="topic-row__latest-name"><?php echo esc_html( $last_name ); ?></div>
+				<div class="topic-row__latest-name"><?php echo esc_html( $rytkoset_last_name ); ?></div>
 				<div class="topic-row__latest-time"><?php bbp_topic_last_active_time(); ?></div>
 			</div>
 		</div>

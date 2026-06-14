@@ -27,24 +27,24 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 	}
 
 	$map = array(
-		', payment pending.' => ', maksu odottaa vahvistusta.',
+		', payment pending.'                              => ', maksu odottaa vahvistusta.',
 		'Your payment was not successful. Please complete your order with a different payment method.' => 'Maksu ei onnistunut. Viimeistele tilaus valitsemalla toinen maksutapa.',
 		'Please complete your payment by transferring the total amount to the following bank account:' => 'Viimeistele maksu siirtämällä koko summa seuraavalle pankkitilille:',
-		'Beneficiary: %s' => 'Saaja: %s',
-		'Payment reference: %s' => 'Viite: %s',
+		'Beneficiary: %s'                                 => 'Saaja: %s',
+		'Payment reference: %s'                           => 'Viite: %s',
 		'Please provide the payment reference <strong>%s</strong>' => 'Käytä maksussa viitettä <strong>%s</strong>',
 		'The payment will expire on <strong>%s</strong>.' => 'Maksu vanhenee <strong>%s</strong>.',
 		'The payment will expire on <strong>%s</strong>. Please make sure you transfer the total amount before this date.' => 'Maksu vanhenee <strong>%s</strong>. Varmista, että siirrät koko summan ennen tätä päivää.',
-		'Pay by Bank' => 'Verkkopankkimaksu',
-		'Name on card' => 'Kortinhaltijan nimi',
-		'Card number' => 'Kortin numero',
-		'Expiry date' => 'Voimassaoloaika',
-		'Secure payments provided by' => 'Turvallisen maksun tarjoaa',
-		'%1$s Secure payments provided by %2$s' => '%1$s Turvallisen maksun tarjoaa %2$s',
+		'Pay by Bank'                                     => 'Verkkopankkimaksu',
+		'Name on card'                                    => 'Kortinhaltijan nimi',
+		'Card number'                                     => 'Kortin numero',
+		'Expiry date'                                     => 'Voimassaoloaika',
+		'Secure payments provided by'                     => 'Turvallisen maksun tarjoaa',
+		'%1$s Secure payments provided by %2$s'           => '%1$s Turvallisen maksun tarjoaa %2$s',
 		'Payment completed by <strong>%1$s</strong> (IBAN (last 4 digits): %2$s, BIC: %3$s)' => 'Maksu suoritettu tililtä <strong>%1$s</strong> (IBAN, 4 viimeistä merkkiä: %2$s, BIC: %3$s)',
-		'%1$s payment pending (%2$s).' => '%1$s: maksu odottaa vahvistusta (%2$s).',
+		'%1$s payment pending (%2$s).'                    => '%1$s: maksu odottaa vahvistusta (%2$s).',
 		'%1$s payment still pending (%2$s) but customer already returned to the store. Status should be updated automatically in the future, if it doesn\'t this might indicate a communication issue between the site and Mollie.' => '%1$s: maksu odottaa edelleen vahvistusta (%2$s), vaikka asiakas on jo palannut kauppaan. Tilan pitäisi päivittyä automaattisesti myöhemmin. Jos näin ei käy, sivuston ja Mollien välillä voi olla yhteysongelma.',
-		'test mode' => 'testitila',
+		'test mode'                                       => 'testitila',
 	);
 
 	if ( isset( $map[ $original ] ) ) {
@@ -217,7 +217,7 @@ function rytkoset_theme_normalize_mollie_rf_references( $text ) {
 	return preg_replace_callback(
 		'/\bRF\d{2}(?:[-\s]?[A-Z0-9]{4})+\b/i',
 		static function ( $matches ) {
-			return strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $matches[0] ) );
+					return strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $matches[0] ) );
 		},
 		$text
 	);

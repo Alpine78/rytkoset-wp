@@ -28,13 +28,17 @@ if ( ! bbp_is_single_forum() ) : ?>
 
 			<fieldset class="bbp-form">
 				<legend>
-					<?php if ( bbp_is_topic_edit() ) :
-						printf( esc_html__( 'Muokkaa aihetta: &ldquo;%s&rdquo;', 'rytkoset-theme' ), bbp_get_topic_title() );
+					<?php
+					if ( bbp_is_topic_edit() ) :
+						/* translators: %s: forum topic title. */
+						printf( esc_html__( 'Muokkaa aihetta: &ldquo;%s&rdquo;', 'rytkoset-theme' ), esc_html( bbp_get_topic_title() ) );
 					elseif ( bbp_is_single_forum() && bbp_get_forum_title() ) :
-						printf( esc_html__( 'Luo uusi aihe alueelle &ldquo;%s&rdquo;', 'rytkoset-theme' ), bbp_get_forum_title() );
+						/* translators: %s: forum title. */
+						printf( esc_html__( 'Luo uusi aihe alueelle &ldquo;%s&rdquo;', 'rytkoset-theme' ), esc_html( bbp_get_forum_title() ) );
 					else :
 						esc_html_e( 'Luo uusi aihe', 'rytkoset-theme' );
-					endif; ?>
+					endif;
+					?>
 				</legend>
 
 				<?php do_action( 'bbp_theme_before_topic_form_notices' ); ?>
@@ -92,10 +96,14 @@ if ( ! bbp_is_single_forum() ) : ?>
 						<?php do_action( 'bbp_theme_before_topic_form_forum' ); ?>
 						<div class="bbp-form-field">
 							<label for="bbp_forum_id"><?php esc_html_e( 'Foorumi:', 'rytkoset-theme' ); ?></label>
-							<?php bbp_dropdown( array(
-								'show_none' => esc_html__( '— Valitse foorumi —', 'rytkoset-theme' ),
-								'selected'  => bbp_get_form_topic_forum(),
-							) ); ?>
+							<?php
+							bbp_dropdown(
+								array(
+									'show_none' => esc_html__( '— Valitse foorumi —', 'rytkoset-theme' ),
+									'selected'  => bbp_get_form_topic_forum(),
+								)
+							);
+							?>
 						</div>
 						<?php do_action( 'bbp_theme_after_topic_form_forum' ); ?>
 					<?php endif; ?>
@@ -153,9 +161,11 @@ if ( ! bbp_is_single_forum() ) : ?>
 					<div class="bbp-submit-wrapper">
 						<?php do_action( 'bbp_theme_before_topic_form_submit_button' ); ?>
 						<button type="submit" id="bbp_topic_submit" name="bbp_topic_submit" class="button submit">
-							<?php echo bbp_is_topic_edit()
+							<?php
+							echo bbp_is_topic_edit()
 								? esc_html__( 'Tallenna muutokset', 'rytkoset-theme' )
-								: esc_html__( 'Lähetä aihe', 'rytkoset-theme' ); ?>
+								: esc_html__( 'Lähetä aihe', 'rytkoset-theme' );
+							?>
 						</button>
 						<?php do_action( 'bbp_theme_after_topic_form_submit_button' ); ?>
 					</div>
@@ -176,7 +186,12 @@ if ( ! bbp_is_single_forum() ) : ?>
 
 	<div id="forum-closed-<?php bbp_forum_id(); ?>" class="bbp-forum-closed">
 		<div class="bbp-template-notice">
-			<ul><li><?php printf( esc_html__( 'Foorumi &laquo;%s&raquo; on suljettu uusilta aiheilta ja vastauksilta.', 'rytkoset-theme' ), bbp_get_forum_title() ); ?></li></ul>
+			<ul><li>
+				<?php
+				/* translators: %s: forum title. */
+				printf( esc_html__( 'Foorumi &laquo;%s&raquo; on suljettu uusilta aiheilta ja vastauksilta.', 'rytkoset-theme' ), esc_html( bbp_get_forum_title() ) );
+				?>
+			</li></ul>
 		</div>
 	</div>
 
@@ -184,10 +199,13 @@ if ( ! bbp_is_single_forum() ) : ?>
 
 	<div id="no-topic-<?php bbp_forum_id(); ?>" class="bbp-no-topic">
 		<div class="bbp-template-notice">
-			<ul><li><?php is_user_logged_in()
+			<ul><li>
+			<?php
+			is_user_logged_in()
 				? esc_html_e( 'Sinulla ei ole oikeutta luoda uusia aiheita.', 'rytkoset-theme' )
 				: esc_html_e( 'Kirjaudu sisään luodaksesi uuden aiheen.', 'rytkoset-theme' );
-			?></li></ul>
+			?>
+			</li></ul>
 		</div>
 		<?php if ( ! is_user_logged_in() ) : ?>
 			<?php bbp_get_template_part( 'form', 'user-login' ); ?>
@@ -198,4 +216,5 @@ if ( ! bbp_is_single_forum() ) : ?>
 
 <?php if ( ! bbp_is_single_forum() ) : ?>
 </div>
-<?php endif;
+	<?php
+endif;
