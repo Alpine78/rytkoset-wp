@@ -11,11 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$newsletter_form = function_exists( 'rytkoset_theme_get_footer_newsletter_form' )
+$rytkoset_newsletter_form = function_exists( 'rytkoset_theme_get_footer_newsletter_form' )
 	? rytkoset_theme_get_footer_newsletter_form()
 	: '';
 
-if ( '' === $newsletter_form ) {
+if ( '' === $rytkoset_newsletter_form ) {
 	return;
 }
 ?>
@@ -31,7 +31,7 @@ if ( '' === $newsletter_form ) {
 		</div>
 		<div class="site-prefooter__form-wrap">
 			<div class="site-footer__newsletter-form site-footer__newsletter-form--inline">
-				<?php echo $newsletter_form; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup is built by the theme and AcyMailing form renderer. ?>
+				<?php echo $rytkoset_newsletter_form; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Markup is built by the theme and AcyMailing form renderer. ?>
 			</div>
 		</div>
 	</div>

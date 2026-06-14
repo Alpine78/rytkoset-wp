@@ -129,6 +129,27 @@ Vaihtoehtoinen koodittomuus: saman lopputuloksen saa myös asettamalla "API Paym
 -kenttään arvon `Tilaus {orderNumber}`, mutta tämä asetus elää tietokannassa ja pitäisi tehdä
 erikseen jokaiseen ympäristöön.
 
+## Maksutapojen järjestys ja kassan ohjeistus (#397, #398)
+
+Mollie on hollantilainen maksunvälittäjä, joten pankkimaksut selvitetään ulkomaisen pankin kautta. Tämä aiheuttaa suomalaisille maksajille kaksi käytännön ongelmaa, jotka koskevat **kaikkia maksutapoja, myös kortteja** (juurisyyn selvitys ja kotimaisen maksunvälittäjän vertailu: tiketti #396):
+
+- **Rajat ylittävä maksu:** osa suomalaisista pankeista (esim. POP Pankki) vaatii ulkomaanmaksun erillisen hyväksynnän ja maan valinnan. Koskee sekä `Tilisiirtoa` että `Pay by Bankia` (Pay by Bank ei kierrä ongelmaa). Korttimaksukin on schemen näkökulmasta rajat ylittävä, joten esim. korttiin asetettu alue­rajoitus (vain Pohjoismaat ja Baltia) voi estää sen.
+- **RF-viite väliviivoilla:** Mollie muotoilee RF-viitteen väliviivoilla (`RF98-1937-…`), jotka suomalaiset verkkopankit hylkäävät. Teema poistaa väliviivat WooCommercen renderöimistä näkymistä (kiitossivu, tilausnäkymä, asiakassähköposti), mutta **ei voi muokata Mollien omaa maksusähköpostia** (`noreply@mollie.com`).
+
+### Maksutapojen järjestys (koodissa)
+
+`inc/woocommerce-mollie.php`:n `rytkoset_theme_demote_mollie_bank_gateways()` (`woocommerce_available_payment_gateways`) siirtää `mollie_wc_gateway_banktransfer`- ja `mollie_wc_gateway_paybybank`-tavat maksutapalistan loppuun, jolloin kortti / Apple Pay / Google Pay ovat ensin ja valikoituvat oletuksena. Tavoite on ohjata valtaosa maksajista pois ongelmallisilta pankkimaksuilta. RF-viiteilmoitus ohjaa kortille eikä lupaa MobilePayta, jota ei ole vielä aktivoitu Mollie-tilillä.
+
+### Kassan ohjeistus (admin, ei versionhallinnassa)
+
+Maksutavan **Description**-kenttään (WooCommerce → Asetukset → Maksutavat) kannattaa lisätä mieto maininta, että maksu kulkee Mollien kautta Alankomaihin. Teksti näkyy Block-kassassa maksutavan alla, kun asiakas valitsee sen. Suositellut tekstit:
+
+- **Luottokortti:** "Maksunvälittäjänä toimii Mollie, ja korttimaksu käsitellään Alankomaissa. Jos kortillesi on asetettu maa- tai aluerajoitus (esim. vain Pohjoismaat ja Baltia), salli ulkomaanmaksut, jotta maksu menee läpi."
+- **Tilisiirto:** "Maksu menee Mollien kautta hollantilaiseen pankkiin. Osa suomalaisista pankeista (esim. POP Pankki) vaatii ulkomaanmaksun erillisen hyväksynnän, ja maksun yhteydessä voi joutua valitsemaan maan. Maksat helpoiten kortilla."
+- **Verkkopankkimaksu (Pay by Bank):** "Maksu välitetään Mollien kautta hollantilaiseen pankkiin, joten osa suomalaisista pankeista voi vaatia ulkomaanmaksun erillisen hyväksynnän. Maksat helpoiten kortilla."
+
+Nämä tekstit elävät WooCommercen asetuksissa (tietokannassa), eivät versionhallinnassa, joten ne pitää lisätä erikseen dev- ja tuotantoympäristöön.
+
 ## Lähteet
 
 - Mollie WooCommerce plugin: https://wordpress.org/plugins/mollie-payments-for-woocommerce/

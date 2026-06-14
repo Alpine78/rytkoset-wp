@@ -17,9 +17,9 @@ get_header();
 if ( have_posts() ) :
 	while ( have_posts() ) :
 		the_post();
-		$event_id         = get_the_ID();
-		$has_summary_card = rytkoset_theme_event_has_summary_card( $event_id );
-		$event_date       = rytkoset_theme_get_event_date_display( $event_id );
+		$rytkoset_event_id         = get_the_ID();
+		$rytkoset_has_summary_card = rytkoset_theme_event_has_summary_card( $rytkoset_event_id );
+		$rytkoset_event_date       = rytkoset_theme_get_event_date_display( $rytkoset_event_id );
 		?>
 		<article <?php post_class( 'event' ); ?>>
 			<header class="event-hero<?php echo has_post_thumbnail() ? '' : ' event-hero--no-image'; ?>">
@@ -42,8 +42,8 @@ if ( have_posts() ) :
 				<div class="event-hero__content">
 					<div class="container section__wide">
 						<div class="event-hero__copy">
-							<?php if ( '' !== $event_date ) : ?>
-								<p class="event-hero__meta"><?php echo esc_html( $event_date ); ?></p>
+							<?php if ( '' !== $rytkoset_event_date ) : ?>
+								<p class="event-hero__meta"><?php echo esc_html( $rytkoset_event_date ); ?></p>
 							<?php endif; ?>
 							<h1 class="event-hero__title"><?php the_title(); ?></h1>
 						</div>
@@ -53,13 +53,13 @@ if ( have_posts() ) :
 
 			<section class="section event__section">
 				<div class="container section__wide">
-					<div class="<?php echo esc_attr( $has_summary_card ? 'event-layout event-layout--has-sidebar' : 'event-layout' ); ?>">
+					<div class="<?php echo esc_attr( $rytkoset_has_summary_card ? 'event-layout event-layout--has-sidebar' : 'event-layout' ); ?>">
 						<div class="event-layout__main">
 							<div class="article__content">
 								<?php the_content(); ?>
 							</div>
 
-							<?php rytkoset_theme_render_free_event_registration_form( $event_id ); ?>
+							<?php rytkoset_theme_render_free_event_registration_form( $rytkoset_event_id ); ?>
 
 							<?php
 							rytkoset_theme_share_buttons(
@@ -71,9 +71,9 @@ if ( have_posts() ) :
 							?>
 						</div>
 
-						<?php if ( $has_summary_card ) : ?>
+						<?php if ( $rytkoset_has_summary_card ) : ?>
 							<div class="event-layout__sidebar">
-								<?php rytkoset_theme_render_event_summary_card( $event_id ); ?>
+								<?php rytkoset_theme_render_event_summary_card( $rytkoset_event_id ); ?>
 							</div>
 						<?php endif; ?>
 					</div>

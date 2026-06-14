@@ -9,20 +9,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 
-$today              = current_time( 'Y-m-d' );
-$event_date_key     = rytkoset_theme_get_event_date_meta_key();
-$upcoming_events    = new WP_Query(
+$rytkoset_today              = current_time( 'Y-m-d' );
+$rytkoset_event_date_key     = rytkoset_theme_get_event_date_meta_key();
+$rytkoset_upcoming_events    = new WP_Query(
 	array(
 		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
-		'meta_key'       => $event_date_key,
+		'meta_key'       => $rytkoset_event_date_key,
 		'meta_type'      => 'DATE',
 		'meta_query'     => array(
 			array(
-				'key'     => $event_date_key,
-				'value'   => $today,
+				'key'     => $rytkoset_event_date_key,
+				'value'   => $rytkoset_today,
 				'compare' => '>=',
 				'type'    => 'DATE',
 			),
@@ -31,18 +31,18 @@ $upcoming_events    = new WP_Query(
 		'order'          => 'ASC',
 	)
 );
-$past_events        = new WP_Query(
+$rytkoset_past_events        = new WP_Query(
 	array(
 		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'no_found_rows'  => true,
-		'meta_key'       => $event_date_key,
+		'meta_key'       => $rytkoset_event_date_key,
 		'meta_type'      => 'DATE',
 		'meta_query'     => array(
 			array(
-				'key'     => $event_date_key,
-				'value'   => $today,
+				'key'     => $rytkoset_event_date_key,
+				'value'   => $rytkoset_today,
 				'compare' => '<',
 				'type'    => 'DATE',
 			),
@@ -51,7 +51,7 @@ $past_events        = new WP_Query(
 		'order'          => 'DESC',
 	)
 );
-$undated_events     = new WP_Query(
+$rytkoset_undated_events     = new WP_Query(
 	array(
 		'post_type'      => 'rytkoset_event',
 		'post_status'    => 'publish',
@@ -60,11 +60,11 @@ $undated_events     = new WP_Query(
 		'meta_query'     => array(
 			'relation' => 'OR',
 			array(
-				'key'     => $event_date_key,
+				'key'     => $rytkoset_event_date_key,
 				'compare' => 'NOT EXISTS',
 			),
 			array(
-				'key'     => $event_date_key,
+				'key'     => $rytkoset_event_date_key,
 				'value'   => '',
 				'compare' => '=',
 			),
@@ -73,9 +73,9 @@ $undated_events     = new WP_Query(
 		'order'          => 'DESC',
 	)
 );
-$has_event_sections = $upcoming_events->have_posts() || $past_events->have_posts() || $undated_events->have_posts();
+$rytkoset_has_event_sections = $rytkoset_upcoming_events->have_posts() || $rytkoset_past_events->have_posts() || $rytkoset_undated_events->have_posts();
 
-$render_event_list = static function ( WP_Query $event_query ) {
+$rytkoset_render_event_list = static function ( WP_Query $event_query ) {
 	?>
 	<div class="event-archive-grid">
 		<?php
@@ -153,25 +153,25 @@ $render_event_list = static function ( WP_Query $event_query ) {
 			<?php endif; ?>
 		</header>
 
-		<?php if ( $has_event_sections ) : ?>
-			<?php if ( $upcoming_events->have_posts() ) : ?>
+		<?php if ( $rytkoset_has_event_sections ) : ?>
+			<?php if ( $rytkoset_upcoming_events->have_posts() ) : ?>
 				<section class="event-archive-section" aria-labelledby="upcoming-events-heading">
 					<h2 id="upcoming-events-heading"><?php esc_html_e( 'Tulevat tapahtumat', 'rytkoset-theme' ); ?></h2>
-					<?php $render_event_list( $upcoming_events ); ?>
+					<?php $rytkoset_render_event_list( $rytkoset_upcoming_events ); ?>
 				</section>
 			<?php endif; ?>
 
-			<?php if ( $past_events->have_posts() ) : ?>
+			<?php if ( $rytkoset_past_events->have_posts() ) : ?>
 				<section class="event-archive-section" aria-labelledby="past-events-heading">
 					<h2 id="past-events-heading"><?php esc_html_e( 'Menneet tapahtumat', 'rytkoset-theme' ); ?></h2>
-					<?php $render_event_list( $past_events ); ?>
+					<?php $rytkoset_render_event_list( $rytkoset_past_events ); ?>
 				</section>
 			<?php endif; ?>
 
-			<?php if ( $undated_events->have_posts() ) : ?>
+			<?php if ( $rytkoset_undated_events->have_posts() ) : ?>
 				<section class="event-archive-section" aria-labelledby="undated-events-heading">
 					<h2 id="undated-events-heading"><?php esc_html_e( 'Päivämäärättömät tapahtumat', 'rytkoset-theme' ); ?></h2>
-					<?php $render_event_list( $undated_events ); ?>
+					<?php $rytkoset_render_event_list( $rytkoset_undated_events ); ?>
 				</section>
 			<?php endif; ?>
 		<?php else : ?>

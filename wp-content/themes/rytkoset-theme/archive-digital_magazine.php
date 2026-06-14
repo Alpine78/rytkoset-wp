@@ -25,10 +25,10 @@ get_header();
 					<?php
 					while ( have_posts() ) :
 						the_post();
-						$excerpt = trim( get_the_excerpt() );
+						$rytkoset_excerpt = trim( get_the_excerpt() );
 
-						if ( '' === $excerpt ) {
-							$excerpt = wp_strip_all_tags( get_the_content() );
+						if ( '' === $rytkoset_excerpt ) {
+							$rytkoset_excerpt = wp_strip_all_tags( get_the_content() );
 						}
 						?>
 						<article <?php post_class( 'digital-magazine-card' ); ?>>
@@ -47,8 +47,8 @@ get_header();
 									<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 								</h2>
 
-								<?php if ( '' !== $excerpt ) : ?>
-									<p class="digital-magazine-card__excerpt"><?php echo esc_html( wp_trim_words( $excerpt, 32 ) ); ?></p>
+								<?php if ( '' !== $rytkoset_excerpt ) : ?>
+									<p class="digital-magazine-card__excerpt"><?php echo esc_html( wp_trim_words( $rytkoset_excerpt, 32 ) ); ?></p>
 								<?php endif; ?>
 
 								<a class="btn btn--light digital-magazine-card__link" href="<?php the_permalink(); ?>">

@@ -135,8 +135,10 @@ function rytkoset_theme_product_sync_render_page() {
 		wp_die( esc_html__( 'Sinulla ei ole oikeuksia tähän sivuun.', 'rytkoset-theme' ) );
 	}
 
-	$tab    = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'export';
-	$token  = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin tab and preview token.
+	$tab   = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'export';
+	$token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	$tab    = in_array( $tab, array( 'export', 'import' ), true ) ? $tab : 'export';
 	$report = get_transient( 'rytkoset_psync_report_' . get_current_user_id() );
 
@@ -326,7 +328,16 @@ function rytkoset_theme_product_sync_handle_export() {
 	$product_ids = isset( $_POST['product_ids'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['product_ids'] ) ) : array();
 
 	if ( empty( $product_ids ) ) {
-		wp_safe_redirect( add_query_arg( array( 'page' => 'rytkoset-product-sync', 'tab' => 'export', 'rytkoset_psync_msg' => 'no-selection' ), admin_url( 'tools.php' ) ) );
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'               => 'rytkoset-product-sync',
+					'tab'                => 'export',
+					'rytkoset_psync_msg' => 'no-selection',
+				),
+				admin_url( 'tools.php' )
+			)
+		);
 		exit;
 	}
 
@@ -369,8 +380,8 @@ function rytkoset_theme_product_sync_handle_export() {
 		wp_die(
 			wp_kses_post(
 				'<p>' . esc_html__( 'Vienti estettiin seuraavien tuotekohtaisten virheiden vuoksi:', 'rytkoset-theme' ) . '</p><ul><li>'
-				. implode( '</li><li>', array_map( 'esc_html', $export_errors ) )
-				. '</li></ul>'
+							. implode( '</li><li>', array_map( 'esc_html', $export_errors ) )
+							. '</li></ul>'
 			)
 		);
 	}
@@ -541,20 +552,20 @@ function rytkoset_theme_product_sync_serialize_product( $product ) {
 	}
 
 	$data = array(
-		'sku'               => $sku,
-		'name'              => (string) $product->get_name(),
-		'slug'              => (string) $product->get_slug(),
-		'status'            => (string) $product->get_status(),
-		'type'              => (string) $product->get_type(),
-		'regular_price'     => (string) $product->get_regular_price(),
-		'sale_price'        => (string) $product->get_sale_price(),
-		'virtual'           => (bool) $product->is_virtual(),
-		'downloadable'      => (bool) $product->is_downloadable(),
-		'short_description' => (string) $product->get_short_description(),
-		'description'       => (string) $product->get_description(),
-		'categories'        => $category_slugs,
-		'tags'              => $tag_slugs,
-		'meta'              => $meta,
+		'sku'                => $sku,
+		'name'               => (string) $product->get_name(),
+		'slug'               => (string) $product->get_slug(),
+		'status'             => (string) $product->get_status(),
+		'type'               => (string) $product->get_type(),
+		'regular_price'      => (string) $product->get_regular_price(),
+		'sale_price'         => (string) $product->get_sale_price(),
+		'virtual'            => (bool) $product->is_virtual(),
+		'downloadable'       => (bool) $product->is_downloadable(),
+		'short_description'  => (string) $product->get_short_description(),
+		'description'        => (string) $product->get_description(),
+		'categories'         => $category_slugs,
+		'tags'               => $tag_slugs,
+		'meta'               => $meta,
 		'downloadable_files' => $downloads,
 	);
 
@@ -728,11 +739,11 @@ function rytkoset_theme_product_sync_render_import_tab( $token ) {
  * @return array{0: array<int, string>, 1: string} [hyväksytyt entry-nimet, virheviesti tai '']
  */
 function rytkoset_theme_product_sync_validate_zip_entries( $zip ) {
-	$allowed_root = array( 'manifest.json', 'products.json' );
+	$allowed_root  = array( 'manifest.json', 'products.json' );
 	$allowed_mimes = get_allowed_mime_types();
-	$safe_entries = array();
+	$safe_entries  = array();
 
-	for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+	for ( $i = 0; $i < $zip->numFiles; $i++ ) { // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- ZipArchive public API property.
 		$name = $zip->getNameIndex( $i );
 
 		if ( false === $name || '' === $name ) {
@@ -805,7 +816,9 @@ function rytkoset_theme_product_sync_handle_upload() {
 
 	check_admin_referer( 'rytkoset_product_sync_upload' );
 
-	if ( empty( $_FILES['zip']['tmp_name'] ) || ! is_uploaded_file( $_FILES['zip']['tmp_name'] ) ) {
+	$uploaded_zip_path = isset( $_FILES['zip']['tmp_name'] ) ? sanitize_text_field( wp_unslash( $_FILES['zip']['tmp_name'] ) ) : '';
+
+	if ( '' === $uploaded_zip_path || ! is_uploaded_file( $uploaded_zip_path ) ) {
 		wp_die( esc_html__( 'ZIP-tiedostoa ei ladattu.', 'rytkoset-theme' ) );
 	}
 
@@ -831,7 +844,7 @@ function rytkoset_theme_product_sync_handle_upload() {
 	}
 
 	$zip = new ZipArchive();
-	if ( true !== $zip->open( $_FILES['zip']['tmp_name'] ) ) {
+	if ( true !== $zip->open( $uploaded_zip_path ) ) {
 		rytkoset_theme_product_sync_rrmdir( $session_dir );
 		wp_die( esc_html__( 'ZIP-tiedoston avaus epäonnistui.', 'rytkoset-theme' ) );
 	}
@@ -873,6 +886,7 @@ function rytkoset_theme_product_sync_handle_upload() {
 	$version = isset( $manifest['version'] ) ? (string) $manifest['version'] : '';
 	if ( ! in_array( $version, array( '1.0', '1.1', '1.2' ), true ) ) {
 		rytkoset_theme_product_sync_rrmdir( $session_dir );
+		/* translators: %s: manifest version from the imported package. */
 		wp_die( sprintf( esc_html__( 'Tuntematon manifestin versio: %s. Tuetut versiot: 1.0, 1.1, 1.2', 'rytkoset-theme' ), esc_html( $version ) ) );
 	}
 
@@ -917,14 +931,14 @@ add_action( 'admin_post_rytkoset_product_sync_upload', 'rytkoset_theme_product_s
  * @return array
  */
 function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
-	$sku           = (string) $incoming['sku'];
-	$type          = isset( $incoming['type'] ) ? (string) $incoming['type'] : 'simple';
-	$existing_id   = wc_get_product_id_by_sku( $sku );
-	$existing      = $existing_id ? wc_get_product( $existing_id ) : null;
-	$status        = $existing ? 'update' : 'new';
-	$changed       = array();
-	$missing_files = array();
-	$errors        = array();
+	$sku               = (string) $incoming['sku'];
+	$type              = isset( $incoming['type'] ) ? (string) $incoming['type'] : 'simple';
+	$existing_id       = wc_get_product_id_by_sku( $sku );
+	$existing          = $existing_id ? wc_get_product( $existing_id ) : null;
+	$status            = $existing ? 'update' : 'new';
+	$changed           = array();
+	$missing_files     = array();
+	$errors            = array();
 	$variation_changes = array();
 
 	if ( 'variable' !== $type && ! empty( $incoming['downloadable'] ) && ! empty( $incoming['downloadable_files'] ) && is_array( $incoming['downloadable_files'] ) ) {
@@ -983,14 +997,14 @@ function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
 	}
 
 	return array(
-		'sku'           => $sku,
-		'name'          => (string) ( $incoming['name'] ?? '' ),
-		'status'        => $status,
-		'changed'       => $changed,
-		'missing_files' => $missing_files,
-		'errors'        => $errors,
+		'sku'               => $sku,
+		'name'              => (string) ( $incoming['name'] ?? '' ),
+		'status'            => $status,
+		'changed'           => $changed,
+		'missing_files'     => $missing_files,
+		'errors'            => $errors,
 		'variation_changes' => $variation_changes,
-		'existing_id'   => $existing_id,
+		'existing_id'       => $existing_id,
 	);
 }
 
@@ -1351,7 +1365,7 @@ function rytkoset_theme_product_sync_normalize_product_attributes_for_compare( $
 	usort(
 		$normalized,
 		function ( $a, $b ) {
-			return strcmp( (string) $a['name'], (string) $b['name'] );
+				return strcmp( (string) $a['name'], (string) $b['name'] );
 		}
 	);
 
@@ -1388,7 +1402,7 @@ function rytkoset_theme_product_sync_normalize_incoming_product_attributes_for_c
 	usort(
 		$normalized,
 		function ( $a, $b ) {
-			return strcmp( (string) $a['name'], (string) $b['name'] );
+				return strcmp( (string) $a['name'], (string) $b['name'] );
 		}
 	);
 
@@ -1470,17 +1484,19 @@ function rytkoset_theme_product_sync_render_preview( $token, $preview ) {
 			<tbody>
 				<?php foreach ( $diffs as $d ) : ?>
 					<?php
-					$status        = (string) $d['status'];
-					$disabled      = ( 'error' === $status );
-					$checked       = ( 'new' === $status || 'update' === $status );
-					$status_label  = isset( $status_labels[ $status ] ) ? $status_labels[ $status ] : $status;
+					$status       = (string) $d['status'];
+					$disabled     = ( 'error' === $status );
+					$checked      = ( 'new' === $status || 'update' === $status );
+					$status_label = isset( $status_labels[ $status ] ) ? $status_labels[ $status ] : $status;
 					?>
 					<tr>
 						<th scope="row" class="check-column">
-							<input type="checkbox" name="skus[]" value="<?php echo esc_attr( $d['sku'] ); ?>"<?php
+							<input type="checkbox" name="skus[]" value="<?php echo esc_attr( $d['sku'] ); ?>"
+							<?php
 								echo $checked ? ' checked' : '';
 								echo $disabled ? ' disabled' : '';
-							?> />
+							?>
+							/>
 						</th>
 						<td><?php echo esc_html( $d['name'] ); ?></td>
 						<td><code><?php echo esc_html( $d['sku'] ); ?></code></td>
@@ -1744,6 +1760,7 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 			$source   = trailingslashit( $session_dir ) . 'files/' . $filename;
 
 			if ( ! file_exists( $source ) ) {
+				/* translators: %s: missing downloadable product filename. */
 				return new WP_Error( 'rytkoset_psync_missing_file', sprintf( __( 'Downloadable-tiedosto puuttuu: %s', 'rytkoset-theme' ), $filename ) );
 			}
 
@@ -2027,11 +2044,12 @@ function rytkoset_theme_product_sync_copy_download_file( $source, $filename ) {
 	if ( empty( $filetype['ext'] ) ) {
 		return new WP_Error(
 			'rytkoset_psync_disallowed_type',
+			/* translators: %s: rejected downloadable product filename. */
 			sprintf( __( 'Tiedostotyyppi ei ole sallittu: %s', 'rytkoset-theme' ), $filename )
 		);
 	}
 
-	$uploads = wp_upload_dir();
+	$uploads  = wp_upload_dir();
 	$dest_dir = trailingslashit( $uploads['basedir'] ) . 'woocommerce_uploads';
 
 	if ( ! wp_mkdir_p( $dest_dir ) ) {
@@ -2045,6 +2063,7 @@ function rytkoset_theme_product_sync_copy_download_file( $source, $filename ) {
 	$dest_path = trailingslashit( $dest_dir ) . wp_unique_filename( $dest_dir, $filename );
 
 	if ( ! copy( $source, $dest_path ) ) {
+		/* translators: %s: downloadable product filename. */
 		return new WP_Error( 'rytkoset_psync_copy_failed', sprintf( __( 'Tiedoston kopiointi epäonnistui: %s', 'rytkoset-theme' ), $filename ) );
 	}
 
@@ -2085,6 +2104,7 @@ function rytkoset_theme_product_sync_render_report( $report ) {
 			<li>
 				<?php
 				printf(
+					/* translators: 1: updated product count, 2: comma-separated product SKUs. */
 					esc_html__( 'Päivitetty: %1$d (%2$s)', 'rytkoset-theme' ),
 					count( $updated ),
 					esc_html( implode( ', ', $updated ) )
@@ -2094,6 +2114,7 @@ function rytkoset_theme_product_sync_render_report( $report ) {
 			<li>
 				<?php
 				printf(
+					/* translators: %d: skipped product count. */
 					esc_html__( 'Ohitettu: %d', 'rytkoset-theme' ),
 					count( $skipped )
 				);

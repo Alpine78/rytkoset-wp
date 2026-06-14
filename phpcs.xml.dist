@@ -16,7 +16,7 @@
 	<!-- Vendoroidut kirjastot ovat kolmannen osapuolen koodia. -->
 	<exclude-pattern>*/assets/vendor/*</exclude-pattern>
 
-	<!-- Aloitus: ydintyyli + tietoturva. Kiristetään myöhemmin (#377). -->
+	<!-- WordPressin ydintyyli ja tietoturvatarkistukset. -->
 	<rule ref="WordPress-Core"/>
 	<rule ref="WordPress.Security"/>
 
@@ -37,6 +37,21 @@
 				<element value="rytkoset"/>
 			</property>
 		</properties>
+	</rule>
+
+	<!-- bbPress-template overrides must invoke the plugin's public hooks verbatim. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound">
+		<exclude-pattern>*/bbpress/*</exclude-pattern>
+	</rule>
+
+	<!-- CPT slugs contain underscores, as required by WordPress template hierarchy. -->
+	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+		<exclude-pattern>*/archive-digital_magazine.php</exclude-pattern>
+		<exclude-pattern>*/archive-gallery_album.php</exclude-pattern>
+		<exclude-pattern>*/archive-rytkoset_event.php</exclude-pattern>
+		<exclude-pattern>*/single-digital_magazine.php</exclude-pattern>
+		<exclude-pattern>*/single-gallery_album.php</exclude-pattern>
+		<exclude-pattern>*/single-rytkoset_event.php</exclude-pattern>
 	</rule>
 
 	<!-- Tuettu WordPress-minimiversio deprekaatiotarkistuksiin. -->

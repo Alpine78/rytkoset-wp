@@ -9,8 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 
-$paged      = max( 1, (int) get_query_var( 'paged' ), (int) get_query_var( 'page' ) );
-$blog_query = new WP_Query(
+$paged               = max( 1, (int) get_query_var( 'paged' ), (int) get_query_var( 'page' ) );
+$rytkoset_blog_query = new WP_Query(
 	array(
 		'post_type'           => 'post',
 		'post_status'         => 'publish',
@@ -39,15 +39,15 @@ $blog_query = new WP_Query(
 				<?php endif; ?>
 			</header>
 
-			<?php if ( $blog_query->have_posts() ) : ?>
+			<?php if ( $rytkoset_blog_query->have_posts() ) : ?>
 				<div class="blog-archive-grid">
 					<?php
-					while ( $blog_query->have_posts() ) :
-						$blog_query->the_post();
-						$excerpt = trim( get_the_excerpt() );
+					while ( $rytkoset_blog_query->have_posts() ) :
+						$rytkoset_blog_query->the_post();
+						$rytkoset_excerpt = trim( get_the_excerpt() );
 
-						if ( '' === $excerpt ) {
-							$excerpt = wp_strip_all_tags( get_the_content() );
+						if ( '' === $rytkoset_excerpt ) {
+							$rytkoset_excerpt = wp_strip_all_tags( get_the_content() );
 						}
 						?>
 						<article <?php post_class( 'blog-card' ); ?>>
@@ -72,8 +72,8 @@ $blog_query = new WP_Query(
 									<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 								</h2>
 
-								<?php if ( '' !== $excerpt ) : ?>
-									<p class="blog-card__excerpt"><?php echo esc_html( wp_trim_words( $excerpt, 32 ) ); ?></p>
+								<?php if ( '' !== $rytkoset_excerpt ) : ?>
+									<p class="blog-card__excerpt"><?php echo esc_html( wp_trim_words( $rytkoset_excerpt, 32 ) ); ?></p>
 								<?php endif; ?>
 
 								<a class="btn btn--light blog-card__link" href="<?php the_permalink(); ?>">
@@ -87,9 +87,9 @@ $blog_query = new WP_Query(
 				</div>
 
 				<?php
-				$pagination = paginate_links(
+				$rytkoset_pagination = paginate_links(
 					array(
-						'total'     => (int) $blog_query->max_num_pages,
+						'total'     => (int) $rytkoset_blog_query->max_num_pages,
 						'current'   => $paged,
 						'prev_text' => __( 'Edelliset', 'rytkoset-theme' ),
 						'next_text' => __( 'Seuraavat', 'rytkoset-theme' ),
@@ -97,10 +97,10 @@ $blog_query = new WP_Query(
 					)
 				);
 
-				if ( $pagination ) :
+				if ( $rytkoset_pagination ) :
 					?>
 					<nav class="pagination blog-pagination" aria-label="<?php esc_attr_e( 'Blogin sivutus', 'rytkoset-theme' ); ?>">
-						<?php echo wp_kses_post( $pagination ); ?>
+						<?php echo wp_kses_post( $rytkoset_pagination ); ?>
 					</nav>
 				<?php endif; ?>
 			<?php else : ?>

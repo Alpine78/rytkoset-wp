@@ -29,9 +29,9 @@ function rytkoset_theme_register_social_fields() {
 
 	acf_add_local_field_group(
 		array(
-			'key'    => 'group_rytkoset_social_links',
-			'title'  => __( 'Sosiaalisen median linkit', 'rytkoset-theme' ),
-			'fields' => array(
+			'key'      => 'group_rytkoset_social_links',
+			'title'    => __( 'Sosiaalisen median linkit', 'rytkoset-theme' ),
+			'fields'   => array(
 				array(
 					'key'         => 'field_rytkoset_facebook_url',
 					'label'       => __( 'Facebook-linkki', 'rytkoset-theme' ),

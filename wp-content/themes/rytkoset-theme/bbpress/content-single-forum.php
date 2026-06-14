@@ -9,10 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$forum_id = bbp_get_forum_id();
-$color    = function_exists( 'rytkoset_theme_forum_color' ) ? rytkoset_theme_forum_color( $forum_id ) : 'default';
-$icon     = function_exists( 'rytkoset_theme_forum_icon' ) ? rytkoset_theme_forum_icon( $forum_id, $color ) : '';
-$desc     = wp_strip_all_tags( (string) bbp_get_forum_content( $forum_id ) );
+$rytkoset_forum_id = bbp_get_forum_id();
+$rytkoset_color    = function_exists( 'rytkoset_theme_forum_color' ) ? rytkoset_theme_forum_color( $rytkoset_forum_id ) : 'default';
+$rytkoset_icon     = function_exists( 'rytkoset_theme_forum_icon' ) ? rytkoset_theme_forum_icon( $rytkoset_forum_id, $rytkoset_color ) : '';
+$rytkoset_desc     = wp_strip_all_tags( (string) bbp_get_forum_content( $rytkoset_forum_id ) );
 ?>
 <div id="bbpress-forums" class="forum-scope forum-page">
 <div class="forum-page__inner">
@@ -32,13 +32,13 @@ $desc     = wp_strip_all_tags( (string) bbp_get_forum_content( $forum_id ) );
 
 	<?php /* Category hero */ ?>
 	<div class="forum-category-head">
-		<span class="cat-row__icon forum-category-icon cat-row__icon--<?php echo esc_attr( $color ); ?>">
-			<?php echo esc_html( $icon ); ?>
+		<span class="cat-row__icon forum-category-icon cat-row__icon--<?php echo esc_attr( $rytkoset_color ); ?>">
+			<?php echo esc_html( $rytkoset_icon ); ?>
 		</span>
 		<div>
 			<h1 class="forum-h1" style="font-size:36px;margin-bottom:6px;"><?php bbp_forum_title(); ?></h1>
-			<?php if ( $desc ) : ?>
-				<p class="forum-lede" style="margin-bottom:0;"><?php echo esc_html( $desc ); ?></p>
+			<?php if ( $rytkoset_desc ) : ?>
+				<p class="forum-lede" style="margin-bottom:0;"><?php echo esc_html( $rytkoset_desc ); ?></p>
 			<?php endif; ?>
 		</div>
 	</div>
@@ -53,7 +53,7 @@ $desc     = wp_strip_all_tags( (string) bbp_get_forum_content( $forum_id ) );
 			</span>
 			<?php if ( function_exists( 'bbp_get_search_url' ) ) : ?>
 			<form id="bbp-search-form" method="get" action="<?php echo esc_url( bbp_get_search_url() ); ?>">
-				<input type="hidden" name="bbp_forum_id" value="<?php echo esc_attr( $forum_id ); ?>" />
+				<input type="hidden" name="bbp_forum_id" value="<?php echo esc_attr( $rytkoset_forum_id ); ?>" />
 				<input
 					class="forum-search__input"
 					type="search"
@@ -66,12 +66,16 @@ $desc     = wp_strip_all_tags( (string) bbp_get_forum_content( $forum_id ) );
 		</div>
 		<div class="forum-actions">
 			<?php if ( is_user_logged_in() && function_exists( 'bbp_get_forum_subscribe_link' ) ) : ?>
-				<?php bbp_forum_subscribe_link( array(
-					'subscribe'   => __( 'Tilaa', 'rytkoset-theme' ),
-					'unsubscribe' => __( 'Peru tilaus', 'rytkoset-theme' ),
-					'before'      => '<span class="forum-btn forum-btn--outline">',
-					'after'       => '</span>',
-				) ); ?>
+				<?php
+				bbp_forum_subscribe_link(
+					array(
+						'subscribe'   => __( 'Tilaa', 'rytkoset-theme' ),
+						'unsubscribe' => __( 'Peru tilaus', 'rytkoset-theme' ),
+						'before'      => '<span class="forum-btn forum-btn--outline">',
+						'after'       => '</span>',
+					)
+				);
+				?>
 			<?php endif; ?>
 			<?php if ( function_exists( 'bbp_current_user_can_access_create_topic_form' ) && bbp_current_user_can_access_create_topic_form() ) : ?>
 				<a href="#new-topic" class="forum-btn forum-btn--primary">
@@ -83,22 +87,22 @@ $desc     = wp_strip_all_tags( (string) bbp_get_forum_content( $forum_id ) );
 	</div>
 
 	<?php /* Filter chips — active state derived from current URL */ ?>
-	<?php $active_tag = isset( $_GET['topic-tag'] ) ? sanitize_key( $_GET['topic-tag'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
+	<?php $rytkoset_active_tag = isset( $_GET['topic-tag'] ) ? sanitize_key( $_GET['topic-tag'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended ?>
 	<div class="topic-toolbar">
 		<div class="filter-chips" role="group" aria-label="<?php esc_attr_e( 'Suodata aiheita', 'rytkoset-theme' ); ?>">
-			<a href="<?php bbp_forum_permalink(); ?>" class="filter-chips__btn<?php echo '' === $active_tag ? ' is-active' : ''; ?>" <?php echo '' === $active_tag ? 'aria-current="true"' : ''; ?>><?php esc_html_e( 'Kaikki', 'rytkoset-theme' ); ?></a>
+			<a href="<?php bbp_forum_permalink(); ?>" class="filter-chips__btn<?php echo '' === $rytkoset_active_tag ? ' is-active' : ''; ?>" <?php echo '' === $rytkoset_active_tag ? 'aria-current="true"' : ''; ?>><?php esc_html_e( 'Kaikki', 'rytkoset-theme' ); ?></a>
 			<?php if ( function_exists( 'bbp_get_forum_permalink' ) ) : ?>
-				<a href="<?php echo esc_url( add_query_arg( 'topic-tag', 'ratkaistu', bbp_get_forum_permalink() ) ); ?>" class="filter-chips__btn<?php echo 'ratkaistu' === $active_tag ? ' is-active' : ''; ?>" <?php echo 'ratkaistu' === $active_tag ? 'aria-current="true"' : ''; ?>><?php esc_html_e( 'Ratkaistut', 'rytkoset-theme' ); ?></a>
+				<a href="<?php echo esc_url( add_query_arg( 'topic-tag', 'ratkaistu', bbp_get_forum_permalink() ) ); ?>" class="filter-chips__btn<?php echo 'ratkaistu' === $rytkoset_active_tag ? ' is-active' : ''; ?>" <?php echo 'ratkaistu' === $rytkoset_active_tag ? 'aria-current="true"' : ''; ?>><?php esc_html_e( 'Ratkaistut', 'rytkoset-theme' ); ?></a>
 			<?php endif; ?>
 		</div>
 		<?php if ( function_exists( 'bbp_forum_topic_count' ) ) : ?>
 			<div class="topic-result-count">
 				<?php
-				$count = bbp_get_forum_topic_count( $forum_id );
+				$rytkoset_count = bbp_get_forum_topic_count( $rytkoset_forum_id );
 				printf(
 					/* translators: %s: number of topics */
 					esc_html__( '%s aihetta', 'rytkoset-theme' ),
-					'<strong>' . esc_html( number_format_i18n( (int) $count ) ) . '</strong>'
+					'<strong>' . esc_html( number_format_i18n( (int) $rytkoset_count ) ) . '</strong>'
 				);
 				?>
 			</div>

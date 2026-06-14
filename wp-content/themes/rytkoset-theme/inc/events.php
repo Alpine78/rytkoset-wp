@@ -1002,8 +1002,8 @@ function rytkoset_theme_sort_event_admin_by_event_date( $query ) {
 	$query->set(
 		'meta_query',
 		array(
-			'relation'          => 'OR',
-			'event_date_clause' => array(
+			'relation'                  => 'OR',
+			'event_date_clause'         => array(
 				'key'     => rytkoset_theme_get_event_date_meta_key(),
 				'compare' => 'EXISTS',
 				'type'    => 'DATE',
@@ -1069,7 +1069,7 @@ function rytkoset_theme_render_event_product_metabox( $post ) {
 				'<p class="description">%s</p>',
 				esc_html(
 					sprintf(
-						/* translators: %s: product SKU. */
+									/* translators: %s: product SKU. */
 						__( 'Valitun tuotteen SKU: %s', 'rytkoset-theme' ),
 						$selected_product->get_sku()
 					)

@@ -186,12 +186,30 @@ function rytkoset_theme_share_buttons( $args = array() ) {
 
 	// Indeksoi linkit palvelun mukaan ja kytke kanava-avaimiin (data-ch).
 	$service_map = array(
-		'facebook'  => array( 'ch' => 'fb',   'label' => __( 'Jaa Facebookissa', 'rytkoset-theme' ) ),
-		'x'         => array( 'ch' => 'x',    'label' => __( 'Jaa X:ssä', 'rytkoset-theme' ) ),
-		'linkedin'  => array( 'ch' => 'li',   'label' => __( 'Jaa LinkedInissä', 'rytkoset-theme' ) ),
-		'whatsapp'  => array( 'ch' => 'wa',   'label' => __( 'Jaa WhatsAppissa', 'rytkoset-theme' ) ),
-		'messenger' => array( 'ch' => 'ms',   'label' => __( 'Jaa Messengerissä', 'rytkoset-theme' ) ),
-		'email'     => array( 'ch' => 'mail', 'label' => __( 'Lähetä sähköpostilla', 'rytkoset-theme' ) ),
+		'facebook'  => array(
+			'ch'    => 'fb',
+			'label' => __( 'Jaa Facebookissa', 'rytkoset-theme' ),
+		),
+		'x'         => array(
+			'ch'    => 'x',
+			'label' => __( 'Jaa X:ssä', 'rytkoset-theme' ),
+		),
+		'linkedin'  => array(
+			'ch'    => 'li',
+			'label' => __( 'Jaa LinkedInissä', 'rytkoset-theme' ),
+		),
+		'whatsapp'  => array(
+			'ch'    => 'wa',
+			'label' => __( 'Jaa WhatsAppissa', 'rytkoset-theme' ),
+		),
+		'messenger' => array(
+			'ch'    => 'ms',
+			'label' => __( 'Jaa Messengerissä', 'rytkoset-theme' ),
+		),
+		'email'     => array(
+			'ch'    => 'mail',
+			'label' => __( 'Lähetä sähköpostilla', 'rytkoset-theme' ),
+		),
 	);
 
 	$links = array();
@@ -254,7 +272,10 @@ function rytkoset_theme_share_buttons( $args = array() ) {
 							class="share__ico"
 							data-ch="<?php echo esc_attr( $meta['ch'] ); ?>"
 							href="<?php echo esc_url( $links[ $service ]['url'] ); ?>"
-							<?php if ( ! $is_mail ) : ?>target="_blank" rel="noopener noreferrer"<?php endif; ?>
+							<?php
+							if ( ! $is_mail ) :
+								?>
+								target="_blank" rel="noopener noreferrer"<?php endif; ?>
 							aria-label="<?php echo esc_attr( $meta['label'] ); ?>"
 						>
 							<?php echo rytkoset_theme_get_share_icon( $meta['ch'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>

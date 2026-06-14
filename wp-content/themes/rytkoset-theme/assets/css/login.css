@@ -351,16 +351,24 @@ body.login input[type="email"]:focus {
   box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.20);
 }
 
-/* Salasanan näytä/piilota — WP:n natiivi .wp-pwd + .wp-hide-pw */
-body.login .user-pass-wrap .wp-pwd { position: relative; }
+/* Salasanan näytä/piilota — WP:n natiivi .wp-pwd + .wp-hide-pw.
+   Asemointikonteksti kaikille .wp-pwd-laatikoille (kirjautuminen käyttää
+   .user-pass-wrap-käärettä, mutta nollaus/asetus ei — ilman tätä silmänappi
+   karkaa väärään paikkaan rekisteröinnissä ja salasanan nollauksessa). */
+body.login .wp-pwd { position: relative; }
 body.login .wp-pwd .input { padding-right: 50px; }
-body.login .wp-hide-pw {
+/* Selector must outweigh WordPress's own `.login .wp-pwd button.wp-hide-pw`
+   (specificity 0,3,1), which forces top:0 and leaves our translateY(-50%) to
+   push the button ~20px above the field. Pin the button to the input's height
+   so the icon centers on the field regardless of the strength meter / caps
+   warning WordPress nests inside .wp-pwd. */
+body.login .wp-pwd button.wp-hide-pw {
   position: absolute;
-  top: 50%;
+  top: 0;
   right: 8px;
-  transform: translateY(-50%);
   width: 38px;
-  height: 38px;
+  height: 50px; /* = form .input min-height; centers the icon on the field */
+  transform: none;
   display: grid;
   place-items: center;
   margin: 0;
@@ -389,6 +397,9 @@ body.login .forgetmenot {
   justify-content: space-between;
   gap: 12px;
   margin: 6px 0 22px;
+  /* Room for the checkbox focus ring (outline 3px + offset 2px) so it stays
+     inside the form's left edge instead of protruding past it. */
+  padding-left: 5px;
 }
 body.login .forgetmenot label {
   display: inline-flex;
@@ -400,14 +411,17 @@ body.login .forgetmenot label {
   color: var(--auth-text-mute);
   cursor: pointer;
 }
+/* Natiivi checkbox: pelkkä accent-color + koko, jotta selaimen oma valintamerkki
+   piirtyy. Aiempi border/background-ylikirjoitus esti ruksin näkymisen. */
 body.login .forgetmenot input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   margin: 0;
-  border-radius: 6px;
-  border: 1.5px solid var(--auth-field-border);
-  background: var(--auth-field-bg);
   accent-color: var(--color-primary);
+  cursor: pointer;
+}
+:root[data-theme="dark"] body.login .forgetmenot input[type="checkbox"] {
+  accent-color: var(--color-accent);
 }
 body.login .forgetmenot input[type="checkbox"]:focus-visible {
   outline: 3px solid var(--color-accent);

@@ -77,49 +77,6 @@ function rytkoset_theme_get_tampere_2026_registration_parent_product( $product )
 }
 
 /**
- * Returns all product IDs that identify Tampere 2026 registration cart items.
- *
- * Includes the parent product and any variations so WooCommerce Blocks
- * conditional checkout-field schemas work for both simple and variable setups.
- *
- * @return array<int, int>
- */
-function rytkoset_theme_get_tampere_2026_registration_product_ids() {
-	if ( ! function_exists( 'wc_get_product_id_by_sku' ) ) {
-		return array();
-	}
-
-	$product_id = wc_get_product_id_by_sku( rytkoset_theme_get_tampere_2026_registration_sku() );
-
-	if ( ! $product_id ) {
-		return array();
-	}
-
-	$product = wc_get_product( $product_id );
-	$ids     = array( (int) $product_id );
-
-	if ( $product instanceof WC_Product_Variable ) {
-		$ids = array_merge( $ids, array_map( 'intval', $product->get_children() ) );
-	}
-
-	$variation_ids = get_posts(
-		array(
-			'post_type'      => 'product_variation',
-			'post_parent'    => $product_id,
-			'post_status'    => array( 'publish', 'private' ),
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		)
-	);
-
-	if ( ! empty( $variation_ids ) ) {
-		$ids = array_merge( $ids, array_map( 'intval', $variation_ids ) );
-	}
-
-	return array_values( array_unique( array_filter( $ids ) ) );
-}
-
-/**
  * Returns the product meta key used for the Tampere 2026 registration deadline.
  *
  * @return string
@@ -174,7 +131,7 @@ function rytkoset_theme_get_tampere_2026_registration_deadline( $product ) {
 	$stored_deadline  = $deadline_product instanceof WC_Product
 		? $deadline_product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true )
 		: $product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true );
-	$deadline        = rytkoset_theme_normalize_registration_deadline_date( (string) $stored_deadline );
+	$deadline         = rytkoset_theme_normalize_registration_deadline_date( (string) $stored_deadline );
 
 	if ( '' !== $deadline ) {
 		return $deadline;
@@ -332,10 +289,12 @@ function rytkoset_theme_save_tampere_2026_product_management_fields( $product ) 
 		return;
 	}
 
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the product edit nonce before this hook runs.
 	$raw_deadline = isset( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] )
 		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] ) )
 		: '';
-	$deadline     = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+	$deadline = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
 
 	if ( '' === $deadline ) {
 		$deadline = rytkoset_theme_get_tampere_2026_registration_default_deadline();
@@ -532,89 +491,110 @@ function rytkoset_theme_get_tampere_2026_max_participants() {
 }
 
 /**
- * Returns a JSON Schema fragment that matches when the Tampere 2026 product is in cart.
+ * Returns the Store API extension namespace for Tampere 2026 cart data.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_tampere_2026_store_api_namespace() {
+	return 'rytkoset_tampere_2026';
+}
+
+/**
+ * Returns Tampere 2026 cart data for the WooCommerce Store API.
  *
  * @return array<string, mixed>
  */
-function rytkoset_theme_get_tampere_2026_cart_presence_schema() {
-	$product_ids = rytkoset_theme_get_tampere_2026_registration_product_ids();
+function rytkoset_theme_get_tampere_2026_store_api_cart_data() {
+	return array(
+		'participant_count' => rytkoset_theme_get_tampere_2026_participant_count(),
+	);
+}
 
-	if ( empty( $product_ids ) ) {
-		return array(
-			'type' => 'object',
-			'not'  => array(),
-		);
+/**
+ * Returns the schema for Tampere 2026 Store API cart data.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_tampere_2026_store_api_cart_schema() {
+	return array(
+		'participant_count' => array(
+			'description' => __( 'Tampere 2026 -osallistujien määrä ostoskorissa.', 'rytkoset-theme' ),
+			'type'        => 'integer',
+			'minimum'     => 0,
+			'readonly'    => true,
+		),
+	);
+}
+
+/**
+ * Registers Tampere 2026 cart data for Checkout Block conditions.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_tampere_2026_store_api_cart_data() {
+	if (
+		! function_exists( 'woocommerce_store_api_register_endpoint_data' )
+		|| ! class_exists( '\Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema' )
+	) {
+		return;
 	}
 
+	woocommerce_store_api_register_endpoint_data(
+		array(
+			'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
+			'namespace'       => rytkoset_theme_get_tampere_2026_store_api_namespace(),
+			'data_callback'   => 'rytkoset_theme_get_tampere_2026_store_api_cart_data',
+			'schema_callback' => 'rytkoset_theme_get_tampere_2026_store_api_cart_schema',
+			'schema_type'     => ARRAY_A,
+		)
+	);
+}
+
+/**
+ * Registers Store API data after WooCommerce Blocks is available.
+ */
+if ( did_action( 'woocommerce_blocks_loaded' ) ) {
+	rytkoset_theme_register_tampere_2026_store_api_cart_data();
+} else {
+	add_action( 'woocommerce_blocks_loaded', 'rytkoset_theme_register_tampere_2026_store_api_cart_data' );
+}
+
+/**
+ * Returns a JSON Schema fragment that matches an active participant field.
+ *
+ * @param int $index Participant index starting from 1.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_tampere_2026_participant_active_schema( $index ) {
+	$namespace = rytkoset_theme_get_tampere_2026_store_api_namespace();
+
 	return array(
 		'type'       => 'object',
 		'properties' => array(
 			'cart' => array(
+				'type'       => 'object',
 				'properties' => array(
-					'items' => array(
-						'contains' => array(
-							'enum' => $product_ids,
+					'extensions' => array(
+						'type'       => 'object',
+						'properties' => array(
+							$namespace => array(
+								'type'       => 'object',
+								'properties' => array(
+									'participant_count' => array(
+										'type'    => 'integer',
+										'minimum' => max( 1, (int) $index ),
+									),
+								),
+								'required'   => array( 'participant_count' ),
+							),
 						),
+						'required'   => array( $namespace ),
 					),
 				),
+				'required'   => array( 'extensions' ),
 			),
 		),
-	);
-}
-
-/**
- * Returns a JSON Schema fragment that matches when the Tampere 2026 product is not in cart.
- *
- * @return array<string, mixed>
- */
-function rytkoset_theme_get_tampere_2026_cart_absence_schema() {
-	return array(
-		'not' => rytkoset_theme_get_tampere_2026_cart_presence_schema(),
-	);
-}
-
-/**
- * Returns a JSON Schema fragment that matches when cart item count is at least the given threshold.
- *
- * This MVP assumes the Tampere registration product is purchased on its own,
- * so total cart quantity is used as the participant count.
- *
- * @param int $minimum Minimum item count.
- * @return array<string, mixed>
- */
-function rytkoset_theme_get_cart_items_count_minimum_schema( $minimum ) {
-	return array(
-		'type'       => 'object',
-		'properties' => array(
-			'cart' => array(
-				'properties' => array(
-					'items_count' => array(
-						'minimum' => (int) $minimum,
-					),
-				),
-			),
-		),
-	);
-}
-
-/**
- * Returns a JSON Schema fragment that matches when cart item count is below the given threshold.
- *
- * @param int $minimum Minimum item count expected for the field to be relevant.
- * @return array<string, mixed>
- */
-function rytkoset_theme_get_cart_items_count_below_schema( $minimum ) {
-	return array(
-		'type'       => 'object',
-		'properties' => array(
-			'cart' => array(
-				'properties' => array(
-					'items_count' => array(
-						'maximum' => max( 0, (int) $minimum - 1 ),
-					),
-				),
-			),
-		),
+		'required'   => array( 'cart' ),
 	);
 }
 
@@ -625,12 +605,7 @@ function rytkoset_theme_get_cart_items_count_below_schema( $minimum ) {
  * @return array<string, mixed>
  */
 function rytkoset_theme_get_tampere_2026_participant_required_schema( $index ) {
-	return array(
-		'allOf' => array(
-			rytkoset_theme_get_tampere_2026_cart_presence_schema(),
-			rytkoset_theme_get_cart_items_count_minimum_schema( $index ),
-		),
-	);
+	return rytkoset_theme_get_tampere_2026_participant_active_schema( $index );
 }
 
 /**
@@ -641,10 +616,7 @@ function rytkoset_theme_get_tampere_2026_participant_required_schema( $index ) {
  */
 function rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ) {
 	return array(
-		'anyOf' => array(
-			rytkoset_theme_get_tampere_2026_cart_absence_schema(),
-			rytkoset_theme_get_cart_items_count_below_schema( $index ),
-		),
+		'not' => rytkoset_theme_get_tampere_2026_participant_active_schema( $index ),
 	);
 }
 
@@ -675,6 +647,7 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => $name_field_id,
+				/* translators: %d: participant number. */
 				'label'             => sprintf( __( 'Osallistuja %d: nimi', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'text',
@@ -693,7 +666,9 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => $diet_field_id,
+				/* translators: %d: participant number. */
 				'label'             => sprintf( __( 'Osallistuja %d: ruokarajoitteet tai allergiat', 'rytkoset-theme' ), $index ),
+				/* translators: %d: participant number. */
 				'optionalLabel'     => sprintf( __( 'Osallistuja %d: ruokarajoitteet tai allergiat (valinnainen)', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'text',
@@ -712,6 +687,7 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => $buffet_field_id,
+				/* translators: %d: participant number. */
 				'label'             => sprintf( __( 'Osallistuja %d: osallistuu perjantain 28.8. buffet-illalliselle (n. 30 €, maksu paikan päällä)', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'checkbox',
@@ -880,17 +856,17 @@ function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
 		return array();
 	}
 
-	$participants     = array();
+	$participants      = array();
 	$participant_types = rytkoset_theme_get_tampere_2026_order_participant_type_sequence( $order );
 
 	for ( $index = 1; $index <= $participant_count; $index++ ) {
-		$name = trim(
+		$name   = trim(
 			rytkoset_theme_get_order_additional_checkout_field_value(
 				$order,
 				sprintf( 'rytkoset/participant_%d_name', $index )
 			)
 		);
-		$diet = trim(
+		$diet   = trim(
 			rytkoset_theme_get_order_additional_checkout_field_value(
 				$order,
 				sprintf( 'rytkoset/participant_%d_diet', $index )
@@ -1283,6 +1259,7 @@ function rytkoset_theme_render_tampere_2026_orders_column( $column_name, $order 
 
 	echo esc_html(
 		sprintf(
+			/* translators: %d: participant count. */
 			_n( '%d osallistuja', '%d osallistujaa', $participant_quantity, 'rytkoset-theme' ),
 			$participant_quantity
 		)
@@ -1537,19 +1514,19 @@ function rytkoset_theme_get_order_paid_event_ids( $order ) {
 
 	$event_ids = get_posts(
 		array(
-			'post_type'      => 'rytkoset_event',
-			'post_status'    => array( 'publish', 'private' ),
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
+			'post_type'          => 'rytkoset_event',
+			'post_status'        => array( 'publish', 'private' ),
+			'posts_per_page'     => -1,
+			'fields'             => 'ids',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				array(
-					'key'     => rytkoset_theme_get_event_product_meta_key(),
-					'value'   => $product_ids,
-					'compare' => 'IN',
-					'type'    => 'NUMERIC',
-				),
-			),
+					'meta_query' => array(
+						array(
+							'key'     => rytkoset_theme_get_event_product_meta_key(),
+							'value'   => $product_ids,
+							'compare' => 'IN',
+							'type'    => 'NUMERIC',
+						),
+					),
 		)
 	);
 

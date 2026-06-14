@@ -10,11 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$stats        = function_exists( 'bbp_get_statistics' ) ? bbp_get_statistics() : array();
-$topic_count  = ! empty( $stats['topic_count'] ) ? $stats['topic_count'] : 0;
-$reply_count  = ! empty( $stats['reply_count'] ) ? $stats['reply_count'] : 0;
-$user_count   = ! empty( $stats['user_count'] ) ? $stats['user_count'] : 0;
-$forum_count  = ! empty( $stats['forum_count'] ) ? $stats['forum_count'] : 0;
+$rytkoset_stats       = function_exists( 'bbp_get_statistics' ) ? bbp_get_statistics() : array();
+$rytkoset_topic_count = ! empty( $rytkoset_stats['topic_count'] ) ? $rytkoset_stats['topic_count'] : 0;
+$rytkoset_reply_count = ! empty( $rytkoset_stats['reply_count'] ) ? $rytkoset_stats['reply_count'] : 0;
+$rytkoset_user_count  = ! empty( $rytkoset_stats['user_count'] ) ? $rytkoset_stats['user_count'] : 0;
+$rytkoset_forum_count = ! empty( $rytkoset_stats['forum_count'] ) ? $rytkoset_stats['forum_count'] : 0;
 ?>
 <div id="bbpress-forums" class="forum-scope forum-page">
 <div class="forum-page__inner">
@@ -57,23 +57,26 @@ $forum_count  = ! empty( $stats['forum_count'] ) ? $stats['forum_count'] : 0;
 			<?php endif; ?>
 			<?php
 			// Link to the first available forum to start a new topic.
-			$first_forum_url = '';
+			$rytkoset_first_forum_url = '';
 			if ( function_exists( 'bbp_has_forums' ) ) {
-				$forums_query = new WP_Query( array(
-					'post_type'      => bbp_get_forum_post_type(),
-					'posts_per_page' => 1,
-					'post_parent'    => 0,
-					'orderby'        => 'menu_order',
-					'order'          => 'ASC',
-				) );
-				if ( $forums_query->have_posts() ) {
-					$forums_query->the_post();
-					$first_forum_url = function_exists( 'bbp_get_forum_permalink' ) ? bbp_get_forum_permalink( get_the_ID() ) : '';
+				$rytkoset_forums_query = new WP_Query(
+					array(
+						'post_type'      => bbp_get_forum_post_type(),
+						'posts_per_page' => 1,
+						'post_parent'    => 0,
+						'orderby'        => 'menu_order',
+						'order'          => 'ASC',
+					)
+				);
+				if ( $rytkoset_forums_query->have_posts() ) {
+					$rytkoset_forums_query->the_post();
+					$rytkoset_first_forum_url = function_exists( 'bbp_get_forum_permalink' ) ? bbp_get_forum_permalink( get_the_ID() ) : '';
 					wp_reset_postdata();
 				}
 			}
-			if ( is_user_logged_in() && $first_forum_url ) : ?>
-				<a href="<?php echo esc_url( $first_forum_url . '#new-topic' ); ?>" class="forum-btn forum-btn--primary">
+			if ( is_user_logged_in() && $rytkoset_first_forum_url ) :
+				?>
+				<a href="<?php echo esc_url( $rytkoset_first_forum_url . '#new-topic' ); ?>" class="forum-btn forum-btn--primary">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
 					<?php esc_html_e( 'Aloita keskustelu', 'rytkoset-theme' ); ?>
 				</a>
@@ -82,22 +85,22 @@ $forum_count  = ! empty( $stats['forum_count'] ) ? $stats['forum_count'] : 0;
 	</div>
 
 	<?php /* Stats strip */ ?>
-	<?php if ( $topic_count || $reply_count || $user_count ) : ?>
+	<?php if ( $rytkoset_topic_count || $rytkoset_reply_count || $rytkoset_user_count ) : ?>
 	<div class="forum-stats">
 		<div class="forum-stat">
-			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $topic_count ) ); ?></div>
+			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $rytkoset_topic_count ) ); ?></div>
 			<div class="forum-stat__label"><?php esc_html_e( 'Aihetta', 'rytkoset-theme' ); ?></div>
 		</div>
 		<div class="forum-stat">
-			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $reply_count ) ); ?></div>
+			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $rytkoset_reply_count ) ); ?></div>
 			<div class="forum-stat__label"><?php esc_html_e( 'Viestiä', 'rytkoset-theme' ); ?></div>
 		</div>
 		<div class="forum-stat">
-			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $user_count ) ); ?></div>
+			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $rytkoset_user_count ) ); ?></div>
 			<div class="forum-stat__label"><?php esc_html_e( 'Jäsentä', 'rytkoset-theme' ); ?></div>
 		</div>
 		<div class="forum-stat">
-			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $forum_count ) ); ?></div>
+			<div class="forum-stat__value"><?php echo esc_html( number_format_i18n( (int) $rytkoset_forum_count ) ); ?></div>
 			<div class="forum-stat__label"><?php esc_html_e( 'Foorumia', 'rytkoset-theme' ); ?></div>
 		</div>
 	</div>

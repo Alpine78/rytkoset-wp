@@ -27,24 +27,24 @@ function rytkoset_theme_mollie_finnish_strings( $translated, $original, $domain 
 	}
 
 	$map = array(
-		', payment pending.' => ', maksu odottaa vahvistusta.',
+		', payment pending.'                              => ', maksu odottaa vahvistusta.',
 		'Your payment was not successful. Please complete your order with a different payment method.' => 'Maksu ei onnistunut. Viimeistele tilaus valitsemalla toinen maksutapa.',
 		'Please complete your payment by transferring the total amount to the following bank account:' => 'Viimeistele maksu siirtämällä koko summa seuraavalle pankkitilille:',
-		'Beneficiary: %s' => 'Saaja: %s',
-		'Payment reference: %s' => 'Viite: %s',
+		'Beneficiary: %s'                                 => 'Saaja: %s',
+		'Payment reference: %s'                           => 'Viite: %s',
 		'Please provide the payment reference <strong>%s</strong>' => 'Käytä maksussa viitettä <strong>%s</strong>',
 		'The payment will expire on <strong>%s</strong>.' => 'Maksu vanhenee <strong>%s</strong>.',
 		'The payment will expire on <strong>%s</strong>. Please make sure you transfer the total amount before this date.' => 'Maksu vanhenee <strong>%s</strong>. Varmista, että siirrät koko summan ennen tätä päivää.',
-		'Pay by Bank' => 'Verkkopankkimaksu',
-		'Name on card' => 'Kortinhaltijan nimi',
-		'Card number' => 'Kortin numero',
-		'Expiry date' => 'Voimassaoloaika',
-		'Secure payments provided by' => 'Turvallisen maksun tarjoaa',
-		'%1$s Secure payments provided by %2$s' => '%1$s Turvallisen maksun tarjoaa %2$s',
+		'Pay by Bank'                                     => 'Verkkopankkimaksu',
+		'Name on card'                                    => 'Kortinhaltijan nimi',
+		'Card number'                                     => 'Kortin numero',
+		'Expiry date'                                     => 'Voimassaoloaika',
+		'Secure payments provided by'                     => 'Turvallisen maksun tarjoaa',
+		'%1$s Secure payments provided by %2$s'           => '%1$s Turvallisen maksun tarjoaa %2$s',
 		'Payment completed by <strong>%1$s</strong> (IBAN (last 4 digits): %2$s, BIC: %3$s)' => 'Maksu suoritettu tililtä <strong>%1$s</strong> (IBAN, 4 viimeistä merkkiä: %2$s, BIC: %3$s)',
-		'%1$s payment pending (%2$s).' => '%1$s: maksu odottaa vahvistusta (%2$s).',
+		'%1$s payment pending (%2$s).'                    => '%1$s: maksu odottaa vahvistusta (%2$s).',
 		'%1$s payment still pending (%2$s) but customer already returned to the store. Status should be updated automatically in the future, if it doesn\'t this might indicate a communication issue between the site and Mollie.' => '%1$s: maksu odottaa edelleen vahvistusta (%2$s), vaikka asiakas on jo palannut kauppaan. Tilan pitäisi päivittyä automaattisesti myöhemmin. Jos näin ei käy, sivuston ja Mollien välillä voi olla yhteysongelma.',
-		'test mode' => 'testitila',
+		'test mode'                                       => 'testitila',
 	);
 
 	if ( isset( $map[ $original ] ) ) {
@@ -113,6 +113,44 @@ function rytkoset_theme_mollie_gateway_title( $title, $gateway_id ) {
 add_filter( 'woocommerce_gateway_title', 'rytkoset_theme_mollie_gateway_title', 10, 2 );
 
 /**
+ * Moves Mollie's bank-rail gateways to the end of the checkout payment list.
+ *
+ * Mollie settles bank transfer and Pay by Bank through a foreign (NL) account,
+ * which trips the "approve foreign payment / pick a country" step in some
+ * Finnish banks (e.g. POP Pankki) and exposes the hyphenated RF reference that
+ * Finnish banks reject. Cards, Apple Pay and Google Pay have neither problem,
+ * so surface them first and keep the bank-rail methods as a last-resort
+ * fallback. Relative order is otherwise preserved.
+ *
+ * @param array<string, WC_Payment_Gateway> $gateways Available gateways keyed by ID.
+ * @return array<string, WC_Payment_Gateway>
+ */
+function rytkoset_theme_demote_mollie_bank_gateways( $gateways ) {
+	if ( ! is_array( $gateways ) || empty( $gateways ) ) {
+		return $gateways;
+	}
+
+	$demoted_ids = array(
+		'mollie_wc_gateway_banktransfer',
+		'mollie_wc_gateway_paybybank',
+	);
+
+	$primary = array();
+	$demoted = array();
+
+	foreach ( $gateways as $gateway_id => $gateway ) {
+		if ( in_array( $gateway_id, $demoted_ids, true ) ) {
+			$demoted[ $gateway_id ] = $gateway;
+		} else {
+			$primary[ $gateway_id ] = $gateway;
+		}
+	}
+
+	return $primary + $demoted;
+}
+add_filter( 'woocommerce_available_payment_gateways', 'rytkoset_theme_demote_mollie_bank_gateways', 20 );
+
+/**
  * Forces Mollie Components to use Finnish locale when WordPress reports plain "fi".
  *
  * Mollie Components accepts "fi_FI", while WordPress can store the Finnish site
@@ -179,7 +217,7 @@ function rytkoset_theme_normalize_mollie_rf_references( $text ) {
 	return preg_replace_callback(
 		'/\bRF\d{2}(?:[-\s]?[A-Z0-9]{4})+\b/i',
 		static function ( $matches ) {
-			return strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $matches[0] ) );
+					return strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', $matches[0] ) );
 		},
 		$text
 	);
@@ -414,7 +452,7 @@ function rytkoset_theme_render_mollie_rf_reference_notice( $order, $context = 's
 
 	$message = sprintf(
 		/* translators: %s: RF reference instruction. */
-		__( 'Maksunvälittäjänä toimii Mollie, ja tilisiirto maksetaan hollantilaiseen pankkiin – tämä on normaalia. Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
+		__( 'Maksunvälittäjänä toimii Mollie, ja tilisiirto maksetaan hollantilaiseen pankkiin – tämä on normaalia. Joissakin suomalaisissa pankeissa ulkomaanmaksu pitää hyväksyä erikseen ennen maksamista, ja maksun yhteydessä voi joutua valitsemaan maan. Helpoiten maksat kortilla, jolloin näitä lisävaiheita ei tarvita. Jos Mollien maksusähköpostissa viite näkyy väliviivoilla, poista väliviivat ennen kuin syötät viitteen suomalaiseen verkkopankkiin. %s Syötä RF-viite maksun viitenumeroksi, jos pankki hyväksyy RF-viitteen.', 'rytkoset-theme' ),
 		$reference_instruction
 	);
 
