@@ -38,6 +38,7 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Checkout-kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla.
 - Kentät aktivoituvat vain, jos ostoskorissa on Tampere 2026 -tuote tai jokin sen variaatioista.
 - Kenttien määrä perustuu Tampere 2026 -variaatioiden yhteenlaskettuun kappalemäärään.
+- Teema julkaisee tämän osallistujamäärän Checkout Blockille Store API:n `cart.extensions.rytkoset_tampere_2026.participant_count`-kentässä. Muut ostoskorin tuotteet eivät vaikuta osallistujakenttien määrään.
 - Tunnistus tehdään ensisijaisesti parent-tuotteen SKU:lla `tampere-2026-osallistumismaksu`.
 - Kentät tallentuvat tilauksen lisäkentiksiin order-metana.
 - Piilotettuja ylimääräisiä osallistujakenttiä ei näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
@@ -59,10 +60,11 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 ## Testaus
 
 - Lisää Tampere 2026 -tuotetta ostoskoriin yksi osallistuja
+- Lisää samaan ostoskoriin myös vähintään yksi muu tuote ja varmista, että kassalla näkyy edelleen vain yhden osallistujan kentät
 - Tee testitilaus loppuun
 - Varmista, että tilausvahvistuksessa, sähköpostissa ja adminissa näkyvät vain osallistujan 1 kentät
 - Varmista, ettei osallistujien 2-10 tyhjiä buffet-kenttiä näytetä arvolla `Ei`
-- Lisää Tampere 2026 -tuotetta ostoskoriin yksi aikuinen ja yksi lapsi
+- Lisää Tampere 2026 -tuotetta ostoskoriin yksi aikuinen ja yksi lapsi sekä pidä mukana yksi muu tuote
 - Varmista, että kassalla näkyy 2 osallistujan kentät
 - Täytä molempien osallistujien nimet
 - Lisää toiselle ruokarajoite
@@ -70,4 +72,4 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Tee testitilaus loppuun
 - Varmista administa, että molemmat osallistujat näkyvät tilauksella luettavasti osallistujatyypin, ruokarajoitteen ja buffet-valinnan kanssa
 - Varmista, ettei osallistujien 3-10 tyhjiä kenttiä näytetä tilausvahvistuksessa, sähköpostissa tai adminissa
-- Tee ei-Tampere-testitilaus ja varmista, ettei sen sähköpostissa tai WooCommerce-adminin tilausnäkymässä näy Tampere 2026 -osallistujien tyhjiä buffet-kenttiä
+- Tee ei-Tampere-testitilaus ja varmista, ettei kassalla, sähköpostissa tai WooCommerce-adminin tilausnäkymässä näy Tampere 2026 -osallistujakenttiä
