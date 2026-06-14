@@ -288,7 +288,7 @@ function rytkoset_theme_get_event_participants( $event_id, $status_filter = '' )
 			array_filter(
 				$rows,
 				static function ( $row ) use ( $status_filter ) {
-					return isset( $row['status'] ) && $status_filter === $row['status'];
+								return isset( $row['status'] ) && $status_filter === $row['status'];
 				}
 			)
 		);
@@ -349,13 +349,13 @@ add_action( 'admin_menu', 'rytkoset_theme_register_event_participants_admin_page
 function rytkoset_theme_get_event_participants_admin_events() {
 	$events = get_posts(
 		array(
-			'post_type'      => 'rytkoset_event',
-			'post_status'    => array( 'publish', 'future', 'draft', 'private' ),
-			'posts_per_page' => -1,
-			'orderby'        => 'meta_value',
+			'post_type'                => 'rytkoset_event',
+			'post_status'              => array( 'publish', 'future', 'draft', 'private' ),
+			'posts_per_page'           => -1,
+			'orderby'                  => 'meta_value',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-			'meta_key'       => '_rytkoset_event_date',
-			'order'          => 'DESC',
+							'meta_key' => '_rytkoset_event_date',
+			'order'                    => 'DESC',
 		)
 	);
 
@@ -410,6 +410,7 @@ function rytkoset_theme_render_event_participants_export_form( $selected_event, 
  * @return void
  */
 function rytkoset_theme_render_event_participants_anonymization_notice() {
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only redirect feedback set by the nonce-protected anonymization action.
 	$notice = isset( $_GET['rytkoset_anonymize_notice'] ) ? sanitize_key( wp_unslash( $_GET['rytkoset_anonymize_notice'] ) ) : '';
 
 	if ( '' === $notice ) {
@@ -417,13 +418,14 @@ function rytkoset_theme_render_event_participants_anonymization_notice() {
 	}
 
 	$count = isset( $_GET['rytkoset_anonymize_count'] ) ? absint( wp_unslash( $_GET['rytkoset_anonymize_count'] ) ) : 0;
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	if ( 'success' === $notice ) {
 		printf(
 			'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
 			esc_html(
 				sprintf(
-					/* translators: %d: anonymized registration count */
+							/* translators: %d: anonymized registration count */
 					_n( '%d maksuton ilmoittautuminen anonymisoitiin.', '%d maksutonta ilmoittautumista anonymisoitiin.', $count, 'rytkoset-theme' ),
 					$count
 				)
@@ -668,8 +670,10 @@ function rytkoset_theme_render_event_participants_admin_page() {
 		wp_die( esc_html__( 'Sinulla ei ole oikeutta tarkastella tätä sivua.', 'rytkoset-theme' ) );
 	}
 
+	// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin list filters.
 	$selected_event  = isset( $_GET['event_id'] ) ? absint( wp_unslash( $_GET['event_id'] ) ) : 0;
 	$selected_status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 	$status_options = rytkoset_theme_get_event_participants_admin_status_options();
 
@@ -693,9 +697,9 @@ function rytkoset_theme_render_event_participants_admin_page() {
 
 	foreach ( $rows as $row ) {
 		if ( isset( $row['source'] ) && 'paid' === $row['source'] ) {
-			$paid_count++;
+			++$paid_count;
 		} else {
-			$free_count++;
+			++$free_count;
 		}
 	}
 
@@ -718,8 +722,8 @@ function rytkoset_theme_render_event_participants_admin_page() {
 						<option value="0"><?php esc_html_e( 'Kaikki tapahtumat', 'rytkoset-theme' ); ?></option>
 						<?php foreach ( $events as $event ) : ?>
 							<?php
-							$event_date    = rytkoset_theme_get_event_date_display( $event->ID );
-							$option_label  = $event->post_title;
+							$event_date   = rytkoset_theme_get_event_date_display( $event->ID );
+							$option_label = $event->post_title;
 
 							if ( '' !== $event_date ) {
 								$option_label .= ' (' . $event_date . ')';
@@ -811,9 +815,9 @@ function rytkoset_theme_render_event_participants_admin_page() {
 										$event_link = add_query_arg(
 											array(
 												'post_type' => 'rytkoset_event',
-												'page'      => 'rytkoset-event-participants',
-												'event_id'  => $event_id_for_row,
-												'status'    => $selected_status,
+												'page'     => 'rytkoset-event-participants',
+												'event_id' => $event_id_for_row,
+												'status'   => $selected_status,
 											),
 											admin_url( 'edit.php' )
 										);

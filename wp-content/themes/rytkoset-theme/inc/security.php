@@ -82,11 +82,13 @@ if ( ! function_exists( 'rytkoset_theme_block_author_enumeration' ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only public request inspection.
 		if ( ! isset( $_GET['author'] ) ) {
 			return;
 		}
 
 		// Vain numeerinen author-parametri on luettelointiyritys.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only public request inspection.
 		$author = sanitize_text_field( wp_unslash( $_GET['author'] ) );
 		if ( '' === $author || ! preg_match( '/^\d+$/', $author ) ) {
 			return;
@@ -231,7 +233,7 @@ add_filter( 'wp_headers', 'rytkoset_theme_remove_pingback_header' );
 add_filter(
 	'xmlrpc_enabled',
 	function ( $enabled ) {
-		return rytkoset_theme_xmlrpc_disabled() ? false : $enabled;
+			return rytkoset_theme_xmlrpc_disabled() ? false : $enabled;
 	}
 );
 

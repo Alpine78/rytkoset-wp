@@ -14,8 +14,8 @@ get_header();
 if ( have_posts() ) :
 	while ( have_posts() ) :
 		the_post();
-		$blog_page = get_page_by_path( 'blogi' );
-		$blog_url  = $blog_page instanceof WP_Post ? get_permalink( $blog_page ) : home_url( '/blogi/' );
+		$rytkoset_blog_page = get_page_by_path( 'blogi' );
+		$rytkoset_blog_url  = $rytkoset_blog_page instanceof WP_Post ? get_permalink( $rytkoset_blog_page ) : home_url( '/blogi/' );
 		?>
 <main id="primary" class="site-main" tabindex="-1">
 
@@ -41,7 +41,7 @@ if ( have_posts() ) :
 				<nav class="breadcrumb blog-post-hero__breadcrumb" aria-label="<?php esc_attr_e( 'Murupolku', 'rytkoset-theme' ); ?>">
 					<a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Etusivu', 'rytkoset-theme' ); ?></a>
 					<span aria-hidden="true">/</span>
-					<a href="<?php echo esc_url( $blog_url ); ?>"><?php esc_html_e( 'Blogi', 'rytkoset-theme' ); ?></a>
+					<a href="<?php echo esc_url( $rytkoset_blog_url ); ?>"><?php esc_html_e( 'Blogi', 'rytkoset-theme' ); ?></a>
 					<span aria-hidden="true">/</span>
 					<span><?php the_title(); ?></span>
 				</nav>
@@ -68,23 +68,23 @@ if ( have_posts() ) :
 				</div>
 
 				<?php
-				$categories = get_the_category_list( ', ' );
-				$tags       = get_the_tag_list( '', ', ' );
+				$rytkoset_categories = get_the_category_list( ', ' );
+				$rytkoset_tags       = get_the_tag_list( '', ', ' );
 
-				if ( $categories || $tags ) :
+				if ( $rytkoset_categories || $rytkoset_tags ) :
 					?>
 					<footer class="blog-post__terms">
-						<?php if ( $categories ) : ?>
+						<?php if ( $rytkoset_categories ) : ?>
 							<p>
 								<strong><?php esc_html_e( 'Kategoriat:', 'rytkoset-theme' ); ?></strong>
-								<?php echo wp_kses_post( $categories ); ?>
+								<?php echo wp_kses_post( $rytkoset_categories ); ?>
 							</p>
 						<?php endif; ?>
 
-						<?php if ( $tags ) : ?>
+						<?php if ( $rytkoset_tags ) : ?>
 							<p>
 								<strong><?php esc_html_e( 'Avainsanat:', 'rytkoset-theme' ); ?></strong>
-								<?php echo wp_kses_post( $tags ); ?>
+								<?php echo wp_kses_post( $rytkoset_tags ); ?>
 							</p>
 						<?php endif; ?>
 					</footer>

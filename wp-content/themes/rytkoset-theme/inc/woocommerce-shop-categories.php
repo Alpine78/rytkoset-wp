@@ -46,7 +46,7 @@ if ( ! function_exists( 'rytkoset_theme_render_shop_category_bar' ) ) {
 		$terms = array_filter(
 			$terms,
 			static function ( $term ) {
-				return 'uncategorized' !== $term->slug;
+							return 'uncategorized' !== $term->slug;
 			}
 		);
 
@@ -68,8 +68,8 @@ if ( ! function_exists( 'rytkoset_theme_render_shop_category_bar' ) ) {
 		);
 
 		foreach ( $terms as $term ) {
-			$is_current  = ( (int) $term->term_id === $current_term_id );
-			$term_link   = get_term_link( $term );
+			$is_current = ( (int) $term->term_id === $current_term_id );
+			$term_link  = get_term_link( $term );
 			if ( is_wp_error( $term_link ) ) {
 				continue;
 			}

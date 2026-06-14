@@ -16,27 +16,27 @@ if ( have_posts() ) :
 	while ( have_posts() ) :
 		the_post();
 
-		$post_id    = get_the_ID();
-		$is_article = rytkoset_theme_is_digital_magazine_article( $post_id );
+		$post_id             = get_the_ID();
+		$rytkoset_is_article = rytkoset_theme_is_digital_magazine_article( $post_id );
 
-		if ( $is_article ) :
-			$magazine_id      = rytkoset_theme_get_digital_magazine_parent_id( $post_id );
-			$previous_article = rytkoset_theme_get_adjacent_digital_magazine_article( $post_id, 'previous' );
-			$next_article     = rytkoset_theme_get_adjacent_digital_magazine_article( $post_id, 'next' );
+		if ( $rytkoset_is_article ) :
+			$rytkoset_magazine_id      = rytkoset_theme_get_digital_magazine_parent_id( $post_id );
+			$rytkoset_previous_article = rytkoset_theme_get_adjacent_digital_magazine_article( $post_id, 'previous' );
+			$rytkoset_next_article     = rytkoset_theme_get_adjacent_digital_magazine_article( $post_id, 'next' );
 			?>
 			<article <?php post_class( 'digital-magazine digital-magazine--article' ); ?>>
 				<header class="digital-magazine-reader__header">
 					<div class="container section__narrow">
-						<a class="digital-magazine-reader__back" href="<?php echo esc_url( get_permalink( $magazine_id ) ); ?>">
+						<a class="digital-magazine-reader__back" href="<?php echo esc_url( get_permalink( $rytkoset_magazine_id ) ); ?>">
 							<?php
 							printf(
 								/* translators: %s: magazine title */
 								esc_html__( 'Takaisin lehteen: %s', 'rytkoset-theme' ),
-								esc_html( get_the_title( $magazine_id ) )
+								esc_html( get_the_title( $rytkoset_magazine_id ) )
 							);
 							?>
 						</a>
-						<p class="digital-magazine-reader__meta"><?php echo esc_html( get_the_title( $magazine_id ) ); ?></p>
+						<p class="digital-magazine-reader__meta"><?php echo esc_html( get_the_title( $rytkoset_magazine_id ) ); ?></p>
 						<h1 class="digital-magazine-reader__title"><?php the_title(); ?></h1>
 					</div>
 				</header>
@@ -48,17 +48,17 @@ if ( have_posts() ) :
 						</div>
 
 						<nav class="digital-magazine-reader__nav" aria-label="<?php esc_attr_e( 'Digilehden juttunavigaatio', 'rytkoset-theme' ); ?>">
-							<?php if ( $previous_article instanceof WP_Post ) : ?>
-								<a class="digital-magazine-reader__nav-link digital-magazine-reader__nav-link--previous" href="<?php echo esc_url( get_permalink( $previous_article ) ); ?>">
+							<?php if ( $rytkoset_previous_article instanceof WP_Post ) : ?>
+								<a class="digital-magazine-reader__nav-link digital-magazine-reader__nav-link--previous" href="<?php echo esc_url( get_permalink( $rytkoset_previous_article ) ); ?>">
 									<span><?php esc_html_e( 'Edellinen juttu', 'rytkoset-theme' ); ?></span>
-									<strong><?php echo esc_html( get_the_title( $previous_article ) ); ?></strong>
+									<strong><?php echo esc_html( get_the_title( $rytkoset_previous_article ) ); ?></strong>
 								</a>
 							<?php endif; ?>
 
-							<?php if ( $next_article instanceof WP_Post ) : ?>
-								<a class="digital-magazine-reader__nav-link digital-magazine-reader__nav-link--next" href="<?php echo esc_url( get_permalink( $next_article ) ); ?>">
+							<?php if ( $rytkoset_next_article instanceof WP_Post ) : ?>
+								<a class="digital-magazine-reader__nav-link digital-magazine-reader__nav-link--next" href="<?php echo esc_url( get_permalink( $rytkoset_next_article ) ); ?>">
 									<span><?php esc_html_e( 'Seuraava juttu', 'rytkoset-theme' ); ?></span>
-									<strong><?php echo esc_html( get_the_title( $next_article ) ); ?></strong>
+									<strong><?php echo esc_html( get_the_title( $rytkoset_next_article ) ); ?></strong>
 								</a>
 							<?php endif; ?>
 						</nav>
@@ -67,7 +67,7 @@ if ( have_posts() ) :
 			</article>
 			<?php
 		else :
-			$articles = rytkoset_theme_get_digital_magazine_articles( $post_id );
+			$rytkoset_articles = rytkoset_theme_get_digital_magazine_articles( $post_id );
 			?>
 			<article <?php post_class( 'digital-magazine digital-magazine--issue' ); ?>>
 				<header class="digital-magazine-issue__hero<?php echo has_post_thumbnail() ? '' : ' digital-magazine-issue__hero--no-image'; ?>">
@@ -109,14 +109,14 @@ if ( have_posts() ) :
 						<section class="digital-magazine-toc" aria-labelledby="digital-magazine-toc-heading">
 							<h2 id="digital-magazine-toc-heading"><?php esc_html_e( 'Sisällysluettelo', 'rytkoset-theme' ); ?></h2>
 
-							<?php if ( ! empty( $articles ) ) : ?>
+							<?php if ( ! empty( $rytkoset_articles ) ) : ?>
 								<ol class="digital-magazine-toc__list">
-									<?php foreach ( $articles as $article ) : ?>
+									<?php foreach ( $rytkoset_articles as $rytkoset_article ) : ?>
 										<li class="digital-magazine-toc__item">
-											<a class="digital-magazine-toc__link" href="<?php echo esc_url( get_permalink( $article ) ); ?>">
-												<span class="digital-magazine-toc__title"><?php echo esc_html( get_the_title( $article ) ); ?></span>
-												<?php if ( has_excerpt( $article ) ) : ?>
-													<span class="digital-magazine-toc__excerpt"><?php echo esc_html( wp_trim_words( get_the_excerpt( $article ), 24 ) ); ?></span>
+											<a class="digital-magazine-toc__link" href="<?php echo esc_url( get_permalink( $rytkoset_article ) ); ?>">
+												<span class="digital-magazine-toc__title"><?php echo esc_html( get_the_title( $rytkoset_article ) ); ?></span>
+												<?php if ( has_excerpt( $rytkoset_article ) ) : ?>
+													<span class="digital-magazine-toc__excerpt"><?php echo esc_html( wp_trim_words( get_the_excerpt( $rytkoset_article ), 24 ) ); ?></span>
 												<?php endif; ?>
 											</a>
 										</li>

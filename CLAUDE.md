@@ -31,9 +31,9 @@ No separate build step. Two checks run in CI for every PR and `main` push (`.git
 find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
 ```
 
-**2. WordPress Coding Standards** (PHP_CodeSniffer + WPCS) — currently warns only (`continue-on-error: true`).
+**2. WordPress Coding Standards** (PHP_CodeSniffer + WPCS) — hard gate.
 
-phpcs is a Composer dev dependency (`composer.json`; the only Composer use in the repo). The ruleset lives in `phpcs.xml.dist` (base `WordPress-Core` + `WordPress.Security`, targets the theme + `wp-content/maintenance.php`, excludes `assets/vendor/`, text domain `rytkoset-theme`, prefix `rytkoset_theme`). Run locally:
+phpcs is a Composer dev dependency (`composer.json`; the only Composer use in the repo). The ruleset lives in `phpcs.xml.dist` (base `WordPress-Core` + `WordPress.Security`, targets the theme + `wp-content/maintenance.php`, excludes `assets/vendor/`, text domain `rytkoset-theme`, prefixes `rytkoset_theme` / `rytkoset`). It contains narrow exceptions for bbPress public hook names and the six underscore-containing CPT template filenames required by WordPress template hierarchy. Run locally:
 
 ```bash
 composer install          # once, installs phpcs + WPCS into vendor/ (gitignored)
@@ -41,9 +41,9 @@ composer run lint         # phpcs — report violations
 composer run lint:fix     # phpcbf — auto-fix whitespace/indentation
 ```
 
-The existing codebase still has style/alignment violations being cleaned up in batches (#377), so phpcs is non-blocking for now; tighten to a hard failure once the baseline is clear. Auto-fixing indentation on template files (embedded HTML/CSS) is intentionally deferred — only pure-PHP modules have been reindented to tabs so far.
+All files in the ruleset must pass without errors or warnings. Keep any `phpcs:ignore` directive scoped to the smallest possible line or block and include the technical reason.
 
-> Note: phpcbf's `Generic.WhiteSpace.DisallowSpaceIndent` converts leading spaces to tabs at the configured tab width. The PHP modules use 8-space-per-level source indentation, so reindent with `--tab-width=8` to get one tab per level (matching the rest of the codebase) rather than two.
+> Note: phpcbf's `Generic.WhiteSpace.DisallowSpaceIndent` converts leading spaces to tabs at the configured tab width. When cleaning legacy 8-space indentation, run phpcbf with `--tab-width=8`, then verify the final result with the normal `composer run lint` command used by CI.
 
 ## Deploy
 

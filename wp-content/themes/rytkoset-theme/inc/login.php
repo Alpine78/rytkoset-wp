@@ -24,7 +24,6 @@ function rytkoset_theme_login_assets() {
 		array( 'rytkoset-theme-base' ),
 		rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/login.css' )
 	);
-
 }
 add_action( 'login_enqueue_scripts', 'rytkoset_theme_login_assets' );
 
@@ -80,7 +79,7 @@ add_action( 'login_head', 'rytkoset_theme_login_theme_attribute' );
  */
 function rytkoset_theme_get_login_layout_config() {
 	$views = array(
-		'login'  => array(
+		'login'    => array(
 			'eyebrow'        => __( 'Jäsenten alue', 'rytkoset-theme' ),
 			'title'          => __( 'Tervetuloa takaisin', 'rytkoset-theme' ),
 			'sub'            => __( 'Kirjaudu sisään jatkaaksesi matkaa. Kehitämme sivustolle jatkuvasti uusia ominaisuuksia rekisteröityneille käyttäjille.', 'rytkoset-theme' ),
@@ -102,7 +101,7 @@ function rytkoset_theme_get_login_layout_config() {
 			'switchLinkText' => __( 'Kirjaudu sisään', 'rytkoset-theme' ),
 			'switchLinkUrl'  => wp_login_url(),
 		),
-		'forgot' => array(
+		'forgot'   => array(
 			'eyebrow'        => __( 'Salasanan palautus', 'rytkoset-theme' ),
 			'title'          => __( 'Unohtuiko salasana?', 'rytkoset-theme' ),
 			'sub'            => __( 'Kirjoita käyttäjätunnuksesi tai sähköpostiosoitteesi, niin lähetämme sinulle linkin uuden salasanan asettamiseen.', 'rytkoset-theme' ),
@@ -297,10 +296,10 @@ function rytkoset_theme_login_layout_script() {
 			}
 
 			/* ---- Salasanan nollaus/asetus: peitetty tyhjä kenttä ----
-			   Poistetaan WP:n automaattisesti generoima salasana (data-pw),
-			   selkokielinen näyttö (data-reveal -> type=text) ja "Luo salasana"
-			   -nappi. Salasanamanageri tunnistaa kentän, kun se on type=password.
-			   Silmäikoni (.wp-hide-pw), vahvuusmittari ja vaatimusteksti jäävät. */
+			Poistetaan WP:n automaattisesti generoima salasana (data-pw),
+			selkokielinen näyttö (data-reveal -> type=text) ja "Luo salasana"
+			-nappi. Salasanamanageri tunnistaa kentän, kun se on type=password.
+			Silmäikoni (.wp-hide-pw), vahvuusmittari ja vaatimusteksti jäävät. */
 			if (action === 'resetpass' || action === 'rp') {
 				var pass1 = loginEl.querySelector('#pass1');
 				if (pass1) {
@@ -315,11 +314,11 @@ function rytkoset_theme_login_layout_script() {
 			}
 
 			/* ---- Silmäikonin kohdistus: nollaus-/asetusnäkymässä WP upottaa
-			   vahvuusmittarin (#pass-strength-result) ja Caps Lock -varoituksen
-			   .wp-pwd-laatikon sisään, jolloin laatikko on kenttää korkeampi eikä
-			   absoluuttisesti asemoitu näytä/piilota-nappi enää keskity kenttään.
-			   Siirretään huomautukset .wp-pwd:n ulkopuolelle, jolloin laatikon
-			   korkeus vastaa kenttää (kuten kirjautumisnäkymässä). ---- */
+			vahvuusmittarin (#pass-strength-result) ja Caps Lock -varoituksen
+			.wp-pwd-laatikon sisään, jolloin laatikko on kenttää korkeampi eikä
+			absoluuttisesti asemoitu näytä/piilota-nappi enää keskity kenttään.
+			Siirretään huomautukset .wp-pwd:n ulkopuolelle, jolloin laatikon
+			korkeus vastaa kenttää (kuten kirjautumisnäkymässä). ---- */
 			var pwd = loginEl.querySelector('.wp-pwd');
 			if (pwd && pwd.parentNode) {
 				var ref = pwd;
@@ -377,24 +376,24 @@ function rytkoset_theme_login_finnish_strings( $translated, $original, $domain )
 	$back_link = html_entity_decode( '&larr; Go to %s', ENT_QUOTES, 'UTF-8' );
 
 	$map = array(
-		'Username or Email Address' => 'Käyttäjätunnus tai sähköposti',
-		'Password'                  => 'Salasana',
-		'Remember Me'               => 'Muista minut',
-		'Log In'                    => 'Kirjaudu sisään',
-		'Log in'                    => 'Kirjaudu sisään',
-		'Lost your password?'       => 'Unohditko salasanasi?',
-		'Register'                  => 'Rekisteröidy',
-		'Register For This Site'    => 'Rekisteröidy tälle sivustolle',
-		'Username'                  => 'Käyttäjätunnus',
-		'Email'                     => 'Sähköposti',
+		'Username or Email Address'   => 'Käyttäjätunnus tai sähköposti',
+		'Password'                    => 'Salasana',
+		'Remember Me'                 => 'Muista minut',
+		'Log In'                      => 'Kirjaudu sisään',
+		'Log in'                      => 'Kirjaudu sisään',
+		'Lost your password?'         => 'Unohditko salasanasi?',
+		'Register'                    => 'Rekisteröidy',
+		'Register For This Site'      => 'Rekisteröidy tälle sivustolle',
+		'Username'                    => 'Käyttäjätunnus',
+		'Email'                       => 'Sähköposti',
 		'Registration confirmation will be emailed to you.' => 'Lähetämme vahvistuslinkin antamaasi sähköpostiin.',
 		'Please enter your username or email address. You will receive an email message with instructions on how to reset your password.' => 'Syötä käyttäjätunnuksesi tai sähköpostiosoitteesi saadaksesi ohjeet salasanan vaihtoon.',
-		'Get New Password'          => 'Lähetä palautuslinkki',
-		$back_link                  => '← Palaa Rytkösten sukuseuran pääsivulle',
-		'← Go to %s'                => '← Palaa Rytkösten sukuseuran pääsivulle',
-		'&larr; Go to %s'           => '← Palaa Rytkösten sukuseuran pääsivulle',
-		'&larr; Back to %s'         => '← Palaa Rytkösten sukuseuran pääsivulle',
-		'← Back to %s'              => '← Palaa Rytkösten sukuseuran pääsivulle',
+		'Get New Password'            => 'Lähetä palautuslinkki',
+		$back_link                    => '← Palaa Rytkösten sukuseuran pääsivulle',
+		'← Go to %s'                  => '← Palaa Rytkösten sukuseuran pääsivulle',
+		'&larr; Go to %s'             => '← Palaa Rytkösten sukuseuran pääsivulle',
+		'&larr; Back to %s'           => '← Palaa Rytkösten sukuseuran pääsivulle',
+		'← Back to %s'                => '← Palaa Rytkösten sukuseuran pääsivulle',
 		'← Go to Rytkösten sukuseura' => '← Palaa Rytkösten sukuseuran pääsivulle',
 		'Error: Cookies are blocked due to unexpected output. For help, please see this documentation or try the support forums.' => 'Virhe: Keksit on estetty odottamattoman tulosteen takia. Lue ohjeet dokumentaatiosta tai kokeile tukifoorumeita.',
 		'Error: Cookies are blocked or not supported by your browser. You must enable cookies to use WordPress.' => 'Virhe: Evästeet on estetty tai selain ei tue niitä. Ota evästeet käyttöön käyttääksesi WordPressiä.',

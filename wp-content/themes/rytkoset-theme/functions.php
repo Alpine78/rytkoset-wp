@@ -280,7 +280,7 @@ function rytkoset_theme_get_logo_markup( $args = array() ) {
 	);
 
 	$args      = wp_parse_args( $args, $defaults );
-	$home_url  = esc_url( home_url( '/' ) );
+	$home_url  = home_url( '/' );
 	$site_name = get_bloginfo( 'name' );
 
 	ob_start();
@@ -301,7 +301,7 @@ function rytkoset_theme_get_logo_markup( $args = array() ) {
 			echo $logo; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		} else {
 			?>
-			<a class="<?php echo esc_attr( trim( $args['link_class'] ) ); ?>" href="<?php echo $home_url; ?>">
+			<a class="<?php echo esc_attr( trim( $args['link_class'] ) ); ?>" href="<?php echo esc_url( $home_url ); ?>">
 				<?php echo esc_html( $site_name ); ?>
 			</a>
 			<?php
@@ -347,8 +347,11 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 
 	echo '<ul class="account-nav__list">';
 	echo '<li class="menu-item menu-item-has-children account-menu__user">';
+	/* translators: %s: logged-in user's display name. */
 	echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false" aria-label="' . esc_attr( sprintf( __( 'Avaa tilivalikko (%s)', 'rytkoset-theme' ), $display_name ) ) . '">';
-	echo '<span class="account-menu__avatar">' . $avatar . '</span>';
+	echo '<span class="account-menu__avatar">';
+	echo wp_kses_post( $avatar );
+	echo '</span>';
 	echo '<span class="account-menu__meta">';
 	echo '<span class="account-menu__greeting">' . esc_html__( 'Kirjautunut', 'rytkoset-theme' ) . '</span>';
 	echo '<span class="account-menu__name">' . esc_html( $display_name ) . '</span>';
@@ -444,71 +447,71 @@ add_filter( 'woocommerce_add_error', 'rytkoset_theme_deduplicate_woocommerce_err
  * Lataa tyylit ja skriptit.
  */
 function rytkoset_theme_scripts() {
-    // Teeman päätyyli (style.css) – sisältää enää teemaotsakkeen. Pidetään
-    // enqueutettuna moduuliketjun juurena (ja jotta WordPress näkee teeman tyylin).
-    wp_enqueue_style(
-	'rytkoset-theme-style',
-	get_stylesheet_uri(),
-	array(),
-	rytkoset_theme_get_asset_version( get_stylesheet_directory() . '/style.css' )
-    );
+		// Teeman päätyyli (style.css) – sisältää enää teemaotsakkeen. Pidetään
+		// enqueutettuna moduuliketjun juurena (ja jotta WordPress näkee teeman tyylin).
+		wp_enqueue_style(
+			'rytkoset-theme-style',
+			get_stylesheet_uri(),
+			array(),
+			rytkoset_theme_get_asset_version( get_stylesheet_directory() . '/style.css' )
+		);
 
-    // Teeman CSS-moduulit kaskadijärjestyksessä. Korvaa style.css:n vanhan
-    // @import-ketjun erillisillä enqueueilla, jotta selain voi ladata moduulit
-    // rinnakkain. Jokainen moduuli riippuu edellisestä, joten latausjärjestys
-    // (base → layout/components → … → responsive viimeisenä) säilyy.
-    $css_modules = array(
-	'rytkoset-theme-base'        => 'base.css',
-	'rytkoset-theme-layout'      => 'layout.css',
-	'rytkoset-theme-hero'        => 'hero.css',
-	'rytkoset-theme-home'        => 'home.css',
-	'rytkoset-theme-404'         => '404.css',
-	'rytkoset-theme-components'  => 'components.css',
-	'rytkoset-theme-nav-base'    => 'nav.base.css',
-	'rytkoset-theme-nav-desktop' => 'nav.desktop.css',
-	'rytkoset-theme-nav-account' => 'nav.account.css',
-	'rytkoset-theme-nav-mobile'  => 'nav.mobile.css',
-	'rytkoset-theme-footer'      => 'footer.css',
-	'rytkoset-theme-responsive'  => 'responsive.css',
-    );
+		// Teeman CSS-moduulit kaskadijärjestyksessä. Korvaa style.css:n vanhan
+		// @import-ketjun erillisillä enqueueilla, jotta selain voi ladata moduulit
+		// rinnakkain. Jokainen moduuli riippuu edellisestä, joten latausjärjestys
+		// (base → layout/components → … → responsive viimeisenä) säilyy.
+		$css_modules = array(
+			'rytkoset-theme-base'        => 'base.css',
+			'rytkoset-theme-layout'      => 'layout.css',
+			'rytkoset-theme-hero'        => 'hero.css',
+			'rytkoset-theme-home'        => 'home.css',
+			'rytkoset-theme-404'         => '404.css',
+			'rytkoset-theme-components'  => 'components.css',
+			'rytkoset-theme-nav-base'    => 'nav.base.css',
+			'rytkoset-theme-nav-desktop' => 'nav.desktop.css',
+			'rytkoset-theme-nav-account' => 'nav.account.css',
+			'rytkoset-theme-nav-mobile'  => 'nav.mobile.css',
+			'rytkoset-theme-footer'      => 'footer.css',
+			'rytkoset-theme-responsive'  => 'responsive.css',
+		);
 
-    $previous_css_handle = 'rytkoset-theme-style';
-    foreach ( $css_modules as $handle => $filename ) {
-	$module_path = get_template_directory() . '/assets/css/' . $filename;
+		$previous_css_handle = 'rytkoset-theme-style';
+		foreach ( $css_modules as $handle => $filename ) {
+			$module_path = get_template_directory() . '/assets/css/' . $filename;
 
-	wp_enqueue_style(
-	    $handle,
-	    get_template_directory_uri() . '/assets/css/' . $filename,
-	    array( $previous_css_handle ),
-	    rytkoset_theme_get_asset_version( $module_path )
-	);
+			wp_enqueue_style(
+				$handle,
+				get_template_directory_uri() . '/assets/css/' . $filename,
+				array( $previous_css_handle ),
+				rytkoset_theme_get_asset_version( $module_path )
+			);
 
-	$previous_css_handle = $handle;
-    }
+			$previous_css_handle = $handle;
+		}
 
-    // Ehdolliset (sivukohtaiset) tyylit ladataan moduuliketjun jälkeen, jotta
-    // ne pääsevät yliajamaan perustyylit kuten ennenkin.
-    $core_css_dependency = $previous_css_handle;
+		// Ehdolliset (sivukohtaiset) tyylit ladataan moduuliketjun jälkeen, jotta
+		// ne pääsevät yliajamaan perustyylit kuten ennenkin.
+		$core_css_dependency = $previous_css_handle;
 
-    // Mobiilivalikon JS
-    wp_enqueue_script(
-	'rytkoset-theme-main',
-	get_template_directory_uri() . '/assets/js/main.js',
-	array(),
-	rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/main.js' ),
-	true // footer
-    );
+		// Mobiilivalikon JS
+		wp_enqueue_script(
+			'rytkoset-theme-main',
+			get_template_directory_uri() . '/assets/js/main.js',
+			array(),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/main.js' ),
+			true // footer
+		);
 
-    // Jakopainikkeiden JS (Web Share API + clipboard-fallback)
-    if ( is_singular() ) {
-	wp_enqueue_script(
-	    'rytkoset-theme-share',
-	    get_template_directory_uri() . '/assets/js/share.js',
-	    array(),
-	    rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/share.js' ),
-	    true // footer
-	);
-    }
+		// Jakopainikkeiden JS (Web Share API + clipboard-fallback)
+	if ( is_singular() ) {
+		wp_enqueue_script(
+			'rytkoset-theme-share',
+			get_template_directory_uri() . '/assets/js/share.js',
+			array(),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/share.js' ),
+			true // footer
+		);
+	}
 
 	if (
 		function_exists( 'is_woocommerce' )
@@ -534,7 +537,7 @@ function rytkoset_theme_scripts() {
 			'window.rytkosetShopConfig = ' . wp_json_encode(
 				array(
 					'soldIndividuallyCartProductIds' => rytkoset_theme_get_sold_individually_cart_product_ids(),
-					'soldIndividuallyInCartText'    => __( 'Jo ostoskorissa', 'rytkoset-theme' ),
+					'soldIndividuallyInCartText'     => __( 'Jo ostoskorissa', 'rytkoset-theme' ),
 				)
 			) . ';',
 			'before'
@@ -568,11 +571,11 @@ function rytkoset_theme_scripts() {
 						array_filter(
 							array(
 								rytkoset_theme_cart_has_membership_product()
-									? rytkoset_theme_get_membership_checkout_notice_markup()
-									: '',
+										? rytkoset_theme_get_membership_checkout_notice_markup()
+										: '',
 								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()
-									? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
-									: '',
+										? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
+										: '',
 							)
 						)
 					),
@@ -582,89 +585,89 @@ function rytkoset_theme_scripts() {
 		);
 	}
 
-    // Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
-    if (
+		// Load PhotoSwipe on album archive, single albums, and fallback query var (plain permalinks).
+	if (
 	is_post_type_archive( 'gallery_album' )
 	|| is_singular( 'gallery_album' )
 	|| get_query_var( 'gallery_album' )
 	|| 'gallery_album' === get_query_var( 'post_type' )
-    ) {
-	$photoswipe_base      = get_template_directory_uri() . '/assets/vendor/photoswipe';
-	$photoswipe_base_path = get_template_directory() . '/assets/vendor/photoswipe';
+		) {
+		$photoswipe_base      = get_template_directory_uri() . '/assets/vendor/photoswipe';
+		$photoswipe_base_path = get_template_directory() . '/assets/vendor/photoswipe';
 
-	// WooCommerce registers PhotoSwipe 4 under legacy handles that clash
-	// with the theme gallery. Remove them on album pages so the theme can
-	// load PhotoSwipe 5 consistently.
-	wp_dequeue_script( 'wc-photoswipe' );
-	wp_deregister_script( 'wc-photoswipe' );
-	wp_dequeue_script( 'wc-photoswipe-ui-default' );
-	wp_deregister_script( 'wc-photoswipe-ui-default' );
-	wp_dequeue_style( 'photoswipe' );
-	wp_deregister_style( 'photoswipe' );
-	wp_dequeue_style( 'photoswipe-default-skin' );
-	wp_deregister_style( 'photoswipe-default-skin' );
+		// WooCommerce registers PhotoSwipe 4 under legacy handles that clash
+		// with the theme gallery. Remove them on album pages so the theme can
+		// load PhotoSwipe 5 consistently.
+		wp_dequeue_script( 'wc-photoswipe' );
+		wp_deregister_script( 'wc-photoswipe' );
+		wp_dequeue_script( 'wc-photoswipe-ui-default' );
+		wp_deregister_script( 'wc-photoswipe-ui-default' );
+		wp_dequeue_style( 'photoswipe' );
+		wp_deregister_style( 'photoswipe' );
+		wp_dequeue_style( 'photoswipe-default-skin' );
+		wp_deregister_style( 'photoswipe-default-skin' );
 
-	wp_enqueue_style(
-	    'rytkoset-theme-gallery',
-	    get_template_directory_uri() . '/assets/css/gallery.css',
-	    array( $core_css_dependency ),
-	    rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/gallery.css' )
-	);
+		wp_enqueue_style(
+			'rytkoset-theme-gallery',
+			get_template_directory_uri() . '/assets/css/gallery.css',
+			array( $core_css_dependency ),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/gallery.css' )
+		);
 
-	wp_enqueue_style(
-	    'rytkoset-photoswipe-style',
-	    $photoswipe_base . '/photoswipe.css',
-	    array(),
-	    rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe.css' )
-	);
+		wp_enqueue_style(
+			'rytkoset-photoswipe-style',
+			$photoswipe_base . '/photoswipe.css',
+			array(),
+			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe.css' )
+		);
 
-	wp_enqueue_script(
-	    'rytkoset-photoswipe-core',
-	    $photoswipe_base . '/photoswipe.umd.min.js',
-	    array(),
-	    rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe.umd.min.js' ),
-	    true
-	);
+		wp_enqueue_script(
+			'rytkoset-photoswipe-core',
+			$photoswipe_base . '/photoswipe.umd.min.js',
+			array(),
+			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe.umd.min.js' ),
+			true
+		);
 
-	wp_enqueue_script(
-	    'rytkoset-photoswipe-lightbox',
-	    $photoswipe_base . '/photoswipe-lightbox.umd.min.js',
-	    array( 'rytkoset-photoswipe-core' ),
-	    rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-lightbox.umd.min.js' ),
-	    true
-	);
+		wp_enqueue_script(
+			'rytkoset-photoswipe-lightbox',
+			$photoswipe_base . '/photoswipe-lightbox.umd.min.js',
+			array( 'rytkoset-photoswipe-core' ),
+			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-lightbox.umd.min.js' ),
+			true
+		);
 
-	wp_enqueue_script(
-	    'rytkoset-photoswipe-init',
-	    get_template_directory_uri() . '/assets/js/photoswipe-init.js',
-	    array( 'rytkoset-photoswipe-lightbox' ),
-	    rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/photoswipe-init.js' ),
-	    true
-	);
+		wp_enqueue_script(
+			'rytkoset-photoswipe-init',
+			get_template_directory_uri() . '/assets/js/photoswipe-init.js',
+			array( 'rytkoset-photoswipe-lightbox' ),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/photoswipe-init.js' ),
+			true
+		);
 
-	wp_add_inline_script(
-	    'rytkoset-photoswipe-init',
-	    'window.rytkosetPhotoSwipe = ' . wp_json_encode(
-		array(
-		    'dynamicCaptionCssUrl' => add_query_arg(
-			'ver',
-			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-dynamic-caption-plugin.css' ),
-			$photoswipe_base . '/photoswipe-dynamic-caption-plugin.css'
-		    ),
-		    'dynamicCaptionJsUrl'  => add_query_arg(
-			'ver',
-			rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-dynamic-caption-plugin.esm.js' ),
-			$photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js'
-		    ),
-		    'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
-		    'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
-		    'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
-		    'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
-		)
-	    ) . ';',
-	    'before'
-	);
-    }
+		wp_add_inline_script(
+			'rytkoset-photoswipe-init',
+			'window.rytkosetPhotoSwipe = ' . wp_json_encode(
+				array(
+					'dynamicCaptionCssUrl' => add_query_arg(
+						'ver',
+						rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-dynamic-caption-plugin.css' ),
+						$photoswipe_base . '/photoswipe-dynamic-caption-plugin.css'
+					),
+					'dynamicCaptionJsUrl'  => add_query_arg(
+						'ver',
+						rytkoset_theme_get_asset_version( $photoswipe_base_path . '/photoswipe-dynamic-caption-plugin.esm.js' ),
+						$photoswipe_base . '/photoswipe-dynamic-caption-plugin.esm.js'
+					),
+					'copyLinkLabel'        => __( 'Kopioi linkki tähän kuvaan', 'rytkoset-theme' ),
+					'copyLinkSuccess'      => __( 'Linkki kopioitu', 'rytkoset-theme' ),
+					'copyLinkToast'        => __( 'Kuvan linkki kopioitu', 'rytkoset-theme' ),
+					'copyLinkPrompt'       => __( 'Kopioi linkki tähän kuvaan:', 'rytkoset-theme' ),
+				)
+			) . ';',
+			'before'
+		);
+	}
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_scripts' );
 
@@ -694,10 +697,10 @@ function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) 
 		return $block_content;
 	}
 
-	$attachment_id         = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
-	$item_id               = $attachment_id > 0 ? (string) $attachment_id : '';
-	$caption_html          = rytkoset_theme_get_attachment_caption_html( $attachment_id );
-	$visible_caption_html  = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
+	$attachment_id        = isset( $block['attrs']['id'] ) ? (int) $block['attrs']['id'] : 0;
+	$item_id              = $attachment_id > 0 ? (string) $attachment_id : '';
+	$caption_html         = rytkoset_theme_get_attachment_caption_html( $attachment_id );
+	$visible_caption_html = rytkoset_theme_get_attachment_visible_caption_html( $attachment_id );
 
 	if ( '' === $caption_html && '' === $item_id ) {
 		return $block_content;
@@ -706,7 +709,7 @@ function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) 
 	$block_content = preg_replace_callback(
 		'/<figure\b/',
 		static function ( $matches ) use ( $caption_html, $item_id, $has_caption_attr, $has_item_id_attr ) {
-			$attributes = '';
+					$attributes = '';
 
 			if ( ! $has_caption_attr && '' !== $caption_html ) {
 				$attributes .= ' data-pswp-caption-html="' . esc_attr( $caption_html ) . '"';
@@ -716,7 +719,7 @@ function rytkoset_theme_inject_image_caption_metadata( $block_content, $block ) 
 				$attributes .= ' data-pswp-item-id="' . esc_attr( $item_id ) . '"';
 			}
 
-			return '<figure' . $attributes;
+					return '<figure' . $attributes;
 		},
 		$block_content,
 		1
@@ -754,17 +757,17 @@ add_filter( 'render_block', 'rytkoset_theme_inject_image_caption_metadata', 10, 
 add_filter(
 	'wp_image_lightbox_enabled',
 	function () {
-		return false;
+			return false;
 	}
 );
 
 add_action(
 	'wp_enqueue_scripts',
 	function () {
-		wp_dequeue_script( 'wp-lightbox' );
-		wp_deregister_script( 'wp-lightbox' );
-		wp_dequeue_style( 'wp-lightbox' );
-		wp_deregister_style( 'wp-lightbox' );
+			wp_dequeue_script( 'wp-lightbox' );
+			wp_deregister_script( 'wp-lightbox' );
+			wp_dequeue_style( 'wp-lightbox' );
+			wp_deregister_style( 'wp-lightbox' );
 	},
 	20
 );
@@ -781,18 +784,18 @@ add_action(
  * @return string HTML.
  */
 if ( ! function_exists( 'rytkoset_theme_forum_avatar' ) ) :
-function rytkoset_theme_forum_avatar( $display_name, $size = 'md' ) {
-	$name   = trim( (string) $display_name );
-	$words  = array_values( array_filter( explode( ' ', $name ) ) );
-	if ( count( $words ) >= 2 ) {
-		$initials = mb_strtoupper( mb_substr( $words[0], 0, 1 ) ) .
-			    mb_strtoupper( mb_substr( end( $words ), 0, 1 ) );
-	} else {
-		$initials = mb_strtoupper( mb_substr( $name, 0, 2 ) );
+	function rytkoset_theme_forum_avatar( $display_name, $size = 'md' ) {
+		$name  = trim( (string) $display_name );
+		$words = array_values( array_filter( explode( ' ', $name ) ) );
+		if ( count( $words ) >= 2 ) {
+			$initials = mb_strtoupper( mb_substr( $words[0], 0, 1 ) ) .
+				mb_strtoupper( mb_substr( end( $words ), 0, 1 ) );
+		} else {
+			$initials = mb_strtoupper( mb_substr( $name, 0, 2 ) );
+		}
+		$size_class = 'md' === $size ? '' : ( 'lg' === $size ? ' forum-avatar--lg' : ( 'xl' === $size ? ' forum-avatar--xl' : '' ) );
+		return '<span class="forum-avatar' . $size_class . '" aria-hidden="true">' . esc_html( $initials ) . '</span>';
 	}
-	$size_class = 'md' === $size ? '' : ( 'lg' === $size ? ' forum-avatar--lg' : ( 'xl' === $size ? ' forum-avatar--xl' : '' ) );
-	return '<span class="forum-avatar' . $size_class . '" aria-hidden="true">' . esc_html( $initials ) . '</span>';
-}
 endif;
 
 /**
@@ -802,22 +805,22 @@ endif;
  * @return string Slug like 'rytkoset', 'net', 'seura', 'seka', 'testi', or 'default'.
  */
 if ( ! function_exists( 'rytkoset_theme_forum_color' ) ) :
-function rytkoset_theme_forum_color( $forum_id ) {
-	$slug = (string) get_post_field( 'post_name', (int) $forum_id );
-	$map  = array(
-		'net'      => 'net',
-		'sukuseura' => 'seura',
-		'sekalainen' => 'seka',
-		'testiviestit' => 'testi',
-		'testi'    => 'testi',
-	);
-	foreach ( $map as $key => $color ) {
-		if ( false !== strpos( $slug, $key ) ) {
-			return $color;
+	function rytkoset_theme_forum_color( $forum_id ) {
+		$slug = (string) get_post_field( 'post_name', (int) $forum_id );
+		$map  = array(
+			'net'          => 'net',
+			'sukuseura'    => 'seura',
+			'sekalainen'   => 'seka',
+			'testiviestit' => 'testi',
+			'testi'        => 'testi',
+		);
+		foreach ( $map as $key => $color ) {
+			if ( false !== strpos( $slug, $key ) ) {
+				return $color;
+			}
 		}
+		return 'rytkoset'; // default / Rytköset forum
 	}
-	return 'rytkoset'; // default / Rytköset forum
-}
 endif;
 
 /**
@@ -828,13 +831,13 @@ endif;
  * @return string Icon label.
  */
 if ( ! function_exists( 'rytkoset_theme_forum_icon' ) ) :
-function rytkoset_theme_forum_icon( $forum_id, $color ) {
-	if ( 'net' === $color ) {
-		return '.net';
+	function rytkoset_theme_forum_icon( $forum_id, $color ) {
+		if ( 'net' === $color ) {
+			return '.net';
+		}
+		$title = (string) get_the_title( (int) $forum_id );
+		return mb_strtoupper( mb_substr( wp_strip_all_tags( $title ), 0, 1 ) );
 	}
-	$title = (string) get_the_title( (int) $forum_id );
-	return mb_strtoupper( mb_substr( wp_strip_all_tags( $title ), 0, 1 ) );
-}
 endif;
 
 /**
@@ -844,14 +847,14 @@ endif;
  * @return string
  */
 if ( ! function_exists( 'rytkoset_theme_bbp_author_name' ) ) :
-function rytkoset_theme_bbp_author_name( $post_id ) {
-	$author_id = (int) get_post_field( 'post_author', (int) $post_id );
-	if ( ! $author_id ) {
-		return __( 'Nimetön', 'rytkoset-theme' );
+	function rytkoset_theme_bbp_author_name( $post_id ) {
+		$author_id = (int) get_post_field( 'post_author', (int) $post_id );
+		if ( ! $author_id ) {
+			return __( 'Nimetön', 'rytkoset-theme' );
+		}
+		$user = get_userdata( $author_id );
+		return $user ? $user->display_name : __( 'Nimetön', 'rytkoset-theme' );
 	}
-	$user = get_userdata( $author_id );
-	return $user ? $user->display_name : __( 'Nimetön', 'rytkoset-theme' );
-}
 endif;
 
 // =============================================================================
@@ -885,13 +888,11 @@ function rytkoset_theme_get_supported_order_statuses() {
 	return array_values(
 		array_map(
 			static function ( $status ) {
-				$status = (string) $status;
+						$status = (string) $status;
 
-				return 0 === strpos( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
+						return 0 === strpos( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
 			},
 			$statuses
 		)
 	);
 }
-
-

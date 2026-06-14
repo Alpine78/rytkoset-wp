@@ -29,13 +29,13 @@ function rytkoset_theme_register_gallery_album_cpt() {
 	);
 
 	$args = array(
-		'labels'             => $labels,
-		'public'             => true,
-		'has_archive'        => true,
-		'menu_icon'          => 'dashicons-format-gallery',
-		'show_in_rest'       => true,
-		'supports'           => array( 'title', 'editor', 'excerpt', 'thumbnail', 'comments' ),
-		'rewrite'            => array(
+		'labels'       => $labels,
+		'public'       => true,
+		'has_archive'  => true,
+		'menu_icon'    => 'dashicons-format-gallery',
+		'show_in_rest' => true,
+		'supports'     => array( 'title', 'editor', 'excerpt', 'thumbnail', 'comments' ),
+		'rewrite'      => array(
 			'slug'       => 'albumit',
 			'with_front' => false,
 		),
@@ -59,23 +59,23 @@ function rytkoset_theme_register_gallery_fields() {
 			'title'    => __( 'Albumin media', 'rytkoset-theme' ),
 			'fields'   => array(
 				array(
-					'key'          => 'field_gallery_caption_note',
-					'label'        => __( 'Kuvatekstit', 'rytkoset-theme' ),
-					'name'         => '',
-					'type'         => 'message',
-					'message'      => __( 'Kuvatekstit ja kuvaukset tulevat mediakirjastosta. Albumin lopulliset kuvatekstit eivät tule Gutenberg-lohkon omasta caption-kentästä.', 'rytkoset-theme' ),
-					'new_lines'    => 'wpautop',
-					'esc_html'     => 1,
+					'key'       => 'field_gallery_caption_note',
+					'label'     => __( 'Kuvatekstit', 'rytkoset-theme' ),
+					'name'      => '',
+					'type'      => 'message',
+					'message'   => __( 'Kuvatekstit ja kuvaukset tulevat mediakirjastosta. Albumin lopulliset kuvatekstit eivät tule Gutenberg-lohkon omasta caption-kentästä.', 'rytkoset-theme' ),
+					'new_lines' => 'wpautop',
+					'esc_html'  => 1,
 				),
 				array(
-					'key'           => 'field_gallery_event_date',
-					'label'         => __( 'Tapahtumapäivä', 'rytkoset-theme' ),
-					'name'          => 'event_date',
-					'type'          => 'date_picker',
-					'instructions'  => __( 'Näytetään albumin päiväyksenä ja käytetään albumien lajitteluun. Jos jätät tyhjäksi, käytetään julkaisupäivää.', 'rytkoset-theme' ),
-					'display_format'=> 'd.m.Y',
-					'return_format' => 'Ymd',
-					'first_day'     => 1,
+					'key'            => 'field_gallery_event_date',
+					'label'          => __( 'Tapahtumapäivä', 'rytkoset-theme' ),
+					'name'           => 'event_date',
+					'type'           => 'date_picker',
+					'instructions'   => __( 'Näytetään albumin päiväyksenä ja käytetään albumien lajitteluun. Jos jätät tyhjäksi, käytetään julkaisupäivää.', 'rytkoset-theme' ),
+					'display_format' => 'd.m.Y',
+					'return_format'  => 'Ymd',
+					'first_day'      => 1,
 				),
 				array(
 					'key'           => 'field_gallery_images',
@@ -87,15 +87,15 @@ function rytkoset_theme_register_gallery_fields() {
 					'preview_size'  => 'medium',
 					'library'       => 'all',
 				),
-										array(
-												'key'           => 'field_gallery_videos',
-												'label'         => __( 'Videot', 'rytkoset-theme' ),
-												'name'          => 'gallery_videos',
-												'type'          => 'repeater',
-												'instructions'  => __( 'Liitä yksi YouTube-linkki per rivi. Videot näytetään albumisivun yläosan Videot-osiossa.', 'rytkoset-theme' ),
-												'layout'        => 'row',
-												'button_label'  => __( 'Lisää YouTube-video', 'rytkoset-theme' ),
-												'sub_fields'    => array(
+				array(
+					'key'          => 'field_gallery_videos',
+					'label'        => __( 'Videot', 'rytkoset-theme' ),
+					'name'         => 'gallery_videos',
+					'type'         => 'repeater',
+					'instructions' => __( 'Liitä yksi YouTube-linkki per rivi. Videot näytetään albumisivun yläosan Videot-osiossa.', 'rytkoset-theme' ),
+					'layout'       => 'row',
+					'button_label' => __( 'Lisää YouTube-video', 'rytkoset-theme' ),
+					'sub_fields'   => array(
 						array(
 							'key'          => 'field_gallery_video_url',
 							'label'        => __( 'Video-URL', 'rytkoset-theme' ),
@@ -244,8 +244,8 @@ function rytkoset_theme_sort_gallery_block_by_filename( $block ) {
 		return $block;
 	}
 
-	$post_id   = (int) get_the_ID();
-	$cache_key = 'album_gallery_order_' . $post_id;
+	$post_id    = (int) get_the_ID();
+	$cache_key  = 'album_gallery_order_' . $post_id;
 	$sorted_ids = get_transient( $cache_key );
 
 	if ( false === $sorted_ids ) {
@@ -416,7 +416,7 @@ function rytkoset_theme_render_album_gallery_block( $block_content, $block ) {
 	$last_row_index      = count( $rows ) - 1;
 	$gallery_id          = 'album-' . (int) get_the_ID();
 
-	$html  = '<div class="wp-block-gallery album-gallery-flex" data-pswp-gallery="' . esc_attr( $gallery_id ) . '">';
+	$html = '<div class="wp-block-gallery album-gallery-flex" data-pswp-gallery="' . esc_attr( $gallery_id ) . '">';
 
 	foreach ( $rows as $row_index => $row ) {
 		$is_last_row = ( $row_index === $last_row_index );
@@ -894,20 +894,20 @@ add_action( 'post_submitbox_misc_actions', 'rytkoset_theme_gallery_album_submitb
  *
  * @return void
  */
-		function rytkoset_theme_enqueue_gallery_album_editor_assets() {
-				$screen = get_current_screen();
+function rytkoset_theme_enqueue_gallery_album_editor_assets() {
+		$screen = get_current_screen();
 
 	if ( ! $screen || 'gallery_album' !== $screen->post_type ) {
 		return;
 	}
 
-				$message = __(
-						'Albumikuvien kuvatekstit tulevat mediakirjastosta. Muokkaa kuvan caption ja description Media-kirjastossa, ei albumin lohkoeditorissa.',
-						'rytkoset-theme'
-				);
-				$hide_video_helper = ! class_exists( 'acf_field_repeater' );
+		$message           = __(
+			'Albumikuvien kuvatekstit tulevat mediakirjastosta. Muokkaa kuvan caption ja description Media-kirjastossa, ei albumin lohkoeditorissa.',
+			'rytkoset-theme'
+		);
+		$hide_video_helper = ! class_exists( 'acf_field_repeater' );
 
-				$script = '( function( wp ) {
+		$script = '( function( wp ) {
 						if ( ! wp || ! wp.domReady || ! wp.data ) {
 								return;
 						}
@@ -1071,9 +1071,9 @@ function rytkoset_theme_get_video_embed_url( $url ) {
 
 	if ( '' !== $video_id ) {
 		$params = array(
-			'rel'             => 0,
-			'modestbranding'  => 1,
-			'playsinline'     => 1,
+			'rel'            => 0,
+			'modestbranding' => 1,
+			'playsinline'    => 1,
 		);
 
 		return add_query_arg( $params, 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $video_id ) );

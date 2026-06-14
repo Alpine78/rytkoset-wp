@@ -46,12 +46,12 @@ function rytkoset_theme_get_event_registration_ids_by_email( $email, $page = 1, 
 			'update_post_meta_cache' => false,
 			'update_post_term_cache' => false,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'             => array(
-				array(
-					'key'   => $meta_keys['email'],
-					'value' => $email,
-				),
-			),
+					'meta_query'     => array(
+						array(
+							'key'   => $meta_keys['email'],
+							'value' => $email,
+						),
+					),
 		)
 	);
 }
@@ -267,11 +267,11 @@ function rytkoset_theme_erase_event_registration_personal_data( $email_address, 
 
 	foreach ( $registration_ids as $registration_id ) {
 		if ( rytkoset_theme_anonymize_event_registration( $registration_id ) ) {
-			$removed++;
+			++$removed;
 			continue;
 		}
 
-		$retained++;
+		++$retained;
 	}
 
 	if ( $removed > 0 ) {
@@ -313,7 +313,7 @@ function rytkoset_theme_handle_event_free_registrations_anonymization() {
 	check_admin_referer( 'rytkoset_anonymize_event_free_registrations', 'rytkoset_event_anonymize_nonce' );
 
 	$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
-	$confirm  = isset( $_POST['confirm_anonymization'] ) && '1' === wp_unslash( $_POST['confirm_anonymization'] );
+	$confirm  = isset( $_POST['confirm_anonymization'] ) && '1' === wp_unslash( $_POST['confirm_anonymization'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Exact allowlisted comparison.
 	$notice   = 'error';
 	$count    = 0;
 
@@ -322,7 +322,7 @@ function rytkoset_theme_handle_event_free_registrations_anonymization() {
 
 		foreach ( $registration_ids as $registration_id ) {
 			if ( rytkoset_theme_anonymize_event_registration( $registration_id ) ) {
-				$count++;
+				++$count;
 			}
 		}
 

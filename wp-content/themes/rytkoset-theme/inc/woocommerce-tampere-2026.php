@@ -174,7 +174,7 @@ function rytkoset_theme_get_tampere_2026_registration_deadline( $product ) {
 	$stored_deadline  = $deadline_product instanceof WC_Product
 		? $deadline_product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true )
 		: $product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true );
-	$deadline        = rytkoset_theme_normalize_registration_deadline_date( (string) $stored_deadline );
+	$deadline         = rytkoset_theme_normalize_registration_deadline_date( (string) $stored_deadline );
 
 	if ( '' !== $deadline ) {
 		return $deadline;
@@ -332,10 +332,12 @@ function rytkoset_theme_save_tampere_2026_product_management_fields( $product ) 
 		return;
 	}
 
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the product edit nonce before this hook runs.
 	$raw_deadline = isset( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] )
 		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] ) )
 		: '';
-	$deadline     = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+	$deadline = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
 
 	if ( '' === $deadline ) {
 		$deadline = rytkoset_theme_get_tampere_2026_registration_default_deadline();
@@ -675,6 +677,7 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => $name_field_id,
+				/* translators: %d: participant number. */
 				'label'             => sprintf( __( 'Osallistuja %d: nimi', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'text',
@@ -693,7 +696,9 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => $diet_field_id,
+				/* translators: %d: participant number. */
 				'label'             => sprintf( __( 'Osallistuja %d: ruokarajoitteet tai allergiat', 'rytkoset-theme' ), $index ),
+				/* translators: %d: participant number. */
 				'optionalLabel'     => sprintf( __( 'Osallistuja %d: ruokarajoitteet tai allergiat (valinnainen)', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'text',
@@ -712,6 +717,7 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => $buffet_field_id,
+				/* translators: %d: participant number. */
 				'label'             => sprintf( __( 'Osallistuja %d: osallistuu perjantain 28.8. buffet-illalliselle (n. 30 €, maksu paikan päällä)', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'checkbox',
@@ -880,17 +886,17 @@ function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
 		return array();
 	}
 
-	$participants     = array();
+	$participants      = array();
 	$participant_types = rytkoset_theme_get_tampere_2026_order_participant_type_sequence( $order );
 
 	for ( $index = 1; $index <= $participant_count; $index++ ) {
-		$name = trim(
+		$name   = trim(
 			rytkoset_theme_get_order_additional_checkout_field_value(
 				$order,
 				sprintf( 'rytkoset/participant_%d_name', $index )
 			)
 		);
-		$diet = trim(
+		$diet   = trim(
 			rytkoset_theme_get_order_additional_checkout_field_value(
 				$order,
 				sprintf( 'rytkoset/participant_%d_diet', $index )
@@ -1283,6 +1289,7 @@ function rytkoset_theme_render_tampere_2026_orders_column( $column_name, $order 
 
 	echo esc_html(
 		sprintf(
+			/* translators: %d: participant count. */
 			_n( '%d osallistuja', '%d osallistujaa', $participant_quantity, 'rytkoset-theme' ),
 			$participant_quantity
 		)
@@ -1537,19 +1544,19 @@ function rytkoset_theme_get_order_paid_event_ids( $order ) {
 
 	$event_ids = get_posts(
 		array(
-			'post_type'      => 'rytkoset_event',
-			'post_status'    => array( 'publish', 'private' ),
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
+			'post_type'          => 'rytkoset_event',
+			'post_status'        => array( 'publish', 'private' ),
+			'posts_per_page'     => -1,
+			'fields'             => 'ids',
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-			'meta_query'     => array(
-				array(
-					'key'     => rytkoset_theme_get_event_product_meta_key(),
-					'value'   => $product_ids,
-					'compare' => 'IN',
-					'type'    => 'NUMERIC',
-				),
-			),
+					'meta_query' => array(
+						array(
+							'key'     => rytkoset_theme_get_event_product_meta_key(),
+							'value'   => $product_ids,
+							'compare' => 'IN',
+							'type'    => 'NUMERIC',
+						),
+					),
 		)
 	);
 
