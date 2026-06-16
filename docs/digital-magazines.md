@@ -1,6 +1,8 @@
 # Digilehdet
 
-Digilehdet ovat WordPressissä HTML-sisältöä. Niitä ei julkaista PDF-tiedostoina, WooCommerce-tuotteina tai ostoon sidottuina sisältöinä tässä MVP-vaiheessa.
+Digilehdet ovat WordPressissä HTML-sisältöä. Niitä ei julkaista PDF-tiedostoina.
+
+Käyttöoikeus- ja hinnoittelumalli (kaikille ilmainen / vain jäsenille / jäsenhinta + normaalihinta / kaikille maksullinen) on kuvattu erillisessä dokumentissa [digilehdet.md](digilehdet.md). Tämä dokumentti kuvaa pelkän sisältömallin ja ylläpidon.
 
 ## Sisältömalli
 
