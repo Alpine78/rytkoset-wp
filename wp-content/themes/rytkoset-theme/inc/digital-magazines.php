@@ -387,3 +387,121 @@ function rytkoset_theme_limit_digital_magazine_archive_to_top_level( $query ) {
 	$query->set( 'order', 'DESC' );
 }
 add_action( 'pre_get_posts', 'rytkoset_theme_limit_digital_magazine_archive_to_top_level' );
+
+/**
+ * Returns the placeholder shown in place of restricted magazine content.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_digital_magazine_locked_notice() {
+	return __( 'Sisältö avautuu, kun lukuoikeus on voimassa.', 'rytkoset-theme' );
+}
+
+/**
+ * Returns true when a post's magazine content must be hidden from the viewer.
+ *
+ * Wraps the shared read-access helper and limits it to digital magazines and
+ * their articles, so the REST, feed, search and oEmbed leak guards all honour
+ * the same per-magazine access model (articles normalize to the parent magazine
+ * inside the helper).
+ *
+ * @param int|WP_Post|null $post Post object or ID. Defaults to the current post.
+ * @return bool
+ */
+function rytkoset_theme_should_hide_digital_magazine_content( $post = null ) {
+	$post = get_post( $post );
+
+	if ( ! $post instanceof WP_Post || 'digital_magazine' !== $post->post_type ) {
+		return false;
+	}
+
+	return ! rytkoset_theme_user_can_read_digital_magazine( $post->ID );
+}
+
+/**
+ * Suppresses content-derived excerpts for restricted magazines and articles.
+ *
+ * WP search results, RSS summary feeds and the oEmbed/embed view all build
+ * their excerpt from get_the_excerpt(), so one filter closes all three routes.
+ * An editor-provided excerpt is kept as an intentional public teaser (matching
+ * the archive card); only the auto-generated, content-derived excerpt is hidden.
+ *
+ * @param string           $excerpt Post excerpt.
+ * @param int|WP_Post|null $post    Post object or ID.
+ * @return string
+ */
+function rytkoset_theme_protect_digital_magazine_excerpt( $excerpt, $post = null ) {
+	$post = get_post( $post );
+
+	if ( ! rytkoset_theme_should_hide_digital_magazine_content( $post ) ) {
+		return $excerpt;
+	}
+
+	if ( '' !== trim( (string) $post->post_excerpt ) ) {
+		return $excerpt;
+	}
+
+	return rytkoset_theme_get_digital_magazine_locked_notice();
+}
+add_filter( 'get_the_excerpt', 'rytkoset_theme_protect_digital_magazine_excerpt', 10, 2 );
+
+/**
+ * Replaces full-content RSS feed output for restricted magazines and articles.
+ *
+ * Summary feeds route through get_the_excerpt() above; this covers feeds
+ * configured to deliver the full post content (the_content_feed).
+ *
+ * @param string $content   Feed content.
+ * @param string $feed_type Feed type.
+ * @return string
+ */
+function rytkoset_theme_protect_digital_magazine_feed_content( $content, $feed_type = null ) {
+	if ( ! rytkoset_theme_should_hide_digital_magazine_content( get_post() ) ) {
+		return $content;
+	}
+
+	return wpautop( rytkoset_theme_get_digital_magazine_locked_notice() );
+}
+add_filter( 'the_content_feed', 'rytkoset_theme_protect_digital_magazine_feed_content', 10, 2 );
+
+/**
+ * Strips restricted magazine content and excerpt from REST responses.
+ *
+ * show_in_rest stays enabled so the block editor keeps working; users who can
+ * edit the magazine (and members/buyers) keep the fields through the shared
+ * read-access helper. Everyone else receives the item with blanked content and
+ * excerpt, while title, slug and featured media stay available for listings.
+ *
+ * @param WP_REST_Response $response Response object.
+ * @param WP_Post          $post     Post object.
+ * @param WP_REST_Request  $request  Request object.
+ * @return WP_REST_Response
+ */
+function rytkoset_theme_protect_digital_magazine_rest( $response, $post, $request ) {
+	if ( ! $post instanceof WP_Post || ! rytkoset_theme_should_hide_digital_magazine_content( $post ) ) {
+		return $response;
+	}
+
+	$data = $response->get_data();
+
+	if ( isset( $data['content'] ) && is_array( $data['content'] ) ) {
+		$data['content']['rendered'] = '';
+
+		if ( array_key_exists( 'raw', $data['content'] ) ) {
+			$data['content']['raw'] = '';
+		}
+	}
+
+	if ( isset( $data['excerpt'] ) && is_array( $data['excerpt'] ) ) {
+		$data['excerpt']['rendered'] = '';
+
+		if ( array_key_exists( 'raw', $data['excerpt'] ) ) {
+			$data['excerpt']['raw'] = '';
+		}
+	}
+
+	$response->set_data( $data );
+
+	return $response;
+}
+add_filter( 'rest_prepare_digital_magazine', 'rytkoset_theme_protect_digital_magazine_rest', 10, 3 );
