@@ -19,17 +19,28 @@ function rytkoset_theme_social_meta() {
 		return;
 	}
 
-	$post_id     = is_singular() ? get_queried_object_id() : 0;
-	$site_name   = get_bloginfo( 'name' );
-	$title       = $post_id ? wp_strip_all_tags( get_the_title( $post_id ) ) : $site_name;
-	$description = $post_id
-		? ( has_excerpt( $post_id )
+	$post_id   = is_singular() ? get_queried_object_id() : 0;
+	$site_name = get_bloginfo( 'name' );
+	$title     = $post_id ? wp_strip_all_tags( get_the_title( $post_id ) ) : $site_name;
+
+	if ( ! $post_id ) {
+		$description = get_bloginfo( 'description' );
+	} elseif (
+		function_exists( 'rytkoset_theme_should_hide_digital_magazine_content' )
+		&& rytkoset_theme_should_hide_digital_magazine_content( $post_id )
+	) {
+		// Restricted digital magazine: never derive the description from the
+		// protected post content. Keep an editor excerpt as a public teaser (#381).
+		$description = has_excerpt( $post_id )
 			? wp_strip_all_tags( get_the_excerpt( $post_id ) )
-			: wp_trim_words( wp_strip_all_tags( get_post_field( 'post_content', $post_id ) ), 30 )
-		)
-		: get_bloginfo( 'description' );
-	$url         = $post_id ? get_permalink( $post_id ) : home_url( '/' );
-	$type        = $post_id ? 'article' : 'website';
+			: get_bloginfo( 'description' );
+	} elseif ( has_excerpt( $post_id ) ) {
+		$description = wp_strip_all_tags( get_the_excerpt( $post_id ) );
+	} else {
+		$description = wp_trim_words( wp_strip_all_tags( get_post_field( 'post_content', $post_id ) ), 30 );
+	}
+	$url  = $post_id ? get_permalink( $post_id ) : home_url( '/' );
+	$type = $post_id ? 'article' : 'website';
 
 	$image        = '';
 	$image_width  = 0;
