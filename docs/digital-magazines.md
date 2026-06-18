@@ -28,7 +28,11 @@ Sisällysluetteloa ei tallenneta erilliseen kenttään. Lehden sivu muodostaa si
 4. Jätä vanhempi tyhjäksi.
 5. Kirjoita lehden johdanto tai kuvaus editoriin.
 6. Lisää halutessasi ote ja artikkelikuva.
-7. Julkaise lehti.
+7. Valitse **Käyttöoikeus**-laatikosta lehden käyttöoikeusmalli.
+8. Julkaise lehti.
+
+Jos käyttöoikeus jätetään oletukseen, lehti on kaikille ilmainen. Käyttöoikeus
+asetetaan vain lehdelle; lehden jutut perivät emolehden käyttöoikeusmallin.
 
 ## Jutun lisääminen lehteen
 
@@ -49,11 +53,18 @@ Lehden sivulla näkyy:
 - lehden kuvaus tai johdanto
 - automaattinen sisällysluettelo
 
+Jos lehti on rajattu eikä käyttäjällä ole lukuoikeutta, sivu näyttää otsikon,
+kansikuvan, lukuoikeuskehotteen ja sisällysluettelon otsikkotasolla. Varsinainen
+lehden tai jutun sisältö ei näy.
+
 Jutun sivulla näkyy:
 
 - linkki takaisin lehteen
 - jutun otsikko ja sisältö
 - edellinen ja seuraava juttu samassa lehdessä, jos niitä on
+
+Jos käyttäjällä ei ole emolehden lukuoikeutta, jutun suora URL näyttää jutun
+otsikon ja lukuoikeuskehotteen sisällön sijaan.
 
 Ensimmäisellä jutulla ei näytetä edellinen-linkkiä. Viimeisellä jutulla ei näytetä seuraava-linkkiä.
 
@@ -65,4 +76,8 @@ Perustestissä varmista:
 - lehden sivu näyttää jutut sisällysluettelossa oikeassa järjestyksessä
 - jutun sivu näyttää takaisin-linkin lehteen
 - jutun edellinen/seuraava-navigaatio toimii
+- vain jäsenille rajattu lehti näyttää sisällön aktiiviselle jäsenelle ja
+  kehotteen kirjautumattomalle / ei-jäsenelle
+- rajatun lehden juttu ei avaudu suoralla URL:lla ilman lukuoikeutta
+- rajatun lehden arkistokortti ei generoi otetta lehden sisällöstä
 - mobiilinäkymässä sisällysluettelo ja lukunäkymä pysyvät luettavina
