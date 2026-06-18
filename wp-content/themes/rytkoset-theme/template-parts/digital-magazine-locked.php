@@ -22,13 +22,27 @@ $rytkoset_secondary_url   = '';
 $rytkoset_secondary_label = '';
 
 if ( 'members_only' === $rytkoset_locked_mode ) {
-	$rytkoset_locked_heading  = __( 'Digilehti on jäsenille', 'rytkoset-theme' );
-	$rytkoset_locked_message  = __(
-		'Aktiiviset jäsenet voivat lukea tämän digilehden kirjautumisen jälkeen. Jos et ole jäsen, voit tutustua jäsenyyteen.',
-		'rytkoset-theme'
-	);
-	$rytkoset_secondary_url   = $rytkoset_membership_url;
-	$rytkoset_secondary_label = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
+	$rytkoset_locked_heading = __( 'Digilehti on jäsenille', 'rytkoset-theme' );
+
+	if ( is_user_logged_in() ) {
+		// Already logged in but not an active member: point straight to membership.
+		$rytkoset_locked_message  = __(
+			'Tämä digilehti on tarkoitettu seuran jäsenille. Tutustu jäsenyyteen, niin saat lehden luettavaksi.',
+			'rytkoset-theme'
+		);
+		$rytkoset_primary_url     = $rytkoset_membership_url;
+		$rytkoset_primary_label   = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
+		$rytkoset_secondary_url   = '';
+		$rytkoset_secondary_label = '';
+	} else {
+		// Logged out: log in first, membership info as secondary action.
+		$rytkoset_locked_message  = __(
+			'Aktiiviset jäsenet voivat lukea tämän digilehden kirjautumisen jälkeen. Jos et ole jäsen, voit tutustua jäsenyyteen.',
+			'rytkoset-theme'
+		);
+		$rytkoset_secondary_url   = $rytkoset_membership_url;
+		$rytkoset_secondary_label = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
+	}
 } elseif ( 'member_and_regular' === $rytkoset_locked_mode ) {
 	$rytkoset_locked_heading  = __( 'Digilehti vaatii oston', 'rytkoset-theme' );
 	$rytkoset_locked_message  = __(
