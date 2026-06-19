@@ -68,6 +68,32 @@ otsikon ja lukuoikeuskehotteen sisällön sijaan.
 
 Ensimmäisellä jutulla ei näytetä edellinen-linkkiä. Viimeisellä jutulla ei näytetä seuraava-linkkiä.
 
+## Käyttöoikeuden myöntäminen manuaalisesti (#420)
+
+Osa digilehdistä myydään verkkokaupan ulkopuolella (käteinen, tilaisuudet,
+postimyynti). Näissä tapauksissa ylläpitäjä voi avata `paid`- tai
+`member_and_regular`-lehden suojatun sisällön rekisteröidylle käyttäjälle ilman
+verkkokauppaostoa.
+
+1. Avaa **Käyttäjät** ja muokkaa käyttäjää (vaatii `edit_users`-oikeuden).
+2. Vieritä **Digilehtien käyttöoikeudet** -osioon. Listassa näkyvät vain
+   maksulliset ja jäsenhinta + normaalihinta -lehdet — ilmaisia ja vain
+   jäsenille -lehtiä ei myönnetä tässä, koska ne avautuvat muilla säännöillä.
+3. Rastita lehdet, joihin käyttäjällä on pääsy, ja tallenna.
+
+Pääsystä:
+
+- **Pysyvä:** myönnetty pääsy ei vanhene. Rastin poisto peruu pääsyn.
+- **Tilikohtainen:** sisältö avautuu vain, kun käyttäjä on kirjautuneena samalle
+  tilille. Pääsyä ei voi myöntää sähköpostiosoitteelle ilman käyttäjätiliä.
+- **Sähköposti-ilmoitus:** käyttäjä saa uudesta myönnöstä sähköpostin, jossa on
+  linkki lehteen ja muistutus kirjautumisesta. Ilmoitus lähtee vain uudesta
+  myönnöstä — ei uudelleentallennuksesta eikä pääsyn poistosta.
+
+Manuaaliset myönnöt tallennetaan käyttäjän metatietoon (`rytkoset_magazine_access`).
+Verkkokauppaostoon perustuva pääsy (#201) tarkistetaan erikseen tilauksista, eikä
+sitä näytetä tässä listassa myöntörastina.
+
 ## Sisällön suojaus muilla reiteillä (#381)
 
 Templatetason lukutarkistus (`#200`) suojaa vain lehden ja jutun varsinaiset

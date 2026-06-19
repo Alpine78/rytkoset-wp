@@ -34,6 +34,7 @@ require_once get_template_directory() . '/inc/event-registration-privacy.php';
 require_once get_template_directory() . '/inc/event-participants-admin.php';
 require_once get_template_directory() . '/inc/event-participants-messaging.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
+require_once get_template_directory() . '/inc/digital-magazine-access.php';
 require_once get_template_directory() . '/inc/attachment-iptc.php';
 require_once get_template_directory() . '/inc/seo-meta.php';
 require_once get_template_directory() . '/inc/login.php';
