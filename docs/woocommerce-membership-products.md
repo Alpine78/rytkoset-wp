@@ -39,6 +39,9 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
   - `_rytkoset_membership_type = lifetime`
 - Vuosijäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
   - `_rytkoset_membership_period = 2023-2026`
+- Vuosi-/perhejäsenmaksun voimassaolopäivä (esim. seuraavan sukukokouksen päivä) tallennetaan tuotemetadataan ISO-muodossa:
+  - `_rytkoset_membership_expiry_date = 2029-08-15`
+  - Asetetaan tuotteen **Jäsenyys voimassa asti** -kentästä. Automaattinen jäsenyyspäivitys (#302) käyttää tätä päivää käyttäjän jäsenyyden voimassaoloksi.
 - Rakenteisten jäsenkenttien näkyminen kassalla määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
 - Lippu on käytössä sekä vuosijäsenmaksuilla että ainaisjäsenmaksulla.
@@ -101,6 +104,7 @@ Suositeltu toimintamalli:
    - `_rytkoset_membership_product = yes`
    - `_rytkoset_membership_type = annual_individual` tai `annual_family`
    - `_rytkoset_membership_period = 2026-2029`
+   - **Jäsenyys voimassa asti** = uuden kauden sukukokouksen päivä (käytetään automaattisessa jäsenyyspäivityksessä #302)
    - `_rytkoset_member_names_required = yes`
 5. Piilota vanhat `2023-2026` tuotteet kaupasta, kun niitä ei enää myydä.
 6. Päivitä jäsenyyssivun linkit uusiin tuotteisiin.

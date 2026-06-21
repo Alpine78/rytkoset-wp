@@ -44,6 +44,15 @@ function rytkoset_theme_get_member_names_required_meta_key() {
 }
 
 /**
+ * Returns the product meta key used for the membership expiry date (ISO YYYY-MM-DD).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_expiry_date_meta_key() {
+	return '_rytkoset_membership_expiry_date';
+}
+
+/**
  * Returns supported membership product types.
  *
  * @return array<string, string>
@@ -124,6 +133,26 @@ function rytkoset_theme_get_membership_product_period( $product ) {
 
 	return sanitize_text_field(
 		(string) $product->get_meta( rytkoset_theme_get_membership_period_meta_key(), true )
+	);
+}
+
+/**
+ * Returns the membership expiry date configured for a product, in ISO YYYY-MM-DD format.
+ *
+ * This is the date through which a membership bought via this product stays active (e.g. the
+ * next family meeting / sukukokous date). The automatic order update (#302) copies it to the
+ * user's membership expiry; an empty value means the membership cannot be auto-activated.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string ISO date (YYYY-MM-DD), or '' when unset/invalid.
+ */
+function rytkoset_theme_get_membership_product_expiry_date( $product ) {
+	if ( ! rytkoset_theme_is_membership_product( $product ) ) {
+		return '';
+	}
+
+	return rytkoset_theme_sanitize_user_membership_expires(
+		(string) $product->get_meta( rytkoset_theme_get_membership_expiry_date_meta_key(), true )
 	);
 }
 
@@ -215,6 +244,17 @@ function rytkoset_theme_render_membership_product_fields() {
 		)
 	);
 
+	woocommerce_wp_text_input(
+		array(
+			'id'          => rytkoset_theme_get_membership_expiry_date_meta_key(),
+			'label'       => __( 'Jäsenyys voimassa asti', 'rytkoset-theme' ),
+			'type'        => 'date',
+			'value'       => rytkoset_theme_get_membership_product_expiry_date( $product ),
+			'description' => __( 'Vuosi- ja perhejäsenmaksulle: päivä, johon asti ostettu jäsenyys on voimassa (yleensä seuraavan sukukokouksen päivä). Automaattinen jäsenyyspäivitys käyttää tätä päivää. Ainaisjäsenmaksulle kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
+			'desc_tip'    => true,
+		)
+	);
+
 	woocommerce_wp_checkbox(
 		array(
 			'id'          => rytkoset_theme_get_member_names_required_meta_key(),
@@ -248,6 +288,9 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 	$period                = isset( $_POST[ rytkoset_theme_get_membership_period_meta_key() ] )
 		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_membership_period_meta_key() ] ) )
 		: '';
+	$expiry_date           = isset( $_POST[ rytkoset_theme_get_membership_expiry_date_meta_key() ] )
+		? rytkoset_theme_sanitize_user_membership_expires( wp_unslash( $_POST[ rytkoset_theme_get_membership_expiry_date_meta_key() ] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitizer validates and returns a normalized ISO date string.
+		: '';
 	// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 	$product->update_meta_data( rytkoset_theme_get_membership_product_meta_key(), $is_membership_product );
@@ -256,6 +299,7 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 	if ( 'yes' !== $is_membership_product ) {
 		$product->delete_meta_data( rytkoset_theme_get_membership_type_meta_key() );
 		$product->delete_meta_data( rytkoset_theme_get_membership_period_meta_key() );
+		$product->delete_meta_data( rytkoset_theme_get_membership_expiry_date_meta_key() );
 		return;
 	}
 
@@ -263,10 +307,12 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 
 	if ( 'lifetime' === $type ) {
 		$product->delete_meta_data( rytkoset_theme_get_membership_period_meta_key() );
+		$product->delete_meta_data( rytkoset_theme_get_membership_expiry_date_meta_key() );
 		return;
 	}
 
 	$product->update_meta_data( rytkoset_theme_get_membership_period_meta_key(), $period );
+	$product->update_meta_data( rytkoset_theme_get_membership_expiry_date_meta_key(), $expiry_date );
 }
 add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_membership_product_fields' );
 
@@ -341,6 +387,7 @@ function rytkoset_theme_get_membership_order_items( $order ) {
 			'type'           => $type,
 			'type_label'     => rytkoset_theme_get_membership_type_label( $type ),
 			'period'         => rytkoset_theme_get_membership_product_period( $product ),
+			'expiry_date'    => rytkoset_theme_get_membership_product_expiry_date( $product ),
 			'admin_label'    => rytkoset_theme_get_membership_product_admin_label( $product ),
 			'requires_names' => rytkoset_theme_membership_product_requires_member_names( $product ),
 		);
@@ -578,7 +625,7 @@ function rytkoset_theme_render_membership_order_metabox( $post_or_order_object )
 		echo '</p>';
 	}
 
-	echo '<p>' . esc_html__( 'Käsittely: tarkista tilisiirtomaksu, merkitse tilaus käsitellyksi tai valmiiksi ja vie jäsenmaksun tiedot manuaalisesti jäsenrekisteriin.', 'rytkoset-theme' ) . '</p>';
+	echo '<p>' . esc_html__( 'Käsittely: tarkista tilisiirtomaksu ja merkitse tilaus käsitellyksi tai valmiiksi. Jäsenyystiedot päivittyvät automaattisesti, kun tilaus saavuttaa hyväksytyn tilan.', 'rytkoset-theme' ) . '</p>';
 }
 
 /**
@@ -1049,3 +1096,260 @@ function rytkoset_theme_cleanup_membership_empty_member_order_meta( $order ) {
 	}
 }
 add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cleanup_membership_empty_member_order_meta', 20 );
+
+// ---------------------------------------------------------------------------
+// Automatic membership update from WooCommerce order (#302)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps a WooCommerce membership product type to the user membership type.
+ *
+ * @param string $product_type Product membership type (annual_individual, annual_family, lifetime).
+ * @return string User membership type (annual, family, lifetime), or '' when unmapped.
+ */
+function rytkoset_theme_map_product_to_user_membership_type( $product_type ) {
+	$map = array(
+		'annual_individual' => 'annual',
+		'annual_family'     => 'family',
+		'lifetime'          => 'lifetime',
+	);
+
+	return isset( $map[ $product_type ] ) ? $map[ $product_type ] : '';
+}
+
+/**
+ * Returns the sort priority of a user membership type (higher = better).
+ *
+ * @param string $user_type User membership type.
+ * @return int
+ */
+function rytkoset_theme_get_user_membership_type_priority( $user_type ) {
+	$priorities = array(
+		'annual'   => 1,
+		'family'   => 2,
+		'lifetime' => 3,
+	);
+
+	return isset( $priorities[ $user_type ] ) ? $priorities[ $user_type ] : 0;
+}
+
+/**
+ * Resolves the best membership to apply from a list of membership order items.
+ *
+ * When multiple membership products are present, lifetime beats time-bound types.
+ * Among time-bound types the latest expiry date wins.
+ *
+ * @param array<int, array<string, mixed>> $membership_items Result of rytkoset_theme_get_membership_order_items().
+ * @return array{type:string,period:string,expires:string}|array<never> Best membership, or empty array when nothing is applicable.
+ */
+function rytkoset_theme_resolve_order_membership( $membership_items ) {
+	$best             = null;
+	$best_priority    = 0;
+	$best_expiry_rank = 0;
+
+	foreach ( $membership_items as $item ) {
+		$user_type = rytkoset_theme_map_product_to_user_membership_type( (string) $item['type'] );
+
+		if ( '' === $user_type ) {
+			continue;
+		}
+
+		$priority = rytkoset_theme_get_user_membership_type_priority( $user_type );
+		$period   = (string) $item['period'];
+		$expires  = ( 'lifetime' !== $user_type ) ? (string) $item['expiry_date'] : '';
+
+		// Lifetime has no expiry; rank it after time-bound dates so it always wins on priority.
+		$expiry_rank = '' !== $expires ? (int) str_replace( '-', '', $expires ) : 0;
+
+		$is_better = ( null === $best )
+			|| ( $priority > $best_priority )
+			|| ( $priority === $best_priority && $expiry_rank > $best_expiry_rank );
+
+		if ( $is_better ) {
+			$best             = array(
+				'type'    => $user_type,
+				'period'  => $period,
+				'expires' => $expires,
+			);
+			$best_priority    = $priority;
+			$best_expiry_rank = $expiry_rank;
+		}
+	}
+
+	return is_array( $best ) ? $best : array();
+}
+
+/**
+ * Returns the order meta key used to mark a membership order as processed.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_order_processed_meta_key() {
+	return '_rytkoset_membership_order_processed';
+}
+
+/**
+ * Applies membership from a WooCommerce order to the associated WordPress user.
+ *
+ * Idempotent: a processed order is marked with order meta so status transitions
+ * (e.g. on-hold → processing → completed) do not apply the membership twice.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_apply_membership_from_order( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+
+	$processed_at = (string) $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key(), true );
+
+	if ( '' !== $processed_at ) {
+		return;
+	}
+
+	$membership_items = rytkoset_theme_get_membership_order_items( $order );
+
+	if ( empty( $membership_items ) ) {
+		return;
+	}
+
+	$user_id = (int) $order->get_user_id();
+
+	if ( ! $user_id ) {
+		$email = trim( (string) $order->get_billing_email() );
+
+		if ( is_email( $email ) ) {
+			$existing_user = get_user_by( 'email', $email );
+
+			if ( $existing_user instanceof WP_User ) {
+				$user_id = $existing_user->ID;
+			}
+		}
+	}
+
+	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
+
+	if ( ! $user_id ) {
+		$order->add_order_note(
+			__( 'Jäsenmaksun automaattinen jäsenyystilan päivitys ohitettiin: tilausta ei voitu yhdistää WordPress-käyttäjään. Tarkista ja aseta jäsenyystiedot manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			false
+		);
+		$order->save();
+		return;
+	}
+
+	$membership = rytkoset_theme_resolve_order_membership( $membership_items );
+
+	if ( empty( $membership ) ) {
+		$order->add_order_note(
+			__( 'Jäsenmaksun automaattista jäsenyyttä ei voitu määrittää: tilauksen jäsenmaksutuotteelta puuttuu jäsenmaksun tyyppi. Tarkista tuotteen asetukset ja aseta jäsenyys tarvittaessa manuaalisesti.', 'rytkoset-theme' ),
+			false
+		);
+		$order->save();
+		return;
+	}
+
+	$current = rytkoset_theme_get_user_membership( $user_id );
+
+	// A purchase must never shorten an existing membership. Lifetime is permanent, and a
+	// time-bound purchase that does not extend the current expiry date is ignored so a
+	// mistaken or duplicate order cannot reduce a member's standing.
+	if ( 'lifetime' !== $membership['type'] ) {
+		$current_covers_new = 'lifetime' === $current['type']
+			|| (
+				rytkoset_theme_user_is_active_member( $user_id )
+				&& '' !== $current['expires']
+				&& '' !== $membership['expires']
+				&& $current['expires'] >= $membership['expires']
+			);
+
+		if ( $current_covers_new ) {
+			$order->add_order_note(
+				__( 'Jäsenyystilaa ei muutettu: käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys.', 'rytkoset-theme' ),
+				false
+			);
+			$order->save();
+			return;
+		}
+	}
+
+	$was_active  = rytkoset_theme_user_is_active_member( $user_id );
+	$type_key    = rytkoset_theme_get_user_membership_type_meta_key();
+	$period_key  = rytkoset_theme_get_user_membership_period_meta_key();
+	$expires_key = rytkoset_theme_get_user_membership_expires_meta_key();
+
+	update_user_meta( $user_id, $type_key, $membership['type'] );
+
+	if ( 'lifetime' === $membership['type'] ) {
+		delete_user_meta( $user_id, $period_key );
+		delete_user_meta( $user_id, $expires_key );
+	} else {
+		update_user_meta( $user_id, $period_key, $membership['period'] );
+		update_user_meta( $user_id, $expires_key, $membership['expires'] );
+	}
+
+	$user       = get_userdata( $user_id );
+	$type_label = rytkoset_theme_get_user_membership_type_label( $membership['type'] );
+
+	$note_parts = array(
+		sprintf(
+			/* translators: 1: WordPress username, 2: membership type label. */
+			__( 'Jäsenyystiedot päivitetty automaattisesti käyttäjälle %1$s (%2$s).', 'rytkoset-theme' ),
+			$user instanceof WP_User ? $user->user_login : (string) $user_id,
+			$type_label
+		),
+	);
+
+	if ( '' !== $membership['period'] ) {
+		$note_parts[] = sprintf(
+			/* translators: %s: membership period (e.g. 2026-2029). */
+			__( 'Jäsenkausi: %s.', 'rytkoset-theme' ),
+			$membership['period']
+		);
+	}
+
+	if ( '' !== $membership['expires'] ) {
+		$note_parts[] = sprintf(
+			/* translators: %s: expiry date (d.m.Y). */
+			__( 'Voimassa asti: %s.', 'rytkoset-theme' ),
+			rytkoset_theme_get_user_membership_expires_display( $membership['expires'] )
+		);
+	}
+
+	$is_now_active = rytkoset_theme_user_is_active_member( $user_id );
+
+	// A time-bound membership that cannot be activated (the product has no expiry date set) is
+	// stored but flagged so an admin sets the expiry date manually.
+	if ( ! $is_now_active && 'lifetime' !== $membership['type'] ) {
+		$note_parts[] = __( 'Huom: jäsenyyttä ei voitu aktivoida automaattisesti, koska tuotteelle ei ole asetettu Jäsenyys voimassa asti -päivää. Aseta voimassaolopäivä käyttäjähallinnassa.', 'rytkoset-theme' );
+	}
+
+	$order->add_order_note( implode( ' ', $note_parts ), false );
+	$order->save();
+
+	if ( ! $was_active && $is_now_active ) {
+		rytkoset_theme_send_membership_confirmation_email( $user_id );
+	}
+}
+
+/**
+ * Hook handler for order status transitions that trigger membership updates.
+ *
+ * @param int      $order_id WooCommerce order ID.
+ * @param WC_Order $order    WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_maybe_apply_membership_from_order( $order_id, $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		$order = wc_get_order( $order_id );
+	}
+
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+
+	rytkoset_theme_apply_membership_from_order( $order );
+}
+add_action( 'woocommerce_order_status_processing', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
+add_action( 'woocommerce_order_status_completed', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
