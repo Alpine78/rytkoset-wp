@@ -231,6 +231,100 @@ function rytkoset_theme_get_user_membership_expires_display( $iso ) {
 }
 
 /**
+ * Sends the membership confirmation email to a user.
+ *
+ * Shared by the manual profile path (#390) and the automatic WooCommerce order path (#302), so
+ * both routes produce an identical message. The body states the membership type and validity:
+ * the period and expiry date for annual/family memberships, or permanent validity for lifetime
+ * memberships. The sender comes from inc/email.php. Callers are responsible for detecting the
+ * non-active → active transition so the confirmation is sent only once.
+ *
+ * @param int $user_id User ID.
+ * @return bool Whether wp_mail() accepted the message for delivery.
+ */
+function rytkoset_theme_send_membership_confirmation_email( $user_id ) {
+	$user = get_userdata( (int) $user_id );
+
+	if ( ! $user instanceof WP_User || ! is_email( $user->user_email ) ) {
+		return false;
+	}
+
+	$membership = rytkoset_theme_get_user_membership( $user->ID );
+
+	if ( '' === $membership['type'] ) {
+		return false;
+	}
+
+	$display_name = trim( (string) $user->display_name );
+	$type_label   = rytkoset_theme_get_user_membership_type_label( $membership['type'] );
+
+	$subject = __( 'Jäsenyytesi Rytkösten sukuseurassa on voimassa', 'rytkoset-theme' );
+
+	$lines = array(
+		'' !== $display_name
+			? sprintf(
+				/* translators: %s: recipient name. */
+				__( 'Hei %s,', 'rytkoset-theme' ),
+				$display_name
+			)
+			: __( 'Hei,', 'rytkoset-theme' ),
+		'',
+		__( 'Kiitos, että olet Rytkösten sukuseura ry:n jäsen.', 'rytkoset-theme' ),
+		'',
+		sprintf(
+			/* translators: %s: membership type label (e.g. Vuosijäsen). */
+			__( 'Jäsenyyden tyyppi: %s', 'rytkoset-theme' ),
+			$type_label
+		),
+	);
+
+	if ( 'lifetime' === $membership['type'] ) {
+		$lines[] = __( 'Jäsenyytesi on voimassa pysyvästi ilman päättymispäivää.', 'rytkoset-theme' );
+	} else {
+		if ( '' !== $membership['period'] ) {
+			$lines[] = sprintf(
+				/* translators: %s: membership period (e.g. 2026-2029). */
+				__( 'Jäsenkausi: %s', 'rytkoset-theme' ),
+				$membership['period']
+			);
+		}
+
+		$expires_display = rytkoset_theme_get_user_membership_expires_display( $membership['expires'] );
+
+		if ( '' !== $expires_display ) {
+			$lines[] = sprintf(
+				/* translators: %s: expiry date in d.m.Y format. */
+				__( 'Voimassa asti: %s', 'rytkoset-theme' ),
+				$expires_display
+			);
+		}
+	}
+
+	$contact_email = rytkoset_theme_get_contact_email();
+
+	$lines[] = '';
+
+	if ( is_email( $contact_email ) ) {
+		$lines[] = sprintf(
+			/* translators: %s: association contact email address. */
+			__( 'Kysymyksissä voit olla yhteydessä: %s', 'rytkoset-theme' ),
+			$contact_email
+		);
+		$lines[] = '';
+	}
+
+	$lines[] = __( 'Terveisin', 'rytkoset-theme' );
+	$lines[] = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+	return wp_mail(
+		$user->user_email,
+		$subject,
+		implode( "\n", $lines ),
+		array( 'Content-Type: text/plain; charset=UTF-8' )
+	);
+}
+
+/**
  * Returns the nonce action used for the user membership profile fields.
  *
  * @param int $user_id The edited user ID.
@@ -339,6 +433,10 @@ function rytkoset_theme_save_user_membership_fields( $user_id ) {
 		return;
 	}
 
+	// Capture the active state before changes so the confirmation email is sent only on a
+	// non-active → active transition (#390). #302 reuses the same send helper on the order path.
+	$was_active = rytkoset_theme_user_is_active_member( $user_id );
+
 	$type_field    = rytkoset_theme_get_user_membership_type_meta_key();
 	$period_field  = rytkoset_theme_get_user_membership_period_meta_key();
 	$expires_field = rytkoset_theme_get_user_membership_expires_meta_key();
@@ -359,18 +457,23 @@ function rytkoset_theme_save_user_membership_fields( $user_id ) {
 	if ( 'lifetime' === $type ) {
 		delete_user_meta( $user_id, $period_field );
 		delete_user_meta( $user_id, $expires_field );
-		return;
+	} else {
+		$period  = isset( $_POST[ $period_field ] )
+			? rytkoset_theme_sanitize_user_membership_period( wp_unslash( $_POST[ $period_field ] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitizer validates and returns a normalized period string.
+			: '';
+		$expires = isset( $_POST[ $expires_field ] )
+			? rytkoset_theme_sanitize_user_membership_expires( wp_unslash( $_POST[ $expires_field ] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitizer validates and returns a normalized date string.
+			: '';
+
+		update_user_meta( $user_id, $period_field, $period );
+		update_user_meta( $user_id, $expires_field, $expires );
 	}
 
-	$period  = isset( $_POST[ $period_field ] )
-		? rytkoset_theme_sanitize_user_membership_period( wp_unslash( $_POST[ $period_field ] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitizer validates and returns a normalized period string.
-		: '';
-	$expires = isset( $_POST[ $expires_field ] )
-		? rytkoset_theme_sanitize_user_membership_expires( wp_unslash( $_POST[ $expires_field ] ) ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitizer validates and returns a normalized date string.
-		: '';
-
-	update_user_meta( $user_id, $period_field, $period );
-	update_user_meta( $user_id, $expires_field, $expires );
+	// Notify the member only when the membership just became active; re-saving an already active
+	// (or still inactive) membership must not resend the confirmation (#390).
+	if ( ! $was_active && rytkoset_theme_user_is_active_member( $user_id ) ) {
+		rytkoset_theme_send_membership_confirmation_email( $user_id );
+	}
 }
 add_action( 'personal_options_update', 'rytkoset_theme_save_user_membership_fields' );
 add_action( 'edit_user_profile_update', 'rytkoset_theme_save_user_membership_fields' );

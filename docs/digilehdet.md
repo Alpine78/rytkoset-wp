@@ -34,8 +34,10 @@ Ylläpidossa pitää pystyä valitsemaan lehdelle yksi neljästä mallista:
 | **Jäsenhinta + normaalihinta** | `member_and_regular` | Kaikki ostavat; aktiivinen jäsen ohjataan jäsentuotteeseen (halvempi), muut normaalituotteeseen. |
 | **Kaikille maksullinen** | `paid` | Kaikki ostavat saman tuotteen samaan hintaan; jäsenyys ei vaikuta. |
 
-> Tunnisteet ovat suunniteltuja meta-arvoja. Lopullinen meta-avaimen nimi ja
-> arvojen muoto vahvistetaan toteutuksessa (`#200`/`#201`).
+Toteutettu meta-avain on `_rytkoset_magazine_access_mode`. Kaikki julkisen
+lukunäkymän tarkistukset kulkevat helperin
+`rytkoset_theme_user_can_read_digital_magazine( $post_id, $user_id = null )`
+kautta, jotta lehden pääsivu, jutut ja jatkotiketit käyttävät samaa sääntöä.
 
 ### Oletus nykyisille lehdille
 
@@ -90,6 +92,12 @@ Digilehtien käyttöoikeustarkistus (`#200`) ja jäsenhinnoittelu (`#201`) käyt
 `#301`:ssä toteutettavaa yhteistä jäsenstatuksen lähdettä ja sen helperiä (esim.
 `rytkoset_theme_user_is_active_member()`).
 
+`#200`:ssa ostotarkistus on tarkoituksella laajennuspiste:
+`rytkoset_theme_user_has_purchased_digital_magazine()` palauttaa tässä vaiheessa
+`false`, mutta tarjoaa suodattimen
+`rytkoset_theme_user_has_purchased_digital_magazine`, johon `#201` kytkee
+WooCommerce-tuotelinkityksen ja `wc_customer_bought_product()`-tarkistuksen.
+
 ### Jos jäsenstatusta ei voida varmistaa
 
 Epäselvässä tilanteessa (kirjautumaton käyttäjä, helper ei palauta varmaa
@@ -109,7 +117,7 @@ digilehden metatietona, samaan tapaan kuin tapahtuma linkitetään maksutuottees
 (`_rytkoset_event_product_id`, ks.
 [woocommerce-event-product-link.md](woocommerce-event-product-link.md)).
 
-Suunnitellut meta-avaimet (vahvistetaan `#201`:ssä):
+Meta-avaimet (toteutettu `#201`:ssä, `inc/woocommerce-digital-magazine.php`):
 
 | Malli | Jäsentuote | Normaalituote |
 | --- | --- | --- |
@@ -117,6 +125,9 @@ Suunnitellut meta-avaimet (vahvistetaan `#201`:ssä):
 | `paid` | — | `_rytkoset_magazine_regular_product_id` |
 | `members_only` | — (ei tuotetta) | — (ei tuotetta) |
 | `free` | — | — |
+
+Ylläpitäjän ohje tuotteiden luontiin ja linkitykseen: ks.
+[digital-magazines.md](digital-magazines.md#maksullinen-digilehti-woocommerce-tuotteet-201).
 
 Perustelu erillisille tuotteille yhden tuotteen dynaamisen alennuksen sijaan:
 
