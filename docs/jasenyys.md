@@ -128,7 +128,7 @@ ylläpitonäkymä. Logiikka on moduulissa
 
 - Tuotteen jäsenyyden tyyppi (`annual_individual` → `annual`, `annual_family` → `family`, `lifetime` → `lifetime`) kirjataan käyttäjämetaan.
 - Jäsenkausi kopioidaan tuotteen `_rytkoset_membership_period`-metasta (esim. `2026-2029`).
-- Voimassaolo lasketaan jäsenkauden loppuvuodesta: `2026-2029` → `2029-12-31`.
+- Voimassaolopäivä luetaan tuotteelle asetetusta **Jäsenyys voimassa asti** -kentästä (`_rytkoset_membership_expiry_date`, yleensä kauden sukukokouksen päivä). Ylläpitäjä asettaa tämän kentän jäsenmaksutuotteelle.
 - Ainaisjäseneltä poistetaan jäsenkausi ja voimassaolopäivä.
 - Kuittaussähköposti lähtee, jos jäsenyys muuttuu ei-aktiivisesta aktiiviseksi.
 
@@ -136,9 +136,11 @@ ylläpitonäkymä. Logiikka on moduulissa
 
 - **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Tilaukselle kirjataan aikaleima `_rytkoset_membership_order_processed`.
 - **Ei käyttäjää:** vierasostokset tai tilaukset, joita ei voida yhdistää WordPress-käyttäjään, saavat tilausmuistiinpanon ylläpitäjälle manuaalista vientiä varten.
-- **Ainaisjäsen ei tingitä:** jos käyttäjällä on jo `lifetime`-jäsenyys, sitä ei korvata määräaikaisella jäsenyysmaksulla.
+- **Jäsenyyttä ei lyhennetä:** jos käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys (ainaisjäsen, tai aktiivinen määräaikainen jäsenyys jonka voimassaolopäivä on sama tai myöhäisempi), ostoa ei sovelleta ja tilaukseen kirjataan muistiinpano. Tämä estää vahingossa ostetun lyhyemmän jäsenyyden lyhentämästä voimassa olevaa jäsenyyttä.
+- **Puuttuva tyyppi:** jos jäsenmaksutuotteelta puuttuu jäsenmaksun tyyppi, jäsenyyttä ei voida määrittää ja tilaukseen kirjataan muistiinpano ylläpitäjälle.
+- **Puuttuva voimassaolopäivä:** jos vuosi-/perhejäsentuotteelta puuttuu **Jäsenyys voimassa asti** -päivä, jäsenyyttä ei voida aktivoida. Tyyppi tallennetaan, mutta jäsenyys ei aktivoidu (fail closed) eikä kuittaussähköpostia lähetetä; tilaukseen kirjataan muistiinpano, jossa pyydetään asettamaan voimassaolopäivä käyttäjähallinnassa.
 
-Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) korvaa edellisen kauden tiedot. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
+Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
 
 ## Rajaus
 
