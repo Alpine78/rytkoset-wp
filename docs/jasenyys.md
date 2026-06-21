@@ -58,6 +58,36 @@ Jäsenyyden vanheneminen ei tapahdu automaattisesti taustalla — voimassaolopä
 mentyä jäsenyys lakkaa olemasta aktiivinen, mutta tieto säilyy käyttäjällä,
 kunnes ylläpitäjä päivittää sen.
 
+## Kuittausviesti jäsenelle
+
+Kun käyttäjän jäsenyys muuttuu **ei-aktiivisesta aktiiviseksi**, jäsenelle
+lähtee automaattisesti suomenkielinen kuittausviesti sähköpostiin (tiketti
+`#390`). Viesti kertoo:
+
+- jäsenyyden tyypin (vuosi-, perhe- tai ainaisjäsen),
+- voimassaolon: vuosi-/perhejäsenelle jäsenkauden ja voimassaolopäivän,
+  ainaisjäsenelle maininnan pysyvästä voimassaolosta,
+- sukuseuran yhteysosoitteen.
+
+Viesti lähtee teeman oletuslähettäjältä (`Rytkösten sukuseura ry`, ks.
+[`inc/email.php`](../wp-content/themes/rytkoset-theme/inc/email.php)).
+
+**Milloin viesti lähtee ja milloin ei:**
+
+- Lähtee, kun ei-jäsenestä tai vanhentuneesta jäsenyydestä tulee aktiivinen.
+- **Ei** lähde uudelleen, jos jo aktiivinen profiili tallennetaan uudelleen
+  (esim. voimassaolopäivän jatkaminen ei laukaise uutta viestiä).
+- Ei lähde, jos käyttäjältä puuttuu kelvollinen sähköpostiosoite.
+
+Sama lähetyslogiikka on käytössä myös myöhemmässä automaattipäivityksessä
+WooCommerce-jäsenmaksutilauksesta (`#302`), joten viesti on identtinen
+molemmilta reiteiltä.
+
+> **Massamerkinnät:** yksittäiset kuittaukset eivät törmää AcyMailingin
+> ~18 viestiä/tunti -rajaan. Jos vanhoja jäseniä joskus merkitään suuria
+> määriä kerralla, lähetykset pitää jonottaa samaan tapaan kuin
+> `Events > Messaging` -jonossa, jottei rajaa ylitetä.
+
 ## Kehittäjälle
 
 Muu koodi tarkistaa aktiivisen jäsenyyden helperillä:
@@ -71,6 +101,13 @@ if ( rytkoset_theme_user_is_active_member( $user_id ) ) {
 Ilman `$user_id`-argumenttia helper tarkistaa kirjautuneen käyttäjän.
 `rytkoset_theme_get_user_membership( $user_id )` palauttaa rakenteisen taulukon
 (`type`, `period`, `expires`).
+
+Kuittausviestin lähettää jaettu helper
+`rytkoset_theme_send_membership_confirmation_email( $user_id )`. Se rakentaa ja
+lähettää viestin käyttäjän nykyisten jäsenyystietojen perusteella, mutta **ei**
+itse tarkista siirtymää — kutsujan vastuulla on lähettää viesti vain
+ei-aktiivinen → aktiivinen -muutoksella (profiilitallennus tekee tämän
+`$was_active`-vertailulla, ja `#302` tekee saman tilauspolulla).
 
 Käyttäjämeta-avaimet (ilman alaviivaa, erotuksena WooCommerce-jäsenmaksutuotteen
 `_rytkoset_membership_*`-tuotemetasta):
