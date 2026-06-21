@@ -79,7 +79,7 @@ Viesti lähtee teeman oletuslähettäjältä (`Rytkösten sukuseura ry`, ks.
   (esim. voimassaolopäivän jatkaminen ei laukaise uutta viestiä).
 - Ei lähde, jos käyttäjältä puuttuu kelvollinen sähköpostiosoite.
 
-Sama lähetyslogiikka on käytössä myös myöhemmässä automaattipäivityksessä
+Sama lähetyslogiikka on käytössä myös automaattipäivityksessä
 WooCommerce-jäsenmaksutilauksesta (`#302`), joten viesti on identtinen
 molemmilta reiteiltä.
 
@@ -116,11 +116,34 @@ Käyttäjämeta-avaimet (ilman alaviivaa, erotuksena WooCommerce-jäsenmaksutuot
 - `rytkoset_membership_period` — esim. `2026-2029`
 - `rytkoset_membership_expires` — tallennetaan ISO-muodossa `2029-12-31` (ylläpidossa syötetään ja näytetään suomalaisena `pp.kk.vvvv`)
 
+## Automaattinen päivitys WooCommerce-tilauksesta (#302)
+
+Kun kirjautunut käyttäjä maksaa jäsenmaksutuotteen verkkokaupassa, tilauksen
+saavuttaessa hyväksytyn tilan (`processing` tai `completed`) jäsenyystiedot
+päivittyvät automaattisesti samaan user meta -rakenteeseen kuin manuaalinen
+ylläpitonäkymä. Logiikka on moduulissa
+[`inc/woocommerce-membership.php`](../wp-content/themes/rytkoset-theme/inc/woocommerce-membership.php).
+
+**Mitä tapahtuu:**
+
+- Tuotteen jäsenyyden tyyppi (`annual_individual` → `annual`, `annual_family` → `family`, `lifetime` → `lifetime`) kirjataan käyttäjämetaan.
+- Jäsenkausi kopioidaan tuotteen `_rytkoset_membership_period`-metasta (esim. `2026-2029`).
+- Voimassaolo lasketaan jäsenkauden loppuvuodesta: `2026-2029` → `2029-12-31`.
+- Ainaisjäseneltä poistetaan jäsenkausi ja voimassaolopäivä.
+- Kuittaussähköposti lähtee, jos jäsenyys muuttuu ei-aktiivisesta aktiiviseksi.
+
+**Erityistilanteet:**
+
+- **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Tilaukselle kirjataan aikaleima `_rytkoset_membership_order_processed`.
+- **Ei käyttäjää:** vierasostokset tai tilaukset, joita ei voida yhdistää WordPress-käyttäjään, saavat tilausmuistiinpanon ylläpitäjälle manuaalista vientiä varten.
+- **Ainaisjäsen ei tingitä:** jos käyttäjällä on jo `lifetime`-jäsenyys, sitä ei korvata määräaikaisella jäsenyysmaksulla.
+
+Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) korvaa edellisen kauden tiedot. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
+
 ## Rajaus
 
 Tämä toteutus ei kata:
 
-- automaattista jäsenyyden päivitystä WooCommerce-jäsenmaksutilauksista (`#302`)
 - jäsenyyden automaattista vanhenemista cronilla
 - jäsenille rajattuja sisältöjä tai jäsenhinnoittelua (EPIC 9 / EPIC 10 jatkot)
 - paperisen jäsenrekisterin massatuontia
