@@ -219,7 +219,7 @@ function rytkoset_theme_render_membership_product_fields() {
 		array(
 			'id'          => rytkoset_theme_get_member_names_required_meta_key(),
 			'label'       => __( 'Vaatii jäsenten nimet kassalla', 'rytkoset-theme' ),
-			'description' => __( 'Näyttää kassalla ohjeen nimien lisäämisestä Lisätietoja-kenttään.', 'rytkoset-theme' ),
+			'description' => __( 'Näyttää kassalla rakenteiset kentät jäsenten nimille ja sähköposteille. Perhejäsenmaksulla (tyyppi: Vuosijäsen: Perhe) kenttiä näytetään useita.', 'rytkoset-theme' ),
 			'value'       => $product->get_meta( rytkoset_theme_get_member_names_required_meta_key(), true ),
 		)
 	);
@@ -302,7 +302,7 @@ function rytkoset_theme_cart_has_membership_product() {
  */
 function rytkoset_theme_get_membership_checkout_notice_markup() {
 	$notice_text = html_entity_decode(
-		'<strong>J&auml;senmaksu:</strong> Valitse kassalla <strong>Lis&auml;&auml; muistiinpano tilaukseesi</strong> ja kirjoita muistiinpanoon j&auml;senen tai j&auml;senten nimet ja s&auml;hk&ouml;postiosoitteet, jotta tiedot voidaan kirjata j&auml;senrekisteriin.',
+		'<strong>J&auml;senmaksu:</strong> T&auml;yt&auml; j&auml;senen nimi ja s&auml;hk&ouml;postiosoite kassan kenttiin, jotta tiedot voidaan kirjata j&auml;senrekisteriin. Perhej&auml;senmaksussa voit lis&auml;t&auml; useamman perheenj&auml;senen &mdash; lis&auml;rivien s&auml;hk&ouml;postit ovat valinnaisia.',
 		ENT_QUOTES,
 		'UTF-8'
 	);
@@ -546,15 +546,506 @@ function rytkoset_theme_render_membership_order_metabox( $post_or_order_object )
 
 	echo '</p>';
 
+	$members = rytkoset_theme_get_membership_order_members( $order );
+
+	if ( ! empty( $members ) ) {
+		echo '<p><strong>' . esc_html__( 'Jäsenet:', 'rytkoset-theme' ) . '</strong></p>';
+		echo '<ol>';
+
+		foreach ( $members as $member ) {
+			echo '<li>';
+			echo '<strong>' . esc_html( '' !== $member['name'] ? $member['name'] : __( 'Nimi puuttuu', 'rytkoset-theme' ) ) . '</strong>';
+
+			if ( '' !== $member['email'] ) {
+				echo '<br>' . esc_html( $member['email'] );
+			} else {
+				echo '<br>' . esc_html__( '(ei sähköpostia)', 'rytkoset-theme' );
+			}
+
+			echo '</li>';
+		}
+
+		echo '</ol>';
+	}
+
 	if ( '' !== $customer_note ) {
 		echo '<p><strong>' . esc_html__( 'Tilauksen lisätiedot:', 'rytkoset-theme' ) . '</strong><br>';
 		echo wp_kses_post( nl2br( esc_html( $customer_note ) ) );
 		echo '</p>';
-	} elseif ( $requires_names ) {
+	} elseif ( $requires_names && empty( $members ) ) {
 		echo '<p><strong>' . esc_html__( 'Huomio:', 'rytkoset-theme' ) . '</strong> ';
-		echo esc_html__( 'Vuosijäsenmaksun lisätietokenttä on tyhjä. Tarkista tarvittaessa jäsenen tai perheenjäsenten nimet ennen jäsenrekisteriin vientiä.', 'rytkoset-theme' );
+		echo esc_html__( 'Jäsenten nimikentät ovat tyhjät. Tarkista tarvittaessa jäsenen tai perheenjäsenten nimet ennen jäsenrekisteriin vientiä.', 'rytkoset-theme' );
 		echo '</p>';
 	}
 
 	echo '<p>' . esc_html__( 'Käsittely: tarkista tilisiirtomaksu, merkitse tilaus käsitellyksi tai valmiiksi ja vie jäsenmaksun tiedot manuaalisesti jäsenrekisteriin.', 'rytkoset-theme' ) . '</p>';
 }
+
+/**
+ * Returns the maximum number of member rows shown for a family membership at checkout.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_membership_max_member_rows() {
+	return 6;
+}
+
+/**
+ * Returns the additional checkout field IDs for a member row.
+ *
+ * @param int $index Member row index.
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_membership_member_field_ids( $index ) {
+	$index = absint( $index );
+
+	return array(
+		sprintf( 'rytkoset/member_%d_name', $index ),
+		sprintf( 'rytkoset/member_%d_email', $index ),
+	);
+}
+
+/**
+ * Returns the number of member rows the checkout should show for the current cart.
+ *
+ * Individual and lifetime memberships need one row; family memberships need several.
+ * Membership products without the names-required flag do not add rows.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_membership_member_row_count() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return 0;
+	}
+
+	$rows = 0;
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( ! rytkoset_theme_is_membership_product( $product ) ) {
+			continue;
+		}
+
+		if ( ! rytkoset_theme_membership_product_requires_member_names( $product ) ) {
+			continue;
+		}
+
+		$needed = ( 'annual_family' === rytkoset_theme_get_membership_product_type( $product ) )
+			? rytkoset_theme_get_membership_max_member_rows()
+			: 1;
+
+		$rows = max( $rows, $needed );
+	}
+
+	return $rows;
+}
+
+/**
+ * Returns true when the current cart contains a membership product that requires member names.
+ *
+ * @return bool
+ */
+function rytkoset_theme_cart_requires_member_names() {
+	return rytkoset_theme_get_membership_member_row_count() > 0;
+}
+
+/**
+ * Returns the Store API extension namespace for membership cart data.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_store_api_namespace() {
+	return 'rytkoset_membership';
+}
+
+/**
+ * Returns membership cart data for the WooCommerce Store API.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_membership_store_api_cart_data() {
+	return array(
+		'member_row_count' => rytkoset_theme_get_membership_member_row_count(),
+	);
+}
+
+/**
+ * Returns the schema for membership Store API cart data.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_membership_store_api_cart_schema() {
+	return array(
+		'member_row_count' => array(
+			'description' => __( 'Jäsenmaksun jäsenrivien määrä ostoskorissa.', 'rytkoset-theme' ),
+			'type'        => 'integer',
+			'minimum'     => 0,
+			'readonly'    => true,
+		),
+	);
+}
+
+/**
+ * Registers membership cart data for Checkout Block conditions.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_membership_store_api_cart_data() {
+	if (
+		! function_exists( 'woocommerce_store_api_register_endpoint_data' )
+		|| ! class_exists( '\Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema' )
+	) {
+		return;
+	}
+
+	woocommerce_store_api_register_endpoint_data(
+		array(
+			'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
+			'namespace'       => rytkoset_theme_get_membership_store_api_namespace(),
+			'data_callback'   => 'rytkoset_theme_get_membership_store_api_cart_data',
+			'schema_callback' => 'rytkoset_theme_get_membership_store_api_cart_schema',
+			'schema_type'     => ARRAY_A,
+		)
+	);
+}
+
+/**
+ * Registers Store API data after WooCommerce Blocks is available.
+ */
+if ( did_action( 'woocommerce_blocks_loaded' ) ) {
+	rytkoset_theme_register_membership_store_api_cart_data();
+} else {
+	add_action( 'woocommerce_blocks_loaded', 'rytkoset_theme_register_membership_store_api_cart_data' );
+}
+
+/**
+ * Returns a JSON Schema fragment that matches an active member field.
+ *
+ * @param int $index Member row index starting from 1.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_membership_member_active_schema( $index ) {
+	$namespace = rytkoset_theme_get_membership_store_api_namespace();
+
+	return array(
+		'type'       => 'object',
+		'properties' => array(
+			'cart' => array(
+				'type'       => 'object',
+				'properties' => array(
+					'extensions' => array(
+						'type'       => 'object',
+						'properties' => array(
+							$namespace => array(
+								'type'       => 'object',
+								'properties' => array(
+									'member_row_count' => array(
+										'type'    => 'integer',
+										'minimum' => max( 1, (int) $index ),
+									),
+								),
+								'required'   => array( 'member_row_count' ),
+							),
+						),
+						'required'   => array( $namespace ),
+					),
+				),
+				'required'   => array( 'extensions' ),
+			),
+		),
+		'required'   => array( 'cart' ),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when a member field should be hidden.
+ *
+ * @param int $index Member row index starting from 1.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_membership_member_hidden_schema( $index ) {
+	return array(
+		'not' => rytkoset_theme_get_membership_member_active_schema( $index ),
+	);
+}
+
+/**
+ * Validates a member email field value.
+ *
+ * Presence of the first row is enforced by the required schema, so empty values
+ * (optional rows or hidden fields) are skipped here and only the format is checked.
+ *
+ * @param string $value Submitted field value.
+ * @return WP_Error|void
+ */
+function rytkoset_theme_validate_membership_member_email_field( $value ) {
+	$value = trim( (string) $value );
+
+	if ( '' === $value ) {
+		return;
+	}
+
+	if ( ! is_email( $value ) ) {
+		return new WP_Error(
+			'rytkoset_invalid_member_email',
+			__( 'Anna jäsenen sähköpostiosoite oikeassa muodossa.', 'rytkoset-theme' )
+		);
+	}
+}
+
+/**
+ * Registers structured member name and email fields for the membership checkout flow.
+ *
+ * Fields are always registered for Store API submissions and conditionally shown
+ * based on the member row count published in the cart extension.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_membership_checkout_fields() {
+	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
+		return;
+	}
+
+	$max_rows = rytkoset_theme_get_membership_max_member_rows();
+
+	for ( $index = 1; $index <= $max_rows; $index++ ) {
+		$name_field_id  = sprintf( 'rytkoset/member_%d_name', $index );
+		$email_field_id = sprintf( 'rytkoset/member_%d_email', $index );
+		$is_first_row   = ( 1 === $index );
+
+		woocommerce_register_additional_checkout_field(
+			array(
+				'id'                => $name_field_id,
+				/* translators: %d: member row number. */
+				'label'             => sprintf( __( 'Jäsen %d: nimi', 'rytkoset-theme' ), $index ),
+				/* translators: %d: member row number. */
+				'optionalLabel'     => sprintf( __( 'Jäsen %d: nimi (valinnainen)', 'rytkoset-theme' ), $index ),
+				'location'          => 'order',
+				'type'              => 'text',
+				'required'          => $is_first_row ? rytkoset_theme_get_membership_member_active_schema( 1 ) : false,
+				'hidden'            => rytkoset_theme_get_membership_member_hidden_schema( $index ),
+				'sanitize_callback' => 'sanitize_text_field',
+				'attributes'        => array(
+					'autocomplete'   => sprintf( 'section-member-%d-name new-password', $index ),
+					'data-lpignore'  => 'true',
+					'data-1p-ignore' => 'true',
+					'maxLength'      => 200,
+				),
+			)
+		);
+
+		woocommerce_register_additional_checkout_field(
+			array(
+				'id'                => $email_field_id,
+				/* translators: %d: member row number. */
+				'label'             => sprintf( __( 'Jäsen %d: sähköposti', 'rytkoset-theme' ), $index ),
+				/* translators: %d: member row number. */
+				'optionalLabel'     => sprintf( __( 'Jäsen %d: sähköposti (valinnainen)', 'rytkoset-theme' ), $index ),
+				'location'          => 'order',
+				'type'              => 'text',
+				'required'          => $is_first_row ? rytkoset_theme_get_membership_member_active_schema( 1 ) : false,
+				'hidden'            => rytkoset_theme_get_membership_member_hidden_schema( $index ),
+				'sanitize_callback' => 'sanitize_email',
+				'validate_callback' => 'rytkoset_theme_validate_membership_member_email_field',
+				'attributes'        => array(
+					'autocomplete'   => sprintf( 'section-member-%d-email new-password', $index ),
+					'data-lpignore'  => 'true',
+					'data-1p-ignore' => 'true',
+					'maxLength'      => 200,
+				),
+			)
+		);
+	}
+}
+add_action( 'woocommerce_init', 'rytkoset_theme_register_membership_checkout_fields' );
+
+/**
+ * Returns structured member rows saved on an order.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return array<int, array<string, string>>
+ */
+function rytkoset_theme_get_membership_order_members( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return array();
+	}
+
+	$members  = array();
+	$max_rows = rytkoset_theme_get_membership_max_member_rows();
+
+	for ( $index = 1; $index <= $max_rows; $index++ ) {
+		$name  = trim(
+			rytkoset_theme_get_order_additional_checkout_field_value( $order, sprintf( 'rytkoset/member_%d_name', $index ) )
+		);
+		$email = trim(
+			rytkoset_theme_get_order_additional_checkout_field_value( $order, sprintf( 'rytkoset/member_%d_email', $index ) )
+		);
+
+		if ( '' === $name && '' === $email ) {
+			continue;
+		}
+
+		$members[] = array(
+			'name'  => $name,
+			'email' => $email,
+		);
+	}
+
+	return $members;
+}
+
+/**
+ * Returns the member row indices that contain data on an order.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return array<int, int>
+ */
+function rytkoset_theme_get_membership_visible_member_indices( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return array();
+	}
+
+	$indices  = array();
+	$max_rows = rytkoset_theme_get_membership_max_member_rows();
+
+	for ( $index = 1; $index <= $max_rows; $index++ ) {
+		$name  = trim(
+			rytkoset_theme_get_order_additional_checkout_field_value( $order, sprintf( 'rytkoset/member_%d_name', $index ) )
+		);
+		$email = trim(
+			rytkoset_theme_get_order_additional_checkout_field_value( $order, sprintf( 'rytkoset/member_%d_email', $index ) )
+		);
+
+		if ( '' !== $name || '' !== $email ) {
+			$indices[] = $index;
+		}
+	}
+
+	return $indices;
+}
+
+/**
+ * Removes WooCommerce's order meta prefix from a member field ID.
+ *
+ * @param string $field_id Field ID or order meta key.
+ * @return string
+ */
+function rytkoset_theme_normalize_membership_member_field_id( $field_id ) {
+	$field_id = (string) $field_id;
+	$prefix   = '_wc_other/';
+
+	if ( 0 === strpos( $field_id, $prefix ) ) {
+		return substr( $field_id, strlen( $prefix ) );
+	}
+
+	return $field_id;
+}
+
+/**
+ * Parses a member row index from an additional checkout field ID.
+ *
+ * @param string $field_id Field ID or order meta key.
+ * @return int Member row index, or 0 when the field is not a membership member field.
+ */
+function rytkoset_theme_get_membership_member_index_from_field_id( $field_id ) {
+	$field_id = rytkoset_theme_normalize_membership_member_field_id( $field_id );
+
+	if ( ! preg_match( '/^rytkoset\/member_(\d+)_(?:name|email)$/', $field_id, $matches ) ) {
+		return 0;
+	}
+
+	return absint( $matches[1] );
+}
+
+/**
+ * Hides empty member fields from order confirmation views and emails.
+ *
+ * @param bool                 $show    Whether WooCommerce would show the field.
+ * @param array<string, mixed> $field   Field data.
+ * @param array<string, mixed> $fields  All fields in the current confirmation context.
+ * @param array<string, mixed> $context Confirmation context.
+ * @return bool
+ */
+function rytkoset_theme_filter_membership_order_confirmation_fields( $show, $field, $fields, $context ) {
+	$field_id = rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields );
+	$index    = rytkoset_theme_get_membership_member_index_from_field_id( $field_id );
+
+	if ( $index < 1 ) {
+		return $show;
+	}
+
+	$order = isset( $context['order'] ) && $context['order'] instanceof WC_Order ? $context['order'] : null;
+
+	if ( ! $order instanceof WC_Order ) {
+		return $show;
+	}
+
+	return $show && in_array( $index, rytkoset_theme_get_membership_visible_member_indices( $order ), true );
+}
+add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_membership_order_confirmation_fields', 10, 4 );
+
+/**
+ * Removes empty member fields from WooCommerce admin order fields.
+ *
+ * @param array<string, mixed> $fields Admin field definitions.
+ * @param WC_Order|null        $order  Order object.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_filter_membership_admin_order_fields( $fields, $order = null ) {
+	if ( ! $order instanceof WC_Order ) {
+		return $fields;
+	}
+
+	$visible = rytkoset_theme_get_membership_visible_member_indices( $order );
+
+	foreach ( $fields as $field_key => $field ) {
+		$field_id = is_array( $field ) && isset( $field['id'] ) ? (string) $field['id'] : (string) $field_key;
+		$index    = rytkoset_theme_get_membership_member_index_from_field_id( $field_id );
+
+		if ( $index > 0 && ! in_array( $index, $visible, true ) ) {
+			unset( $fields[ $field_key ] );
+		}
+	}
+
+	return $fields;
+}
+add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_membership_admin_order_fields', 20, 2 );
+
+/**
+ * Deletes empty member field meta from new Store API orders.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_cleanup_membership_empty_member_order_meta( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+
+	$visible      = rytkoset_theme_get_membership_visible_member_indices( $order );
+	$max_rows     = rytkoset_theme_get_membership_max_member_rows();
+	$deleted_meta = false;
+
+	for ( $index = 1; $index <= $max_rows; $index++ ) {
+		if ( in_array( $index, $visible, true ) ) {
+			continue;
+		}
+
+		foreach ( rytkoset_theme_get_membership_member_field_ids( $index ) as $field_id ) {
+			$meta_key = '_wc_other/' . $field_id;
+
+			if ( ! $order->meta_exists( $meta_key ) ) {
+				continue;
+			}
+
+			$order->delete_meta_data( $meta_key );
+			$deleted_meta = true;
+		}
+	}
+
+	if ( $deleted_meta ) {
+		$order->save();
+	}
+}
+add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cleanup_membership_empty_member_order_meta', 20 );
