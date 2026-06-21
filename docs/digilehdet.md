@@ -117,7 +117,7 @@ digilehden metatietona, samaan tapaan kuin tapahtuma linkitetään maksutuottees
 (`_rytkoset_event_product_id`, ks.
 [woocommerce-event-product-link.md](woocommerce-event-product-link.md)).
 
-Suunnitellut meta-avaimet (vahvistetaan `#201`:ssä):
+Meta-avaimet (toteutettu `#201`:ssä, `inc/woocommerce-digital-magazine.php`):
 
 | Malli | Jäsentuote | Normaalituote |
 | --- | --- | --- |
@@ -125,6 +125,9 @@ Suunnitellut meta-avaimet (vahvistetaan `#201`:ssä):
 | `paid` | — | `_rytkoset_magazine_regular_product_id` |
 | `members_only` | — (ei tuotetta) | — (ei tuotetta) |
 | `free` | — | — |
+
+Ylläpitäjän ohje tuotteiden luontiin ja linkitykseen: ks.
+[digital-magazines.md](digital-magazines.md#maksullinen-digilehti-woocommerce-tuotteet-201).
 
 Perustelu erillisille tuotteille yhden tuotteen dynaamisen alennuksen sijaan:
 
