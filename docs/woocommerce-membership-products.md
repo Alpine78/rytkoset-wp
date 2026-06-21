@@ -23,11 +23,11 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Vuosijäsenmaksujen tuotekuvauksissa kerrotaan:
   - jäsenyys on voimassa sukukokousten välisen ajan
   - nykyinen kausi on `2023 - 2026`
-  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet kirjoitetaan tilauksen muistiinpanoon
-- Kassalle on lisätty ohjeteksti kaikille jäsenmaksutuotteille, myös ainaisjäsenmaksulle:
-  - tilaaja valitsee `Lisää muistiinpano tilaukseesi`
-  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet kirjoitetaan muistiinpanoon
-  - tiedot voidaan kirjata jäsenrekisteriin
+  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet syötetään kassan rakenteisiin kenttiin
+- Kassalle näytetään rakenteiset kentät jäsenten nimille ja sähköposteille, kun korissa on nimet vaativa jäsenmaksutuote (`_rytkoset_member_names_required = yes`):
+  - yksityis- ja ainaisjäsenmaksu: yksi nimi + sähköposti (molemmat pakollisia)
+  - perhejäsenmaksu (`annual_family`): useampi nimi + sähköposti -rivi; ensimmäinen rivi pakollinen, lisärivien sähköpostit valinnaisia
+  - tiedot tallentuvat tilauksen tietoihin rakenteisessa muodossa ja voidaan kirjata jäsenrekisteriin
 
 ## Tekniset huomiot
 
@@ -39,14 +39,24 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
   - `_rytkoset_membership_type = lifetime`
 - Vuosijäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
   - `_rytkoset_membership_period = 2023-2026`
-- Kassalla näytettävä nimiohje määräytyy tuotemetadata-lipulla:
+- Rakenteisten jäsenkenttien näkyminen kassalla määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
-- Nimiohjeen metadata on käytössä vain vuosijäsenmaksutuotteilla.
-- Teema näyttää kassaohjeen silloin, kun korissa on jäsenmaksutuotteeksi merkitty tuote.
-- Checkout Blockin tilausmuistiinpano käyttää WooCommercen omaa valintatekstiä `Lisää muistiinpano tilaukseesi`.
-- `Ainaisjäsenmaksu` näyttää saman jäsenrekisteriohjeen kuin vuosijäsenmaksut.
+- Lippu on käytössä sekä vuosijäsenmaksuilla että ainaisjäsenmaksulla.
+- Teema näyttää lyhyen kassaohjeen ja rakenteiset kentät silloin, kun korissa on nimet vaativa jäsenmaksutuote.
 - Kassaohjeen renderöinti tehdään teemassa, koska WooCommerce Block Checkout ei näyttänyt luotettavasti normaalia sivusisältöä nykyisessä teemassa.
 - WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
+
+### Rakenteiset jäsenkentät kassalla
+
+Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php`, `docs/woocommerce-tampere-2026-checkout-fields.md`):
+
+- Kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla (`woocommerce_register_additional_checkout_field`, `location = order`): `rytkoset/member_X_name` ja `rytkoset/member_X_email` (X = 1–6).
+- Teema julkaisee Checkout Blockille näytettävien rivien määrän Store API:n `cart.extensions.rytkoset_membership.member_row_count` -kentässä: 1 yksityis-/ainaisjäsenmaksulle, 6 perhejäsenmaksulle, 0 kun korissa ei ole nimet vaativaa jäsenmaksua.
+- Rivit, joiden indeksi ylittää `member_row_count`-arvon, piilotetaan ja niiden validointi ohitetaan ehdollisella JSON-skeemalla.
+- Rivin 1 nimi ja sähköposti ovat pakollisia; lisärivit ovat valinnaisia. Sähköpostin muoto tarkistetaan `validate_callback`-funktiolla (`is_email`); tyhjät valinnaiset rivit ohitetaan.
+- Kentät tallentuvat tilauksen lisäkentiksi order-metana (`_wc_other/rytkoset/member_X_name`, `_wc_other/rytkoset/member_X_email`).
+- Tyhjien jäsenrivien lisäkenttämetat poistetaan uusilta Store API -tilauksilta, eikä tyhjiä rivejä näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
+- Kenttien autocomplete on rajattu pois, jotta selaimen autofill ei kirjoita arvoja vääriin riveihin.
 
 ## Jäsenmaksutilausten käsittelymalli
 
@@ -68,10 +78,11 @@ Yksittäisen tilauksen admin-näkymään lisätään `Jäsenmaksu`-laatikko. Se 
 - jäsenkauden
 - tilauksen tilan
 - yhteyshenkilön nimen, sähköpostin ja puhelinnumeron
+- syötetyt jäsenet (nimi + sähköposti) rakenteisena listana
 - asiakkaan kirjoittamat lisätiedot
 - ylläpidon käsittelyohjeen
 
-Vuosijäsenmaksuissa lisätietokentästä poimitaan jäsenen tai perheenjäsenten nimet manuaalista jäsenrekisteriin vientiä varten. Jos lisätietokenttä on tyhjä, tilausnäkymä näyttää ylläpidolle huomion.
+Jäsenet poimitaan suoraan rakenteisista jäsenkentistä manuaalista jäsenrekisteriin vientiä varten. Jos jäsenkentät ovat tyhjät eikä lisätietokentässä ole tietoja, tilausnäkymä näyttää ylläpidolle huomion. Vanhat tilaukset, joissa jäsenet on kirjattu vapaaseen lisätietokenttään (tilauksen muistiinpanoon), näkyvät adminissa edelleen kuten ennen.
 
 ## Uuden jäsenkauden käyttöönotto
 
