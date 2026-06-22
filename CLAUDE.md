@@ -19,7 +19,11 @@ docker compose up -d
 docker compose down
 ```
 
-Three containers: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `rytkoset-joomla-db` (Joomla migration). Only `wp-content/` is mounted from host â€” file changes are reflected immediately without restart.
+Three containers: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `rytkoset-joomla-db` (Joomla migration). Only `wp-content/` is mounted from host â€” file changes are reflected immediately without restart. WordPress core persists in the `wp_core` named volume.
+
+A fourth, on-demand `wpcli` service (`wordpress:cli-php8.3`, `cli` Compose profile, does not start with `docker compose up`) runs one-off WP-CLI commands, e.g. `docker compose run --rm wpcli wp theme activate rytkoset-theme`. Use it to install/configure WordPress non-interactively.
+
+On Windows without Docker Desktop, run Docker Engine inside WSL2 â€” see `docs/local-dev-wsl.md` for the full setup (Docker Engine install, WP-CLI bootstrap, plugin notes).
 
 ## Linting and CI
 

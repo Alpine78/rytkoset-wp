@@ -40,8 +40,28 @@ services:
       WORDPRESS_DB_USER: wpuser
       WORDPRESS_DB_PASSWORD: wppass
     volumes:
+      - wp_core:/var/www/html
+      - ./wp-content:/var/www/html/wp-content
+
+  # WP-CLI for one-off commands (install, theme activation, etc.).
+  # Does not start with `docker compose up` — run on demand:
+  #   docker compose run --rm wpcli wp <command>
+  wpcli:
+    image: wordpress:cli-php8.3
+    profiles: ["cli"]
+    depends_on:
+      - db
+      - wordpress
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: rytkoset_wp
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppass
+    volumes:
+      - wp_core:/var/www/html
       - ./wp-content:/var/www/html/wp-content
 
 volumes:
   db_data:
   joomla_db_data:
+  wp_core:
