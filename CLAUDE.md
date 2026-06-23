@@ -19,7 +19,7 @@ docker compose up -d
 docker compose down
 ```
 
-Three containers: `rytkoset-wp` (WordPress/PHP 8.3), `rytkoset-db` (MariaDB), `rytkoset-joomla-db` (Joomla migration). Only `wp-content/` is mounted from host â€” file changes are reflected immediately without restart.
+Three containers: `rytkoset-wp` (WordPress 7 / PHP 8.3), `rytkoset-db` (MariaDB), `rytkoset-joomla-db` (Joomla migration). Only `wp-content/` is mounted from host â€” file changes are reflected immediately without restart.
 
 ## Linting and CI
 
