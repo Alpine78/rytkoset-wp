@@ -73,3 +73,6 @@ wp-content/ai1wm-backups/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# LiteSpeed Cache plugin runtime/state (per-environment, regenerated)
+wp-content/litespeed/
