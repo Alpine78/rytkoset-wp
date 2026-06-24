@@ -158,6 +158,22 @@ class Rytkoset_Test_Order_Item {
 	}
 }
 
+class WC_Coupon {
+	/** @var array<string,mixed> */
+	private array $meta;
+
+	/**
+	 * @param array<string,mixed> $meta Meta key => value map.
+	 */
+	public function __construct( array $meta = array() ) {
+		$this->meta = $meta;
+	}
+
+	public function get_meta( string $key, bool $single = true ) {
+		return $this->meta[ $key ] ?? '';
+	}
+}
+
 class WC_Order {
 	/** @var array<string,mixed> */
 	public array $meta = array();
@@ -211,6 +227,10 @@ function esc_url_raw( $url ) {
 	return $url;
 }
 
+function esc_html( $text ) {
+	return htmlspecialchars( (string) $text, ENT_QUOTES );
+}
+
 function sanitize_key( $key ) {
 	$key = strtolower( (string) $key );
 
@@ -261,6 +281,10 @@ function current_time( $type = 'mysql' ) {
 
 function get_current_user_id(): int {
 	return (int) $GLOBALS['rytkoset_test_current_user'];
+}
+
+function is_user_logged_in(): bool {
+	return get_current_user_id() > 0;
 }
 
 function get_user_meta( $user_id, $key = '', $single = false ) {
@@ -385,6 +409,7 @@ $rytkoset_theme_inc = dirname( __DIR__ ) . '/wp-content/themes/rytkoset-theme/in
 
 require_once $rytkoset_theme_inc . '/user-membership.php';
 require_once $rytkoset_theme_inc . '/woocommerce-membership.php';
+require_once $rytkoset_theme_inc . '/woocommerce-member-coupon.php';
 require_once $rytkoset_theme_inc . '/digital-magazine-access.php';
 
 require_once __DIR__ . '/Rytkoset_Theme_Test_Case.php';
