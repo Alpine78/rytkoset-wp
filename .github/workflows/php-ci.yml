@@ -24,8 +24,11 @@ jobs:
         run: |
           find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l
 
-      - name: Install Composer dev dependencies (PHPCS + WPCS)
+      - name: Install Composer dev dependencies (PHPCS + WPCS + PHPUnit)
         run: composer install --no-interaction --no-progress
 
       - name: PHP_CodeSniffer (WordPress Coding Standards)
         run: composer run lint
+
+      - name: PHPUnit (unit tests)
+        run: composer run test
