@@ -27,7 +27,7 @@ On Windows without Docker Desktop, run Docker Engine inside WSL2 â€” see `d
 
 ## Linting and CI
 
-No separate build step. Two checks run in CI for every PR and `main` push (`.github/workflows/php-ci.yml`):
+No separate build step. Three checks run in CI for every PR and `main` push (`.github/workflows/php-ci.yml`):
 
 **1. PHP syntax validation** (`php -l`) — hard gate:
 
@@ -48,6 +48,17 @@ composer run lint:fix     # phpcbf — auto-fix whitespace/indentation
 All files in the ruleset must pass without errors or warnings. Keep any `phpcs:ignore` directive scoped to the smallest possible line or block and include the technical reason.
 
 > Note: phpcbf's `Generic.WhiteSpace.DisallowSpaceIndent` converts leading spaces to tabs at the configured tab width. When cleaning legacy 8-space indentation, run phpcbf with `--tab-width=8`, then verify the final result with the normal `composer run lint` command used by CI.
+
+**3. PHPUnit unit tests** — hard gate.
+
+phpunit is a Composer dev dependency. Config is in `phpunit.xml.dist`; tests live in `tests/`. Run locally:
+
+```bash
+composer install          # installs phpunit into vendor/ (gitignored)
+composer run test         # phpunit
+```
+
+The theme has **no WordPress test install**. These are lightweight unit tests: `tests/bootstrap.php` defines just enough WordPress/WooCommerce stubs (sanitizers, an in-memory user-meta store, a controllable `current_datetime()`, and minimal `WP_User`/`WP_Post`/`WC_Order`/`WC_Product` objects) to load `inc/user-membership.php`, `inc/woocommerce-membership.php` and `inc/digital-magazine-access.php` and exercise their logic without a database. Every test extends `Rytkoset_Theme_Test_Case`, which resets the stub state in `setUp()`. Coverage targets the EPIC 10 membership decision logic: `rytkoset_theme_user_is_active_member()` (the member gate), the FI/ISO date and period sanitizers, the #302 order→membership resolution (`rytkoset_theme_resolve_order_membership`) and application rules (idempotency, never-shorten, guest/unmatched fail-closed, email-on-activation), and #420 manual magazine grants/revocation + the OR-logic access filter. Admin render/save callbacks (nonces, `$_POST`, capabilities) are intentionally out of scope. When adding membership logic, prefer extracting the decision into a pure/near-pure function and adding a test next to the existing ones. The stubs are deliberately minimal — extend `tests/bootstrap.php` only with what a new test needs. PHP-version note: CI runs PHPUnit on PHP 8.3; locally without PHP installed you can run it through Docker (`docker run --rm --entrypoint php -v "$PWD":/app -w /app composer:2 vendor/bin/phpunit`).
 
 ## Deploy
 
