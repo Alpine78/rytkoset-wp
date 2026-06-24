@@ -44,19 +44,42 @@ if ( 'members_only' === $rytkoset_locked_mode ) {
 		$rytkoset_secondary_label = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
 	}
 } elseif ( 'member_and_regular' === $rytkoset_locked_mode ) {
-	$rytkoset_locked_heading  = __( 'Digilehti vaatii oston', 'rytkoset-theme' );
-	$rytkoset_locked_message  = __(
-		'Tämä digilehti on maksullinen. Jäsenhinta ja normaalihinta lisätään myöhemmässä WooCommerce-tuotelinkityksen vaiheessa.',
-		'rytkoset-theme'
-	);
-	$rytkoset_secondary_url   = $rytkoset_membership_url;
-	$rytkoset_secondary_label = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
+	$rytkoset_locked_heading = __( 'Digilehti vaatii oston', 'rytkoset-theme' );
+	$rytkoset_purchase_cta   = function_exists( 'rytkoset_theme_get_digital_magazine_purchase_cta' )
+		? rytkoset_theme_get_digital_magazine_purchase_cta( $rytkoset_locked_post_id )
+		: array();
+
+	if ( ! empty( $rytkoset_purchase_cta['url'] ) ) {
+		$rytkoset_primary_url   = $rytkoset_purchase_cta['url'];
+		$rytkoset_primary_label = $rytkoset_purchase_cta['label'];
+
+		if ( is_user_logged_in() ) {
+			$rytkoset_locked_message  = __( 'Tämä digilehti on maksullinen. Aktiivisena jäsenenä saat sen jäsenhintaan.', 'rytkoset-theme' );
+			$rytkoset_secondary_url   = $rytkoset_membership_url;
+			$rytkoset_secondary_label = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
+		} else {
+			$rytkoset_locked_message  = __( 'Tämä digilehti on maksullinen. Aktiiviset jäsenet saavat sen jäsenhintaan — kirjaudu ensin saadaksesi jäsenhinnan.', 'rytkoset-theme' );
+			$rytkoset_secondary_url   = $rytkoset_locked_login;
+			$rytkoset_secondary_label = __( 'Kirjaudu (jäsenhinta)', 'rytkoset-theme' );
+		}
+	} else {
+		$rytkoset_locked_message  = __( 'Tämä digilehti on maksullinen. Ostolinkki ei ole vielä saatavilla.', 'rytkoset-theme' );
+		$rytkoset_secondary_url   = $rytkoset_membership_url;
+		$rytkoset_secondary_label = __( 'Tutustu jäsenyyteen', 'rytkoset-theme' );
+	}
 } elseif ( 'paid' === $rytkoset_locked_mode ) {
 	$rytkoset_locked_heading = __( 'Digilehti vaatii oston', 'rytkoset-theme' );
-	$rytkoset_locked_message = __(
-		'Tämä digilehti on maksullinen. Ostolinkki lisätään myöhemmässä WooCommerce-tuotelinkityksen vaiheessa.',
-		'rytkoset-theme'
-	);
+	$rytkoset_purchase_cta   = function_exists( 'rytkoset_theme_get_digital_magazine_purchase_cta' )
+		? rytkoset_theme_get_digital_magazine_purchase_cta( $rytkoset_locked_post_id )
+		: array();
+
+	if ( ! empty( $rytkoset_purchase_cta['url'] ) ) {
+		$rytkoset_locked_message = __( 'Tämä digilehti on maksullinen. Osta lukuoikeus jatkaaksesi.', 'rytkoset-theme' );
+		$rytkoset_primary_url    = $rytkoset_purchase_cta['url'];
+		$rytkoset_primary_label  = $rytkoset_purchase_cta['label'];
+	} else {
+		$rytkoset_locked_message = __( 'Tämä digilehti on maksullinen. Ostolinkki ei ole vielä saatavilla.', 'rytkoset-theme' );
+	}
 }
 ?>
 <section class="digital-magazine-lock" aria-labelledby="digital-magazine-lock-heading">

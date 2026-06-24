@@ -64,10 +64,15 @@ wp-content/ai1wm-backups/
 # uncomment the next line
 #/wp-content/themes
 
-# Composer-kehitysriippuvuudet (phpcs / WordPress Coding Standards)
+# Composer-kehitysriippuvuudet (phpcs / WordPress Coding Standards, PHPUnit)
 /vendor/
+
+# PHPUnit-välimuisti
+/.phpunit.cache/
+.phpunit.result.cache
 
 # Claude Code local settings
 .claude/settings.local.json
 
-Rytköset-handoff-some
+# LiteSpeed Cache plugin runtime/state (per-environment, regenerated)
+wp-content/litespeed/

@@ -68,6 +68,56 @@ otsikon ja lukuoikeuskehotteen sisällön sijaan.
 
 Ensimmäisellä jutulla ei näytetä edellinen-linkkiä. Viimeisellä jutulla ei näytetä seuraava-linkkiä.
 
+## Maksullinen digilehti: WooCommerce-tuotteet (#201)
+
+`paid`- ja `member_and_regular`-lehdet linkitetään WooCommerce-tuotteeseen, joka
+hoitaa maksamisen. Sisältö pysyy digilehdessä — tuote on vain maksuväline.
+
+**Kaksi erillistä tuotetta** (#199):
+
+| Lehden malli | Normaalihintatuote | Jäsenhintatuote |
+| --- | --- | --- |
+| Kaikille maksullinen (`paid`) | pakollinen | — |
+| Jäsenhinta + normaalihinta (`member_and_regular`) | pakollinen | valinnainen |
+| Vain jäsenille / Kaikille ilmainen | — | — |
+
+### Tuotteen luonti
+
+1. Luo **Tuotteet > Lisää uusi** -näkymässä tuote lehden hintaa varten.
+2. Merkitse tuote **virtuaaliseksi** (Tuotetiedot → rasti *Virtuaalinen*): ei
+   toimitusta. **Älä** lisää ladattavaa tiedostoa — sisältö luetaan sivustolta,
+   ei PDF-liitteenä.
+3. Aseta hinta ja julkaise tuote.
+4. `member_and_regular`-lehdelle luo erikseen normaalihinta- ja
+   jäsenhintatuotteet (kaksi tuotetta, eri hinnat).
+
+### Tuotteen linkitys lehteen
+
+1. Avaa lehti (ylälehti) ja etsi **Maksutuotteet**-laatikko.
+2. Valitse **Normaalihintatuote** ja tarvittaessa **Jäsenhintatuote**. Vain
+   julkaistut tuotteet kelpaavat.
+3. Tallenna lehti.
+
+Lukitun lehden ostokehote ohjaa oikeaan tuotteeseen käyttäjän jäsenstatuksen
+mukaan: aktiivinen jäsen näkee jäsenhintatuotteen, muut normaalihintatuotteen.
+Jos jäsenstatusta ei voida varmistaa (kirjautumaton), ohjataan normaalihintaan.
+
+### Ostaminen ja lukuoikeus
+
+- **Vain jäsen voi ostaa jäsenhintatuotteen.** Tuotteen lisääminen koriin ja
+  kassalla eteneminen estyy ilman aktiivista jäsenyyttä.
+- Lukuoikeus avautuu, kun ostajan tilauksessa on lehteen linkitetty tuote ja
+  tilaus on **valmis** (`processing`/`completed`). `on-hold`-tilisiirto ei vielä
+  avaa sisältöä. Pääsy on tilikohtainen — osto pitää tehdä kirjautuneena tai
+  samalla laskutussähköpostilla.
+- Ostaja saa lukuoikeudesta saman sähköposti-ilmoituksen kuin manuaalisesta
+  myönnöstä (#420), kerran tilausta ja lehteä kohti.
+
+> **Synkronointi:** lehden ja tuotteen linkitys (`_rytkoset_magazine_*_product_id`)
+> tallennetaan lehden metatietoon ja viittaa tuotteen ID:hen. Tuote-ID:t ovat eri
+> local- ja dev-ympäristössä, joten linkitys **ei** siirry tuotesynkronointi-
+> työkalulla — aseta tuotteet jokaisessa ympäristössä erikseen.
+
 ## Käyttöoikeuden myöntäminen manuaalisesti (#420)
 
 Osa digilehdistä myydään verkkokaupan ulkopuolella (käteinen, tilaisuudet,
