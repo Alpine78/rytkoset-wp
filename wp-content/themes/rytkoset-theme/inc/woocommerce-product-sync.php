@@ -23,12 +23,117 @@ function rytkoset_theme_product_sync_get_meta_keys() {
 		'_rytkoset_membership_product',
 		'_rytkoset_membership_type',
 		'_rytkoset_membership_period',
+		'_rytkoset_membership_expiry_date',
 		'_rytkoset_member_names_required',
 		'_rytkoset_registration_deadline',
 		'_rytkoset_registration_mode',
 	);
 
 	return apply_filters( 'rytkoset_theme_product_sync_meta_keys', $keys );
+}
+
+/**
+ * Validoi tuotteen jäsenmaksumetat (#407).
+ *
+ * Sama logiikka viennissä (WC_Product-objektin metoista) ja tuonnissa
+ * (tuontidatan meta-arraysta): data luetaan whitelistattujen metojen
+ * arvotaulusta (avain => arvo). Sallitut jäsenmaksutyypit otetaan suoraan
+ * jäsenmaksumoduulista (`rytkoset_theme_get_membership_type_options()`), ei
+ * kovakoodattuna toisena listana. Tyypin tunnistusta ei johdeta tuotteen
+ * nimestä.
+ *
+ * @param array<string, mixed> $meta Tuotteen `_rytkoset_*`-metat (avain => arvo).
+ * @return array<int, string> Virheviestit; tyhjä taulu = kelvollinen tai ei jäsenmaksutuote.
+ */
+function rytkoset_theme_product_sync_validate_membership_meta( $meta ) {
+	$product_key = rytkoset_theme_get_membership_product_meta_key();
+	$type_key    = rytkoset_theme_get_membership_type_meta_key();
+	$period_key  = rytkoset_theme_get_membership_period_meta_key();
+
+	$is_membership = isset( $meta[ $product_key ] ) && 'yes' === (string) $meta[ $product_key ];
+	$type          = isset( $meta[ $type_key ] ) ? (string) $meta[ $type_key ] : '';
+	$period        = isset( $meta[ $period_key ] ) ? trim( (string) $meta[ $period_key ] ) : '';
+
+	$errors = array();
+
+	if ( ! $is_membership ) {
+		// Ristiriita: tyyppi tai jäsenkausi asetettu ilman jäsenmaksutuotteen lippua.
+		if ( '' !== $type || '' !== $period ) {
+			$errors[] = __( 'Jäsenmaksumetat ovat ristiriidassa: jäsenmaksun tyyppi tai jäsenkausi on asetettu, mutta tuotetta ei ole merkitty jäsenmaksutuotteeksi.', 'rytkoset-theme' );
+		}
+
+		return $errors;
+	}
+
+	// Jäsenmaksutuote: tyypin on oltava jokin jäsenmaksumoduulin sallituista arvoista.
+	if ( '' === rytkoset_theme_normalize_membership_type( $type ) ) {
+		$errors[] = sprintf(
+			/* translators: 1: configured type value, 2: comma-separated allowed type keys */
+			__( 'Jäsenmaksun tyyppi on virheellinen (%1$s). Sallitut arvot: %2$s.', 'rytkoset-theme' ),
+			'' === $type ? __( 'ei valintaa', 'rytkoset-theme' ) : $type,
+			implode( ', ', array_keys( rytkoset_theme_get_membership_type_options() ) )
+		);
+
+		return $errors;
+	}
+
+	// Vuosijäsenmaksulta vaaditaan jäsenkausi; ainaisjäseneltä ei.
+	if ( 'lifetime' !== $type && '' === $period ) {
+		$errors[] = __( 'Vuosijäsenmaksulta vaaditaan jäsenkausi.', 'rytkoset-theme' );
+	}
+
+	return $errors;
+}
+
+/**
+ * Rakentaa esikatselua varten jäsenmaksuasetusten luettavan yhteenvedon (#407).
+ *
+ * @param array<string, mixed> $meta Tuontidatan `_rytkoset_*`-metat.
+ * @return array<int, array{label: string, value: string}> Tyhjä taulu, jos ei jäsenmaksutuote.
+ */
+function rytkoset_theme_product_sync_get_membership_summary( $meta ) {
+	$product_key = rytkoset_theme_get_membership_product_meta_key();
+	if ( ! isset( $meta[ $product_key ] ) || 'yes' !== (string) $meta[ $product_key ] ) {
+		return array();
+	}
+
+	$type   = isset( $meta[ rytkoset_theme_get_membership_type_meta_key() ] ) ? (string) $meta[ rytkoset_theme_get_membership_type_meta_key() ] : '';
+	$period = isset( $meta[ rytkoset_theme_get_membership_period_meta_key() ] ) ? (string) $meta[ rytkoset_theme_get_membership_period_meta_key() ] : '';
+	$expiry = isset( $meta[ rytkoset_theme_get_membership_expiry_date_meta_key() ] ) ? (string) $meta[ rytkoset_theme_get_membership_expiry_date_meta_key() ] : '';
+	$names  = isset( $meta[ rytkoset_theme_get_member_names_required_meta_key() ] ) && 'yes' === (string) $meta[ rytkoset_theme_get_member_names_required_meta_key() ];
+
+	$type_label = '' === rytkoset_theme_normalize_membership_type( $type )
+		/* translators: %s: invalid raw membership type value */
+		? sprintf( __( 'virheellinen (%s)', 'rytkoset-theme' ), '' === $type ? __( 'ei valintaa', 'rytkoset-theme' ) : $type )
+		: rytkoset_theme_get_membership_type_label( $type );
+
+	$summary = array(
+		array(
+			'label' => __( 'Jäsenmaksutuote', 'rytkoset-theme' ),
+			'value' => __( 'Kyllä', 'rytkoset-theme' ),
+		),
+		array(
+			'label' => __( 'Tyyppi', 'rytkoset-theme' ),
+			'value' => $type_label,
+		),
+		array(
+			'label' => __( 'Jäsenkausi', 'rytkoset-theme' ),
+			'value' => '' !== $period ? $period : '—',
+		),
+		array(
+			'label' => __( 'Jäsenten nimet vaaditaan', 'rytkoset-theme' ),
+			'value' => $names ? __( 'Kyllä', 'rytkoset-theme' ) : __( 'Ei', 'rytkoset-theme' ),
+		),
+	);
+
+	if ( '' !== $expiry ) {
+		$summary[] = array(
+			'label' => __( 'Jäsenyys voimassa asti', 'rytkoset-theme' ),
+			'value' => $expiry,
+		);
+	}
+
+	return $summary;
 }
 
 /**
@@ -526,6 +631,12 @@ function rytkoset_theme_product_sync_serialize_product( $product ) {
 		}
 	}
 
+	// Estä puutteellisen/ristiriitaisen jäsenmaksukonfiguraation vienti (#407).
+	$membership_errors = rytkoset_theme_product_sync_validate_membership_meta( $meta );
+	if ( ! empty( $membership_errors ) ) {
+		return new WP_Error( 'rytkoset_psync_invalid_membership_meta', implode( ' ', $membership_errors ) );
+	}
+
 	$downloads    = array();
 	$files_to_add = array();
 
@@ -961,6 +1072,10 @@ function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
 		);
 	}
 
+	// Validoi jäsenmaksumetat myös tuonnissa (käsin muokattu tai vanha paketti) (#407).
+	$incoming_meta = isset( $incoming['meta'] ) && is_array( $incoming['meta'] ) ? $incoming['meta'] : array();
+	$errors        = array_merge( $errors, rytkoset_theme_product_sync_validate_membership_meta( $incoming_meta ) );
+
 	if ( 'variable' === $type ) {
 		$errors = array_merge( $errors, rytkoset_theme_product_sync_validate_variable_import_data( $incoming ) );
 
@@ -1004,6 +1119,7 @@ function rytkoset_theme_product_sync_compute_diff( $incoming, $session_dir ) {
 		'missing_files'     => $missing_files,
 		'errors'            => $errors,
 		'variation_changes' => $variation_changes,
+		'membership'        => rytkoset_theme_product_sync_get_membership_summary( $incoming_meta ),
 		'existing_id'       => $existing_id,
 	);
 }
@@ -1502,6 +1618,14 @@ function rytkoset_theme_product_sync_render_preview( $token, $preview ) {
 						<td><code><?php echo esc_html( $d['sku'] ); ?></code></td>
 						<td><?php echo esc_html( $status_label ); ?></td>
 						<td>
+							<?php if ( ! empty( $d['membership'] ) && is_array( $d['membership'] ) ) : ?>
+								<p style="margin:0 0 .25rem;"><strong><?php esc_html_e( 'Jäsenmaksuasetukset:', 'rytkoset-theme' ); ?></strong></p>
+								<ul style="margin:0 0 .5rem;padding-left:1rem;">
+									<?php foreach ( $d['membership'] as $line ) : ?>
+										<li><?php echo esc_html( $line['label'] ); ?>: <strong><?php echo esc_html( $line['value'] ); ?></strong></li>
+									<?php endforeach; ?>
+								</ul>
+							<?php endif; ?>
 							<?php if ( 'error' === $status && ( ! empty( $d['errors'] ) || ! empty( $d['missing_files'] ) ) ) : ?>
 								<span style="color:#b32d2e;">
 									<?php
@@ -1741,6 +1865,14 @@ function rytkoset_theme_product_sync_import_product( $incoming, $session_dir ) {
 
 	// Custom metat — kopioi vain whitelistatut avaimet.
 	$incoming_meta = isset( $incoming['meta'] ) && is_array( $incoming['meta'] ) ? $incoming['meta'] : array();
+
+	// Estä puutteellisen/ristiriitaisen jäsenmaksukonfiguraation tuonti, vaikka
+	// esikatselu ohitettaisiin tai paketti olisi käsin muokattu (#407).
+	$membership_errors = rytkoset_theme_product_sync_validate_membership_meta( $incoming_meta );
+	if ( ! empty( $membership_errors ) ) {
+		return new WP_Error( 'rytkoset_psync_invalid_membership_meta', implode( ' ', $membership_errors ) );
+	}
+
 	foreach ( rytkoset_theme_product_sync_get_meta_keys() as $key ) {
 		if ( isset( $incoming_meta[ $key ] ) ) {
 			$product->update_meta_data( $key, $incoming_meta[ $key ] );
