@@ -37,6 +37,7 @@ require_once get_template_directory() . '/inc/digital-magazines.php';
 require_once get_template_directory() . '/inc/digital-magazine-access.php';
 require_once get_template_directory() . '/inc/attachment-iptc.php';
 require_once get_template_directory() . '/inc/seo-meta.php';
+require_once get_template_directory() . '/inc/structured-data.php';
 require_once get_template_directory() . '/inc/login.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/user-membership.php';
