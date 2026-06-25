@@ -75,6 +75,11 @@ $rytkoset_cs_social_links = function_exists( 'rytkoset_theme_get_social_links' )
 
 // Illustraation URL
 $rytkoset_cs_illustration = $rytkoset_cs_theme_uri . '/assets/images/home/home-welcome-illustration.png';
+
+// Self-hostatut fontit (#379) — GDPR: ei pyyntöjä Googlen palvelimille.
+$rytkoset_cs_font_manrope         = $rytkoset_cs_theme_uri . '/assets/fonts/manrope-latin.woff2';
+$rytkoset_cs_font_newsreader      = $rytkoset_cs_theme_uri . '/assets/fonts/newsreader-latin.woff2';
+$rytkoset_cs_font_newsreader_ital = $rytkoset_cs_theme_uri . '/assets/fonts/newsreader-latin-italic.woff2';
 ?>
 <!doctype html>
 <html lang="fi">
@@ -84,11 +89,32 @@ $rytkoset_cs_illustration = $rytkoset_cs_theme_uri . '/assets/images/home/home-w
 <title><?php echo esc_html( 'Sivusto päivittyy — ' . $rytkoset_cs_site_name ); ?></title>
 <meta name="robots" content="noindex, nofollow" />
 <?php wp_head(); ?>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet" />
 <style>
 /* Rytköset — Huoltotila / Coming soon (teeman ylikirjoitus) */
+
+/* Self-hostatut fontit (#379) — variable-fontit, latin-subset, font-display: swap. */
+@font-face {
+	font-family: "Manrope";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("<?php echo esc_url( $rytkoset_cs_font_manrope ); ?>") format("woff2");
+}
+@font-face {
+	font-family: "Newsreader";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("<?php echo esc_url( $rytkoset_cs_font_newsreader ); ?>") format("woff2");
+}
+@font-face {
+	font-family: "Newsreader";
+	font-style: italic;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("<?php echo esc_url( $rytkoset_cs_font_newsreader_ital ); ?>") format("woff2");
+}
+
 html, body {
 height: 100%;
 margin: 0;
