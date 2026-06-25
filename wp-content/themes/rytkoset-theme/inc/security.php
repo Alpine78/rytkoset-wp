@@ -331,6 +331,23 @@ if ( ! function_exists( 'rytkoset_theme_filter_registration_spam' ) ) {
 			return $errors;
 		}
 
+		$email  = strtolower( $user_email );
+		$at     = strrpos( $email, '@' );
+		$local  = false !== $at ? substr( $email, 0, $at ) : $email;
+		$domain = false !== $at ? substr( $email, $at + 1 ) : $email;
+
+		// RFC 5321: paikallisosa ei saa päättyä pisteeseen.
+		if ( str_ends_with( $local, '.' ) ) {
+			$errors->add( 'rytkoset_blocked_email', __( 'Tällä sähköpostiosoitteella ei voi rekisteröityä.', 'rytkoset-theme' ) );
+			return $errors;
+		}
+
+		// Yli 6 pistettä paikallisosassa on botti-signaali (normaali nimi ei käytä niitä näin paljon).
+		if ( substr_count( $local, '.' ) > 6 ) {
+			$errors->add( 'rytkoset_blocked_email', __( 'Tällä sähköpostiosoitteella ei voi rekisteröityä.', 'rytkoset-theme' ) );
+			return $errors;
+		}
+
 		/**
 		 * Suodata estetyt sähköpostidomainin päätteet (esim. `.casino`).
 		 * Vertailu tehdään domainin loppuosaan.
@@ -341,10 +358,6 @@ if ( ! function_exists( 'rytkoset_theme_filter_registration_spam' ) ) {
 			'rytkoset_theme_blocked_registration_email_patterns',
 			array( '.casino', '.bet', '.poker' )
 		);
-
-		$email  = strtolower( $user_email );
-		$at     = strrpos( $email, '@' );
-		$domain = false !== $at ? substr( $email, $at + 1 ) : $email;
 
 		foreach ( $blocked as $pattern ) {
 			$pattern = strtolower( (string) $pattern );
