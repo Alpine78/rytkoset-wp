@@ -214,3 +214,102 @@ function rytkoset_theme_allow_event_organizer_admin_access( $prevent_access ) {
 	return $prevent_access;
 }
 add_filter( 'woocommerce_prevent_admin_access', 'rytkoset_theme_allow_event_organizer_admin_access' );
+
+/**
+ * Returns the nonce action for the Event Organizer additional-role profile section.
+ *
+ * @param int $user_id The edited user ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_organizer_role_nonce_action( $user_id ) {
+	return 'rytkoset_save_event_organizer_role_' . (int) $user_id;
+}
+
+/**
+ * Renders the "Tapahtumien järjestäjä" additional-role checkbox on a user profile screen.
+ *
+ * The checkbox toggles the event_organizer role as a secondary role so a user can be, for
+ * example, Päätoimittaja and Event Organizer at the same time. It leaves the WordPress primary
+ * role (the normal role dropdown) untouched. Shown only to users who can edit users.
+ *
+ * @param WP_User $user The user being edited.
+ * @return void
+ */
+function rytkoset_theme_render_user_event_organizer_field( $user ) {
+	if ( ! current_user_can( 'edit_users' ) || ! $user instanceof WP_User ) {
+		return;
+	}
+
+	$is_organizer = in_array( 'event_organizer', (array) $user->roles, true );
+
+	wp_nonce_field(
+		rytkoset_theme_get_event_organizer_role_nonce_action( $user->ID ),
+		'rytkoset_event_organizer_role_nonce'
+	);
+	?>
+	<h2><?php esc_html_e( 'Tapahtumien järjestäjä', 'rytkoset-theme' ); ?></h2>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th scope="row"><?php esc_html_e( 'Tapahtumaoikeudet', 'rytkoset-theme' ); ?></th>
+			<td>
+				<label>
+					<input type="checkbox" name="rytkoset_event_organizer_role" value="1" <?php checked( $is_organizer ); ?> />
+					<?php esc_html_e( 'Tapahtumien järjestäjä (Event Organizer)', 'rytkoset-theme' ); ?>
+				</label>
+				<p class="description">
+					<?php esc_html_e( 'Antaa käyttäjälle oikeudet hallita tapahtumia ja ilmoittautumisia muuttamatta käyttäjän pääroolia. Voidaan yhdistää mihin tahansa päärooliin, esimerkiksi Päätoimittajaan.', 'rytkoset-theme' ); ?>
+				</p>
+			</td>
+		</tr>
+	</table>
+	<?php
+}
+add_action( 'show_user_profile', 'rytkoset_theme_render_user_event_organizer_field' );
+add_action( 'edit_user_profile', 'rytkoset_theme_render_user_event_organizer_field' );
+
+/**
+ * Saves the Event Organizer additional-role checkbox from a user profile screen.
+ *
+ * Adds or removes only the event_organizer role via WP_User::add_role()/remove_role(), so the
+ * user's other roles (their primary role, e.g. Päätoimittaja) stay intact.
+ *
+ * Hooked to `profile_update` rather than `edit_user_profile_update`: when an admin edits another
+ * user, WordPress processes the primary-role dropdown in edit_user() → WP_User::set_role(), which
+ * replaces the user's entire role set. profile_update fires after that inside wp_update_user(), so
+ * the secondary role we add here is not wiped by the dropdown.
+ *
+ * @param int $user_id The edited user ID.
+ * @return void
+ */
+function rytkoset_theme_save_user_event_organizer_field( $user_id ) {
+	$user_id = (int) $user_id;
+
+	if ( ! current_user_can( 'edit_users' ) || ! current_user_can( 'edit_user', $user_id ) ) {
+		return;
+	}
+
+	if ( ! isset( $_POST['rytkoset_event_organizer_role_nonce'] )
+		|| ! wp_verify_nonce(
+			sanitize_text_field( wp_unslash( $_POST['rytkoset_event_organizer_role_nonce'] ) ),
+			rytkoset_theme_get_event_organizer_role_nonce_action( $user_id )
+		)
+	) {
+		return;
+	}
+
+	$user = get_userdata( $user_id );
+
+	if ( ! $user instanceof WP_User ) {
+		return;
+	}
+
+	$should_be_organizer = ! empty( $_POST['rytkoset_event_organizer_role'] );
+	$is_organizer        = in_array( 'event_organizer', (array) $user->roles, true );
+
+	if ( $should_be_organizer && ! $is_organizer ) {
+		$user->add_role( 'event_organizer' );
+	} elseif ( ! $should_be_organizer && $is_organizer ) {
+		$user->remove_role( 'event_organizer' );
+	}
+}
+add_action( 'profile_update', 'rytkoset_theme_save_user_event_organizer_field' );

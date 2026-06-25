@@ -193,6 +193,26 @@ Rooli ei saa:
 
 Tämä rooli on tarkoitettu tapahtumien järjestäjille, joille ei haluta antaa täysiä ylläpitäjän oikeuksia. Maksutuotteet luo ja ylläpitää edelleen varsinainen ylläpitäjä.
 
+#### Event Organizer -lisäroolin antaminen profiilista
+
+WordPressin tavallinen roolipudotusvalikko **korvaa** käyttäjän pääroolin, joten Event Organizer -oikeuksia ei voi antaa pudotusvalikosta menettämättä käyttäjän alkuperäistä roolia (esim. Päätoimittaja). Tätä varten käyttäjäprofiilissa on erillinen valinta, joka antaa Event Organizer -roolin **lisäroolina** pääroolia muuttamatta.
+
+Antaminen:
+
+1. Avaa **Käyttäjät → (käyttäjä) → Muokkaa**.
+2. Etsi osio **Tapahtumien järjestäjä** ja rastita **Tapahtumien järjestäjä (Event Organizer)**.
+3. Tallenna käyttäjä.
+
+Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus muokata käyttäjiä (`edit_users`). Rastin poisto poistaa vain Event Organizer -lisäroolin; käyttäjän muut roolit säilyvät.
+
+**Milloin mitäkin roolia käytetään:**
+
+- **Pelkkä Päätoimittaja** (tai muu pärooli): sisällön- ja viestinnän hallinta, ei tapahtumaoikeuksia. Sopii hallituksen jäsenelle, joka ei järjestä tapahtumia.
+- **Pelkkä Event Organizer**: vain tapahtumien ja ilmoittautumisten hallinta, ei muita sisältöoikeuksia. Sopii tapahtumavastaavalle, joka ei tarvitse muita oikeuksia.
+- **Päätoimittaja + Event Organizer**: molemmat tehtävät samalla tilillä. Aseta pärooliksi Päätoimittaja roolipudotusvalikosta ja rastita lisäksi **Tapahtumien järjestäjä** -valinta.
+
+Päätoimittaja-roolille **ei** anneta tapahtumaoikeuksia suoraan, koska kaikki päätoimittajat eivät järjestä tapahtumia. Rajattu lisärooli on ylläpidettävämpi.
+
 ### Tampere 2026
 
 Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle erillisinä MVP-osina:
