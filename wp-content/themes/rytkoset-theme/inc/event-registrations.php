@@ -14,15 +14,48 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function rytkoset_theme_get_event_registration_meta_keys() {
 	return array(
-		'event_id'      => '_rytkoset_registration_event_id',
-		'name'          => '_rytkoset_registration_name',
-		'email'         => '_rytkoset_registration_email',
-		'diet'          => '_rytkoset_registration_diet',
-		'notes'         => '_rytkoset_registration_notes',
-		'status'        => '_rytkoset_registration_status',
-		'gdpr_consent'  => '_rytkoset_registration_gdpr_consent',
-		'anonymized_at' => '_rytkoset_registration_anonymized_at',
+		'event_id'        => '_rytkoset_registration_event_id',
+		'name'            => '_rytkoset_registration_name',
+		'email'           => '_rytkoset_registration_email',
+		'diet'            => '_rytkoset_registration_diet',
+		'notes'           => '_rytkoset_registration_notes',
+		'status'          => '_rytkoset_registration_status',
+		'pickup_point'    => '_rytkoset_registration_pickup_point',
+		'passenger_count' => '_rytkoset_registration_passenger_count',
+		'gdpr_consent'    => '_rytkoset_registration_gdpr_consent',
+		'anonymized_at'   => '_rytkoset_registration_anonymized_at',
 	);
+}
+
+/**
+ * Returns the maximum passenger count a single bus registration may request.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_event_registration_max_passenger_count() {
+	return (int) apply_filters( 'rytkoset_theme_event_registration_max_passenger_count', 10 );
+}
+
+/**
+ * Normalizes a raw passenger count into a positive integer within range.
+ *
+ * @param mixed $raw_value Raw passenger count.
+ * @return int
+ */
+function rytkoset_theme_normalize_event_registration_passenger_count( $raw_value ) {
+	$count = absint( $raw_value );
+
+	if ( $count < 1 ) {
+		$count = 1;
+	}
+
+	$max = rytkoset_theme_get_event_registration_max_passenger_count();
+
+	if ( $max > 0 && $count > $max ) {
+		$count = $max;
+	}
+
+	return $count;
 }
 
 /**
@@ -154,14 +187,19 @@ add_action( 'add_meta_boxes_event_registration', 'rytkoset_theme_register_event_
  * @param WP_Post $post Registration post object.
  */
 function rytkoset_theme_render_event_registration_metabox( $post ) {
-	$event_id = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'event_id' ) );
-	$name     = rytkoset_theme_get_event_registration_meta( $post->ID, 'name' );
-	$email    = rytkoset_theme_get_event_registration_meta( $post->ID, 'email' );
-	$diet     = rytkoset_theme_get_event_registration_meta( $post->ID, 'diet' );
-	$notes    = rytkoset_theme_get_event_registration_meta( $post->ID, 'notes' );
-	$status   = rytkoset_theme_get_event_registration_meta( $post->ID, 'status' );
-	$events   = rytkoset_theme_get_event_registration_event_options();
-	$statuses = rytkoset_theme_get_event_registration_statuses();
+	$event_id        = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'event_id' ) );
+	$name            = rytkoset_theme_get_event_registration_meta( $post->ID, 'name' );
+	$email           = rytkoset_theme_get_event_registration_meta( $post->ID, 'email' );
+	$diet            = rytkoset_theme_get_event_registration_meta( $post->ID, 'diet' );
+	$notes           = rytkoset_theme_get_event_registration_meta( $post->ID, 'notes' );
+	$status          = rytkoset_theme_get_event_registration_meta( $post->ID, 'status' );
+	$events          = rytkoset_theme_get_event_registration_event_options();
+	$statuses        = rytkoset_theme_get_event_registration_statuses();
+	$is_bus          = $event_id > 0 && rytkoset_theme_event_is_bus_transport( $event_id );
+	$pickup_points   = $is_bus ? rytkoset_theme_get_event_bus_pickup_points( $event_id ) : array();
+	$pickup_point    = rytkoset_theme_get_event_registration_meta( $post->ID, 'pickup_point' );
+	$passenger_count = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'passenger_count' ) );
+	$max_passengers  = rytkoset_theme_get_event_registration_max_passenger_count();
 
 	if ( ! isset( $statuses[ $status ] ) ) {
 		$status = 'pending';
@@ -190,6 +228,33 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 		<label for="rytkoset_registration_email"><strong><?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?></strong></label>
 		<input type="email" id="rytkoset_registration_email" name="rytkoset_registration_email" class="widefat" value="<?php echo esc_attr( $email ); ?>" />
 	</p>
+
+	<?php if ( $is_bus ) : ?>
+		<p>
+			<label for="rytkoset_registration_pickup_point"><strong><?php esc_html_e( 'Lähtöpaikka', 'rytkoset-theme' ); ?></strong></label>
+		</p>
+		<select id="rytkoset_registration_pickup_point" name="rytkoset_registration_pickup_point" class="widefat">
+			<option value=""><?php esc_html_e( 'Ei lähtöpaikkaa', 'rytkoset-theme' ); ?></option>
+			<?php
+			$pickup_options = $pickup_points;
+
+			if ( '' !== $pickup_point && ! in_array( $pickup_point, $pickup_options, true ) ) {
+				$pickup_options[] = $pickup_point;
+			}
+
+			foreach ( $pickup_options as $point ) :
+				?>
+				<option value="<?php echo esc_attr( $point ); ?>" <?php selected( $pickup_point, $point ); ?>>
+					<?php echo esc_html( $point ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+
+		<p>
+			<label for="rytkoset_registration_passenger_count"><strong><?php esc_html_e( 'Matkustajien määrä', 'rytkoset-theme' ); ?></strong></label>
+			<input type="number" id="rytkoset_registration_passenger_count" name="rytkoset_registration_passenger_count" class="widefat" min="1" max="<?php echo esc_attr( (string) $max_passengers ); ?>" step="1" value="<?php echo esc_attr( $passenger_count > 0 ? (string) $passenger_count : '1' ); ?>" />
+		</p>
+	<?php endif; ?>
 
 	<p>
 		<label for="rytkoset_registration_diet"><strong><?php esc_html_e( 'Ruokarajoitteet ja allergiat', 'rytkoset-theme' ); ?></strong></label>
@@ -306,6 +371,25 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 		}
 
 		update_post_meta( $post_id, $meta_keys[ $key ], $value );
+	}
+
+	if ( $event_id > 0 && rytkoset_theme_event_is_bus_transport( $event_id ) ) {
+		$raw_pickup   = isset( $_POST['rytkoset_registration_pickup_point'] ) ? sanitize_text_field( wp_unslash( $_POST['rytkoset_registration_pickup_point'] ) ) : '';
+		$pickup_point = rytkoset_theme_resolve_event_bus_pickup_point( $event_id, $raw_pickup );
+
+		if ( '' === $pickup_point ) {
+			delete_post_meta( $post_id, $meta_keys['pickup_point'] );
+		} else {
+			update_post_meta( $post_id, $meta_keys['pickup_point'], $pickup_point );
+		}
+
+		$raw_passengers = isset( $_POST['rytkoset_registration_passenger_count'] ) ? absint( wp_unslash( $_POST['rytkoset_registration_passenger_count'] ) ) : 0;
+
+		if ( $raw_passengers > 0 ) {
+			update_post_meta( $post_id, $meta_keys['passenger_count'], rytkoset_theme_normalize_event_registration_passenger_count( $raw_passengers ) );
+		} else {
+			delete_post_meta( $post_id, $meta_keys['passenger_count'] );
+		}
 	}
 
 	$title = rytkoset_theme_build_event_registration_title( $name, $event_id );
@@ -534,15 +618,19 @@ function rytkoset_theme_event_has_active_registration_for_email( $event_id, $ema
  * The email confirms receipt only. Registration status remains pending until
  * an organizer handles it in the admin.
  *
- * @param int    $event_id Event post ID.
- * @param string $name     Participant name.
- * @param string $email    Participant email.
+ * @param int    $event_id        Event post ID.
+ * @param string $name            Participant name.
+ * @param string $email           Participant email.
+ * @param string $pickup_point    Optional bus pickup point.
+ * @param int    $passenger_count Optional bus passenger count.
  * @return bool Whether WordPress accepted the email for sending.
  */
-function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email ) {
-	$event_id = absint( $event_id );
-	$name     = trim( (string) $name );
-	$email    = sanitize_email( $email );
+function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email, $pickup_point = '', $passenger_count = 0 ) {
+	$event_id        = absint( $event_id );
+	$name            = trim( (string) $name );
+	$email           = sanitize_email( $email );
+	$pickup_point    = trim( (string) $pickup_point );
+	$passenger_count = absint( $passenger_count );
 
 	if ( $event_id <= 0 || '' === $email || ! is_email( $email ) ) {
 		return false;
@@ -606,6 +694,22 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
 			/* translators: %s: event location. */
 			__( 'Paikka: %s', 'rytkoset-theme' ),
 			$location
+		);
+	}
+
+	if ( '' !== $pickup_point ) {
+		$lines[] = sprintf(
+			/* translators: %s: bus pickup point. */
+			__( 'Lähtöpaikka: %s', 'rytkoset-theme' ),
+			$pickup_point
+		);
+	}
+
+	if ( $passenger_count > 0 ) {
+		$lines[] = sprintf(
+			/* translators: %d: bus passenger count. */
+			__( 'Matkustajia: %d', 'rytkoset-theme' ),
+			$passenger_count
 		);
 	}
 
@@ -784,21 +888,51 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'already_registered' );
 	}
 
-	$meta_keys       = rytkoset_theme_get_event_registration_meta_keys();
+	$is_bus          = rytkoset_theme_event_is_bus_transport( $event_id );
+	$pickup_point    = '';
+	$passenger_count = 0;
+
+	if ( $is_bus ) {
+		$pickup_points = rytkoset_theme_get_event_bus_pickup_points( $event_id );
+
+		if ( ! empty( $pickup_points ) ) {
+			$raw_pickup   = isset( $_POST['registration_pickup_point'] ) ? sanitize_text_field( wp_unslash( $_POST['registration_pickup_point'] ) ) : '';
+			$pickup_point = rytkoset_theme_resolve_event_bus_pickup_point( $event_id, $raw_pickup );
+
+			if ( '' === $pickup_point ) {
+				rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_pickup' );
+			}
+		}
+
+		$raw_passengers  = isset( $_POST['registration_passenger_count'] ) ? absint( wp_unslash( $_POST['registration_passenger_count'] ) ) : 0;
+		$passenger_count = rytkoset_theme_normalize_event_registration_passenger_count( $raw_passengers );
+	}
+
+	$meta_keys  = rytkoset_theme_get_event_registration_meta_keys();
+	$meta_input = array(
+		$meta_keys['event_id']     => $event_id,
+		$meta_keys['name']         => $name,
+		$meta_keys['email']        => $email,
+		$meta_keys['diet']         => $diet,
+		$meta_keys['notes']        => $notes,
+		$meta_keys['status']       => 'pending',
+		$meta_keys['gdpr_consent'] => time(),
+	);
+
+	if ( $is_bus ) {
+		if ( '' !== $pickup_point ) {
+			$meta_input[ $meta_keys['pickup_point'] ] = $pickup_point;
+		}
+
+		$meta_input[ $meta_keys['passenger_count'] ] = $passenger_count;
+	}
+
 	$registration_id = wp_insert_post(
 		array(
 			'post_type'   => 'event_registration',
 			'post_status' => 'publish',
 			'post_title'  => rytkoset_theme_build_event_registration_title( $name, $event_id ),
-			'meta_input'  => array(
-				$meta_keys['event_id']     => $event_id,
-				$meta_keys['name']         => $name,
-				$meta_keys['email']        => $email,
-				$meta_keys['diet']         => $diet,
-				$meta_keys['notes']        => $notes,
-				$meta_keys['status']       => 'pending',
-				$meta_keys['gdpr_consent'] => time(),
-			),
+			'meta_input'  => $meta_input,
 		),
 		true
 	);
@@ -807,7 +941,7 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'save_failed' );
 	}
 
-	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email );
+	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email, $pickup_point, $passenger_count );
 
 	if ( ! empty( $_POST['registration_newsletter_opt_in'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['registration_newsletter_opt_in'] ) ) && function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
 		$newsletter_result = rytkoset_theme_subscribe_email_to_newsletter( $email, 'event_registration', get_current_user_id() );
@@ -838,6 +972,7 @@ function rytkoset_theme_get_event_registration_error_field( $error_code ) {
 		'invalid_email'      => 'email',
 		'already_registered' => 'email',
 		'missing_consent'    => 'gdpr',
+		'invalid_pickup'     => 'pickup',
 	);
 
 	return isset( $map[ $error_code ] ) ? $map[ $error_code ] : '';
@@ -872,6 +1007,7 @@ function rytkoset_theme_get_event_registration_feedback() {
 		'invalid_email'      => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
 		'missing_consent'    => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
 		'already_registered' => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
+		'invalid_pickup'     => __( 'Valitse lähtöpaikka.', 'rytkoset-theme' ),
 		'rate_limited'       => __( 'Liian monta ilmoittautumisyritystä lyhyessä ajassa. Odota hetki ja yritä uudelleen.', 'rytkoset-theme' ),
 	);
 
@@ -959,20 +1095,36 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 		return;
 	}
 
-	$invalid_field = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
+	$invalid_field  = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
 		? $feedback['field']
 		: '';
-	$invalid_attrs = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
-	$name_invalid  = 'name' === $invalid_field ? $invalid_attrs : '';
-	$email_invalid = 'email' === $invalid_field ? $invalid_attrs : '';
-	$gdpr_invalid  = 'gdpr' === $invalid_field ? $invalid_attrs : '';
+	$invalid_attrs  = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
+	$name_invalid   = 'name' === $invalid_field ? $invalid_attrs : '';
+	$email_invalid  = 'email' === $invalid_field ? $invalid_attrs : '';
+	$gdpr_invalid   = 'gdpr' === $invalid_field ? $invalid_attrs : '';
+	$pickup_invalid = 'pickup' === $invalid_field ? $invalid_attrs : '';
+	$is_bus         = rytkoset_theme_event_is_bus_transport( $event_id );
+	$pickup_points  = $is_bus ? rytkoset_theme_get_event_bus_pickup_points( $event_id ) : array();
+	$max_passengers = rytkoset_theme_get_event_registration_max_passenger_count();
 	?>
 	<section class="event-registration" aria-labelledby="<?php echo esc_attr( $form_id . '-title' ); ?>">
 		<h2 id="<?php echo esc_attr( $form_id . '-title' ); ?>" class="event-registration__title">
-			<?php esc_html_e( 'Ilmoittaudu tapahtumaan', 'rytkoset-theme' ); ?>
+			<?php
+			if ( $is_bus ) {
+				esc_html_e( 'Ilmoittaudu bussikyytiin', 'rytkoset-theme' );
+			} else {
+				esc_html_e( 'Ilmoittaudu tapahtumaan', 'rytkoset-theme' );
+			}
+			?>
 		</h2>
 		<p id="<?php echo esc_attr( $description_id ); ?>" class="event-registration__description">
-			<?php esc_html_e( 'Tällä lomakkeella voit ilmoittautua maksuttomaan tapahtumaan.', 'rytkoset-theme' ); ?>
+			<?php
+			if ( $is_bus ) {
+				esc_html_e( 'Ilmoittautuminen on tässä vaiheessa maksuton. Maksu peritään vasta, kun kyydin toteutuminen on varmistunut.', 'rytkoset-theme' );
+			} else {
+				esc_html_e( 'Tällä lomakkeella voit ilmoittautua maksuttomaan tapahtumaan.', 'rytkoset-theme' );
+			}
+			?>
 		</p>
 
 		<?php if ( ! empty( $feedback ) && 'error' === $feedback['type'] ) : ?>
@@ -1002,6 +1154,31 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 				</label>
 				<input id="<?php echo esc_attr( $form_id . '-email' ); ?>" name="registration_email" type="email" autocomplete="email" required aria-required="true"<?php echo $email_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
 			</div>
+
+			<?php if ( $is_bus && ! empty( $pickup_points ) ) : ?>
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-pickup' ); ?>">
+						<?php esc_html_e( 'Lähtöpaikka', 'rytkoset-theme' ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
+					<select id="<?php echo esc_attr( $form_id . '-pickup' ); ?>" name="registration_pickup_point" required aria-required="true"<?php echo $pickup_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+						<option value=""><?php esc_html_e( 'Valitse lähtöpaikka', 'rytkoset-theme' ); ?></option>
+						<?php foreach ( $pickup_points as $point ) : ?>
+							<option value="<?php echo esc_attr( $point ); ?>"><?php echo esc_html( $point ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( $is_bus ) : ?>
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-passengers' ); ?>">
+						<?php esc_html_e( 'Matkustajien määrä', 'rytkoset-theme' ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
+					<input id="<?php echo esc_attr( $form_id . '-passengers' ); ?>" name="registration_passenger_count" type="number" inputmode="numeric" min="1" max="<?php echo esc_attr( (string) $max_passengers ); ?>" step="1" value="1" required aria-required="true" />
+				</div>
+			<?php endif; ?>
 
 			<div class="event-registration__field">
 				<label for="<?php echo esc_attr( $form_id . '-diet' ); ?>">

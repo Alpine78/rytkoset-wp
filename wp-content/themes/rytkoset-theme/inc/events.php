@@ -847,6 +847,29 @@ function rytkoset_theme_get_event_bus_pickup_points( $event_id ) {
 }
 
 /**
+ * Resolves a submitted pickup point to the canonical configured spelling.
+ *
+ * @param int    $event_id     Event post ID.
+ * @param string $pickup_point Submitted pickup point label.
+ * @return string Canonical pickup point, or empty string when not configured.
+ */
+function rytkoset_theme_resolve_event_bus_pickup_point( $event_id, $pickup_point ) {
+	$pickup_point = trim( (string) $pickup_point );
+
+	if ( '' === $pickup_point ) {
+		return '';
+	}
+
+	foreach ( rytkoset_theme_get_event_bus_pickup_points( $event_id ) as $point ) {
+		if ( 0 === strcasecmp( $point, $pickup_point ) ) {
+			return $point;
+		}
+	}
+
+	return '';
+}
+
+/**
  * Adds the bus transport sign-up metabox.
  */
 function rytkoset_theme_register_event_bus_transport_metabox() {

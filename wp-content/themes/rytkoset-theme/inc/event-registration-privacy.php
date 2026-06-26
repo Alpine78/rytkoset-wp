@@ -219,6 +219,23 @@ function rytkoset_theme_export_event_registration_personal_data( $email_address,
 			),
 		);
 
+		$pickup_point    = rytkoset_theme_get_event_registration_meta( $registration_id, 'pickup_point' );
+		$passenger_count = rytkoset_theme_get_event_registration_meta( $registration_id, 'passenger_count' );
+
+		if ( '' !== $pickup_point ) {
+			$data[] = array(
+				'name'  => __( 'Lähtöpaikka', 'rytkoset-theme' ),
+				'value' => $pickup_point,
+			);
+		}
+
+		if ( '' !== $passenger_count ) {
+			$data[] = array(
+				'name'  => __( 'Matkustajien määrä', 'rytkoset-theme' ),
+				'value' => $passenger_count,
+			);
+		}
+
 		$items[] = array(
 			'group_id'    => 'rytkoset-event-registrations',
 			'group_label' => __( 'Tapahtumailmoittautumiset', 'rytkoset-theme' ),
