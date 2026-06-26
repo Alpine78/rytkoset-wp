@@ -61,6 +61,8 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 			'phone'            => '',
 			'diet'             => rytkoset_theme_get_event_registration_meta( $registration->ID, 'diet' ),
 			'notes'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'notes' ),
+			'pickup_point'     => rytkoset_theme_get_event_registration_meta( $registration->ID, 'pickup_point' ),
+			'passenger_count'  => absint( rytkoset_theme_get_event_registration_meta( $registration->ID, 'passenger_count' ) ),
 			'participant_type' => '',
 			'friday_buffet'    => false,
 			'status'           => $status,
@@ -580,6 +582,8 @@ function rytkoset_theme_export_event_participants_csv() {
 		$event_id = 0;
 	}
 
+	$is_bus_event = $event_id > 0 && rytkoset_theme_event_is_bus_transport( $event_id );
+
 	$rows = $event_id > 0
 		? rytkoset_theme_get_event_participants( $event_id, $selected_status )
 		: rytkoset_theme_get_all_events_participants( $selected_status );
@@ -600,25 +604,28 @@ function rytkoset_theme_export_event_participants_csv() {
 	// UTF-8 BOM jotta Excel tunnistaa koodauksen oikein.
 	echo "\xEF\xBB\xBF";
 
-	fputcsv(
-		$output,
-		array(
-			__( 'Tapahtuma', 'rytkoset-theme' ),
-			__( 'Nimi', 'rytkoset-theme' ),
-			__( 'Osallistujatyyppi', 'rytkoset-theme' ),
-			__( 'Perjantain buffet', 'rytkoset-theme' ),
-			__( 'Sähköposti', 'rytkoset-theme' ),
-			__( 'Puhelin', 'rytkoset-theme' ),
-			__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
-			__( 'Lähde', 'rytkoset-theme' ),
-			__( 'Status', 'rytkoset-theme' ),
-			__( 'Ilmoittautunut', 'rytkoset-theme' ),
-			__( 'Yhteyshenkilö', 'rytkoset-theme' ),
-			__( 'Yhteyshenkilön sähköposti', 'rytkoset-theme' ),
-			__( 'Tilausnumero', 'rytkoset-theme' ),
-		),
-		';'
+	$header_columns = array(
+		__( 'Tapahtuma', 'rytkoset-theme' ),
+		__( 'Nimi', 'rytkoset-theme' ),
+		__( 'Osallistujatyyppi', 'rytkoset-theme' ),
+		__( 'Perjantain buffet', 'rytkoset-theme' ),
+		__( 'Sähköposti', 'rytkoset-theme' ),
+		__( 'Puhelin', 'rytkoset-theme' ),
+		__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
+		__( 'Lähde', 'rytkoset-theme' ),
+		__( 'Status', 'rytkoset-theme' ),
+		__( 'Ilmoittautunut', 'rytkoset-theme' ),
+		__( 'Yhteyshenkilö', 'rytkoset-theme' ),
+		__( 'Yhteyshenkilön sähköposti', 'rytkoset-theme' ),
+		__( 'Tilausnumero', 'rytkoset-theme' ),
 	);
+
+	if ( $is_bus_event ) {
+		$header_columns[] = __( 'Lähtöpaikka', 'rytkoset-theme' );
+		$header_columns[] = __( 'Matkustajia', 'rytkoset-theme' );
+	}
+
+	fputcsv( $output, $header_columns, ';' );
 
 	foreach ( $rows as $row ) {
 		$details = trim( (string) ( $row['diet'] ?? '' ) );
@@ -653,6 +660,11 @@ function rytkoset_theme_export_event_participants_csv() {
 				isset( $row['order_number'] ) && null !== $row['order_number'] ? (string) $row['order_number'] : '',
 			)
 		);
+
+		if ( $is_bus_event ) {
+			$cells[] = rytkoset_theme_csv_neutralize_formula( (string) ( $row['pickup_point'] ?? '' ) );
+			$cells[] = rytkoset_theme_csv_neutralize_formula( (string) max( 1, (int) ( $row['passenger_count'] ?? 1 ) ) );
+		}
 
 		fputcsv( $output, $cells, ';' );
 	}
@@ -700,6 +712,33 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			++$paid_count;
 		} else {
 			++$free_count;
+		}
+	}
+
+	$is_bus_event         = $selected_event > 0 && rytkoset_theme_event_is_bus_transport( $selected_event );
+	$bus_passenger_total  = 0;
+	$bus_pickup_breakdown = array();
+
+	if ( $is_bus_event ) {
+		foreach ( $rows as $row ) {
+			if ( isset( $row['status'] ) && 'cancelled' === $row['status'] ) {
+				continue;
+			}
+
+			$passengers           = max( 1, isset( $row['passenger_count'] ) ? (int) $row['passenger_count'] : 1 );
+			$bus_passenger_total += $passengers;
+
+			$pickup = isset( $row['pickup_point'] ) ? (string) $row['pickup_point'] : '';
+
+			if ( '' === $pickup ) {
+				$pickup = __( 'Ei lähtöpaikkaa', 'rytkoset-theme' );
+			}
+
+			if ( ! isset( $bus_pickup_breakdown[ $pickup ] ) ) {
+				$bus_pickup_breakdown[ $pickup ] = 0;
+			}
+
+			$bus_pickup_breakdown[ $pickup ] += $passengers;
 		}
 	}
 
@@ -768,6 +807,35 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			<br class="clear" />
 		</div>
 
+		<?php if ( $is_bus_event ) : ?>
+			<div class="postbox" style="margin-top:16px; max-width:760px;">
+				<div class="inside">
+					<h2><?php esc_html_e( 'Bussikyydin yhteenveto', 'rytkoset-theme' ); ?></h2>
+					<p>
+						<strong>
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %d: total passenger count */
+									__( 'Matkustajia yhteensä: %d', 'rytkoset-theme' ),
+									$bus_passenger_total
+								)
+							);
+							?>
+						</strong>
+						<span class="description"><?php esc_html_e( '(peruutetut eivät mukana)', 'rytkoset-theme' ); ?></span>
+					</p>
+					<?php if ( ! empty( $bus_pickup_breakdown ) ) : ?>
+						<ul style="margin-left:1.5em; list-style:disc;">
+							<?php foreach ( $bus_pickup_breakdown as $pickup_label => $pickup_passengers ) : ?>
+								<li><?php echo esc_html( $pickup_label . ': ' . $pickup_passengers ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<?php rytkoset_theme_render_event_participants_anonymization_form( $selected_event ); ?>
 
 		<?php $show_event_column = 0 === $selected_event; ?>
@@ -775,6 +843,10 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></th>
+					<?php if ( $is_bus_event ) : ?>
+						<th scope="col"><?php esc_html_e( 'Lähtöpaikka', 'rytkoset-theme' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Matkustajia', 'rytkoset-theme' ); ?></th>
+					<?php endif; ?>
 					<th scope="col"><?php esc_html_e( 'Osallistujatyyppi', 'rytkoset-theme' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Perjantain buffet', 'rytkoset-theme' ); ?></th>
 					<?php if ( $show_event_column ) : ?>
@@ -791,13 +863,18 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			</thead>
 			<tbody>
 				<?php if ( empty( $rows ) ) : ?>
+					<?php $empty_colspan = ( $show_event_column ? 11 : 10 ) + ( $is_bus_event ? 2 : 0 ); ?>
 					<tr>
-						<td colspan="<?php echo $show_event_column ? 11 : 10; ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
+						<td colspan="<?php echo esc_attr( (string) $empty_colspan ); ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
 					</tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $row ) : ?>
 						<tr>
 							<td><?php echo esc_html( (string) $row['name'] ); ?></td>
+							<?php if ( $is_bus_event ) : ?>
+								<td><?php echo '' !== (string) ( $row['pickup_point'] ?? '' ) ? esc_html( (string) $row['pickup_point'] ) : '&mdash;'; ?></td>
+								<td><?php echo esc_html( (string) max( 1, (int) ( $row['passenger_count'] ?? 1 ) ) ); ?></td>
+							<?php endif; ?>
 							<td><?php echo '' !== (string) $row['participant_type'] ? esc_html( (string) $row['participant_type'] ) : '&mdash;'; ?></td>
 							<td>
 								<?php
