@@ -772,6 +772,192 @@ function rytkoset_theme_save_event_details( $post_id ) {
 add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_details' );
 
 /**
+ * Returns the meta key flagging an event as a bus transport sign-up event.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_bus_transport_meta_key() {
+	return '_rytkoset_event_is_bus_transport';
+}
+
+/**
+ * Returns the meta key used for the bus transport pickup point list.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_bus_pickup_points_meta_key() {
+	return '_rytkoset_event_bus_pickup_points';
+}
+
+/**
+ * Checks whether an event collects free bus transport sign-ups.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_event_is_bus_transport( $event_id ) {
+	return 'yes' === get_post_meta( absint( $event_id ), rytkoset_theme_get_event_bus_transport_meta_key(), true );
+}
+
+/**
+ * Normalizes a raw pickup-point list into unique, trimmed lines.
+ *
+ * @param string $raw_value Raw textarea value.
+ * @return array<int, string>
+ */
+function rytkoset_theme_normalize_bus_pickup_points( $raw_value ) {
+	$parts   = preg_split( '/[\r\n]+/', (string) $raw_value );
+	$seen    = array();
+	$results = array();
+
+	if ( ! is_array( $parts ) ) {
+		return array();
+	}
+
+	foreach ( $parts as $part ) {
+		$point = trim( (string) $part );
+
+		if ( '' === $point ) {
+			continue;
+		}
+
+		$index = strtolower( $point );
+
+		if ( isset( $seen[ $index ] ) ) {
+			continue;
+		}
+
+		$seen[ $index ] = true;
+		$results[]      = $point;
+	}
+
+	return $results;
+}
+
+/**
+ * Returns the configured bus transport pickup points for an event.
+ *
+ * @param int $event_id Event post ID.
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_event_bus_pickup_points( $event_id ) {
+	$value = get_post_meta( absint( $event_id ), rytkoset_theme_get_event_bus_pickup_points_meta_key(), true );
+
+	return rytkoset_theme_normalize_bus_pickup_points( is_scalar( $value ) ? (string) $value : '' );
+}
+
+/**
+ * Adds the bus transport sign-up metabox.
+ */
+function rytkoset_theme_register_event_bus_transport_metabox() {
+	add_meta_box(
+		'rytkoset_event_bus_transport',
+		__( 'Bussikyyti', 'rytkoset-theme' ),
+		'rytkoset_theme_render_event_bus_transport_metabox',
+		'rytkoset_event',
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_bus_transport_metabox' );
+
+/**
+ * Renders the bus transport sign-up metabox.
+ *
+ * @param WP_Post $post Event post object.
+ */
+function rytkoset_theme_render_event_bus_transport_metabox( $post ) {
+	$is_bus        = rytkoset_theme_event_is_bus_transport( $post->ID );
+	$pickup_points = rytkoset_theme_get_event_bus_pickup_points( $post->ID );
+
+	wp_nonce_field( 'rytkoset_save_event_bus_transport', 'rytkoset_event_bus_transport_nonce' );
+	?>
+	<p>
+		<label for="rytkoset_event_is_bus_transport">
+			<input
+				type="checkbox"
+				id="rytkoset_event_is_bus_transport"
+				name="rytkoset_event_is_bus_transport"
+				value="yes"
+				<?php checked( $is_bus ); ?>
+			/>
+			<?php esc_html_e( 'Tämä on bussikyytitapahtuma', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Maksuton ilmoittautuminen, jolla kerätään bussikyytiläiset. Maksu hoidetaan vasta kun kyyti varmistuu.', 'rytkoset-theme' ); ?>
+	</p>
+	<p>
+		<label for="rytkoset_event_bus_pickup_points">
+			<?php esc_html_e( 'Lähtöpaikat', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<textarea
+		id="rytkoset_event_bus_pickup_points"
+		name="rytkoset_event_bus_pickup_points"
+		rows="4"
+		class="widefat"
+		placeholder="<?php esc_attr_e( "Iisalmi\nKuopio\nVarkaus", 'rytkoset-theme' ); ?>"
+	><?php echo esc_textarea( implode( "\n", $pickup_points ) ); ?></textarea>
+	<p class="description">
+		<?php esc_html_e( 'Yksi lähtöpaikka riviä kohti. Nämä näytetään ilmoittautumislomakkeen lähtöpaikka-valikossa.', 'rytkoset-theme' ); ?>
+	</p>
+	<?php
+}
+
+/**
+ * Saves the bus transport sign-up settings.
+ *
+ * @param int $post_id Event post ID.
+ */
+function rytkoset_theme_save_event_bus_transport( $post_id ) {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+
+	if ( wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	if ( ! isset( $_POST['rytkoset_event_bus_transport_nonce'] ) ) {
+		return;
+	}
+
+	$nonce = sanitize_text_field( wp_unslash( $_POST['rytkoset_event_bus_transport_nonce'] ) );
+
+	if ( ! wp_verify_nonce( $nonce, 'rytkoset_save_event_bus_transport' ) ) {
+		return;
+	}
+
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+
+	$is_bus = isset( $_POST['rytkoset_event_is_bus_transport'] )
+		&& 'yes' === sanitize_text_field( wp_unslash( $_POST['rytkoset_event_is_bus_transport'] ) );
+
+	if ( $is_bus ) {
+		update_post_meta( $post_id, rytkoset_theme_get_event_bus_transport_meta_key(), 'yes' );
+	} else {
+		delete_post_meta( $post_id, rytkoset_theme_get_event_bus_transport_meta_key() );
+	}
+
+	$raw_pickup_points = isset( $_POST['rytkoset_event_bus_pickup_points'] )
+		? sanitize_textarea_field( wp_unslash( $_POST['rytkoset_event_bus_pickup_points'] ) )
+		: '';
+	$pickup_points     = rytkoset_theme_normalize_bus_pickup_points( $raw_pickup_points );
+	$meta_key          = rytkoset_theme_get_event_bus_pickup_points_meta_key();
+
+	if ( empty( $pickup_points ) ) {
+		delete_post_meta( $post_id, $meta_key );
+		return;
+	}
+
+	update_post_meta( $post_id, $meta_key, implode( "\n", $pickup_points ) );
+}
+add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_bus_transport' );
+
+/**
  * Returns the meta key used to link an event to a WooCommerce product.
  *
  * @return string
