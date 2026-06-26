@@ -1232,3 +1232,46 @@ body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li a:
     grid-template-columns: 1fr;
   }
 }
+
+/* Tilauksen peruutus (ks. inc/woocommerce-cancellation.php).
+   "Peruuta tilaus" -painike erottuu varovaisella punaisella reunuksella
+   (toissijainen toiminto), jotta se ei kilpaile maksu-/uusi tilaus -nappien kanssa. */
+.woocommerce a.button.rytkoset-cancel-order,
+.woocommerce button.button.rytkoset-cancel-order,
+.woocommerce-page a.button.rytkoset-cancel-order,
+.woocommerce-page button.button.rytkoset-cancel-order {
+  background: transparent;
+  border-color: var(--shop-notice-error);
+  color: var(--shop-notice-error);
+}
+
+.woocommerce a.button.rytkoset-cancel-order:hover,
+.woocommerce button.button.rytkoset-cancel-order:hover,
+.woocommerce-page a.button.rytkoset-cancel-order:hover,
+.woocommerce-page button.button.rytkoset-cancel-order:hover {
+  background: var(--shop-notice-error);
+  color: var(--color-text-inverted);
+}
+
+/* Vahvistussivu */
+.rytkoset-cancel-order-confirm {
+  max-width: 640px;
+}
+
+.rytkoset-cancel-order-summary {
+  margin: 1.5rem 0;
+}
+
+.rytkoset-cancel-order-summary th {
+  width: 35%;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rytkoset-cancel-order-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}

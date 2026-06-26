@@ -260,13 +260,34 @@ class WC_Order {
 	/** @var array<string,mixed> */
 	public array $meta = array();
 	public int $user_id = 0;
+	public int $id = 0;
+	public string $status = 'pending';
+	public ?DateTimeImmutable $date_created = null;
+	public string $order_number = '';
 	public string $billing_email = '';
 	public string $payment_method = '';
+	public string $edit_order_url = '';
 	/** @var Rytkoset_Test_Order_Item[] */
 	public array $items = array();
 	/** @var string[] */
 	public array $notes = array();
 	public int $save_count = 0;
+
+	public function get_id(): int {
+		return $this->id;
+	}
+
+	public function get_order_number(): string {
+		return '' !== $this->order_number ? $this->order_number : (string) $this->id;
+	}
+
+	public function get_status(): string {
+		return $this->status;
+	}
+
+	public function get_date_created(): ?DateTimeImmutable {
+		return $this->date_created;
+	}
 
 	public function get_meta( string $key, bool $single = true ) {
 		return $this->meta[ $key ] ?? '';
@@ -282,6 +303,12 @@ class WC_Order {
 
 	public function get_billing_email(): string {
 		return $this->billing_email;
+	}
+
+	public function get_edit_order_url(): string {
+		return '' !== $this->edit_order_url
+			? $this->edit_order_url
+			: 'https://rytkoset.test/wp-admin/post.php?post=' . $this->id . '&action=edit';
 	}
 
 	public function get_payment_method(): string {
@@ -571,6 +598,26 @@ function add_filter( $tag, $callback, $priority = 10, $accepted_args = 1 ) {
 
 function add_action( $tag, $callback, $priority = 10, $accepted_args = 1 ) {
 	return add_filter( $tag, $callback, $priority, $accepted_args );
+}
+
+function remove_filter( $tag, $callback, $priority = 10 ) {
+	if ( empty( $GLOBALS['rytkoset_test_hooks'][ $tag ] ) ) {
+		return false;
+	}
+
+	foreach ( $GLOBALS['rytkoset_test_hooks'][ $tag ] as $index => $hook ) {
+		if ( (int) $priority === $hook[0] && $callback === $hook[1] ) {
+			unset( $GLOBALS['rytkoset_test_hooks'][ $tag ][ $index ] );
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function remove_action( $tag, $callback, $priority = 10 ) {
+	return remove_filter( $tag, $callback, $priority );
 }
 
 function apply_filters( $tag, $value, ...$args ) {

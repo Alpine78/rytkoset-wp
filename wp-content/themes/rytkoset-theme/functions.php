@@ -50,6 +50,7 @@ require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
 require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
+require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
@@ -522,7 +523,7 @@ function rytkoset_theme_scripts() {
 
 	if (
 		function_exists( 'is_woocommerce' )
-		&& ( is_woocommerce() || is_cart() || is_checkout() )
+		&& ( is_woocommerce() || is_cart() || is_checkout() || ( function_exists( 'is_account_page' ) && is_account_page() ) )
 	) {
 		wp_enqueue_style(
 			'rytkoset-theme-shop',
