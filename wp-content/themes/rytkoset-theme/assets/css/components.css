@@ -704,6 +704,7 @@
 }
 
 .event-registration__field input,
+.event-registration__field select,
 .event-registration__field textarea {
   box-sizing: border-box;
   width: 100%;
@@ -721,7 +722,21 @@
   resize: vertical;
 }
 
+/* Pudotusvalikko muiden kenttien näköiseksi: oma alasnuoli (keskiharmaa,
+   näkyy sekä vaalealla että tummalla taustalla) ja tilaa nuolelle oikealle. */
+.event-registration__field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 0.75rem;
+}
+
 .event-registration__field input:focus,
+.event-registration__field select:focus,
 .event-registration__field textarea:focus {
   outline: 3px solid rgba(251, 191, 36, 0.35);
   outline-offset: 2px;
@@ -732,6 +747,7 @@
    säilyy. aria-invalid="true" lisätään PHP:ssä redirectin jälkeen, kun
    palvelin tunnisti vikaisen kentän (nimi, sähköposti, GDPR). */
 .event-registration__field input[aria-invalid="true"],
+.event-registration__field select[aria-invalid="true"],
 .event-registration__field textarea[aria-invalid="true"] {
   border-color: #b91c1c;
   box-shadow: 0 0 0 1px #b91c1c;

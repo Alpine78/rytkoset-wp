@@ -847,17 +847,37 @@ function rytkoset_theme_get_event_bus_pickup_points( $event_id ) {
 }
 
 /**
+ * Returns the stored value for the free-choice "other pickup point" option.
+ *
+ * Bus transport registrations may select a stop along the route that is not in
+ * the configured list; the rider writes the exact place in the notes field.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_bus_pickup_point_other_value() {
+	return __( 'Muu paikka reitin varrella', 'rytkoset-theme' );
+}
+
+/**
  * Resolves a submitted pickup point to the canonical configured spelling.
+ *
+ * Accepts the configured pickup points and the free-choice "other" option.
  *
  * @param int    $event_id     Event post ID.
  * @param string $pickup_point Submitted pickup point label.
- * @return string Canonical pickup point, or empty string when not configured.
+ * @return string Canonical pickup point, or empty string when not accepted.
  */
 function rytkoset_theme_resolve_event_bus_pickup_point( $event_id, $pickup_point ) {
 	$pickup_point = trim( (string) $pickup_point );
 
 	if ( '' === $pickup_point ) {
 		return '';
+	}
+
+	$other = rytkoset_theme_get_event_bus_pickup_point_other_value();
+
+	if ( 0 === strcasecmp( $other, $pickup_point ) ) {
+		return $other;
 	}
 
 	foreach ( rytkoset_theme_get_event_bus_pickup_points( $event_id ) as $point ) {

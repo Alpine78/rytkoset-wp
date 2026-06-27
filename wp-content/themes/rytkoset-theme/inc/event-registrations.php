@@ -236,7 +236,8 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 		<select id="rytkoset_registration_pickup_point" name="rytkoset_registration_pickup_point" class="widefat">
 			<option value=""><?php esc_html_e( 'Ei lähtöpaikkaa', 'rytkoset-theme' ); ?></option>
 			<?php
-			$pickup_options = $pickup_points;
+			$pickup_options   = $pickup_points;
+			$pickup_options[] = rytkoset_theme_get_event_bus_pickup_point_other_value();
 
 			if ( '' !== $pickup_point && ! in_array( $pickup_point, $pickup_options, true ) ) {
 				$pickup_options[] = $pickup_point;
@@ -1166,6 +1167,18 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 						<?php foreach ( $pickup_points as $point ) : ?>
 							<option value="<?php echo esc_attr( $point ); ?>"><?php echo esc_html( $point ); ?></option>
 						<?php endforeach; ?>
+						<?php $pickup_other = rytkoset_theme_get_event_bus_pickup_point_other_value(); ?>
+						<option value="<?php echo esc_attr( $pickup_other ); ?>">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: %s: free-choice pickup point label */
+									__( '%s (kerro tarkempi paikka lisätiedoissa)', 'rytkoset-theme' ),
+									$pickup_other
+								)
+							);
+							?>
+						</option>
 					</select>
 				</div>
 			<?php endif; ?>
