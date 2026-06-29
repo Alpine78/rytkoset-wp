@@ -334,6 +334,14 @@ class WC_Order {
 	public function save(): void {
 		++$this->save_count;
 	}
+
+	public function update_status( string $new_status, string $note = '', bool $manual = false ): void {
+		$this->status = $new_status;
+
+		if ( '' !== $note ) {
+			$this->add_order_note( $note, false );
+		}
+	}
 }
 
 /**
@@ -617,8 +625,20 @@ function get_the_title( $post = 0 ) {
 		: '';
 }
 
+function get_the_date( $format = '', $post = null ) {
+	$format = '' === $format ? get_option( 'date_format' ) : $format;
+
+	return wp_date( $format, current_datetime()->getTimestamp() );
+}
+
 function get_permalink( $post_id ) {
 	return 'https://rytkoset.test/?p=' . (int) ( $post_id instanceof WP_Post ? $post_id->ID : $post_id );
+}
+
+function get_edit_post_link( $post = 0, $context = 'display' ) {
+	$id = $post instanceof WP_Post ? $post->ID : (int) $post;
+
+	return 'https://rytkoset.test/wp-admin/post.php?post=' . $id . '&action=edit';
 }
 
 function get_bloginfo( $show = '' ) {
@@ -1060,6 +1080,14 @@ function get_post_field( $field, $post = 0 ) {
 
 function wc_has_notice( $message, $notice_type = 'success' ): bool {
 	return ! empty( $GLOBALS['rytkoset_test_wc_notices'][ $notice_type . ':' . $message ] );
+}
+
+function wc_add_notice( $message, $notice_type = 'success' ): void {
+	$GLOBALS['rytkoset_test_wc_notices'][ $notice_type . ':' . $message ] = true;
+}
+
+function wc_get_account_endpoint_url( $endpoint ): string {
+	return home_url( '/tili/' . trim( (string) $endpoint, '/' ) . '/' );
 }
 
 function wc_get_order_statuses(): array {
