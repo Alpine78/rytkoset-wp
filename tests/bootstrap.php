@@ -40,6 +40,9 @@ $GLOBALS['rytkoset_test_caps']         = array(); // [capability] => bool for th
 $GLOBALS['rytkoset_test_current_post'] = 0;       // get_post() with no argument
 $GLOBALS['rytkoset_test_options']      = array(); // [option] => value (get_option/update_option)
 $GLOBALS['rytkoset_test_roles']        = array(); // [role slug] => WP_Role (get_role)
+$GLOBALS['rytkoset_test_transients']   = array(); // [transient] => value
+$GLOBALS['rytkoset_test_next_post_id'] = 1000;    // auto-increment ID for wp_insert_post()
+$GLOBALS['rytkoset_test_redirects']    = array(); // captured wp_safe_redirect() calls
 $GLOBALS['rytkoset_test_locale']       = 'fi_FI'; // determine_locale()/get_locale()
 $GLOBALS['rytkoset_test_is_admin']     = false;   // is_admin()
 $GLOBALS['rytkoset_test_is_singular']  = false;   // is_singular()
@@ -72,6 +75,9 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_current_post']  = 0;
 	$GLOBALS['rytkoset_test_options']       = array();
 	$GLOBALS['rytkoset_test_roles']         = array();
+	$GLOBALS['rytkoset_test_transients']    = array();
+	$GLOBALS['rytkoset_test_next_post_id']  = 1000;
+	$GLOBALS['rytkoset_test_redirects']     = array();
 	$GLOBALS['rytkoset_test_locale']        = 'fi_FI';
 	$GLOBALS['rytkoset_test_is_admin']      = false;
 	$GLOBALS['rytkoset_test_is_singular']   = false;
@@ -156,6 +162,7 @@ class WP_Post {
 	public string $post_excerpt = '';
 	public string $post_name    = '';
 	public int $post_author     = 0;
+	public string $post_status  = 'publish';
 
 	public function __construct( int $id = 0, string $type = 'post', string $title = '', int $parent = 0, int $menu_order = 0 ) {
 		$this->ID          = $id;
@@ -366,6 +373,27 @@ class WP_Error {
 
 		return $this->errors ? array_merge( ...array_values( $this->errors ) ) : array();
 	}
+
+	public function get_error_message( string $code = '' ): string {
+		$messages = $this->get_error_messages( $code );
+
+		return $messages[0] ?? '';
+	}
+}
+
+/**
+ * Raised by wp_safe_redirect() so tests can exercise handlers that call exit.
+ */
+class Rytkoset_Test_Redirect_Exception extends RuntimeException {
+	public string $location;
+	public int $status;
+
+	public function __construct( string $location, int $status = 302 ) {
+		parent::__construct( $location, $status );
+
+		$this->location = $location;
+		$this->status   = $status;
+	}
 }
 
 /**
@@ -431,7 +459,7 @@ function get_post_type( $post = null ) {
 function get_post_status( $post = null ) {
 	$post = get_post( $post );
 
-	return $post instanceof WP_Post ? 'publish' : false;
+	return $post instanceof WP_Post ? $post->post_status : false;
 }
 
 function esc_url_raw( $url ) {
@@ -452,6 +480,15 @@ function sanitize_text_field( $str ) {
 	$str = (string) $str;
 	$str = wp_strip_all_tags_simple( $str );
 	$str = preg_replace( '/[\r\n\t ]+/', ' ', $str );
+
+	return trim( $str );
+}
+
+function sanitize_textarea_field( $str ) {
+	$str = (string) $str;
+	$str = wp_strip_all_tags_simple( $str );
+	$str = preg_replace( "/\r\n|\r/", "\n", $str );
+	$str = preg_replace( "/[ \t]+/", ' ', $str );
 
 	return trim( $str );
 }
@@ -490,6 +527,24 @@ function current_time( $type = 'mysql' ) {
 	}
 
 	return $now->format( 'Y-m-d H:i:s' );
+}
+
+function wp_verify_nonce( $nonce, $action = -1 ) {
+	return hash_equals( (string) $action, (string) $nonce ) ? 1 : false;
+}
+
+function wp_create_nonce( $action = -1 ) {
+	return (string) $action;
+}
+
+function wp_nonce_field( $action = -1, $name = '_wpnonce', $referer = true, $display = true ) {
+	$field = '<input type="hidden" name="' . esc_html( (string) $name ) . '" value="' . esc_html( wp_create_nonce( $action ) ) . '" />';
+
+	if ( $display ) {
+		echo $field; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Test bootstrap HTML helper.
+	}
+
+	return $field;
 }
 
 function get_current_user_id(): int {
@@ -583,6 +638,33 @@ function wp_mail( $to, $subject, $message, $headers = '', $attachments = array()
 	);
 
 	return true;
+}
+
+function get_transient( $transient ) {
+	return $GLOBALS['rytkoset_test_transients'][ (string) $transient ] ?? false;
+}
+
+function set_transient( $transient, $value, $expiration = 0 ): bool {
+	$GLOBALS['rytkoset_test_transients'][ (string) $transient ] = $value;
+
+	return true;
+}
+
+function delete_transient( $transient ): bool {
+	unset( $GLOBALS['rytkoset_test_transients'][ (string) $transient ] );
+
+	return true;
+}
+
+function wp_safe_redirect( $location, $status = 302, $x_redirect_by = 'WordPress' ) {
+	$redirect = array(
+		'location' => (string) $location,
+		'status'   => (int) $status,
+	);
+
+	$GLOBALS['rytkoset_test_redirects'][] = $redirect;
+
+	throw new Rytkoset_Test_Redirect_Exception( $redirect['location'], $redirect['status'] );
 }
 
 // Minimal real hook system: add_filter()/add_action() register callbacks at module load and
@@ -684,6 +766,31 @@ function delete_post_meta( $post_id, $key ): bool {
 	unset( $GLOBALS['rytkoset_test_post_meta'][ (int) $post_id ][ $key ] );
 
 	return true;
+}
+
+function wp_insert_post( $postarr, $wp_error = false ) {
+	if ( ! is_array( $postarr ) || empty( $postarr['post_type'] ) ) {
+		return $wp_error ? new WP_Error( 'invalid_post', 'Invalid post data.' ) : 0;
+	}
+
+	$post_id = isset( $postarr['ID'] ) ? absint( $postarr['ID'] ) : (int) $GLOBALS['rytkoset_test_next_post_id']++;
+	$post    = rytkoset_test_register_post(
+		$post_id,
+		(string) $postarr['post_type'],
+		(string) ( $postarr['post_title'] ?? '' ),
+		absint( $postarr['post_parent'] ?? 0 ),
+		absint( $postarr['menu_order'] ?? 0 )
+	);
+
+	if ( isset( $postarr['post_status'] ) ) {
+		$post->post_status = (string) $postarr['post_status'];
+	}
+
+	foreach ( (array) ( $postarr['meta_input'] ?? array() ) as $meta_key => $meta_value ) {
+		update_post_meta( $post_id, (string) $meta_key, $meta_value );
+	}
+
+	return $post_id;
 }
 
 /**
