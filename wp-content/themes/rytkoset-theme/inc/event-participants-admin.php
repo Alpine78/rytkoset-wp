@@ -388,6 +388,50 @@ function rytkoset_theme_get_event_participants_admin_status_options() {
 }
 
 /**
+ * Builds the event-choice participant summary for the admin page.
+ *
+ * Cancelled rows are intentionally skipped because the summary is used for
+ * operational headcounts. When quantity collection is enabled, each row counts
+ * as its saved quantity; otherwise each row counts as one registration.
+ *
+ * @param array $rows                Participant rows.
+ * @param bool  $has_quantity_column Whether quantity counts units instead of registrations.
+ * @return array{total:int,breakdown:array<string,int>}
+ */
+function rytkoset_theme_get_event_participant_choice_summary( $rows, $has_quantity_column ) {
+	$summary = array(
+		'total'     => 0,
+		'breakdown' => array(),
+	);
+
+	foreach ( $rows as $row ) {
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+
+		if ( isset( $row['status'] ) && 'cancelled' === $row['status'] ) {
+			continue;
+		}
+
+		$units             = $has_quantity_column ? max( 1, isset( $row['quantity'] ) ? (int) $row['quantity'] : 1 ) : 1;
+		$summary['total'] += $units;
+		$choice            = isset( $row['choice'] ) ? trim( (string) $row['choice'] ) : '';
+
+		if ( '' === $choice ) {
+			$choice = __( 'Ei valintaa', 'rytkoset-theme' );
+		}
+
+		if ( ! isset( $summary['breakdown'][ $choice ] ) ) {
+			$summary['breakdown'][ $choice ] = 0;
+		}
+
+		$summary['breakdown'][ $choice ] += $units;
+	}
+
+	return $summary;
+}
+
+/**
  * Renders the CSV export form for the unified event participants admin page.
  *
  * @param int    $selected_event  Selected event ID (0 for all events).
@@ -728,32 +772,14 @@ function rytkoset_theme_render_event_participants_admin_page() {
 	$has_quantity_column = $selected_event > 0 && rytkoset_theme_event_collects_quantity( $selected_event );
 	$choice_label        = $has_choice_column ? rytkoset_theme_get_event_choice_field_label( $selected_event ) : '';
 	$quantity_label      = $has_quantity_column ? rytkoset_theme_get_event_quantity_field_label( $selected_event ) : '';
-	$summary_total       = 0;
-	$choice_breakdown    = array();
-
-	if ( $has_choice_column ) {
-		foreach ( $rows as $row ) {
-			if ( isset( $row['status'] ) && 'cancelled' === $row['status'] ) {
-				continue;
-			}
-
-			// With a quantity field the total counts people; otherwise registrations.
-			$units          = $has_quantity_column ? max( 1, isset( $row['quantity'] ) ? (int) $row['quantity'] : 1 ) : 1;
-			$summary_total += $units;
-
-			$choice = isset( $row['choice'] ) ? (string) $row['choice'] : '';
-
-			if ( '' === $choice ) {
-				$choice = __( 'Ei valintaa', 'rytkoset-theme' );
-			}
-
-			if ( ! isset( $choice_breakdown[ $choice ] ) ) {
-				$choice_breakdown[ $choice ] = 0;
-			}
-
-			$choice_breakdown[ $choice ] += $units;
-		}
-	}
+	$choice_summary      = $has_choice_column
+		? rytkoset_theme_get_event_participant_choice_summary( $rows, $has_quantity_column )
+		: array(
+			'total'     => 0,
+			'breakdown' => array(),
+		);
+	$summary_total       = $choice_summary['total'];
+	$choice_breakdown    = $choice_summary['breakdown'];
 
 	?>
 	<div class="wrap">

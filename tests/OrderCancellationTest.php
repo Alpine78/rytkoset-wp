@@ -206,4 +206,74 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Pyynnön aikaleima:', $mail['message'] );
 		$this->assertStringContainsString( 'Avaa tilaus: https://rytkoset.test/wp-admin/post.php?post=123&action=edit', $mail['message'] );
 	}
+
+	// --- Submit handler ------------------------------------------------------
+
+	public function test_submit_handler_cancels_unpaid_order_and_redirects_to_orders(): void {
+		$order                = $this->make_order( 'pending', time() - HOUR_IN_SECONDS );
+		$order->user_id       = 7;
+		$order->billing_email = 'asiakas@example.test';
+
+		$GLOBALS['rytkoset_test_current_user']   = 7;
+		$GLOBALS['rytkoset_test_orders'][ 123 ] = $order;
+		$_POST                                  = array(
+			'rytkoset_confirm_cancellation' => '1',
+			'order_id'                      => '123',
+			'_wpnonce'                      => 'rytkoset_confirm_cancel_order_123',
+		);
+
+		try {
+			rytkoset_theme_handle_order_cancellation_submit();
+			$this->fail( 'Expected cancellation submit handler to redirect after success.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/orders/', $redirect->location );
+		}
+
+		$this->assertSame( 'cancelled', $order->get_status() );
+		$this->assertSame( array( 'Asiakas peruutti tilauksen itsepalveluna.' ), $order->notes );
+		$this->assertTrue( wc_has_notice( 'Tilauksesi on peruutettu. Saat vahvistuksen sähköpostiisi.', 'success' ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertStringContainsString( 'Tilauksesi 123 on peruutettu', $GLOBALS['rytkoset_test_mails'][0]['subject'] );
+		$this->assertStringContainsString( 'Tilausta ei ollut vielä maksettu', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+	}
+
+	public function test_submit_handler_records_paid_order_request_without_changing_status(): void {
+		$order                 = $this->make_order( 'processing', time() - HOUR_IN_SECONDS );
+		$order->user_id        = 7;
+		$order->billing_email  = 'asiakas@example.test';
+		$order->edit_order_url = 'https://rytkoset.test/wp-admin/post.php?post=123&action=edit';
+
+		$GLOBALS['rytkoset_test_current_user']   = 7;
+		$GLOBALS['rytkoset_test_orders'][ 123 ] = $order;
+		$_POST                                  = array(
+			'rytkoset_confirm_cancellation' => '1',
+			'order_id'                      => '123',
+			'_wpnonce'                      => 'rytkoset_confirm_cancel_order_123',
+		);
+
+		try {
+			rytkoset_theme_handle_order_cancellation_submit();
+			$this->fail( 'Expected cancellation submit handler to redirect after success.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/orders/', $redirect->location );
+		}
+
+		$this->assertSame( 'processing', $order->get_status() );
+		$this->assertMatchesRegularExpression(
+			'/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/',
+			(string) $order->get_meta( rytkoset_theme_get_order_cancellation_requested_meta_key() )
+		);
+		$this->assertCount( 1, $order->notes );
+		$this->assertStringContainsString( 'Asiakas pyysi tilauksen peruutusta itsepalveluna.', $order->notes[0] );
+		$this->assertSame( 1, $order->save_count );
+		$this->assertTrue(
+			wc_has_notice(
+				'Peruutuspyyntösi on vastaanotettu. Käsittelemme palautuksen ja olemme tarvittaessa yhteydessä. Saat vahvistuksen sähköpostiisi.',
+				'success'
+			)
+		);
+		$this->assertCount( 2, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertStringContainsString( 'Peruutuspyyntö: tilaus 123 vaatii palautuksen', $GLOBALS['rytkoset_test_mails'][0]['subject'] );
+		$this->assertStringContainsString( 'Peruutuspyyntösi tilaukselle 123 on vastaanotettu', $GLOBALS['rytkoset_test_mails'][1]['subject'] );
+	}
 }

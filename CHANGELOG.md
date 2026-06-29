@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Changed
+- `.gitattributes` / `phpcs.xml.dist` / `README.md` / `CLAUDE.md` / `wp-content/mu-plugins/automation-by-klik.php` / `wp-content/themes/rytkoset-theme/inc/event-participants-admin.php` / `tests/bootstrap.php` / `tests/EventMetaTest.php` / `tests/EventParticipantsAdminTest.php` / `tests/EventRegistrationFormTest.php` / `tests/OrderCancellationTest.php`: korjattu dev -> main -katselmuksessa löytyneet merge-valmiuden perusasiat (#452). PHPCS:n tarkistusalueeseen lisättiin `wp-content/mu-plugins/`, Klikin MU-plugin siistittiin WPCS-yhteensopivaksi ja dokumentaatio kertoo nyt selvästi, että teema deployautuu nykyisillä workflowilla automaattisesti mutta erilliset `wp-content`-operointitiedostot eivät. Samalla lisättiin LF-rivinvaihtosäännöt, normalisoitiin PHPCS:n tarkistusalueen PHP-tiedostot LF-muotoon ja lisättiin tapahtumailmoittautumisen valinta-/määrälogiikan, kuittaussähköpostin, onnistuneen lomakelähetyksen, osallistuja-adminin valinta-/määräyhteenvedon sekä WooCommerce-tilausperuutuksen submit-handlerin testit.
 - `Dockerfile` / `CLAUDE.md`: päivitetty WordPress 6.8.3 → 7 (`wordpress:7-php8.3-apache`) vastaamaan dev- ja tuotantoympäristöjä.
 
 ### Added

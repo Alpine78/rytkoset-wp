@@ -95,4 +95,31 @@ final class EventMetaTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_sanitize_event_organizer_notification_recipients( "a@b.fi, a@b.fi\nc@d.fi" )
 		);
 	}
+
+	// --- registration choice fields -----------------------------------------
+
+	public function test_choice_options_trim_dedupe_and_preserve_first_spelling(): void {
+		$this->assertSame(
+			array( 'Kuopio', 'Varkaus', 'Muu paikka reitin varrella' ),
+			rytkoset_theme_normalize_choice_options( " Kuopio \nVarkaus\nkuopio\n\nMuu paikka reitin varrella" )
+		);
+	}
+
+	public function test_event_choice_helpers_read_meta_and_resolve_canonical_value(): void {
+		rytkoset_test_register_post( 10, 'rytkoset_event', 'Bussikyyti' );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_enabled_meta_key(), 'yes' );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_options_meta_key(), "Kuopio\nVarkaus" );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_field_label_meta_key(), 'Lähtöpaikka' );
+
+		$this->assertTrue( rytkoset_theme_event_has_choice_field( 10 ) );
+		$this->assertSame( array( 'Kuopio', 'Varkaus' ), rytkoset_theme_get_event_choice_options( 10 ) );
+		$this->assertSame( 'Lähtöpaikka', rytkoset_theme_get_event_choice_field_label( 10 ) );
+		$this->assertSame( 'Kuopio', rytkoset_theme_resolve_event_choice_value( 10, 'kuopio' ) );
+		$this->assertSame( '', rytkoset_theme_resolve_event_choice_value( 10, 'Tampere' ) );
+	}
+
+	public function test_choice_and_quantity_labels_have_defaults(): void {
+		$this->assertSame( 'Lähtöpaikka', rytkoset_theme_get_event_choice_field_label( 999 ) );
+		$this->assertSame( 'Matkustajien määrä', rytkoset_theme_get_event_quantity_field_label( 999 ) );
+	}
 }

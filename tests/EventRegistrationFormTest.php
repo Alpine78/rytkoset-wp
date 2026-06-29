@@ -51,6 +51,7 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'name', rytkoset_theme_get_event_registration_error_field( 'missing_name' ) );
 		$this->assertSame( 'email', rytkoset_theme_get_event_registration_error_field( 'invalid_email' ) );
 		$this->assertSame( 'email', rytkoset_theme_get_event_registration_error_field( 'already_registered' ) );
+		$this->assertSame( 'choice', rytkoset_theme_get_event_registration_error_field( 'invalid_choice' ) );
 		$this->assertSame( 'gdpr', rytkoset_theme_get_event_registration_error_field( 'missing_consent' ) );
 		$this->assertSame( '', rytkoset_theme_get_event_registration_error_field( 'unknown_code' ) );
 	}
@@ -91,5 +92,89 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 	public function test_form_hidden_for_non_event_post(): void {
 		rytkoset_test_register_post( 10, 'page', 'Tavallinen sivu', 0 );
 		$this->assertFalse( rytkoset_theme_event_can_show_free_registration_form( 10 ) );
+	}
+
+	public function test_submission_saves_choice_and_quantity_then_redirects_successfully(): void {
+		$this->event( 10 );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_enabled_meta_key(), 'yes' );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_options_meta_key(), "Kuopio\nVarkaus" );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_field_label_meta_key(), 'Lähtöpaikka' );
+		update_post_meta( 10, rytkoset_theme_get_event_collect_quantity_meta_key(), 'yes' );
+		update_post_meta( 10, rytkoset_theme_get_event_quantity_field_label_meta_key(), 'Matkustajia' );
+
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.10';
+		$_POST                  = array(
+			'event_id'                                  => '10',
+			'website'                                   => '',
+			'rytkoset_event_registration_submit_nonce' => 'rytkoset_submit_event_registration',
+			'registration_name'                         => ' Maija Meikäläinen ',
+			'registration_email'                        => 'maija@example.test',
+			'registration_diet'                         => "Laktoositon\nGluteeniton",
+			'registration_notes'                        => 'Tarvitsee apua bussiin noustessa.',
+			'registration_gdpr_consent'                 => '1',
+			'registration_choice'                       => 'kuopio',
+			'registration_quantity'                     => '12',
+		);
+
+		try {
+			rytkoset_theme_handle_event_registration_submission();
+			$this->fail( 'Expected the submission handler to redirect after saving.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertStringContainsString( 'registration_status=success', $redirect->location );
+		}
+
+		$registration_id = 1000;
+		$meta_keys       = rytkoset_theme_get_event_registration_meta_keys();
+
+		$this->assertSame( 'event_registration', get_post_type( $registration_id ) );
+		$this->assertSame( 'Maija Meikäläinen - Sukujuhla', get_the_title( $registration_id ) );
+		$this->assertSame( 10, get_post_meta( $registration_id, $meta_keys['event_id'], true ) );
+		$this->assertSame( 'Maija Meikäläinen', get_post_meta( $registration_id, $meta_keys['name'], true ) );
+		$this->assertSame( 'maija@example.test', get_post_meta( $registration_id, $meta_keys['email'], true ) );
+		$this->assertSame( 'Kuopio', get_post_meta( $registration_id, $meta_keys['choice'], true ) );
+		$this->assertSame( 10, get_post_meta( $registration_id, $meta_keys['quantity'], true ) );
+		$this->assertSame( 'pending', get_post_meta( $registration_id, $meta_keys['status'], true ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertStringContainsString( 'Lähtöpaikka: Kuopio', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+		$this->assertStringContainsString( 'Matkustajia: 10', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+	}
+
+	// --- quantity normalization ---------------------------------------------
+
+	public function test_registration_quantity_normalizes_to_positive_default_range(): void {
+		$this->assertSame( 1, rytkoset_theme_normalize_event_registration_quantity( 0 ) );
+		$this->assertSame( 3, rytkoset_theme_normalize_event_registration_quantity( '3' ) );
+		$this->assertSame( 10, rytkoset_theme_normalize_event_registration_quantity( 99 ) );
+	}
+
+	public function test_registration_quantity_respects_filtered_maximum(): void {
+		$filter = static fn() => 2;
+		add_filter( 'rytkoset_theme_event_registration_max_quantity', $filter );
+
+		$this->assertSame( 2, rytkoset_theme_normalize_event_registration_quantity( 5 ) );
+
+		remove_filter( 'rytkoset_theme_event_registration_max_quantity', $filter );
+	}
+
+	// --- receipt email -------------------------------------------------------
+
+	public function test_receipt_email_includes_choice_and_quantity(): void {
+		$this->event( 10 );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_field_label_meta_key(), 'Lähtöpaikka' );
+		update_post_meta( 10, rytkoset_theme_get_event_quantity_field_label_meta_key(), 'Matkustajia' );
+
+		$this->assertTrue(
+			rytkoset_theme_send_event_registration_receipt_email(
+				10,
+				'Maija Meikäläinen',
+				'maija@example.test',
+				'Kuopio',
+				2
+			)
+		);
+
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertStringContainsString( 'Lähtöpaikka: Kuopio', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+		$this->assertStringContainsString( 'Matkustajia: 2', $GLOBALS['rytkoset_test_mails'][0]['message'] );
 	}
 }

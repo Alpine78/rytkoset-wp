@@ -2,9 +2,10 @@
 <ruleset name="Rytköset Theme">
 	<description>WordPress Coding Standards Rytkösten sukuseuran teemalle.</description>
 
-	<!-- Tarkistuskohteet: teema ja erillinen huoltotilasivu. -->
+	<!-- Tarkistuskohteet: teema ja erilliset operatiiviset wp-content-tiedostot. -->
 	<file>wp-content/themes/rytkoset-theme</file>
 	<file>wp-content/maintenance.php</file>
+	<file>wp-content/mu-plugins</file>
 
 	<!-- Vain PHP-tiedostot. -->
 	<arg name="extensions" value="php"/>

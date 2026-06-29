@@ -1,8 +1,14 @@
 <?php
-/*
-  Plugin Name: WordPress automation by Klik
-  Description: Management of this WordPress site is provided by Klik.
-*/
+/**
+ * Plugin Name: WordPress automation by Klik
+ * Description: Management of this WordPress site is provided by Klik.
+ *
+ * @package Rytkoset
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 // This plugin was added because Automatic Updates, Automatic Backups, and
 // other features are managed externally by Klik.
@@ -11,15 +17,14 @@
 //     block-automation-by-klik.php
 
 // Turn off WordPress automatic updates since these are managed externally.
-// If you remove this to re-enable WordPress's automatic updates then it's 
+// If you remove this to re-enable WordPress's automatic updates then it's
 // advised to disable auto-updating in Klik.
 add_filter( 'automatic_updater_disabled', '__return_true', -9999 );
 
 // Disable WordPress site health test for Automatic Updates since these are
 // managed externally by Klik.
-function klik_filter_site_status_tests($tests) {
-	unset($tests['async']['background_updates']);
+function rytkoset_filter_klik_site_status_tests( $tests ) {
+	unset( $tests['async']['background_updates'] );
 	return $tests;
 }
-add_filter('site_status_tests', 'klik_filter_site_status_tests');
-
+add_filter( 'site_status_tests', 'rytkoset_filter_klik_site_status_tests' );
