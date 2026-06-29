@@ -34,15 +34,23 @@ require_once get_template_directory() . '/inc/event-registration-privacy.php';
 require_once get_template_directory() . '/inc/event-participants-admin.php';
 require_once get_template_directory() . '/inc/event-participants-messaging.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
+require_once get_template_directory() . '/inc/digital-magazine-access.php';
 require_once get_template_directory() . '/inc/attachment-iptc.php';
 require_once get_template_directory() . '/inc/seo-meta.php';
+require_once get_template_directory() . '/inc/structured-data.php';
 require_once get_template_directory() . '/inc/login.php';
 require_once get_template_directory() . '/inc/newsletter.php';
+require_once get_template_directory() . '/inc/user-membership.php';
+require_once get_template_directory() . '/inc/members-only-pages.php';
 require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
+require_once get_template_directory() . '/inc/woocommerce-member-coupon.php';
+require_once get_template_directory() . '/inc/woocommerce-digital-magazine.php';
 require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
+require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
+require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
@@ -515,7 +523,7 @@ function rytkoset_theme_scripts() {
 
 	if (
 		function_exists( 'is_woocommerce' )
-		&& ( is_woocommerce() || is_cart() || is_checkout() )
+		&& ( is_woocommerce() || is_cart() || is_checkout() || ( function_exists( 'is_account_page' ) && is_account_page() ) )
 	) {
 		wp_enqueue_style(
 			'rytkoset-theme-shop',
@@ -570,7 +578,7 @@ function rytkoset_theme_scripts() {
 					'checkoutNotes' => array_values(
 						array_filter(
 							array(
-								rytkoset_theme_cart_has_membership_product()
+								function_exists( 'rytkoset_theme_cart_requires_member_names' ) && rytkoset_theme_cart_requires_member_names()
 										? rytkoset_theme_get_membership_checkout_notice_markup()
 										: '',
 								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()

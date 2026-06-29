@@ -1,7 +1,7 @@
 # Rytköset.net WordPress-projekti
 
-Tämä repository sisältää Rytkösten sukuseura ry:n verkkosivuston WordPress-teeman
-ja projektidokumentaation.
+Tämä repository sisältää Rytkösten sukuseura ry:n verkkosivuston WordPress-teeman,
+erillisiä `wp-content`-operointitiedostoja ja projektidokumentaation.
 
 Kyseessä on oikea tuotantoprojekti. Päätavoite on ylläpidettävä, suomenkielinen
 WordPress-sivusto ei-teknisille käyttäjille. Sivusto tukee sisältöjä,
@@ -18,8 +18,9 @@ Dev-ympäristö:
 ## About this project (English summary)
 
 Production WordPress site for a Finnish family association (Rytkösten sukuseura ry).
-The repository contains a hand-built custom theme — no page builder, no heavy
-frontend framework — together with the project documentation. Highlights: custom
+The repository contains a hand-built custom theme, a few standalone `wp-content`
+operational files, and the project documentation — no page builder, no heavy
+frontend framework. Highlights: custom
 post types for events, registrations and photo galleries; WooCommerce extensions
 for memberships and paid events; an AcyMailing newsletter integration; a Dockerized
 local environment; and GitHub Actions for PHP validation and FTPS deploys.
@@ -82,9 +83,14 @@ sitä ajattelun ja katselmoinnin kumppanina — pienin, ymmärrettävin askelin.
 
 ## Nykyinen rajaus
 
-Versionhallinnassa oleva varsinainen koodi on custom-teema:
+Versionhallinnassa oleva varsinainen sovelluskoodi on custom-teema:
 
 - `wp-content/themes/rytkoset-theme/`
+
+Lisäksi repossa on rajatusti erillisiä `wp-content`-operointitiedostoja:
+
+- `wp-content/maintenance.php`
+- `wp-content/mu-plugins/automation-by-klik.php`
 
 WordPressin ydintiedostot, asennetut lisäosat ja tuotannon mediatiedostot eivät
 ole tässä repossa.
@@ -131,7 +137,7 @@ kontin uudelleenrakennusta.
 Ensimmäinen käynnistys:
 
 - Tietokannan tunnukset tulevat suoraan `docker-compose.yml`-tiedostosta — erillistä `.env`-tiedostoa ei tarvita paikallisesti.
-- WordPressin ydin tulee Docker-imagesta (`wordpress:6.8.3-php8.3-apache`). Tietokanta on alussa tyhjä, joten ensimmäisellä käynnillä `http://localhost:8000` ohjaa WordPressin asennusvelhoon.
+- WordPressin ydin tulee Docker-imagesta (`wordpress:7-php8.3-apache`). Tietokanta on alussa tyhjä, joten ensimmäisellä käynnillä `http://localhost:8000` ohjaa WordPressin asennusvelhoon.
 - Lisäosat (WooCommerce, AcyMailing) eivät ole repossa, vaan ne asennetaan WordPressin kautta. Teema toimii ilman niitäkin, mutta osa toiminnoista vaatii ne. PhotoSwipe 5 on vendoroitu teemaan (`assets/vendor/photoswipe/`).
 
 ## Validointi
@@ -147,6 +153,10 @@ Tarkista PHP-syntaksi ennen PR:ää tai deployta:
 GitHub Actions ajaa saman tarkistuksen workflowlla `.github/workflows/php-ci.yml`
 pull requesteille ja `main`-branchin pusheille.
 
+PHPCS / WordPress Coding Standards tarkistaa teeman lisäksi `wp-content/maintenance.php`-
+ja `wp-content/mu-plugins/`-polut, jotta versionhallinnassa olevat erilliset
+operointitiedostot eivät jää CI:n ulkopuolelle.
+
 ## Branchit ja deployt
 
 Branch-malli:
@@ -161,6 +171,8 @@ Dev-deploy:
 - Polkurajaus: `wp-content/themes/rytkoset-theme/**`
 - Menetelmä: FTPS
 - Kohde: `dev.rytkoset.net`
+- Huom: dev-deploy vie vain teeman. `wp-content/maintenance.php` ja
+  `wp-content/mu-plugins/` eivät deployaudu tällä workflowlla.
 
 Tuotantodeploy:
 
@@ -169,6 +181,7 @@ Tuotantodeploy:
 - Oletuslähde: `main`
 - Menetelmä: FTPS
 - Kohde: `rytkoset.net`
+- Huom: tuotantoworkflow vie oletuksena vain teeman.
 
 Tuotantoon ei deployata automaattisesti. Tämä on tarkoituksellinen rajaus.
 
@@ -180,6 +193,8 @@ Tärkeät polut:
 - `wp-content/themes/rytkoset-theme/inc/` - teeman toiminnalliset moduulit
 - `wp-content/themes/rytkoset-theme/assets/` - CSS, JavaScript, ikonit ja kuvat
 - `wp-content/maintenance.php` - brändätty WordPressin huoltotilasivu
+- `wp-content/mu-plugins/automation-by-klik.php` - Klikin hallinnoiman ylläpidon
+  MU-pluginin repoitu kopio; ei automaattisesti deployattava teematiedosto
 - `docs/` - ominaisuus- ja ylläpitodokumentaatio
 - `.github/workflows/` - CI- ja deploy-workflowt
 - `CHANGELOG.md` - manuaalinen muutoshistoria

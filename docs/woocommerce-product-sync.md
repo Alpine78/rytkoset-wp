@@ -91,11 +91,30 @@ Vain seuraavat `_rytkoset_*` -etuliitteiset metat siirtyvät (WooCommercen sisä
 - `_rytkoset_membership_product`
 - `_rytkoset_membership_type`
 - `_rytkoset_membership_period`
+- `_rytkoset_membership_expiry_date`
 - `_rytkoset_member_names_required`
 - `_rytkoset_registration_deadline`
 - `_rytkoset_registration_mode`
 
 Lista on filtteröitävissä koodista: `rytkoset_theme_product_sync_meta_keys`.
+
+`_rytkoset_membership_expiry_date` ("Jäsenyys voimassa asti", #302) on tuotekohtainen asetus, jonka automaattinen jäsenyyspäivitys kopioi ostajan jäsenyyden voimassaolopäiväksi. Se tarkoittaa liiketoiminnallisesti samaa päivää (esim. seuraavan sukukokouksen päivämäärä) kaikissa ympäristöissä, joten se siirtyy synkassa muiden jäsenmaksumetojen tavoin eikä jää kohdeympäristössä tyhjäksi — tyhjänä #302 ei pystyisi aktivoimaan jäsenyyttä.
+
+### Jäsenmaksutuotteen validointi (#407)
+
+Jotta puutteellinen jäsenmaksukonfiguraatio ei pääse huomaamatta toiseen ympäristöön, työkalu validoi jäsenmaksumetat sekä viennissä että tuonnissa. Sallitut jäsenmaksutyypit luetaan suoraan jäsenmaksumoduulista (`rytkoset_theme_get_membership_type_options()`) — tyyppiä **ei** päätellä tuotteen nimestä.
+
+Tarkistettavat ehdot:
+
+- Jos `_rytkoset_membership_product = yes`, jäsenmaksun tyypin on oltava jokin sallituista: `annual_individual`, `annual_family` tai `lifetime`.
+- Vuosijäsenmaksulta (`annual_individual` / `annual_family`) vaaditaan jäsenkausi (`_rytkoset_membership_period`); ainaisjäseneltä (`lifetime`) ei.
+- Ristiriita, jossa jäsenmaksun tyyppi tai jäsenkausi on asetettu ilman jäsenmaksutuotteen lippua, nostetaan virheeksi.
+
+Toiminta:
+
+- **Vienti:** puutteellinen jäsenmaksukonfiguraatio **estää koko viennin** selkeällä tuotekohtaisella virheviestillä (sama mekanismi kuin uploads-alueen ulkopuolisella downloadable-tiedostolla).
+- **Tuonti:** sama validointi ajetaan myös käsin muokatun tai vanhan paketin varalta. Esikatselussa virheellinen tuote merkitään **VIRHE**-tilaan eikä sitä voi tuoda, ja varsinainen tuonti hylkää virheellisen tuotteen vaikka esikatselu ohitettaisiin.
+- **Esikatselun luettava yhteenveto:** jäsenmaksutuotteilla esikatselu näyttää asetukset ymmärrettävillä nimillä — jäsenmaksutuote, tyyppi (käännetty nimi), jäsenkausi, jäsenten nimien vaatimus ja jäsenyyden voimassaolopäivä.
 
 ## Downloadable-tuotteet
 
@@ -129,6 +148,7 @@ Työkalu **ei** tällä hetkellä:
 - Downloadable-tuote siirtyy tiedostoineen; puuttuva tiedosto estää tuonnin `VIRHE`-tilalla.
 - Puuttuva kategoria luodaan kohdeympäristöön automaattisesti.
 - Custom meta -avaimet (`_rytkoset_membership_*`, `_rytkoset_registration_*`) säilyvät siirrossa.
+- Jäsenmaksutuotteen validointi (#407) testattu yksityishenkilön vuosijäsenmaksulla, perhejäsenmaksulla, ainaisjäsenmaksulla ja virheellisesti konfiguroidulla tuotteella: kelvolliset siirtyvät neljine (viidesti expiryineen) metoineen, virheellinen estää viennin ja merkitään tuonnin esikatselussa `VIRHE`-tilaan.
 - Variaatiotuote voidaan viedä ja tuoda parent-SKU:n sekä variaatio-SKU:iden perusteella.
 - Variaation hinnan muutos näkyy esikatselussa variaatiokohtaisena muutoksena.
 - Variaatioiden ja simple-tuotteiden `stock_status` siirtyy viennissä ja tuonnissa, ja muutos näkyy esikatselussa. Vanhat `1.0`/`1.1`-paketit eivät yliaja kohteen varastotilaa.

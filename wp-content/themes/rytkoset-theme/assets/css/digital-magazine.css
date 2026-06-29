@@ -42,6 +42,20 @@
   padding: 1.25rem;
 }
 
+.digital-magazine-card__badge,
+.digital-magazine-lock__eyebrow {
+  justify-self: start;
+  margin: 0;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .digital-magazine-card__title {
   margin: 0;
   font-size: 1.35rem;
@@ -180,6 +194,34 @@
 
 .digital-magazine-toc__excerpt {
   color: var(--color-text-mute);
+}
+
+.digital-magazine-lock {
+  display: grid;
+  gap: 1rem;
+  max-width: 760px;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-alt);
+  box-shadow: var(--shadow-card);
+}
+
+.digital-magazine-lock__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+.digital-magazine-lock__text {
+  margin: 0;
+  color: var(--color-text-mute);
+}
+
+.digital-magazine-lock__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .digital-magazine-reader__header {

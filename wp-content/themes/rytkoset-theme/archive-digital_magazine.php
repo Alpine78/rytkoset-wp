@@ -25,10 +25,20 @@ get_header();
 					<?php
 					while ( have_posts() ) :
 						the_post();
-						$rytkoset_excerpt = trim( get_the_excerpt() );
 
-						if ( '' === $rytkoset_excerpt ) {
-							$rytkoset_excerpt = wp_strip_all_tags( get_the_content() );
+						$rytkoset_post_id       = get_the_ID();
+						$rytkoset_can_read      = rytkoset_theme_user_can_read_digital_magazine( $rytkoset_post_id );
+						$rytkoset_is_restricted = rytkoset_theme_digital_magazine_is_restricted( $rytkoset_post_id );
+						$rytkoset_excerpt       = '';
+
+						if ( $rytkoset_can_read || ! $rytkoset_is_restricted ) {
+							$rytkoset_excerpt = trim( get_the_excerpt() );
+
+							if ( '' === $rytkoset_excerpt ) {
+								$rytkoset_excerpt = wp_strip_all_tags( get_the_content() );
+							}
+						} elseif ( has_excerpt() ) {
+							$rytkoset_excerpt = trim( get_the_excerpt() );
 						}
 						?>
 						<article <?php post_class( 'digital-magazine-card' ); ?>>
@@ -43,12 +53,28 @@ get_header();
 							</a>
 
 							<div class="digital-magazine-card__body">
+								<?php if ( $rytkoset_is_restricted && ! $rytkoset_can_read ) : ?>
+									<p class="digital-magazine-card__badge">
+										<?php
+										echo esc_html(
+											rytkoset_theme_get_digital_magazine_access_mode_label(
+												rytkoset_theme_get_digital_magazine_access_mode( $rytkoset_post_id )
+											)
+										);
+										?>
+									</p>
+								<?php endif; ?>
+
 								<h2 class="digital-magazine-card__title">
 									<a href="<?php the_permalink(); ?>"><?php the_title(); ?></a>
 								</h2>
 
 								<?php if ( '' !== $rytkoset_excerpt ) : ?>
 									<p class="digital-magazine-card__excerpt"><?php echo esc_html( wp_trim_words( $rytkoset_excerpt, 32 ) ); ?></p>
+								<?php elseif ( $rytkoset_is_restricted && ! $rytkoset_can_read ) : ?>
+									<p class="digital-magazine-card__excerpt">
+										<?php esc_html_e( 'Sisältö avautuu, kun lukuoikeus on voimassa.', 'rytkoset-theme' ); ?>
+									</p>
 								<?php endif; ?>
 
 								<a class="btn btn--light digital-magazine-card__link" href="<?php the_permalink(); ?>">

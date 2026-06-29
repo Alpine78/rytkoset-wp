@@ -344,6 +344,28 @@ function rytkoset_theme_get_event_price_text( $event_id ) {
 }
 
 /**
+ * Returns the meta key controlling the diet question on the registration form.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_collect_diet_meta_key() {
+	return '_rytkoset_event_collect_diet';
+}
+
+/**
+ * Checks whether the free registration form should collect diet/allergy info.
+ *
+ * Defaults to true so existing events keep the field; only an explicit `no`
+ * (event without catering) hides it.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_event_collects_diet( $event_id ) {
+	return 'no' !== get_post_meta( absint( $event_id ), rytkoset_theme_get_event_collect_diet_meta_key(), true );
+}
+
+/**
  * Formats event price text for display.
  *
  * @param string $price_text Event price text.
@@ -611,11 +633,12 @@ add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_deta
  * @param WP_Post $post Event post object.
  */
 function rytkoset_theme_render_event_details_metabox( $post ) {
-	$start_time = rytkoset_theme_get_event_time_raw( $post->ID, 'start_time' );
-	$end_time   = rytkoset_theme_get_event_time_raw( $post->ID, 'end_time' );
-	$location   = rytkoset_theme_get_event_location( $post->ID );
-	$fee_type   = rytkoset_theme_get_event_fee_type( $post->ID );
-	$price_text = rytkoset_theme_get_event_price_text( $post->ID );
+	$start_time   = rytkoset_theme_get_event_time_raw( $post->ID, 'start_time' );
+	$end_time     = rytkoset_theme_get_event_time_raw( $post->ID, 'end_time' );
+	$location     = rytkoset_theme_get_event_location( $post->ID );
+	$fee_type     = rytkoset_theme_get_event_fee_type( $post->ID );
+	$price_text   = rytkoset_theme_get_event_price_text( $post->ID );
+	$collect_diet = rytkoset_theme_event_collects_diet( $post->ID );
 
 	wp_nonce_field( 'rytkoset_save_event_details', 'rytkoset_event_details_nonce' );
 	?>
@@ -689,6 +712,22 @@ function rytkoset_theme_render_event_details_metabox( $post ) {
 	</p>
 	<p class="description">
 		<?php esc_html_e( 'Hintateksti on informatiivinen. Varsinainen maksaminen hoidetaan erillisellä WooCommerce-tuotteella, jos tapahtumaan on linkitetty maksutuote.', 'rytkoset-theme' ); ?>
+	</p>
+	<hr />
+	<p>
+		<label for="rytkoset_event_collect_diet">
+			<input
+				type="checkbox"
+				id="rytkoset_event_collect_diet"
+				name="rytkoset_event_collect_diet"
+				value="yes"
+				<?php checked( $collect_diet ); ?>
+			/>
+			<?php esc_html_e( 'Kysy ruokavaliorajoitteet ja allergiat ilmoittautumislomakkeella', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Poista valinta, jos tapahtumassa ei ole tarjoiluita. Koskee maksutonta ilmoittautumislomaketta.', 'rytkoset-theme' ); ?>
 	</p>
 	<?php
 }
@@ -768,8 +807,362 @@ function rytkoset_theme_save_event_details( $post_id ) {
 	} else {
 		update_post_meta( $post_id, $meta_keys['price_text'], $price_text );
 	}
+
+	// Checkbox: present means collect diet info (default), absent means hide it.
+	if ( isset( $_POST['rytkoset_event_collect_diet'] ) ) {
+		delete_post_meta( $post_id, rytkoset_theme_get_event_collect_diet_meta_key() );
+	} else {
+		update_post_meta( $post_id, rytkoset_theme_get_event_collect_diet_meta_key(), 'no' );
+	}
 }
 add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_details' );
+
+/**
+ * Returns the meta key enabling a registration choice field.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_choice_enabled_meta_key() {
+	return '_rytkoset_event_choice_enabled';
+}
+
+/**
+ * Returns the meta key used for the choice options list.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_choice_options_meta_key() {
+	return '_rytkoset_event_choice_options';
+}
+
+/**
+ * Checks whether an event shows a registration choice field.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_event_has_choice_field( $event_id ) {
+	return 'yes' === get_post_meta( absint( $event_id ), rytkoset_theme_get_event_choice_enabled_meta_key(), true );
+}
+
+/**
+ * Normalizes a raw choice-options list into unique, trimmed lines.
+ *
+ * @param string $raw_value Raw textarea value.
+ * @return array<int, string>
+ */
+function rytkoset_theme_normalize_choice_options( $raw_value ) {
+	$parts   = preg_split( '/[\r\n]+/', (string) $raw_value );
+	$seen    = array();
+	$results = array();
+
+	if ( ! is_array( $parts ) ) {
+		return array();
+	}
+
+	foreach ( $parts as $part ) {
+		$point = trim( (string) $part );
+
+		if ( '' === $point ) {
+			continue;
+		}
+
+		$index = strtolower( $point );
+
+		if ( isset( $seen[ $index ] ) ) {
+			continue;
+		}
+
+		$seen[ $index ] = true;
+		$results[]      = $point;
+	}
+
+	return $results;
+}
+
+/**
+ * Returns the configured choice options for an event.
+ *
+ * @param int $event_id Event post ID.
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_event_choice_options( $event_id ) {
+	$value = get_post_meta( absint( $event_id ), rytkoset_theme_get_event_choice_options_meta_key(), true );
+
+	return rytkoset_theme_normalize_choice_options( is_scalar( $value ) ? (string) $value : '' );
+}
+
+/**
+ * Returns the meta key for the registration choice-field label.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_choice_field_label_meta_key() {
+	return '_rytkoset_event_choice_field_label';
+}
+
+/**
+ * Returns the registration choice-field label (default "Lähtöpaikka").
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_choice_field_label( $event_id ) {
+	$label = get_post_meta( absint( $event_id ), rytkoset_theme_get_event_choice_field_label_meta_key(), true );
+	$label = is_scalar( $label ) ? trim( (string) $label ) : '';
+
+	return '' !== $label ? $label : __( 'Lähtöpaikka', 'rytkoset-theme' );
+}
+
+/**
+ * Returns the meta key toggling the registration quantity field.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_collect_quantity_meta_key() {
+	return '_rytkoset_event_collect_quantity';
+}
+
+/**
+ * Checks whether the registration form collects a quantity.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_event_collects_quantity( $event_id ) {
+	return 'yes' === get_post_meta( absint( $event_id ), rytkoset_theme_get_event_collect_quantity_meta_key(), true );
+}
+
+/**
+ * Returns the meta key for the quantity-field label.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_quantity_field_label_meta_key() {
+	return '_rytkoset_event_quantity_field_label';
+}
+
+/**
+ * Returns the quantity-field label (default "Matkustajien määrä").
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_quantity_field_label( $event_id ) {
+	$label = get_post_meta( absint( $event_id ), rytkoset_theme_get_event_quantity_field_label_meta_key(), true );
+	$label = is_scalar( $label ) ? trim( (string) $label ) : '';
+
+	return '' !== $label ? $label : __( 'Matkustajien määrä', 'rytkoset-theme' );
+}
+
+/**
+ * Resolves a submitted choice value to the canonical configured spelling.
+ *
+ * Accepts the configured options and (when enabled) the free-choice "other".
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $value    Submitted choice value.
+ * @return string Canonical value, or empty string when not accepted.
+ */
+function rytkoset_theme_resolve_event_choice_value( $event_id, $value ) {
+	$value = trim( (string) $value );
+
+	if ( '' === $value ) {
+		return '';
+	}
+
+	foreach ( rytkoset_theme_get_event_choice_options( $event_id ) as $point ) {
+		if ( 0 === strcasecmp( $point, $value ) ) {
+			return $point;
+		}
+	}
+
+	return '';
+}
+
+/**
+ * Adds the registration extra-field metabox (choice list + quantity).
+ */
+function rytkoset_theme_register_event_choice_field_metabox() {
+	add_meta_box(
+		'rytkoset_event_choice_field',
+		__( 'Ilmoittautumisen lisävalinta', 'rytkoset-theme' ),
+		'rytkoset_theme_render_event_choice_field_metabox',
+		'rytkoset_event',
+		'side',
+		'default'
+	);
+}
+add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_choice_field_metabox' );
+
+/**
+ * Renders the registration extra-field metabox (choice list + quantity).
+ *
+ * @param WP_Post $post Event post object.
+ */
+function rytkoset_theme_render_event_choice_field_metabox( $post ) {
+	$enabled          = rytkoset_theme_event_has_choice_field( $post->ID );
+	$options          = rytkoset_theme_get_event_choice_options( $post->ID );
+	$field_label      = rytkoset_theme_get_event_choice_field_label( $post->ID );
+	$collect_quantity = rytkoset_theme_event_collects_quantity( $post->ID );
+	$quantity_label   = rytkoset_theme_get_event_quantity_field_label( $post->ID );
+
+	wp_nonce_field( 'rytkoset_save_event_choice_field', 'rytkoset_event_choice_field_nonce' );
+	?>
+	<p>
+		<label for="rytkoset_event_choice_enabled">
+			<input
+				type="checkbox"
+				id="rytkoset_event_choice_enabled"
+				name="rytkoset_event_choice_enabled"
+				value="yes"
+				<?php checked( $enabled ); ?>
+			/>
+			<?php esc_html_e( 'Lisää valintalista ilmoittautumislomakkeelle', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Lisää maksuttomalle ilmoittautumislomakkeelle pudotusvalikon, josta vastaaja valitsee yhden vaihtoehdon (esim. lähtöpaikka).', 'rytkoset-theme' ); ?>
+	</p>
+	<p>
+		<label for="rytkoset_event_choice_field_label">
+			<?php esc_html_e( 'Kentän nimi', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<input
+		type="text"
+		id="rytkoset_event_choice_field_label"
+		name="rytkoset_event_choice_field_label"
+		class="widefat"
+		value="<?php echo esc_attr( $field_label ); ?>"
+		placeholder="<?php esc_attr_e( 'Lähtöpaikka', 'rytkoset-theme' ); ?>"
+	/>
+	<p>
+		<label for="rytkoset_event_choice_options">
+			<?php esc_html_e( 'Vaihtoehdot', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<textarea
+		id="rytkoset_event_choice_options"
+		name="rytkoset_event_choice_options"
+		rows="4"
+		class="widefat"
+		placeholder="<?php esc_attr_e( "Iisalmi\nKuopio\nVarkaus", 'rytkoset-theme' ); ?>"
+	><?php echo esc_textarea( implode( "\n", $options ) ); ?></textarea>
+	<p class="description">
+		<?php esc_html_e( 'Yksi vaihtoehto riviä kohti. Voit lisätä esim. "Muu" -rivin, jos vastaaja voi täydentää tarkemman tiedon lisätietokenttään.', 'rytkoset-theme' ); ?>
+	</p>
+	<hr />
+	<p>
+		<label for="rytkoset_event_collect_quantity">
+			<input
+				type="checkbox"
+				id="rytkoset_event_collect_quantity"
+				name="rytkoset_event_collect_quantity"
+				value="yes"
+				<?php checked( $collect_quantity ); ?>
+			/>
+			<?php esc_html_e( 'Kysy määrä', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p>
+		<label for="rytkoset_event_quantity_field_label">
+			<?php esc_html_e( 'Määräkentän nimi', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<input
+		type="text"
+		id="rytkoset_event_quantity_field_label"
+		name="rytkoset_event_quantity_field_label"
+		class="widefat"
+		value="<?php echo esc_attr( $quantity_label ); ?>"
+		placeholder="<?php esc_attr_e( 'Matkustajien määrä', 'rytkoset-theme' ); ?>"
+	/>
+	<p class="description">
+		<?php esc_html_e( 'Lisää lomakkeelle numerokentän (esim. matkustajien tai henkilöiden määrä).', 'rytkoset-theme' ); ?>
+	</p>
+	<?php
+}
+
+/**
+ * Saves the registration extra-field settings.
+ *
+ * @param int $post_id Event post ID.
+ */
+function rytkoset_theme_save_event_choice_field( $post_id ) {
+	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+		return;
+	}
+
+	if ( wp_is_post_revision( $post_id ) ) {
+		return;
+	}
+
+	if ( ! isset( $_POST['rytkoset_event_choice_field_nonce'] ) ) {
+		return;
+	}
+
+	$nonce = sanitize_text_field( wp_unslash( $_POST['rytkoset_event_choice_field_nonce'] ) );
+
+	if ( ! wp_verify_nonce( $nonce, 'rytkoset_save_event_choice_field' ) ) {
+		return;
+	}
+
+	if ( ! current_user_can( 'edit_post', $post_id ) ) {
+		return;
+	}
+
+	$enabled = isset( $_POST['rytkoset_event_choice_enabled'] )
+		&& 'yes' === sanitize_text_field( wp_unslash( $_POST['rytkoset_event_choice_enabled'] ) );
+
+	if ( $enabled ) {
+		update_post_meta( $post_id, rytkoset_theme_get_event_choice_enabled_meta_key(), 'yes' );
+	} else {
+		delete_post_meta( $post_id, rytkoset_theme_get_event_choice_enabled_meta_key() );
+	}
+
+	$raw_options = isset( $_POST['rytkoset_event_choice_options'] )
+		? sanitize_textarea_field( wp_unslash( $_POST['rytkoset_event_choice_options'] ) )
+		: '';
+	$options     = rytkoset_theme_normalize_choice_options( $raw_options );
+
+	if ( empty( $options ) ) {
+		delete_post_meta( $post_id, rytkoset_theme_get_event_choice_options_meta_key() );
+	} else {
+		update_post_meta( $post_id, rytkoset_theme_get_event_choice_options_meta_key(), implode( "\n", $options ) );
+	}
+
+	// Text labels and toggles. Store only when set; empty falls back to defaults.
+	$text_meta = array(
+		'rytkoset_event_choice_field_label'   => rytkoset_theme_get_event_choice_field_label_meta_key(),
+		'rytkoset_event_quantity_field_label' => rytkoset_theme_get_event_quantity_field_label_meta_key(),
+	);
+
+	foreach ( $text_meta as $field => $meta_key ) {
+		$value = isset( $_POST[ $field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $field ] ) ) : '';
+
+		if ( '' === $value ) {
+			delete_post_meta( $post_id, $meta_key );
+		} else {
+			update_post_meta( $post_id, $meta_key, $value );
+		}
+	}
+
+	$toggle_meta = array(
+		'rytkoset_event_collect_quantity' => rytkoset_theme_get_event_collect_quantity_meta_key(),
+	);
+
+	foreach ( $toggle_meta as $field => $meta_key ) {
+		$checked = isset( $_POST[ $field ] ) && 'yes' === sanitize_text_field( wp_unslash( $_POST[ $field ] ) );
+
+		if ( $checked ) {
+			update_post_meta( $post_id, $meta_key, 'yes' );
+		} else {
+			delete_post_meta( $post_id, $meta_key );
+		}
+	}
+}
+add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_choice_field' );
 
 /**
  * Returns the meta key used to link an event to a WooCommerce product.

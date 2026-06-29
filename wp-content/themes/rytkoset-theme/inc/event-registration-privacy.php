@@ -219,6 +219,23 @@ function rytkoset_theme_export_event_registration_personal_data( $email_address,
 			),
 		);
 
+		$choice_value = rytkoset_theme_get_event_registration_meta( $registration_id, 'choice' );
+		$quantity     = rytkoset_theme_get_event_registration_meta( $registration_id, 'quantity' );
+
+		if ( '' !== $choice_value ) {
+			$data[] = array(
+				'name'  => rytkoset_theme_get_event_choice_field_label( $event_id ),
+				'value' => $choice_value,
+			);
+		}
+
+		if ( '' !== $quantity ) {
+			$data[] = array(
+				'name'  => rytkoset_theme_get_event_quantity_field_label( $event_id ),
+				'value' => $quantity,
+			);
+		}
+
 		$items[] = array(
 			'group_id'    => 'rytkoset-event-registrations',
 			'group_label' => __( 'Tapahtumailmoittautumiset', 'rytkoset-theme' ),

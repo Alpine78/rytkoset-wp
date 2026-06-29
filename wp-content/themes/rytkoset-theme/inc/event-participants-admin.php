@@ -61,6 +61,8 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 			'phone'            => '',
 			'diet'             => rytkoset_theme_get_event_registration_meta( $registration->ID, 'diet' ),
 			'notes'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'notes' ),
+			'choice'           => rytkoset_theme_get_event_registration_meta( $registration->ID, 'choice' ),
+			'quantity'         => absint( rytkoset_theme_get_event_registration_meta( $registration->ID, 'quantity' ) ),
 			'participant_type' => '',
 			'friday_buffet'    => false,
 			'status'           => $status,
@@ -386,6 +388,50 @@ function rytkoset_theme_get_event_participants_admin_status_options() {
 }
 
 /**
+ * Builds the event-choice participant summary for the admin page.
+ *
+ * Cancelled rows are intentionally skipped because the summary is used for
+ * operational headcounts. When quantity collection is enabled, each row counts
+ * as its saved quantity; otherwise each row counts as one registration.
+ *
+ * @param array $rows                Participant rows.
+ * @param bool  $has_quantity_column Whether quantity counts units instead of registrations.
+ * @return array{total:int,breakdown:array<string,int>}
+ */
+function rytkoset_theme_get_event_participant_choice_summary( $rows, $has_quantity_column ) {
+	$summary = array(
+		'total'     => 0,
+		'breakdown' => array(),
+	);
+
+	foreach ( $rows as $row ) {
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+
+		if ( isset( $row['status'] ) && 'cancelled' === $row['status'] ) {
+			continue;
+		}
+
+		$units             = $has_quantity_column ? max( 1, isset( $row['quantity'] ) ? (int) $row['quantity'] : 1 ) : 1;
+		$summary['total'] += $units;
+		$choice            = isset( $row['choice'] ) ? trim( (string) $row['choice'] ) : '';
+
+		if ( '' === $choice ) {
+			$choice = __( 'Ei valintaa', 'rytkoset-theme' );
+		}
+
+		if ( ! isset( $summary['breakdown'][ $choice ] ) ) {
+			$summary['breakdown'][ $choice ] = 0;
+		}
+
+		$summary['breakdown'][ $choice ] += $units;
+	}
+
+	return $summary;
+}
+
+/**
  * Renders the CSV export form for the unified event participants admin page.
  *
  * @param int    $selected_event  Selected event ID (0 for all events).
@@ -580,6 +626,11 @@ function rytkoset_theme_export_event_participants_csv() {
 		$event_id = 0;
 	}
 
+	$has_choice_column   = $event_id > 0 && rytkoset_theme_event_has_choice_field( $event_id );
+	$has_quantity_column = $event_id > 0 && rytkoset_theme_event_collects_quantity( $event_id );
+	$choice_label        = $has_choice_column ? rytkoset_theme_get_event_choice_field_label( $event_id ) : '';
+	$quantity_label      = $has_quantity_column ? rytkoset_theme_get_event_quantity_field_label( $event_id ) : '';
+
 	$rows = $event_id > 0
 		? rytkoset_theme_get_event_participants( $event_id, $selected_status )
 		: rytkoset_theme_get_all_events_participants( $selected_status );
@@ -600,25 +651,31 @@ function rytkoset_theme_export_event_participants_csv() {
 	// UTF-8 BOM jotta Excel tunnistaa koodauksen oikein.
 	echo "\xEF\xBB\xBF";
 
-	fputcsv(
-		$output,
-		array(
-			__( 'Tapahtuma', 'rytkoset-theme' ),
-			__( 'Nimi', 'rytkoset-theme' ),
-			__( 'Osallistujatyyppi', 'rytkoset-theme' ),
-			__( 'Perjantain buffet', 'rytkoset-theme' ),
-			__( 'Sähköposti', 'rytkoset-theme' ),
-			__( 'Puhelin', 'rytkoset-theme' ),
-			__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
-			__( 'Lähde', 'rytkoset-theme' ),
-			__( 'Status', 'rytkoset-theme' ),
-			__( 'Ilmoittautunut', 'rytkoset-theme' ),
-			__( 'Yhteyshenkilö', 'rytkoset-theme' ),
-			__( 'Yhteyshenkilön sähköposti', 'rytkoset-theme' ),
-			__( 'Tilausnumero', 'rytkoset-theme' ),
-		),
-		';'
+	$header_columns = array(
+		__( 'Tapahtuma', 'rytkoset-theme' ),
+		__( 'Nimi', 'rytkoset-theme' ),
+		__( 'Osallistujatyyppi', 'rytkoset-theme' ),
+		__( 'Perjantain buffet', 'rytkoset-theme' ),
+		__( 'Sähköposti', 'rytkoset-theme' ),
+		__( 'Puhelin', 'rytkoset-theme' ),
+		__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
+		__( 'Lähde', 'rytkoset-theme' ),
+		__( 'Status', 'rytkoset-theme' ),
+		__( 'Ilmoittautunut', 'rytkoset-theme' ),
+		__( 'Yhteyshenkilö', 'rytkoset-theme' ),
+		__( 'Yhteyshenkilön sähköposti', 'rytkoset-theme' ),
+		__( 'Tilausnumero', 'rytkoset-theme' ),
 	);
+
+	if ( $has_choice_column ) {
+		$header_columns[] = $choice_label;
+	}
+
+	if ( $has_quantity_column ) {
+		$header_columns[] = $quantity_label;
+	}
+
+	fputcsv( $output, $header_columns, ';' );
 
 	foreach ( $rows as $row ) {
 		$details = trim( (string) ( $row['diet'] ?? '' ) );
@@ -653,6 +710,14 @@ function rytkoset_theme_export_event_participants_csv() {
 				isset( $row['order_number'] ) && null !== $row['order_number'] ? (string) $row['order_number'] : '',
 			)
 		);
+
+		if ( $has_choice_column ) {
+			$cells[] = rytkoset_theme_csv_neutralize_formula( (string) ( $row['choice'] ?? '' ) );
+		}
+
+		if ( $has_quantity_column ) {
+			$cells[] = rytkoset_theme_csv_neutralize_formula( (string) max( 1, (int) ( $row['quantity'] ?? 1 ) ) );
+		}
 
 		fputcsv( $output, $cells, ';' );
 	}
@@ -702,6 +767,19 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			++$free_count;
 		}
 	}
+
+	$has_choice_column   = $selected_event > 0 && rytkoset_theme_event_has_choice_field( $selected_event );
+	$has_quantity_column = $selected_event > 0 && rytkoset_theme_event_collects_quantity( $selected_event );
+	$choice_label        = $has_choice_column ? rytkoset_theme_get_event_choice_field_label( $selected_event ) : '';
+	$quantity_label      = $has_quantity_column ? rytkoset_theme_get_event_quantity_field_label( $selected_event ) : '';
+	$choice_summary      = $has_choice_column
+		? rytkoset_theme_get_event_participant_choice_summary( $rows, $has_quantity_column )
+		: array(
+			'total'     => 0,
+			'breakdown' => array(),
+		);
+	$summary_total       = $choice_summary['total'];
+	$choice_breakdown    = $choice_summary['breakdown'];
 
 	?>
 	<div class="wrap">
@@ -768,6 +846,56 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			<br class="clear" />
 		</div>
 
+		<?php if ( $has_choice_column ) : ?>
+			<div class="postbox" style="margin-top:16px; max-width:760px;">
+				<div class="inside">
+					<h2>
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: choice field label */
+								__( '%s – yhteenveto', 'rytkoset-theme' ),
+								$choice_label
+							)
+						);
+						?>
+					</h2>
+					<p>
+						<strong>
+							<?php
+							if ( $has_quantity_column ) {
+								echo esc_html(
+									sprintf(
+										/* translators: 1: quantity field label, 2: total quantity */
+										__( '%1$s yhteensä: %2$d', 'rytkoset-theme' ),
+										$quantity_label,
+										$summary_total
+									)
+								);
+							} else {
+								echo esc_html(
+									sprintf(
+										/* translators: %d: total registrations */
+										__( 'Ilmoittautumisia yhteensä: %d', 'rytkoset-theme' ),
+										$summary_total
+									)
+								);
+							}
+							?>
+						</strong>
+						<span class="description"><?php esc_html_e( '(peruutetut eivät mukana)', 'rytkoset-theme' ); ?></span>
+					</p>
+					<?php if ( ! empty( $choice_breakdown ) ) : ?>
+						<ul style="margin-left:1.5em; list-style:disc;">
+							<?php foreach ( $choice_breakdown as $choice_name => $choice_units ) : ?>
+								<li><?php echo esc_html( $choice_name . ': ' . $choice_units ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<?php rytkoset_theme_render_event_participants_anonymization_form( $selected_event ); ?>
 
 		<?php $show_event_column = 0 === $selected_event; ?>
@@ -775,6 +903,12 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></th>
+					<?php if ( $has_choice_column ) : ?>
+						<th scope="col"><?php echo esc_html( $choice_label ); ?></th>
+					<?php endif; ?>
+					<?php if ( $has_quantity_column ) : ?>
+						<th scope="col"><?php echo esc_html( $quantity_label ); ?></th>
+					<?php endif; ?>
 					<th scope="col"><?php esc_html_e( 'Osallistujatyyppi', 'rytkoset-theme' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Perjantain buffet', 'rytkoset-theme' ); ?></th>
 					<?php if ( $show_event_column ) : ?>
@@ -791,13 +925,20 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			</thead>
 			<tbody>
 				<?php if ( empty( $rows ) ) : ?>
+					<?php $empty_colspan = ( $show_event_column ? 11 : 10 ) + ( $has_choice_column ? 1 : 0 ) + ( $has_quantity_column ? 1 : 0 ); ?>
 					<tr>
-						<td colspan="<?php echo $show_event_column ? 11 : 10; ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
+						<td colspan="<?php echo esc_attr( (string) $empty_colspan ); ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
 					</tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $row ) : ?>
 						<tr>
 							<td><?php echo esc_html( (string) $row['name'] ); ?></td>
+							<?php if ( $has_choice_column ) : ?>
+								<td><?php echo '' !== (string) ( $row['choice'] ?? '' ) ? esc_html( (string) $row['choice'] ) : '&mdash;'; ?></td>
+							<?php endif; ?>
+							<?php if ( $has_quantity_column ) : ?>
+								<td><?php echo esc_html( (string) max( 1, (int) ( $row['quantity'] ?? 1 ) ) ); ?></td>
+							<?php endif; ?>
 							<td><?php echo '' !== (string) $row['participant_type'] ? esc_html( (string) $row['participant_type'] ) : '&mdash;'; ?></td>
 							<td>
 								<?php

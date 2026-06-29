@@ -247,6 +247,16 @@ $rytkoset_mnt_socials = array(
 // ---------------------------------------------------------------------------
 
 $rytkoset_mnt_illustration = $rytkoset_mnt_theme_url . '/assets/images/home/home-welcome-illustration.png';
+
+// ---------------------------------------------------------------------------
+// Self-hostatut fontit (#379) — GDPR: ei pyyntöjä Googlen palvelimille.
+// URLit rakennetaan WP_CONTENT_URL-pohjaisella teema-URLilla, koska
+// get_template_directory_uri() ei ole käytettävissä osittain ladatussa tilassa.
+// ---------------------------------------------------------------------------
+
+$rytkoset_mnt_font_manrope         = $rytkoset_mnt_theme_url . '/assets/fonts/manrope-latin.woff2';
+$rytkoset_mnt_font_newsreader      = $rytkoset_mnt_theme_url . '/assets/fonts/newsreader-latin.woff2';
+$rytkoset_mnt_font_newsreader_ital = $rytkoset_mnt_theme_url . '/assets/fonts/newsreader-latin-italic.woff2';
 ?>
 <!doctype html>
 <html lang="fi">
@@ -255,11 +265,32 @@ $rytkoset_mnt_illustration = $rytkoset_mnt_theme_url . '/assets/images/home/home
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sivusto päivittyy — <?php echo esc_html( $rytkoset_mnt_site_name ); ?></title>
 <meta name="robots" content="noindex, nofollow" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet" />
 <style>
 /* Rytköset — Huoltotila (standalone, kaikki CSS sisäistetty) */
+
+/* Self-hostatut fontit (#379) — variable-fontit, latin-subset, font-display: swap. */
+@font-face {
+	font-family: "Manrope";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("<?php echo esc_url( $rytkoset_mnt_font_manrope ); ?>") format("woff2");
+}
+@font-face {
+	font-family: "Newsreader";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("<?php echo esc_url( $rytkoset_mnt_font_newsreader ); ?>") format("woff2");
+}
+@font-face {
+	font-family: "Newsreader";
+	font-style: italic;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("<?php echo esc_url( $rytkoset_mnt_font_newsreader_ital ); ?>") format("woff2");
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
