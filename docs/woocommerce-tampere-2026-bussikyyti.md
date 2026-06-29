@@ -13,12 +13,16 @@ Tämä dokumentti kuvaa tiketin `#450` toimintamallin: bussikyydin (esim. Savo�
 ## Vaihe 1 — Bussikyytitapahtuman luonti (ylläpito)
 
 1. **Tapahtumat → Lisää uusi.** Anna otsikko (esim. *Bussikyyti Tampereen sukujuhliin*), kuvaus ja ajankohta.
-2. **Tapahtuman tiedot** -laatikko: aseta **Maksullisuus = Maksuton**. (Bussikyyti kerätään maksuttomalla lomakkeella; varsinainen maksu hoidetaan myöhemmin erikseen.)
-3. **Bussikyyti**-laatikko (uusi):
-   - Rastita **Tämä on bussikyytitapahtuma**.
-   - Kirjoita **Lähtöpaikat**, yksi riviä kohti (esim. `Iisalmi` / `Kuopio` / `Varkaus`). Nämä näytetään ilmoittautumislomakkeen lähtöpaikka-valikossa.
+2. **Tapahtuman tiedot** -laatikko: aseta **Maksullisuus = Maksuton**. (Bussikyyti kerätään maksuttomalla lomakkeella; varsinainen maksu hoidetaan myöhemmin erikseen.) Poista tarvittaessa valinta **Kysy ruokavaliorajoitteet ja allergiat** — bussikyydissä ei ole tarjoiluita.
+3. **Ilmoittautumisen lisävalinta** -laatikko:
+   - Rastita **Lisää valintalista ilmoittautumislomakkeelle**.
+   - **Kentän nimi**: `Lähtöpaikka`.
+   - **Vaihtoehdot**: yksi lähtöpaikka riviä kohti (esim. `Iisalmi` / `Lapinlahti` / `Kuopio`). Lisää tarvittaessa viimeiseksi riviksi esim. `Muu paikka reitin varrella (kerro lisätiedoissa)` — vastaaja täydentää tarkemman paikan Lisätieto-kenttään.
+   - Rastita **Kysy määrä** ja anna määräkentän nimeksi `Matkustajien määrä`.
 4. **Tapahtumapäivä**-laatikko: halutessasi aseta **Maksuttoman ilmoittautumisen määräpäivä** — lomake sulkeutuu sen jälkeen (tyhjänä lomake sulkeutuu tapahtumapäivän jälkeen).
 5. Julkaise tapahtuma. Tapahtumasivulle ilmestyy bussikyydin ilmoittautumislomake.
+
+> **Yleiskäyttöinen:** sama "Ilmoittautumisen lisävalinta" -laatikko toimii missä tahansa tapahtumassa. Voit nimetä kentän vapaasti (esim. "Kuljetustapa", "Ryhmä") ja määräkenttä on oma valintansa — ota käyttöön vain tarvittavat. Bussikyyti on vain yksi käyttötapa.
 
 > **Älä** liitä tapahtumaan maksutuotetta (Maksutuote-laatikko). Jos tapahtumaan on linkitetty WooCommerce-tuote, maksuton ilmoittautumislomake ei näy.
 
@@ -27,13 +31,13 @@ Tämä dokumentti kuvaa tiketin `#450` toimintamallin: bussikyydin (esim. Savo�
 Tapahtumasivun lomakkeella kysytään:
 
 - **Nimi** ja **sähköposti** (pakollisia)
-- **Lähtöpaikka** (pudotusvalikko tapahtuman lähtöpaikoista, pakollinen). Valikossa on aina myös vaihtoehto **Muu paikka reitin varrella** — jos kävijä valitsee sen, hän kirjoittaa tarkemman paikan Lisätieto-kenttään. Osallistujat-listassa ja CSV:ssä nämä näkyvät lähtöpaikkana "Muu paikka reitin varrella", ja tarkka paikka löytyy lisätiedoista
+- **Lähtöpaikka** (pudotusvalikko tapahtuman lähtöpaikoista, pakollinen). Bussikyydissä valikossa on myös vaihtoehto **Muu paikka reitin varrella** — jos kävijä valitsee sen, hän kirjoittaa tarkemman paikan Lisätieto-kenttään. Osallistujat-listassa ja CSV:ssä nämä näkyvät lähtöpaikkana "Muu paikka reitin varrella", ja tarkka paikka löytyy lisätiedoista
 - **Matkustajien määrä** (oletus 1; perhe voi varata useamman paikan yhdellä lomakkeella)
 - tietosuojasuostumus
 
 Lomake kertoo selvästi, että ilmoittautuminen on tässä vaiheessa **maksuton** ja maksu peritään vasta kun kyyti varmistuu. Ilmoittautunut saa kuittaussähköpostin, jossa näkyy myös lähtöpaikka ja matkustajamäärä.
 
-Tekninen huomio: matkustajamäärän yläraja on oletuksena 10 (suodatin `rytkoset_theme_event_registration_max_passenger_count`).
+Tekninen huomio: matkustajamäärän yläraja on oletuksena 10 (suodatin `rytkoset_theme_event_registration_max_quantity`).
 
 ## Vaihe 3 — Lähtijöiden seuranta (ylläpito)
 
@@ -70,9 +74,9 @@ Vanha maksullinen variaatiotuote (SKU `tampere-2026-bussikyyti`, `inc/woocommerc
 
 | Osa | Sijainti |
 | --- | --- |
-| Bussikyytilippu + lähtöpaikat tapahtumalle (metat `_rytkoset_event_is_bus_transport`, `_rytkoset_event_bus_pickup_points`), getterit ja lähtöpaikan resolveri | `inc/events.php` |
-| Lomakkeen lähtöpaikka + matkustajamäärä, validointi ja tallennus (metat `_rytkoset_registration_pickup_point`, `_rytkoset_registration_passenger_count`), kuittaussähköposti | `inc/event-registrations.php` |
-| Osallistujat-näkymän sarakkeet + bussikyydin yhteenveto + CSV-sarakkeet | `inc/event-participants-admin.php` |
+| Yleinen valintalista + määräkenttä + ruokavaliovalinta tapahtumalle ("Ilmoittautumisen lisävalinta" -laatikko; metat `_rytkoset_event_choice_enabled`, `_rytkoset_event_choice_options`, `_rytkoset_event_choice_field_label`, `_rytkoset_event_collect_quantity`/`_rytkoset_event_quantity_field_label`, `_rytkoset_event_collect_diet`), getterit ja valinnan resolveri. Meta-avaimet ja funktioiden nimet ovat geneerisiä (ei bussikohtaisia) | `inc/events.php` |
+| Lomakkeen valinta + määräkenttä, validointi ja tallennus (metat `_rytkoset_registration_choice`, `_rytkoset_registration_quantity`), kuittaussähköposti tapahtuman nimillä | `inc/event-registrations.php` |
+| Osallistujat-näkymän sarakkeet + yhteenveto + CSV-sarakkeet (tapahtuman nimillä) | `inc/event-participants-admin.php` |
 | Lähtöpaikka + matkustajamäärä GDPR-vientiin (anonymisointi säilyttää ne — eivät henkilötietoja) | `inc/event-registration-privacy.php` |
 
 ## Jätetään tietoisesti pois
