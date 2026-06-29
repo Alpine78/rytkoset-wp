@@ -20,9 +20,42 @@ function rytkoset_theme_get_event_registration_meta_keys() {
 		'diet'          => '_rytkoset_registration_diet',
 		'notes'         => '_rytkoset_registration_notes',
 		'status'        => '_rytkoset_registration_status',
+		'choice'        => '_rytkoset_registration_choice',
+		'quantity'      => '_rytkoset_registration_quantity',
 		'gdpr_consent'  => '_rytkoset_registration_gdpr_consent',
 		'anonymized_at' => '_rytkoset_registration_anonymized_at',
 	);
+}
+
+/**
+ * Returns the maximum quantity a single registration may request.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_event_registration_max_quantity() {
+	return (int) apply_filters( 'rytkoset_theme_event_registration_max_quantity', 10 );
+}
+
+/**
+ * Normalizes a raw quantity into a positive integer within range.
+ *
+ * @param mixed $raw_value Raw quantity.
+ * @return int
+ */
+function rytkoset_theme_normalize_event_registration_quantity( $raw_value ) {
+	$count = absint( $raw_value );
+
+	if ( $count < 1 ) {
+		$count = 1;
+	}
+
+	$max = rytkoset_theme_get_event_registration_max_quantity();
+
+	if ( $max > 0 && $count > $max ) {
+		$count = $max;
+	}
+
+	return $count;
 }
 
 /**
@@ -154,14 +187,22 @@ add_action( 'add_meta_boxes_event_registration', 'rytkoset_theme_register_event_
  * @param WP_Post $post Registration post object.
  */
 function rytkoset_theme_render_event_registration_metabox( $post ) {
-	$event_id = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'event_id' ) );
-	$name     = rytkoset_theme_get_event_registration_meta( $post->ID, 'name' );
-	$email    = rytkoset_theme_get_event_registration_meta( $post->ID, 'email' );
-	$diet     = rytkoset_theme_get_event_registration_meta( $post->ID, 'diet' );
-	$notes    = rytkoset_theme_get_event_registration_meta( $post->ID, 'notes' );
-	$status   = rytkoset_theme_get_event_registration_meta( $post->ID, 'status' );
-	$events   = rytkoset_theme_get_event_registration_event_options();
-	$statuses = rytkoset_theme_get_event_registration_statuses();
+	$event_id         = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'event_id' ) );
+	$name             = rytkoset_theme_get_event_registration_meta( $post->ID, 'name' );
+	$email            = rytkoset_theme_get_event_registration_meta( $post->ID, 'email' );
+	$diet             = rytkoset_theme_get_event_registration_meta( $post->ID, 'diet' );
+	$notes            = rytkoset_theme_get_event_registration_meta( $post->ID, 'notes' );
+	$status           = rytkoset_theme_get_event_registration_meta( $post->ID, 'status' );
+	$events           = rytkoset_theme_get_event_registration_event_options();
+	$statuses         = rytkoset_theme_get_event_registration_statuses();
+	$has_choice       = $event_id > 0 && rytkoset_theme_event_has_choice_field( $event_id );
+	$choice_options   = $has_choice ? rytkoset_theme_get_event_choice_options( $event_id ) : array();
+	$choice_label     = $event_id > 0 ? rytkoset_theme_get_event_choice_field_label( $event_id ) : '';
+	$collect_quantity = $event_id > 0 && rytkoset_theme_event_collects_quantity( $event_id );
+	$quantity_label   = $event_id > 0 ? rytkoset_theme_get_event_quantity_field_label( $event_id ) : '';
+	$choice_value     = rytkoset_theme_get_event_registration_meta( $post->ID, 'choice' );
+	$quantity         = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'quantity' ) );
+	$max_quantity     = rytkoset_theme_get_event_registration_max_quantity();
 
 	if ( ! isset( $statuses[ $status ] ) ) {
 		$status = 'pending';
@@ -190,6 +231,35 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 		<label for="rytkoset_registration_email"><strong><?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?></strong></label>
 		<input type="email" id="rytkoset_registration_email" name="rytkoset_registration_email" class="widefat" value="<?php echo esc_attr( $email ); ?>" />
 	</p>
+
+	<?php if ( $has_choice ) : ?>
+		<p>
+			<label for="rytkoset_registration_choice"><strong><?php echo esc_html( $choice_label ); ?></strong></label>
+		</p>
+		<select id="rytkoset_registration_choice" name="rytkoset_registration_choice" class="widefat">
+			<option value=""><?php esc_html_e( 'Ei valintaa', 'rytkoset-theme' ); ?></option>
+			<?php
+			$choice_select_options = $choice_options;
+
+			if ( '' !== $choice_value && ! in_array( $choice_value, $choice_select_options, true ) ) {
+				$choice_select_options[] = $choice_value;
+			}
+
+			foreach ( $choice_select_options as $point ) :
+				?>
+				<option value="<?php echo esc_attr( $point ); ?>" <?php selected( $choice_value, $point ); ?>>
+					<?php echo esc_html( $point ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+	<?php endif; ?>
+
+	<?php if ( $collect_quantity ) : ?>
+		<p>
+			<label for="rytkoset_registration_quantity"><strong><?php echo esc_html( $quantity_label ); ?></strong></label>
+			<input type="number" id="rytkoset_registration_quantity" name="rytkoset_registration_quantity" class="widefat" min="1" max="<?php echo esc_attr( (string) $max_quantity ); ?>" step="1" value="<?php echo esc_attr( $quantity > 0 ? (string) $quantity : '1' ); ?>" />
+		</p>
+	<?php endif; ?>
 
 	<p>
 		<label for="rytkoset_registration_diet"><strong><?php esc_html_e( 'Ruokarajoitteet ja allergiat', 'rytkoset-theme' ); ?></strong></label>
@@ -306,6 +376,27 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 		}
 
 		update_post_meta( $post_id, $meta_keys[ $key ], $value );
+	}
+
+	if ( $event_id > 0 && rytkoset_theme_event_has_choice_field( $event_id ) ) {
+		$raw_choice   = isset( $_POST['rytkoset_registration_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['rytkoset_registration_choice'] ) ) : '';
+		$choice_value = rytkoset_theme_resolve_event_choice_value( $event_id, $raw_choice );
+
+		if ( '' === $choice_value ) {
+			delete_post_meta( $post_id, $meta_keys['choice'] );
+		} else {
+			update_post_meta( $post_id, $meta_keys['choice'], $choice_value );
+		}
+	}
+
+	if ( $event_id > 0 && rytkoset_theme_event_collects_quantity( $event_id ) ) {
+		$raw_quantity = isset( $_POST['rytkoset_registration_quantity'] ) ? absint( wp_unslash( $_POST['rytkoset_registration_quantity'] ) ) : 0;
+
+		if ( $raw_quantity > 0 ) {
+			update_post_meta( $post_id, $meta_keys['quantity'], rytkoset_theme_normalize_event_registration_quantity( $raw_quantity ) );
+		} else {
+			delete_post_meta( $post_id, $meta_keys['quantity'] );
+		}
 	}
 
 	$title = rytkoset_theme_build_event_registration_title( $name, $event_id );
@@ -534,15 +625,19 @@ function rytkoset_theme_event_has_active_registration_for_email( $event_id, $ema
  * The email confirms receipt only. Registration status remains pending until
  * an organizer handles it in the admin.
  *
- * @param int    $event_id Event post ID.
- * @param string $name     Participant name.
- * @param string $email    Participant email.
+ * @param int    $event_id        Event post ID.
+ * @param string $name            Participant name.
+ * @param string $email           Participant email.
+ * @param string $choice_value    Optional choice value.
+ * @param int    $quantity        Optional quantity.
  * @return bool Whether WordPress accepted the email for sending.
  */
-function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email ) {
-	$event_id = absint( $event_id );
-	$name     = trim( (string) $name );
-	$email    = sanitize_email( $email );
+function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email, $choice_value = '', $quantity = 0 ) {
+	$event_id     = absint( $event_id );
+	$name         = trim( (string) $name );
+	$email        = sanitize_email( $email );
+	$choice_value = trim( (string) $choice_value );
+	$quantity     = absint( $quantity );
 
 	if ( $event_id <= 0 || '' === $email || ! is_email( $email ) ) {
 		return false;
@@ -607,6 +702,15 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
 			__( 'Paikka: %s', 'rytkoset-theme' ),
 			$location
 		);
+	}
+
+	if ( '' !== $choice_value ) {
+		// Label is admin-defined per event, so it is concatenated, not a format string.
+		$lines[] = rytkoset_theme_get_event_choice_field_label( $event_id ) . ': ' . $choice_value;
+	}
+
+	if ( $quantity > 0 ) {
+		$lines[] = rytkoset_theme_get_event_quantity_field_label( $event_id ) . ': ' . $quantity;
 	}
 
 	$lines[] = '';
@@ -784,21 +888,52 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'already_registered' );
 	}
 
-	$meta_keys       = rytkoset_theme_get_event_registration_meta_keys();
+	$choice_value = '';
+	$quantity     = 0;
+
+	if ( rytkoset_theme_event_has_choice_field( $event_id ) ) {
+		$choice_options = rytkoset_theme_get_event_choice_options( $event_id );
+
+		if ( ! empty( $choice_options ) ) {
+			$raw_choice   = isset( $_POST['registration_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['registration_choice'] ) ) : '';
+			$choice_value = rytkoset_theme_resolve_event_choice_value( $event_id, $raw_choice );
+
+			if ( '' === $choice_value ) {
+				rytkoset_theme_handle_event_registration_error( $event_id, 'invalid_choice' );
+			}
+		}
+	}
+
+	if ( rytkoset_theme_event_collects_quantity( $event_id ) ) {
+		$raw_quantity = isset( $_POST['registration_quantity'] ) ? absint( wp_unslash( $_POST['registration_quantity'] ) ) : 0;
+		$quantity     = rytkoset_theme_normalize_event_registration_quantity( $raw_quantity );
+	}
+
+	$meta_keys  = rytkoset_theme_get_event_registration_meta_keys();
+	$meta_input = array(
+		$meta_keys['event_id']     => $event_id,
+		$meta_keys['name']         => $name,
+		$meta_keys['email']        => $email,
+		$meta_keys['diet']         => $diet,
+		$meta_keys['notes']        => $notes,
+		$meta_keys['status']       => 'pending',
+		$meta_keys['gdpr_consent'] => time(),
+	);
+
+	if ( '' !== $choice_value ) {
+		$meta_input[ $meta_keys['choice'] ] = $choice_value;
+	}
+
+	if ( $quantity > 0 ) {
+		$meta_input[ $meta_keys['quantity'] ] = $quantity;
+	}
+
 	$registration_id = wp_insert_post(
 		array(
 			'post_type'   => 'event_registration',
 			'post_status' => 'publish',
 			'post_title'  => rytkoset_theme_build_event_registration_title( $name, $event_id ),
-			'meta_input'  => array(
-				$meta_keys['event_id']     => $event_id,
-				$meta_keys['name']         => $name,
-				$meta_keys['email']        => $email,
-				$meta_keys['diet']         => $diet,
-				$meta_keys['notes']        => $notes,
-				$meta_keys['status']       => 'pending',
-				$meta_keys['gdpr_consent'] => time(),
-			),
+			'meta_input'  => $meta_input,
 		),
 		true
 	);
@@ -807,7 +942,7 @@ function rytkoset_theme_handle_event_registration_submission() {
 		rytkoset_theme_handle_event_registration_error( $event_id, 'save_failed' );
 	}
 
-	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email );
+	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email, $choice_value, $quantity );
 
 	if ( ! empty( $_POST['registration_newsletter_opt_in'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['registration_newsletter_opt_in'] ) ) && function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
 		$newsletter_result = rytkoset_theme_subscribe_email_to_newsletter( $email, 'event_registration', get_current_user_id() );
@@ -838,6 +973,7 @@ function rytkoset_theme_get_event_registration_error_field( $error_code ) {
 		'invalid_email'      => 'email',
 		'already_registered' => 'email',
 		'missing_consent'    => 'gdpr',
+		'invalid_choice'     => 'choice',
 	);
 
 	return isset( $map[ $error_code ] ) ? $map[ $error_code ] : '';
@@ -872,6 +1008,7 @@ function rytkoset_theme_get_event_registration_feedback() {
 		'invalid_email'      => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
 		'missing_consent'    => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
 		'already_registered' => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
+		'invalid_choice'     => __( 'Valitse vaihtoehto.', 'rytkoset-theme' ),
 		'rate_limited'       => __( 'Liian monta ilmoittautumisyritystä lyhyessä ajassa. Odota hetki ja yritä uudelleen.', 'rytkoset-theme' ),
 	);
 
@@ -959,13 +1096,20 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 		return;
 	}
 
-	$invalid_field = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
+	$invalid_field    = ! empty( $feedback ) && 'error' === $feedback['type'] && ! empty( $feedback['field'] )
 		? $feedback['field']
 		: '';
-	$invalid_attrs = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
-	$name_invalid  = 'name' === $invalid_field ? $invalid_attrs : '';
-	$email_invalid = 'email' === $invalid_field ? $invalid_attrs : '';
-	$gdpr_invalid  = 'gdpr' === $invalid_field ? $invalid_attrs : '';
+	$invalid_attrs    = ' aria-invalid="true" aria-describedby="' . esc_attr( $notice_id ) . '"';
+	$name_invalid     = 'name' === $invalid_field ? $invalid_attrs : '';
+	$email_invalid    = 'email' === $invalid_field ? $invalid_attrs : '';
+	$gdpr_invalid     = 'gdpr' === $invalid_field ? $invalid_attrs : '';
+	$choice_invalid   = 'choice' === $invalid_field ? $invalid_attrs : '';
+	$has_choice       = rytkoset_theme_event_has_choice_field( $event_id );
+	$choice_options   = $has_choice ? rytkoset_theme_get_event_choice_options( $event_id ) : array();
+	$choice_label     = rytkoset_theme_get_event_choice_field_label( $event_id );
+	$collect_quantity = rytkoset_theme_event_collects_quantity( $event_id );
+	$quantity_label   = rytkoset_theme_get_event_quantity_field_label( $event_id );
+	$max_quantity     = rytkoset_theme_get_event_registration_max_quantity();
 	?>
 	<section class="event-registration" aria-labelledby="<?php echo esc_attr( $form_id . '-title' ); ?>">
 		<h2 id="<?php echo esc_attr( $form_id . '-title' ); ?>" class="event-registration__title">
@@ -1003,12 +1147,39 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 				<input id="<?php echo esc_attr( $form_id . '-email' ); ?>" name="registration_email" type="email" autocomplete="email" required aria-required="true"<?php echo $email_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?> />
 			</div>
 
-			<div class="event-registration__field">
-				<label for="<?php echo esc_attr( $form_id . '-diet' ); ?>">
-					<?php esc_html_e( 'Ruokarajoitteet tai allergiat', 'rytkoset-theme' ); ?>
-				</label>
-				<textarea id="<?php echo esc_attr( $form_id . '-diet' ); ?>" name="registration_diet" rows="3"></textarea>
-			</div>
+			<?php if ( $has_choice && ! empty( $choice_options ) ) : ?>
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-choice' ); ?>">
+						<?php echo esc_html( $choice_label ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
+					<select id="<?php echo esc_attr( $form_id . '-choice' ); ?>" name="registration_choice" required aria-required="true"<?php echo $choice_invalid; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+						<option value=""><?php esc_html_e( 'Valitse…', 'rytkoset-theme' ); ?></option>
+						<?php foreach ( $choice_options as $choice_option ) : ?>
+							<option value="<?php echo esc_attr( $choice_option ); ?>"><?php echo esc_html( $choice_option ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( $collect_quantity ) : ?>
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-quantity' ); ?>">
+						<?php echo esc_html( $quantity_label ); ?>
+						<span aria-hidden="true">*</span>
+					</label>
+					<input id="<?php echo esc_attr( $form_id . '-quantity' ); ?>" name="registration_quantity" type="number" inputmode="numeric" min="1" max="<?php echo esc_attr( (string) $max_quantity ); ?>" step="1" value="1" required aria-required="true" />
+				</div>
+			<?php endif; ?>
+
+			<?php if ( rytkoset_theme_event_collects_diet( $event_id ) ) : ?>
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-diet' ); ?>">
+						<?php esc_html_e( 'Ruokarajoitteet tai allergiat', 'rytkoset-theme' ); ?>
+					</label>
+					<textarea id="<?php echo esc_attr( $form_id . '-diet' ); ?>" name="registration_diet" rows="3"></textarea>
+				</div>
+			<?php endif; ?>
 
 			<div class="event-registration__field">
 				<label for="<?php echo esc_attr( $form_id . '-notes' ); ?>">

@@ -1,96 +1,86 @@
-# WooCommerce: Tampere 2026 bussikyyti-lisätuote
+# Bussikyyti: ilmoittautuminen ja maksu jälkikäteen
 
-Tämä dokumentti kuvaa tiketin `#442` toteutusmallin: yhteiskuljetus Savosta Tampereen sukujuhliin ja takaisin.
+Tämä dokumentti kuvaa tiketin `#450` toimintamallin: bussikyydin (esim. Savo–Tampere–Savo) **ilmoittautumisten keräys ilman maksua**, ja maksu vasta kun kyydin toteutuminen on varmistunut.
+
+> **Mallinmuutos.** Aiemmin bussikyyti oli **maksullinen** WooCommerce-variaatiotuote, jossa maksu perittiin heti ostaessa (tiketti `#442`, `inc/woocommerce-bus-transport.php`). Hallitus päätti, että kyytiläiset kerätään ensin ja maksu peritään vasta kun matka toteutuu (vähintään 20 lähtijää). Bussikyyti mallinnetaan nyt **maksuttomana tapahtumana**, jolloin käytössä on koko olemassa oleva ilmoittautumisinfra (lomake, Osallistujat-näkymä, CSV-vienti, joukkoviestintä, GDPR-työkalut). Vanha maksullinen tuotemalli on korvattu — ks. [Vanha maksullinen tuote](#vanha-maksullinen-tuote).
 
 ## Tavoite
 
-Tarjota Tampereen sukujuhliin erillinen bussikyyti Savosta ja takaisin (meno-paluu), alustava hinta **45 € / matkustaja**. **Meno perjantaina `28.8.2026`, paluu lauantaina `29.8.2026` juhlien jälkeen.** Matka toteutuu vain, jos lähtijöitä on riittävästi.
+- Kerätä bussikyytiin lähtijät (nimi, sähköposti, **lähtöpaikka**, matkustajamäärä) **ilman maksua**.
+- Hallitus näkee yhdellä silmäyksellä lähtijämäärän ja lähtöpaikkajakauman → voi todeta täyttyykö vähimmäismäärä (esim. 20).
+- Kun matka varmistuu, maksu peritään **manuaalisilla WooCommerce-tilauksilla** (Mollie-maksulinkki).
 
-## Päätökset
+## Vaihe 1 — Bussikyytitapahtuman luonti (ylläpito)
 
-- **Useita noutopisteitä Savossa** → matkustaja valitsee lähtöpaikan ostaessaan.
-- **Bussin voi ostaa ilman osallistumismaksutuotetta** → erillinen, itsenäisesti ostettava tuote.
-- **Ilmoittautumisen määräpäiväsulku pakollinen**, oletus `2026-07-30` (sama kuin osallistumismaksulla).
-- **Matkan toteutuminen** (riittävä lähtijämäärä) ja mahdollinen hyvitys hoidetaan **operatiivisesti** — WooCommercessa ei ole tälle natiivia kynnystä.
+1. **Tapahtumat → Lisää uusi.** Anna otsikko (esim. *Bussikyyti Tampereen sukujuhliin*), kuvaus ja ajankohta.
+2. **Tapahtuman tiedot** -laatikko: aseta **Maksullisuus = Maksuton**. (Bussikyyti kerätään maksuttomalla lomakkeella; varsinainen maksu hoidetaan myöhemmin erikseen.) Poista tarvittaessa valinta **Kysy ruokavaliorajoitteet ja allergiat** — bussikyydissä ei ole tarjoiluita.
+3. **Ilmoittautumisen lisävalinta** -laatikko:
+   - Rastita **Lisää valintalista ilmoittautumislomakkeelle**.
+   - **Kentän nimi**: `Lähtöpaikka`.
+   - **Vaihtoehdot**: yksi lähtöpaikka riviä kohti (esim. `Iisalmi` / `Lapinlahti` / `Kuopio`). Lisää tarvittaessa viimeiseksi riviksi esim. `Muu paikka reitin varrella (kerro lisätiedoissa)` — vastaaja täydentää tarkemman paikan Lisätieto-kenttään.
+   - Rastita **Kysy määrä** ja anna määräkentän nimeksi `Matkustajien määrä`.
+4. **Tapahtumapäivä**-laatikko: halutessasi aseta **Maksuttoman ilmoittautumisen määräpäivä** — lomake sulkeutuu sen jälkeen (tyhjänä lomake sulkeutuu tapahtumapäivän jälkeen).
+5. Julkaise tapahtuma. Tapahtumasivulle ilmestyy bussikyydin ilmoittautumislomake.
 
-## Tuotemalli
+> **Yleiskäyttöinen:** sama "Ilmoittautumisen lisävalinta" -laatikko toimii missä tahansa tapahtumassa. Voit nimetä kentän vapaasti (esim. "Kuljetustapa", "Ryhmä") ja määräkenttä on oma valintansa — ota käyttöön vain tarvittavat. Bussikyyti on vain yksi käyttötapa.
 
-- Tuotteen nimi: `Bussikyyti Tampereen sukujuhliin (Savo–Tampere–Savo)`
-- SKU: `tampere-2026-bussikyyti`
-- Tuotetyyppi: **Variable product** (sama malli kuin osallistumismaksussa)
-- Virtuaalituote: `Kyllä` (ei toimitusta)
-- Ladattava: `Ei`
-- Attribuutti **`Lähtöpaikka`**, jonka termit ovat noutopisteet → kukin noutopiste on variaatio. Kaikki variaatiot hinnaltaan `45 €`.
+> **Älä** liitä tapahtumaan maksutuotetta (Maksutuote-laatikko). Jos tapahtumaan on linkitetty WooCommerce-tuote, maksuton ilmoittautumislomake ei näy.
 
-### Kapasiteetti (koko bussi, jaettu noutopisteiden kesken)
+## Vaihe 2 — Ilmoittautuminen (kävijä)
 
-Kapasiteetti on koko bussin paikkamäärä, jaettu kaikkien noutopisteiden kesken. Tämä tehdään WooCommercen **parent-tason** varastonhallinnalla — ei variaatiokohtaisesti:
+Tapahtumasivun lomakkeella kysytään:
 
-- parent-tuotteella `Manage stock = yes`
-- `Stock quantity = bussin paikkamäärä`
-- `Backorders = no`
-- variaatioilla **ei** omaa varastoa (perivät jaetun parent-saldon)
+- **Nimi** ja **sähköposti** (pakollisia)
+- **Lähtöpaikka** (pudotusvalikko tapahtuman lähtöpaikoista, pakollinen). Bussikyydissä valikossa on myös vaihtoehto **Muu paikka reitin varrella** — jos kävijä valitsee sen, hän kirjoittaa tarkemman paikan Lisätieto-kenttään. Osallistujat-listassa ja CSV:ssä nämä näkyvät lähtöpaikkana "Muu paikka reitin varrella", ja tarkka paikka löytyy lisätiedoista
+- **Matkustajien määrä** (oletus 1; perhe voi varata useamman paikan yhdellä lomakkeella)
+- tietosuojasuostumus
 
-Näin esim. `2 × Kuopio + 1 × Iisalmi` vähentää samasta 50 paikan saldosta yhteensä 3.
+Lomake kertoo selvästi, että ilmoittautuminen on tässä vaiheessa **maksuton** ja maksu peritään vasta kun kyyti varmistuu. Ilmoittautunut saa kuittaussähköpostin, jossa näkyy myös lähtöpaikka ja matkustajamäärä.
 
-## Myyntilogiikka
+Tekninen huomio: matkustajamäärän yläraja on oletuksena 10 (suodatin `rytkoset_theme_event_registration_max_quantity`).
 
-- Yksi variaation kappale = yksi matkustaja kyseisestä noutopisteestä.
-- Samaan tilaukseen voi ostaa matkustajia eri noutopisteistä (kuten osallistumismaksun aikuinen/lapsi).
-- Tuote liitetään `Tampere 2026 osallistumismaksu` -tuotteen **Cross-sells**-kenttään (Product data → Linked Products), jolloin bussi ehdotetaan ostoskorissa. Bussin voi silti ostaa myös erikseen.
-- Maksutapana nykyinen maksupolku (Mollie / tilisiirto).
+## Vaihe 3 — Lähtijöiden seuranta (ylläpito)
 
-## Määräpäivä ja kapasiteettisulku
+**Tapahtumat → Osallistujat**, valitse bussikyytitapahtuma:
 
-Bussituotteelle on oma kenttä tuotteen **inventory**-osiossa:
+- Lista näyttää bussikyytitapahtumalle omat sarakkeet **Lähtöpaikka** ja **Matkustajia**.
+- **Bussikyydin yhteenveto** -laatikko näyttää matkustajat yhteensä (peruutetut pois lukien) sekä lähtöpaikkajakauman matkustajamäärinä.
+- **Vie CSV** sisältää bussikyytitapahtumalle lähtöpaikka- ja matkustajamääräsarakkeet.
 
-- `Ilmoittautumisen määräpäivä` (oletus `2026-07-30`)
+Vähimmäismäärän (esim. 20) toteutuminen todetaan **käsin** listalta — järjestelmä ei estä ilmoittautumista eikä laukaise automatiikkaa.
 
-Logiikka (`inc/woocommerce-bus-transport.php`) uudelleenkäyttää osallistumismaksun määräpäivä-/kapasiteettiportin viestit ja päivän normalisoinnin, mutta bussi tunnistetaan **omalla SKU:lla**:
+## Vaihe 4 — Vahvistus ja maksu (ylläpito, operatiivinen)
 
-- määräajan jälkeen tuotetta ei voi ostaa → `Ilmoittautuminen on päättynyt.`
-- kapasiteetin täytyttyä → `Ilmoittautuminen on täynnä.`
-- määräpäivä tulkitaan päivän loppuun asti paikallisessa aikavyöhykkeessä (osto sulkeutuu seuraavan päivän alusta)
-- sama estologiikka pysäyttää etenemisen myös ostoskorissa ja kassalla
+Kun lähtijöitä on riittävästi ja matka toteutuu:
 
-### Tärkeä rajaus: ei osallistujakenttiä
+1. **Ilmoita lähtijöille.** Käytä **Tapahtumat → Viestintä** -toimintoa ja lähetä bussikyytiläisille viesti, että matka toteutuu ja maksulinkki tulee erikseen.
+2. **Peri maksu WooCommercella.** Luo kullekin ilmoittautuneelle (tai perheelle matkustajamäärän mukaan) WooCommerce-tilaus:
+   - **WooCommerce → Tilaukset → Lisää tilaus.**
+   - Lisää asiakas ja **bussipaikka-tuote** rivituotteena (matkustajamäärä = kappalemäärä), jätä tila **Odottaa maksua**.
+   - Lähetä asiakkaalle tilauksen maksulinkki (*Lähetä tilaustiedot asiakkaalle* / Customer invoice). Maksu hoituu Molliella tavalliseen tapaan.
+3. Jos matka **ei** toteudu, ilmoita lähtijöille eikä maksuja peritä (yhtään tilausta ei ole vielä luotu).
 
-Bussituote **ei** täsmää osallistumismaksutuotteeseen (`rytkoset_theme_is_tampere_2026_registration_product()`), joten sille **ei** aktivoidu osallistujakohtaisia kassakenttiä (nimi / ruokarajoite / buffet) eikä osallistuja-admin-saraketta. Noutopiste tulee variaatiosta ja matkustajamäärä kappalemäärästä.
+> Tätä varten kannattaa pitää yksi yksinkertainen **bussipaikka-tuote** WooCommercessa (yksi hinta, ei variaatioita — lähtöpaikka tulee ilmoittautumisesta). Tuote voidaan **piilottaa kaupasta** (Catalog visibility), koska sitä ei myydä suoraan vaan käytetään vain manuaalisten tilausten rivituotteena.
 
-## Matkan toteutuminen (operatiivinen)
+## Vanha maksullinen tuote
 
-WooCommercessa ei ole "toteutuu jos vähintään X lähtijää" -kynnystä, joten:
+Vanha maksullinen variaatiotuote (SKU `tampere-2026-bussikyyti`, `inc/woocommerce-bus-transport.php`, tiketti `#442`) on tällä mallilla **korvattu**:
 
-- kerro tuotekuvauksessa minimimäärä ja että `45 €` palautetaan, jos matka ei toteudu
-- katso lähtijämäärä määräpäivän (`30.7.2026`) jälkeen tuotteen varastosaldosta / tilauksista
-- jos lähtijöitä on liian vähän, peru ja hyvitä kyseiset tilaukset käsin (sekä Mollie että tilisiirto tukevat hyvitystä)
+- Piilota vanha tuote kaupasta (Catalog visibility = *Piilotettu*) tai poista se, jos siitä ei ole tehty tilauksia.
+- Voit säilyttää yksinkertaisen bussipaikka-tuotteen vaiheen 4 manuaalisia tilauksia varten.
+- Koodimoduuli `inc/woocommerce-bus-transport.php` (määräpäivä-/kapasiteettiportti SKU:n perusteella) jää toistaiseksi paikalleen, mutta se ei ole enää ilmoittautumisen reitti. Sen voi poistaa erikseen, kun vanhasta tuotteesta on luovuttu.
 
-## Tuotekuvauksen minimitiedot
+## Tekninen toteutus
 
-- reitti ja että hinta on meno-paluu
-- aikataulu: meno perjantaina `28.8.2026`, paluu lauantaina `29.8.2026` juhlien jälkeen
-- hinta `45 € / matkustaja`
-- valitse lähtöpaikka ja lisää ostoskoriin yksi paikka per matkustaja
-- matka toteutuu, jos lähtijöitä on riittävästi; muuten maksu palautetaan
-- ilmoittautumisen määräpäivä `30.7.2026`
+| Osa | Sijainti |
+| --- | --- |
+| Yleinen valintalista + määräkenttä + ruokavaliovalinta tapahtumalle ("Ilmoittautumisen lisävalinta" -laatikko; metat `_rytkoset_event_choice_enabled`, `_rytkoset_event_choice_options`, `_rytkoset_event_choice_field_label`, `_rytkoset_event_collect_quantity`/`_rytkoset_event_quantity_field_label`, `_rytkoset_event_collect_diet`), getterit ja valinnan resolveri. Meta-avaimet ja funktioiden nimet ovat geneerisiä (ei bussikohtaisia) | `inc/events.php` |
+| Lomakkeen valinta + määräkenttä, validointi ja tallennus (metat `_rytkoset_registration_choice`, `_rytkoset_registration_quantity`), kuittaussähköposti tapahtuman nimillä | `inc/event-registrations.php` |
+| Osallistujat-näkymän sarakkeet + yhteenveto + CSV-sarakkeet (tapahtuman nimillä) | `inc/event-participants-admin.php` |
+| Lähtöpaikka + matkustajamäärä GDPR-vientiin (anonymisointi säilyttää ne — eivät henkilötietoja) | `inc/event-registration-privacy.php` |
 
-## Testaus
+## Jätetään tietoisesti pois
 
-- Tuote näkyy kaupassa ja on ostettavissa myös ilman osallistumismaksutuotetta
-- Lähtöpaikan voi valita ja eri noutopisteistä voi ostaa paikkoja samaan tilaukseen
-- Ostoskorin summa muuttuu oikein (45 € × matkustajat)
-- Koko bussin kapasiteetti on jaettu noutopisteiden kesken (yksi yhteinen varastosaldo)
-- Määräpäivän jälkeen tuotetta ei voi ostaa ja näkyy `Ilmoittautuminen on päättynyt.`
-- Kapasiteetin täytyttyä näkyy `Ilmoittautuminen on täynnä.`
-- Bussituote **ei** näytä Tampere 2026 -osallistujakenttiä kassalla eikä osallistujasaraketta adminissa
-- Tuote ehdotetaan ostoskorissa osallistumismaksun cross-sellinä
-
-## Jätetään myöhempään / tietoisesti pois
-
-- automaattinen minimimäärän / perumisen logiikka (manuaalinen hyvitys)
-- matkustajakohtaiset lisäkentät (nimi/allergiat) bussille
-- erillinen matkustajaraportti (paikkamäärä näkyy varastosaldosta ja tilauksista)
-
-## Paikallinen testituote
-
-Paikalliseen ympäristöön luotiin testituote 3 esimerkkinoutopisteellä (`Kuopio`, `Iisalmi`, `Varkaus`) ja 50 paikan jaetulla varastolla. **Noutopisteet ovat paikkamerkkejä** — korvaa ne todellisilla noutopisteillä WooCommerce-adminissa (Product data → Attributes → `Lähtöpaikka`, ja luo variaatiot kullekin).
+- Automaattinen vähimmäismäärän/perumisen logiikka (todetaan ja hoidetaan käsin).
+- Maksun integrointi suoraan ilmoittautumiseen (peritään erikseen vasta varmistuksen jälkeen).
+- Bussipaikka-tuotteen ja tapahtuman tekninen linkitys (maksu hoidetaan manuaalisilla tilauksilla).
