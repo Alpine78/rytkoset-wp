@@ -54,6 +54,7 @@ require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
+require_once get_template_directory() . '/inc/chat.php';
 
 /**
  * Returns the short display caption for an attachment.
