@@ -562,6 +562,39 @@ function rytkoset_theme_scripts() {
 		);
 	}
 
+	// AI-tukichatin widget (#413) — vain kun backend on konfiguroitu (#412).
+	if ( function_exists( 'rytkoset_theme_chat_widget_is_enabled' ) && rytkoset_theme_chat_widget_is_enabled() ) {
+		wp_enqueue_style(
+			'rytkoset-theme-chat',
+			get_template_directory_uri() . '/assets/css/chat.css',
+			array( $core_css_dependency ),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/chat.css' )
+		);
+
+		wp_enqueue_script(
+			'rytkoset-theme-chat',
+			get_template_directory_uri() . '/assets/js/chat.js',
+			array(),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/chat.js' ),
+			true
+		);
+
+		wp_add_inline_script(
+			'rytkoset-theme-chat',
+			'window.rytkosetChatConfig = ' . wp_json_encode(
+				array(
+					'restUrl'        => rest_url( 'rytkoset/v1/chat' ),
+					'nonce'          => wp_create_nonce( 'wp_rest' ),
+					'maxInputLength' => rytkoset_theme_chat_get_max_input_length(),
+					'typingText'     => __( 'Kirjoittaa…', 'rytkoset-theme' ),
+					'errorText'      => __( 'Vastauksen haku ei juuri nyt onnistunut. Yritä hetken kuluttua uudelleen tai ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
+					'sendingLabel'   => __( 'Lähetetään…', 'rytkoset-theme' ),
+				)
+			) . ';',
+			'before'
+		);
+	}
+
 	if ( is_post_type_archive( 'digital_magazine' ) || is_singular( 'digital_magazine' ) ) {
 		wp_enqueue_style(
 			'rytkoset-theme-digital-magazine',
