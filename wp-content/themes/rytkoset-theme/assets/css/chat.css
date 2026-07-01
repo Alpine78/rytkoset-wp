@@ -66,6 +66,10 @@
   animation: rytkoset-chat-in var(--transition-normal);
 }
 
+.rytkoset-chat__panel[hidden] {
+  display: none;
+}
+
 @keyframes rytkoset-chat-in {
   from {
     opacity: 0;
