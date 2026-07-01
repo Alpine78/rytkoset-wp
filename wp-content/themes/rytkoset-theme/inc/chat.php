@@ -46,6 +46,20 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_config' ) ) {
 }
 
 /**
+ * Palauttaa yksittäisen chat-viestin merkkirajan.
+ *
+ * Jaettu backendin (syötteen katkaisu) ja frontendin (widgetin `maxlength`)
+ * kesken, jotta käyttöliittymän raja vastaa palvelimen rajaa.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_max_input_length' ) ) {
+	function rytkoset_theme_chat_get_max_input_length() {
+		return (int) apply_filters( 'rytkoset_theme_chat_max_input_length', 1000 );
+	}
+}
+
+/**
  * Rekisteröi REST-reitin `POST /wp-json/rytkoset/v1/chat`.
  *
  * @return void
@@ -105,7 +119,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		}
 
 		// 4. Syötteen jäsennys ja rajat.
-		$max_input   = (int) apply_filters( 'rytkoset_theme_chat_max_input_length', 1000 );
+		$max_input   = rytkoset_theme_chat_get_max_input_length();
 		$max_history = (int) apply_filters( 'rytkoset_theme_chat_max_history', 8 );
 
 		$raw_messages = $request->get_param( 'messages' );
@@ -411,3 +425,116 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		return apply_filters( 'rytkoset_theme_chat_system_prompt', $prompt, $contact_email );
 	}
 }
+
+/**
+ * Kertoo, näytetäänkö chat-widget frontendissä.
+ *
+ * True vain kun backend on konfiguroitu (ei kuollutta widgetiä ilman avainta);
+ * suodatettavissa `rytkoset_theme_chat_widget_enabled`-suotimella.
+ *
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_widget_is_enabled' ) ) {
+	function rytkoset_theme_chat_widget_is_enabled() {
+		$config  = rytkoset_theme_chat_get_config();
+		$enabled = ! empty( $config['is_configured'] );
+
+		/**
+		 * Suodattaa chat-widgetin näyttämisen frontendissä.
+		 *
+		 * @param bool $enabled Näytetäänkö widget.
+		 */
+		return (bool) apply_filters( 'rytkoset_theme_chat_widget_enabled', $enabled );
+	}
+}
+
+/**
+ * Tulostaa chat-widgetin merkkauksen sivun alatunnisteeseen.
+ *
+ * Renderöi vain semanttisen, escapetetun kuoren; viestit lisää JS turvallisesti
+ * (`textContent`). Piilotettu ilman JS:ää (`hidden`-attribuutti), jonka JS poistaa
+ * alustuksessa.
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_render_widget' ) ) {
+	function rytkoset_theme_chat_render_widget() {
+		if ( ! rytkoset_theme_chat_widget_is_enabled() ) {
+			return;
+		}
+
+		$greeting  = __( 'Hei! Kysy minulta Rytkösten sukuseurasta — jäsenyydestä, tapahtumista, kuvista tai sukututkimuksesta.', 'rytkoset-theme' );
+		$max_input = (string) rytkoset_theme_chat_get_max_input_length();
+		?>
+		<div class="rytkoset-chat" data-rytkoset-chat hidden>
+			<button
+				type="button"
+				class="rytkoset-chat__toggle"
+				aria-expanded="false"
+				aria-controls="rytkoset-chat-panel"
+				aria-label="<?php esc_attr_e( 'Avaa tukichatti', 'rytkoset-theme' ); ?>"
+				data-rytkoset-chat-toggle
+			>
+				<span class="rytkoset-chat__toggle-icon" aria-hidden="true">💬</span>
+				<span class="rytkoset-chat__toggle-label"><?php esc_html_e( 'Kysy', 'rytkoset-theme' ); ?></span>
+			</button>
+
+			<section
+				id="rytkoset-chat-panel"
+				class="rytkoset-chat__panel"
+				role="dialog"
+				aria-label="<?php esc_attr_e( 'Rytkösten sukuseuran tukichatti', 'rytkoset-theme' ); ?>"
+				data-rytkoset-chat-panel
+				hidden
+			>
+				<header class="rytkoset-chat__header">
+					<h2 class="rytkoset-chat__title"><?php esc_html_e( 'Kysy sukuseurasta', 'rytkoset-theme' ); ?></h2>
+					<button
+						type="button"
+						class="rytkoset-chat__close"
+						aria-label="<?php esc_attr_e( 'Sulje chatti', 'rytkoset-theme' ); ?>"
+						data-rytkoset-chat-close
+					>
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</header>
+
+				<p class="rytkoset-chat__disclaimer">
+					<?php esc_html_e( 'Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse.', 'rytkoset-theme' ); ?>
+				</p>
+
+				<div
+					class="rytkoset-chat__log"
+					role="log"
+					aria-live="polite"
+					aria-atomic="false"
+					data-rytkoset-chat-log
+				>
+					<?php // Yhdellä rivillä: white-space: pre-wrap säilyttäisi sisennyksen tyhjätilan. ?>
+					<div class="rytkoset-chat__msg rytkoset-chat__msg--assistant"><?php echo esc_html( $greeting ); ?></div>
+				</div>
+
+				<form class="rytkoset-chat__form" data-rytkoset-chat-form>
+					<textarea
+						class="rytkoset-chat__input"
+						rows="1"
+						maxlength="<?php echo esc_attr( $max_input ); ?>"
+						placeholder="<?php esc_attr_e( 'Kirjoita kysymyksesi…', 'rytkoset-theme' ); ?>"
+						aria-label="<?php esc_attr_e( 'Kirjoita viesti', 'rytkoset-theme' ); ?>"
+						data-rytkoset-chat-input
+					></textarea>
+					<button
+						type="submit"
+						class="rytkoset-chat__send"
+						aria-label="<?php esc_attr_e( 'Lähetä viesti', 'rytkoset-theme' ); ?>"
+						data-rytkoset-chat-send
+					>
+						<?php echo rytkoset_theme_inline_icon( 'send', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Teeman oma sanitoitu SVG. ?>
+					</button>
+				</form>
+			</section>
+		</div>
+		<?php
+	}
+}
+add_action( 'wp_footer', 'rytkoset_theme_chat_render_widget' );

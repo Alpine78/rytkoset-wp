@@ -172,4 +172,35 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( $config['is_configured'] );
 		$this->assertSame( 'mistral-small-latest', $config['model'] );
 	}
+
+	// --- rytkoset_theme_chat_get_max_input_length() --------------------------
+
+	public function test_max_input_length_default(): void {
+		$this->assertSame( 1000, rytkoset_theme_chat_get_max_input_length() );
+	}
+
+	public function test_max_input_length_is_filterable(): void {
+		$filter = static fn() => 250;
+		add_filter( 'rytkoset_theme_chat_max_input_length', $filter );
+
+		$this->assertSame( 250, rytkoset_theme_chat_get_max_input_length() );
+
+		remove_filter( 'rytkoset_theme_chat_max_input_length', $filter );
+	}
+
+	// --- rytkoset_theme_chat_widget_is_enabled() -----------------------------
+
+	public function test_widget_disabled_when_backend_not_configured(): void {
+		// No wp-config constants defined in tests → backend not configured.
+		$this->assertFalse( rytkoset_theme_chat_widget_is_enabled() );
+	}
+
+	public function test_widget_enabled_filter_can_force_on(): void {
+		$filter = static fn() => true;
+		add_filter( 'rytkoset_theme_chat_widget_enabled', $filter );
+
+		$this->assertTrue( rytkoset_theme_chat_widget_is_enabled() );
+
+		remove_filter( 'rytkoset_theme_chat_widget_enabled', $filter );
+	}
 }
