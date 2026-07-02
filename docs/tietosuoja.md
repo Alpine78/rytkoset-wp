@@ -46,7 +46,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 # Tietosuojaseloste
 
-Päivitetty: 24.5.2026
+Päivitetty: 2.7.2026
 
 ## Rekisterinpitäjä
 
@@ -115,6 +115,14 @@ Jos otat yhteyttä yhdistykseen sähköpostilla, viesti tallentuu sähköpostipa
 
 Sukututkimusta varten ylläpidetään erillistä sukututkimusrekisteriä. Sen rekisterinpitäjä, yhteyshenkilöt, käyttötarkoitus, tietosisältö, tietolähteet ja rekisteröidyn oikeudet kuvataan sivulla `/sukuseura/rekisteriseloste/`.
 
+### AI-tukichatti
+
+Sivustolla on tekoälyavusteinen tukichatti, joka vastaa sukuseuraa ja sivuston käyttöä koskeviin kysymyksiin. Chattiin kirjoittamasi viestit lähetetään käsiteltäviksi palveluntarjoajalle Mistral AI SAS (Ranska), joka tuottaa vastaukset tekoälymallilla. Käsittely tapahtuu Euroopan unionin alueella.
+
+Sivusto ei tallenna chat-keskusteluja: keskustelu säilyy vain selaimesi muistissa istunnon ajan ja katoaa, kun suljet sivun. Chatti ei käytä evästeitä. Väärinkäytön ja kulujen hallitsemiseksi sivusto käsittelee kävijän IP-osoitetta lyhytaikaisesti viestimäärän rajoittamiseksi; IP-osoitetta ei yhdistetä keskustelujen sisältöön eikä luovuteta Mistral AI:lle.
+
+Älä kirjoita chattiin henkilötunnusta, salasanoja, maksukortin tietoja tai muita arkaluonteisia tietoja. Henkilökohtaisissa asioissa ota yhteyttä sähköpostitse: info@rytkoset.net.
+
 ### Sisältöön upotettu media
 
 Sivustolla voi olla YouTube-videoita. Teema näyttää videot YouTuben privacy-enhanced -upotuksina (`youtube-nocookie.com`), jotta katselutieto ei lataushetkellä vaikuttaisi YouTube-käyttökokemuksen personointiin. Kun katsot videon, YouTube ja Google voivat silti käsitellä tietoja omien käytäntöjensä mukaisesti.
@@ -138,6 +146,7 @@ Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointit
 - **Maksunvälitys**: Mollie B.V. (Hollanti) — verkkokaupan maksujen käsittely
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
 - **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
+- **Tekoälyavusteinen tukichatti**: Mistral AI SAS (Ranska/EU) — chattiin kirjoitettujen viestien käsittely vastausten tuottamiseksi
 
 Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on tehtävänsä perusteella tarve käsitellä tietoja, kuten sivuston ylläpitäjät, tapahtumien vastuuhenkilöt, verkkokaupan tilausten käsittelijät ja taloushallinnon vastuuhenkilöt.
 
@@ -168,7 +177,7 @@ Sinulla on myös oikeus tehdä valitus tietosuojavaltuutetun toimistolle (tietos
 
 ## Mihin lähetämme tietosi
 
-Sivuston palvelin sijaitsee Suomessa. Mollien maksunvälityspalvelu käsittelee tietoja EU-alueella.
+Sivuston palvelin sijaitsee Suomessa. Mollien maksunvälityspalvelu käsittelee tietoja EU-alueella. Myös tukichatin käsittelijä Mistral AI toimii EU-alueella.
 
 Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.
 
@@ -190,3 +199,4 @@ Sivustolla käytetään LiteSpeed Cache -välimuistia suorituskyvyn parantamisee
 - Suostumuksen aikaleima tallennetaan meta-kenttään `_rytkoset_registration_gdpr_consent`.
 - Albumien YouTube-upotukset: [`inc/gallery-albums.php`](../wp-content/themes/rytkoset-theme/inc/gallery-albums.php) — käyttää `youtube-nocookie.com`-osoitetta.
 - Footerin linkki tulee `footer`-valikosta ([`footer.php`](../wp-content/themes/rytkoset-theme/footer.php)) — ei vaadi koodimuutoksia.
+- AI-tukichatti: [`inc/chat.php`](../wp-content/themes/rytkoset-theme/inc/chat.php) — API-avain ja kävijän IP eivät koskaan välity Mistralille, keskusteluhistoria ei tallennu palvelimelle eikä selaimen pysyvään muistiin. Tekninen kuvaus ja kulusuojat: [`docs/chat.md`](chat.md).

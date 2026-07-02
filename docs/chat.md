@@ -1,6 +1,6 @@
-# AI-tukichatti: backend-proxy ja Mistral-integraatio
+# AI-tukichatti: backend-proxy, Mistral-integraatio ja ylläpito
 
-AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-avain **ei koskaan** päädy selaimeen. Tämä toiminto (#412, EPIC 11 / #411) toteuttaa **vain backendin**: REST-reitin, system-promptin, Mistral-välityksen ja kulusuojat. Käyttöliittymä (chat-widget) ja vastauksen escapetys kuuluvat tikettiin **#413**.
+AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-avain **ei koskaan** päädy selaimeen. Kokonaisuus on toteutettu kolmessa siivussa (EPIC 11 / #411): backend-proxy ja kulusuojat (**#412**), chat-widget (**#413**) sekä Customizer-asetukset, dokumentaatio ja GDPR (**#414**).
 
 Toteutus: `inc/chat.php`. Teeman koodia, ei ulkoisia kirjastoja. Tämä on teeman **ensimmäinen REST-päätepiste**.
 
@@ -44,7 +44,66 @@ Kaikki oletukset ovat suodatettavia:
 
 ## System-prompt
 
-`rytkoset_theme_chat_get_system_prompt()` kokoaa promptin, joka ohjeistaa assistentin: vastaa **vain suomeksi**, pysy yhdistyksen aiheissa, **älä keksi tietoa** ja ohjaa epävarmoissa sähköpostiin (`rytkoset_theme_get_contact_email()`). Promptin voi korvata tai laajentaa (esim. tarkempi FAQ-tietämys) suodattimella `rytkoset_theme_chat_system_prompt` (argumentit: `$prompt`, `$contact_email`).
+`rytkoset_theme_chat_get_system_prompt()` kokoaa promptin, joka ohjeistaa assistentin: vastaa **vain suomeksi**, pysy yhdistyksen aiheissa, **älä keksi tietoa** ja ohjaa epävarmoissa sähköpostiin (`rytkoset_theme_get_contact_email()`). Jos Customizerin **Tietopohja/FAQ-kenttä** (#414, ks. alla) ei ole tyhjä, sen sisältö liitetään promptin loppuun "ensisijaisena tietolähteenä". Promptin voi korvata tai laajentaa suodattimella `rytkoset_theme_chat_system_prompt` (argumentit: `$prompt`, `$contact_email`).
+
+## Customizer-asetukset (#414)
+
+**Ulkoasu → Mukauta → Tukichatti** (`customize.php`, osio `rytkoset_theme_chat`). Kolme kenttää, jotka ei-tekninen ylläpitäjä voi muokata ilman koodimuutoksia:
+
+| Kenttä | Setting | Vaikutus |
+|---|---|---|
+| Näytä tukichatti sivustolla (checkbox, oletus **päällä**) | `rytkoset_theme_chat_enabled` | Pois → widget piilotetaan **ja** REST-reitti palauttaa hallitun virheen (HTTP 503). Suora rajapintakutsukin siis estyy. |
+| Tervetuloviesti (textarea) | `rytkoset_theme_chat_welcome_message` | Chatin avausviesti. Tyhjä = teeman oletusteksti. |
+| Tietopohja / usein kysytyt kysymykset (textarea) | `rytkoset_theme_chat_faq` | Liitetään system-promptiin jokaiseen API-kutsuun. Muutos näkyy chatin vastauksissa heti julkaisun jälkeen. |
+
+Getterit: `rytkoset_theme_chat_admin_enabled()`, `rytkoset_theme_chat_get_welcome_message()`, `rytkoset_theme_chat_get_faq_text()`. Sanitointi: checkbox → bool, tekstikentät → `sanitize_textarea_field`.
+
+Huom: chatti näkyy sivustolla vain kun **molemmat** ehdot täyttyvät — API-avain on asetettu `wp-config.php`:hen **ja** Customizer-kytkin on päällä.
+
+### Tietopohjan (FAQ) ylläpito
+
+FAQ-teksti on chatin ainoa yhdistyskohtainen tietolähde — malli ei hae tietoa sivustolta eikä internetistä. Kirjoitusohjeet:
+
+- **Rakenne:** otsikot ISOLLA omilla riveillään, faktat luettelomerkkeinä (`- `). Selkeä rakenne auttaa mallia poimimaan oikean kohdan.
+- **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen ja Mollie-erityistapaukset (ulkomaanmaksun hyväksyntä, RF-viitteen väliviivat Mollien sähköpostissa), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot.
+- **Pituus:** teksti lähetetään Mistralille **jokaisen viestin mukana**, joten pidä se tiiviinä (nyrkkisääntö: alle ~5 000 merkkiä). Pitkä teksti kasvattaa kuluja ja heikentää vastausten tarkkuutta.
+- **Ajantasaisuus:** kun hinnat, päivämäärät tai käytännöt muuttuvat sivustolla, päivitä myös FAQ — chatti ei huomaa sivuston muutoksia itse. Nopeasti muuttuvien tietojen (esim. yksittäisen tapahtuman aikataulu) osalta parempi tapa on viitata tapahtumasivuun kuin kopioida yksityiskohdat FAQ:hun.
+- **Rajaukset:** älä laita FAQ:hun henkilötietoja äläkä mitään, mikä ei saa näkyä julkisesti — FAQ:n sisältö voi päätyä chatin vastauksiin kenelle tahansa kävijälle.
+
+Testaa muutokset dev-ympäristössä kysymällä chatilta muutettuja kohtia ennen tuotantoon vientiä.
+
+## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
+
+Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
+
+1. Hanki uuden tarjoajan API-avain ja chat-completions-päätepisteen koko URL (esim. Mistral-malli Azure AI:n Sweden Central -alueella).
+2. Päivitä `RYTKOSET_CHAT_API_KEY`, `RYTKOSET_CHAT_API_ENDPOINT` ja tarvittaessa `RYTKOSET_CHAT_API_MODEL` kohdeympäristön `wp-config.php`:hen.
+3. Aja alla oleva curl-testi ja varmista suomenkielinen vastaus.
+
+Tarkista vaihdon yhteydessä tarjoajan dokumentaatiosta erityisesti: (a) hyväksyykö päätepiste `Authorization: Bearer` -otsakkeen — koodi lähettää vain sen, joten esim. pelkkää `api-key`-otsaketta vaativa päätepiste vaatisi pienen muutoksen `inc/chat.php`:n `wp_remote_post()`-kutsuun; (b) mallin nimi kyseisessä palvelussa; (c) että data käsitellään EU:ssa (GDPR — päivitä myös tietosuojaseloste, ks. alla).
+
+## Tietosuoja (GDPR)
+
+Chatin tietosuojaominaisuudet, jotka selosteen ja dokumentaation väitteet perustuvat koodiin:
+
+- Viestit välitetään Mistralin **EU-päätepisteeseen** palvelimen kautta; API-avain ja kävijän IP eivät koskaan välity Mistralille (Mistral näkee vain palvelimen IP:n).
+- Keskusteluja **ei tallenneta** WordPressiin eikä selaimeen: historia elää vain sivun JS-muistissa ja katoaa sivun sulkeutuessa. Ei evästeitä eikä web storagea → ei suostumusbanneritarvetta.
+- Rate limit käsittelee kävijän IP-osoitetta lyhytaikaisesti palvelimella (transient, MD5-tiivisteenä avaimessa, enintään rajoitusikkunan ajan). IP:tä ei yhdistetä keskustelun sisältöön.
+- Widgetin disclaimer kehottaa olemaan syöttämättä arkaluonteisia tietoja, ja system-prompt ohjeistaa mallia olemaan pyytämättä niitä.
+
+### Tekstiehdotus tietosuojaselosteeseen
+
+Selosteteksti on sivun sisältöä (ei koodia), joten alla oleva on **ehdotus ylläpidolle** lisättäväksi tietosuojaseloste-sivulle. Täydennä yhteysosoite ja tarkista Mistral-linkin ajantasaisuus:
+
+> **Tekoälyavusteinen tukichatti**
+>
+> Sivustolla on tekoälyavusteinen tukichatti, joka vastaa sukuseuraa ja sivuston käyttöä koskeviin kysymyksiin. Vastaukset tuottaa Mistral AI:n kielimalli. Chattiin kirjoitetut viestit lähetetään käsiteltäviksi Mistral AI:lle (Mistral AI SAS, Ranska), ja ne käsitellään Euroopan unionin alueella. Viestejä käytetään vain vastauksen tuottamiseen.
+>
+> Sivusto ei tallenna chat-keskusteluja: keskustelu säilyy vain selaimesi muistissa ja tyhjenee, kun suljet sivun. Chatti ei käytä evästeitä. Väärinkäytön estämiseksi sivusto käsittelee kävijän IP-osoitetta lyhytaikaisesti viestimäärän rajoittamista varten; IP-osoitetta ei yhdistetä keskustelujen sisältöön eikä luovuteta chat-palvelun tarjoajalle.
+>
+> Älä kirjoita chattiin henkilötietoja tai arkaluonteisia tietoja (esimerkiksi henkilötunnusta, salasanoja tai maksukortin tietoja). Henkilökohtaisissa asioissa ota yhteyttä sähköpostitse: **[yhteysosoite]**.
+>
+> Lisätietoa Mistral AI:n tietosuojakäytännöistä: https://mistral.ai/privacy-policy
 
 ## Testaus
 
@@ -70,6 +129,8 @@ Kaikki oletukset ovat suodatettavia:
 5. **Syöteraja**: lähetä yli 1000 merkin viesti → katkaistaan ennen API-kutsua.
 6. **Puuttuva avain**: poista `RYTKOSET_CHAT_API_KEY` → HTTP 503, ei PHP-fatalia.
 7. Varmista, ettei API-avain näy vasteessa eikä selaimen lähdekoodissa.
+8. **Customizer-kytkin**: ota chatti pois päältä (Ulkoasu → Mukauta → Tukichatti) → widget ei renderöidy ja suora REST-kutsu palauttaa HTTP 503 (`rytkoset_chat_disabled`).
+9. **FAQ**: lisää Tietopohja-kenttään tunnistettava fakta (esim. testihinta) → chatti käyttää sitä vastauksessa ilman koodimuutosta.
 
 Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta ja system-prompt. Verkko- ja REST-kytkentä varmistetaan yllä olevalla manuaalisella curl-testillä.
 
@@ -77,7 +138,7 @@ Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit
 
 Kelluva chat-painike + paneeli (`inc/chat.php` renderöi kuoren `wp_footer`-koukussa, `assets/js/chat.js` + `assets/css/chat.css`). Rakentuu yllä kuvatun REST-reitin päälle.
 
-- **Näkyy vain kun backend on konfiguroitu.** `rytkoset_theme_chat_widget_is_enabled()` palauttaa `true` vasta kun `RYTKOSET_CHAT_API_KEY` + `RYTKOSET_CHAT_API_ENDPOINT` on asetettu — ilman avainta widgetiä ei renderöidä eikä assetteja ladata. Näyttämisen voi pakottaa/estää suodattimella `rytkoset_theme_chat_widget_enabled`.
+- **Näkyy vain kun backend on konfiguroitu ja chatti on kytketty päälle.** `rytkoset_theme_chat_widget_is_enabled()` palauttaa `true` vasta kun `RYTKOSET_CHAT_API_KEY` + `RYTKOSET_CHAT_API_ENDPOINT` on asetettu **ja** Customizerin Tukichatti-kytkin on päällä (#414) — muuten widgetiä ei renderöidä eikä assetteja ladata. Näyttämisen voi pakottaa/estää suodattimella `rytkoset_theme_chat_widget_enabled`.
 - **Keksitön:** keskusteluhistoria elää **vain JS-muistissa**. Ei `localStorage`/`sessionStorage`/keksejä → keksibanneria ei tarvita. Sivun lataus nollaa keskustelun (hyväksytty MVP-rajaus).
 - **Turvallinen renderöinti:** mallin vastaus lisätään DOMiin `textContent`illä (ei `innerHTML`) → ei XSS-riskiä. Rivinvaihdot säilyvät CSS:n `white-space: pre-wrap`illä.
 - **Saavutettavuus (WCAG 2.1 AA):** paneeli `role="dialog"`, viestiloki `role="log" aria-live="polite"` (uudet vastaukset ilmoitetaan ruudunlukijalle), näkyvä fokus, näppäimistökäyttö (Enter lähettää, Shift+Enter rivinvaihto, **Esc** sulkee ja palauttaa fokuksen painikkeeseen). Fokusansaa ei ole (paneeli ei ole modaali) — MVP-rajaus.
