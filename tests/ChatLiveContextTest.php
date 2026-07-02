@@ -113,7 +113,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Ajankohta: 12.7.2026 klo 12:00–16:00', $context );
 		$this->assertStringContainsString( 'Paikka: Tampere-talo', $context );
 		$this->assertStringContainsString( 'Hinta: Maksuton', $context );
-		$this->assertStringContainsString( 'Ilmoittautuminen viimeistään: 30.6.2026', $context );
+		$this->assertStringContainsString( 'Ilmoittautuminen päättyi: 30.6.2026', $context );
 		$this->assertStringContainsString( 'Lähtöpaikka: Iisalmi, Kuopio', $context );
 		$this->assertStringContainsString( 'kysytään myös: Matkustajien määrä', $context );
 		$this->assertStringContainsString( 'https://rytkoset.test/?p=10', $context );
@@ -123,7 +123,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		$this->register_event( 10, 'Kesäretki', '2026-07-20', array( '_rytkoset_event_fee_type' => 'free' ) );
 
 		$this->assertStringContainsString(
-			'Ilmoittautuminen viimeistään: 20.7.2026',
+			'Ilmoittautuminen päättyy: 20.7.2026',
 			rytkoset_theme_chat_format_event_context( 10 )
 		);
 	}
@@ -143,7 +143,52 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'Hinta: 25 €', $context );
 		$this->assertStringContainsString( 'Ilmoittautuminen ja maksu tapahtuman sivun kautta.', $context );
-		$this->assertStringNotContainsString( 'viimeistään', $context );
+		$this->assertStringNotContainsString( 'Ilmoittautuminen päättyy:', $context );
+	}
+
+	public function test_event_context_paid_linked_product_includes_product_deadline(): void {
+		$this->register_event(
+			10,
+			'Maksullinen juhla',
+			'2026-08-01',
+			array(
+				'_rytkoset_event_fee_type'              => 'paid',
+				'_rytkoset_event_product_id'            => 50,
+				'_rytkoset_event_price_text'            => '25',
+				'_rytkoset_event_registration_deadline' => '2026-07-01',
+			)
+		);
+		rytkoset_test_register_product(
+			50,
+			'publish',
+			'Tampere 2026 -osallistumismaksu',
+			array(
+				'_rytkoset_registration_mode'     => 'tampere_2026',
+				'_rytkoset_registration_deadline' => '2026-07-30',
+			)
+		);
+
+		$context = rytkoset_theme_chat_format_event_context( 10 );
+
+		$this->assertStringContainsString( 'Ilmoittautuminen ja maksu tapahtuman sivun kautta.', $context );
+		$this->assertStringContainsString( 'Ilmoittautuminen päättyy: 30.7.2026', $context );
+		$this->assertStringNotContainsString( '1.7.2026', $context );
+	}
+
+	public function test_event_context_does_not_show_free_deadline_when_fee_type_is_not_free(): void {
+		$this->register_event(
+			10,
+			'Pelkka tapahtumatieto',
+			'2026-08-01',
+			array(
+				'_rytkoset_event_registration_deadline' => '2026-07-01',
+			)
+		);
+
+		$context = rytkoset_theme_chat_format_event_context( 10 );
+
+		$this->assertStringNotContainsString( 'Ilmoittautuminen päättyy:', $context );
+		$this->assertStringNotContainsString( '1.7.2026', $context );
 	}
 
 	// --- rytkoset_theme_chat_get_membership_context() ------------------------

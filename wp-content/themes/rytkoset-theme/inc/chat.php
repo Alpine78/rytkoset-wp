@@ -249,17 +249,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_format_event_context' ) ) {
 
 		if ( 'paid' === rytkoset_theme_get_event_fee_type( $event_id ) ) {
 			$lines[] = '  Ilmoittautuminen ja maksu tapahtuman sivun kautta.';
-		} else {
-			// Sama takaraja kuin julkisella lomakkeella: oma takaraja tai tapahtumapäivä.
-			$deadline = rytkoset_theme_get_free_event_registration_deadline_raw( $event_id );
-			if ( '' === $deadline ) {
-				$deadline = rytkoset_theme_get_event_date_raw( $event_id );
-			}
+		}
 
-			$deadline_display = rytkoset_theme_chat_format_iso_date( $deadline );
-			if ( '' !== $deadline_display ) {
-				$lines[] = '  Ilmoittautuminen viimeistään: ' . $deadline_display;
-			}
+		// Sama ilmoittautumisajan lähde kuin tapahtumasivun yhteenvetokortilla.
+		$deadline         = rytkoset_theme_get_event_registration_deadline_raw( $event_id );
+		$deadline_display = rytkoset_theme_chat_format_iso_date( $deadline );
+		if ( '' !== $deadline_display ) {
+			$deadline_label = rytkoset_theme_is_event_registration_deadline_passed( $event_id )
+				? 'Ilmoittautuminen päättyi'
+				: 'Ilmoittautuminen päättyy';
+			$lines[]        = '  ' . $deadline_label . ': ' . $deadline_display;
 		}
 
 		if ( rytkoset_theme_event_has_choice_field( $event_id ) ) {
