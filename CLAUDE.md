@@ -166,6 +166,20 @@ individual order state. Person-list answers must repeat only names and roles
 given in the source. Keep this guardrail updated when the site's permanent
 public functions change.
 
+Chat knowledge guardrail: `inc/chat.php` includes a stable site context helper,
+`rytkoset_theme_chat_get_stable_site_context()` (filter
+`rytkoset_theme_chat_stable_site_context`), in every system prompt. It locks in
+site basics that must not be left to model inference: Finnish store/account
+paths (`/kauppa/`, `/oma-tili/tilaukset/`), forum availability, blog-submission
+handling via maintainers, social links, digital magazines as HTML content rather
+than PDFs, sukukirja library borrowing, the published `Rytkösten sukulainen nro
+9` product, the board page and chairperson, and conditional payment retry
+wording. The prompt now explicitly limits factual answers to the supplied prompt
+sources (stable context, maintainer FAQ, live context) and forbids guesses based
+on general knowledge, WordPress defaults, old site patterns, future plans,
+people, product availability, permissions, or individual order state. Keep this
+guardrail updated when the site's permanent public functions change.
+
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
 ### CSS structure
