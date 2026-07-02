@@ -395,6 +395,10 @@ function rytkoset_theme_get_event_fee_display( $event_id ) {
 	$fee_type   = rytkoset_theme_get_event_fee_type( $event_id );
 	$price_text = rytkoset_theme_get_event_price_text( $event_id );
 
+	if ( 'free' === $fee_type && '' !== $price_text ) {
+		return rytkoset_theme_format_event_price_text( $price_text );
+	}
+
 	if ( 'free' === $fee_type ) {
 		return __( 'Maksuton', 'rytkoset-theme' );
 	}
