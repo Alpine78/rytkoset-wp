@@ -132,6 +132,7 @@
 /* --- Viestiloki ----------------------------------------------------------- */
 
 .rytkoset-chat__log {
+  position: relative;
   flex: 1 1 auto;
   overflow-y: auto;
   display: flex;
@@ -154,6 +155,19 @@
   align-self: flex-start;
   background: var(--color-surface-muted);
   color: var(--color-text);
+}
+
+/* Vastauksiin automaattisesti linkitetyt oman sivuston osoitteet (chat.js).
+   Perivät kuplan tekstivärin, jotta kontrasti säilyy myös tummassa teemassa. */
+.rytkoset-chat__msg a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.rytkoset-chat__msg a:hover,
+.rytkoset-chat__msg a:focus-visible {
+  text-decoration-thickness: 2px;
 }
 
 .rytkoset-chat__msg--user {
@@ -261,6 +275,10 @@
 /* --- Mobiili: paneeli lähes koko ruudulle --------------------------------- */
 
 @media (max-width: 640px) {
+  /* Alkutila / fallback ilman visualViewport-tukea. chat.js pinnaa paneelin
+     avattaessa tarkasti näkyvään viewporttiin (inline left/top/width/height)
+     iOS Safarin virtuaalinäppäimistö- ja vaakavierityskummallisuuksien
+     varalta — inline-tyylit korvaavat nämä arvot silloin automaattisesti. */
   .rytkoset-chat.is-open {
     inset: 0.5rem;
   }
