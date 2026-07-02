@@ -203,4 +203,62 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 
 		remove_filter( 'rytkoset_theme_chat_widget_enabled', $filter );
 	}
+
+	// --- Customizer: FAQ, tervetuloviesti ja päälle/pois-kytkin (#414) -------
+
+	public function test_faq_text_empty_by_default(): void {
+		$this->assertSame( '', rytkoset_theme_chat_get_faq_text() );
+	}
+
+	public function test_faq_text_is_trimmed(): void {
+		$GLOBALS['rytkoset_test_options']['theme_mod_rytkoset_theme_chat_faq'] = "  Jäsenmaksu on 20 €.  \n";
+
+		$this->assertSame( 'Jäsenmaksu on 20 €.', rytkoset_theme_chat_get_faq_text() );
+	}
+
+	public function test_system_prompt_includes_faq_when_set(): void {
+		$GLOBALS['rytkoset_test_options']['theme_mod_rytkoset_theme_chat_faq'] = 'Seuraava sukukokous on 12.7.2026.';
+
+		$prompt = rytkoset_theme_chat_get_system_prompt();
+
+		$this->assertStringContainsString( 'Tietopohja:', $prompt );
+		$this->assertStringContainsString( 'Seuraava sukukokous on 12.7.2026.', $prompt );
+	}
+
+	public function test_system_prompt_omits_faq_section_when_empty(): void {
+		$this->assertStringNotContainsString( 'Tietopohja:', rytkoset_theme_chat_get_system_prompt() );
+	}
+
+	public function test_welcome_message_falls_back_to_default(): void {
+		$this->assertStringContainsString( 'Kysy minulta Rytkösten sukuseurasta', rytkoset_theme_chat_get_welcome_message() );
+	}
+
+	public function test_welcome_message_uses_custom_value(): void {
+		$GLOBALS['rytkoset_test_options']['theme_mod_rytkoset_theme_chat_welcome_message'] = 'Moi! Miten voin auttaa?';
+
+		$this->assertSame( 'Moi! Miten voin auttaa?', rytkoset_theme_chat_get_welcome_message() );
+	}
+
+	public function test_welcome_message_whitespace_only_falls_back(): void {
+		$GLOBALS['rytkoset_test_options']['theme_mod_rytkoset_theme_chat_welcome_message'] = "   \n";
+
+		$this->assertStringContainsString( 'Kysy minulta', rytkoset_theme_chat_get_welcome_message() );
+	}
+
+	public function test_admin_enabled_defaults_to_true(): void {
+		$this->assertTrue( rytkoset_theme_chat_admin_enabled() );
+	}
+
+	public function test_admin_enabled_reflects_disabled_setting(): void {
+		$GLOBALS['rytkoset_test_options']['theme_mod_rytkoset_theme_chat_enabled'] = false;
+
+		$this->assertFalse( rytkoset_theme_chat_admin_enabled() );
+	}
+
+	public function test_sanitize_checkbox_coerces_to_bool(): void {
+		$this->assertTrue( rytkoset_theme_chat_sanitize_checkbox( '1' ) );
+		$this->assertTrue( rytkoset_theme_chat_sanitize_checkbox( true ) );
+		$this->assertFalse( rytkoset_theme_chat_sanitize_checkbox( '' ) );
+		$this->assertFalse( rytkoset_theme_chat_sanitize_checkbox( '0' ) );
+	}
 }

@@ -60,6 +60,138 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_max_input_length' ) ) {
 }
 
 /**
+ * Kertoo, onko chatti kytketty päälle Customizerissa.
+ *
+ * Oletus on päällä, jotta jo konfiguroitujen ympäristöjen toiminta säilyy
+ * ennallaan. Gate koskee sekä widgetiä että REST-reittiä.
+ *
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_admin_enabled' ) ) {
+	function rytkoset_theme_chat_admin_enabled() {
+		return (bool) get_theme_mod( 'rytkoset_theme_chat_enabled', true );
+	}
+}
+
+/**
+ * Palauttaa chatin tervetuloviestin (Customizer, oletus fallbackina).
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_welcome_message' ) ) {
+	function rytkoset_theme_chat_get_welcome_message() {
+		$default = __( 'Hei! Kysy minulta Rytkösten sukuseurasta, kuten jäsenyydestä, tapahtumista, kuvista tai sukututkimuksesta.', 'rytkoset-theme' );
+		$message = trim( (string) get_theme_mod( 'rytkoset_theme_chat_welcome_message', '' ) );
+
+		return '' !== $message ? $message : $default;
+	}
+}
+
+/**
+ * Palauttaa ylläpitäjän Customizeriin syöttämän FAQ-/tietopohjatekstin.
+ *
+ * Liitetään system-promptiin, jotta ei-tekninen ylläpitäjä voi muokata chatin
+ * tietämystä ilman koodimuutosta. Tyhjä = ei erillistä tietopohjaa.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_faq_text' ) ) {
+	function rytkoset_theme_chat_get_faq_text() {
+		return trim( (string) get_theme_mod( 'rytkoset_theme_chat_faq', '' ) );
+	}
+}
+
+/**
+ * Sanitoi Customizerin valintaruudun arvon boolean-arvoksi.
+ *
+ * @param mixed $value Syötetty arvo.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_sanitize_checkbox' ) ) {
+	function rytkoset_theme_chat_sanitize_checkbox( $value ) {
+		return (bool) $value;
+	}
+}
+
+/**
+ * Rekisteröi Customizeriin "Tukichatti"-osion: päälle/pois, tervetuloviesti
+ * ja FAQ-teksti. FAQ syötetään system-promptiin (#412).
+ *
+ * @param WP_Customize_Manager $wp_customize Customizer manager.
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_register_customizer' ) ) {
+	function rytkoset_theme_chat_register_customizer( $wp_customize ) {
+		$wp_customize->add_section(
+			'rytkoset_theme_chat',
+			array(
+				'title'       => __( 'Tukichatti', 'rytkoset-theme' ),
+				'description' => __( 'AI-tukichatin asetukset. Chatti näkyy sivustolla vain, kun palvelinpuolen API-avain on asetettu (wp-config.php) ja chatti on kytketty päälle alta.', 'rytkoset-theme' ),
+				'priority'    => 84,
+			)
+		);
+
+		$wp_customize->add_setting(
+			'rytkoset_theme_chat_enabled',
+			array(
+				'default'           => true,
+				'sanitize_callback' => 'rytkoset_theme_chat_sanitize_checkbox',
+				'transport'         => 'refresh',
+			)
+		);
+
+		$wp_customize->add_control(
+			'rytkoset_theme_chat_enabled',
+			array(
+				'label'       => __( 'Näytä tukichatti sivustolla', 'rytkoset-theme' ),
+				'description' => __( 'Kun tämä on pois päältä, chatti-ikkuna piilotetaan eikä chatti vastaa (myös suora rajapintakutsu estetään).', 'rytkoset-theme' ),
+				'section'     => 'rytkoset_theme_chat',
+				'type'        => 'checkbox',
+			)
+		);
+
+		$wp_customize->add_setting(
+			'rytkoset_theme_chat_welcome_message',
+			array(
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_textarea_field',
+				'transport'         => 'refresh',
+			)
+		);
+
+		$wp_customize->add_control(
+			'rytkoset_theme_chat_welcome_message',
+			array(
+				'label'       => __( 'Tervetuloviesti', 'rytkoset-theme' ),
+				'description' => __( 'Ensimmäinen viesti, jonka chatti näyttää avattaessa. Jätä tyhjäksi käyttääksesi oletusviestiä.', 'rytkoset-theme' ),
+				'section'     => 'rytkoset_theme_chat',
+				'type'        => 'textarea',
+			)
+		);
+
+		$wp_customize->add_setting(
+			'rytkoset_theme_chat_faq',
+			array(
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_textarea_field',
+				'transport'         => 'refresh',
+			)
+		);
+
+		$wp_customize->add_control(
+			'rytkoset_theme_chat_faq',
+			array(
+				'label'       => __( 'Tietopohja / usein kysytyt kysymykset', 'rytkoset-theme' ),
+				'description' => __( 'Chatti käyttää tätä tekstiä ensisijaisena tietolähteenä (esim. jäsenyys ja maksut, tapahtumat, sisäänkirjautuminen ja salasana, yhteystiedot). Teksti lähetetään tekoälylle jokaisen kysymyksen mukana, joten pidä se ytimekkäänä.', 'rytkoset-theme' ),
+				'section'     => 'rytkoset_theme_chat',
+				'type'        => 'textarea',
+			)
+		);
+	}
+}
+add_action( 'customize_register', 'rytkoset_theme_chat_register_customizer' );
+
+/**
  * Rekisteröi REST-reitin `POST /wp-json/rytkoset/v1/chat`.
  *
  * @return void
@@ -103,6 +235,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		if ( ! $config['is_configured'] ) {
 			return new WP_Error(
 				'rytkoset_chat_not_configured',
+				__( 'Chat ei ole juuri nyt käytettävissä. Ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
+				array( 'status' => 503 )
+			);
+		}
+
+		// 2b. Ylläpitäjän kytkin (Customizer). Pois → hallittu virhe, myös suora kutsu.
+		if ( ! rytkoset_theme_chat_admin_enabled() ) {
+			return new WP_Error(
+				'rytkoset_chat_disabled',
 				__( 'Chat ei ole juuri nyt käytettävissä. Ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
 				array( 'status' => 503 )
 			);
@@ -416,6 +557,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
 
+		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414) ensisijaisena lähteenä.
+		$faq = rytkoset_theme_chat_get_faq_text();
+		if ( '' !== $faq ) {
+			$prompt .= "\n\nKäytä ensisijaisena tietolähteenä seuraavaa yhdistyksen tietopohjaa. Jos vastaus ei löydy siitä etkä ole varma, kerro ettet tiedä ja ohjaa sähköpostiin.\n\n";
+			$prompt .= "Tietopohja:\n" . $faq;
+		}
+
 		/**
 		 * Suodattaa chat-assistentin system-promptin.
 		 *
@@ -437,7 +585,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 if ( ! function_exists( 'rytkoset_theme_chat_widget_is_enabled' ) ) {
 	function rytkoset_theme_chat_widget_is_enabled() {
 		$config  = rytkoset_theme_chat_get_config();
-		$enabled = ! empty( $config['is_configured'] );
+		$enabled = ! empty( $config['is_configured'] ) && rytkoset_theme_chat_admin_enabled();
 
 		/**
 		 * Suodattaa chat-widgetin näyttämisen frontendissä.
@@ -463,7 +611,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_widget' ) ) {
 			return;
 		}
 
-		$greeting  = __( 'Hei! Kysy minulta Rytkösten sukuseurasta — jäsenyydestä, tapahtumista, kuvista tai sukututkimuksesta.', 'rytkoset-theme' );
+		$greeting  = rytkoset_theme_chat_get_welcome_message();
 		$max_input = (string) rytkoset_theme_chat_get_max_input_length();
 		?>
 		<div class="rytkoset-chat" data-rytkoset-chat hidden>
