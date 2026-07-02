@@ -23,6 +23,13 @@ final class EventDisplayTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'Maksuton', rytkoset_theme_get_event_fee_display( 10 ) );
 	}
 
+	public function test_free_event_with_price_text_shows_formatted_price_text(): void {
+		update_post_meta( 10, $this->keys()['fee_type'], 'free' );
+		update_post_meta( 10, $this->keys()['price_text'], '45' );
+
+		$this->assertSame( '45 €', rytkoset_theme_get_event_fee_display( 10 ) );
+	}
+
 	public function test_paid_event_with_price_is_formatted(): void {
 		update_post_meta( 10, $this->keys()['fee_type'], 'paid' );
 		update_post_meta( 10, $this->keys()['price_text'], '12,50' );
