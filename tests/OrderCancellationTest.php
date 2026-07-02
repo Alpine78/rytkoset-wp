@@ -226,7 +226,7 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_order_cancellation_submit();
 			$this->fail( 'Expected cancellation submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/orders/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/tilaukset/', $redirect->location );
 		}
 
 		$this->assertSame( 'cancelled', $order->get_status() );
@@ -255,7 +255,7 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_order_cancellation_submit();
 			$this->fail( 'Expected cancellation submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/orders/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/tilaukset/', $redirect->location );
 		}
 
 		$this->assertSame( 'processing', $order->get_status() );
