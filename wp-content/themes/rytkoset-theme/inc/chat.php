@@ -838,7 +838,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 			'- Sosiaalisen median linkit ovat sivustolla: Facebook https://www.facebook.com/rytkoset, YouTube https://www.youtube.com/@rytkoset, Instagram https://www.instagram.com/rytkoset/ ja X https://x.com/rytkoset. Älä väitä, ettei some-tilejä ole.',
 			'- Sukukirjaa voi lainata eri kirjastoista. Älä väitä, ettei sukukirjaa ole olemassa tai että uusi sukukirjatyö olisi käynnissä, ellei ajantasainen tietopohja niin kerro.',
 			'- Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa: /kauppa/sukulehdet/rytkosten-sukulainen-nro-9/. Ohjaa tuotteen sivulle ajantasaisen hinnan ja saatavuuden tarkistamiseksi.',
-			'- Sukuseuran hallitus kerrotaan sivulla /sukuseura/sukuseuran-hallitus/. Sivun mukaan hallituskausi on 2023-2026 ja puheenjohtaja on Antti Rytkönen.',
+			'- Sukuseuran hallitus kerrotaan sivulla /sukuseura/sukuseuran-hallitus/. Hallituskausi on 2023-2026. Hallitukseen kuuluvat: Esa Rytkönen (jäsen, Espoo / Maaninka), Mikko Rytkönen (suvun esimies, Runni), Antti Rytkönen (puheenjohtaja, Tampere), Eeli Rytkönen (Kinnulanlahti / Maaninka), Eeva-Liisa Ryhänen (jäsen, Helsinki), Ilkka Rytkönen (jäsen / rytkoset.net ylläpitäjä, Kuopio), Juha Rytkönen (jäsen, Maavesi / Joroinen), Mauri Rytkönen (jäsen, Helsinki), Tapani Rytkönen (sihteeri, Pieksämäki) ja Kimmo Tuulenkari (jäsen, Kajaani). Kun kysytään hallituksesta, käytä vain tätä listaa äläkä lisää muita nimiä.',
 			'- Maksuongelmissa ohjeista Oma tili -> Tilaukset vain ehdollisesti: jos tilauksella näkyy Maksa / yritä uudelleen -painike, maksua voi jatkaa ja valita kassalla toisen maksutavan; jos painiketta ei näy, ohjaa sähköpostiin.',
 		);
 
@@ -870,14 +870,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 			? rytkoset_theme_get_contact_email()
 			: 'info@rytkoset.net';
 
+		$home_url = rtrim( (string) home_url(), '/' );
+
 		$prompt  = "Olet Rytkösten sukuseura ry:n verkkosivujen suomenkielinen tukiassistentti.\n\n";
 		$prompt .= "Ohjeet:\n";
 		$prompt .= "- Vastaa aina ja vain suomeksi, ystävällisesti ja tiiviisti.\n";
+		$prompt .= "- Vastaa pelkkänä tekstinä ilman muotoilumerkintöjä: ei Markdownia, ei tähtiä lihavointiin, ei [teksti](osoite)-linkkejä eikä otsikkomerkkejä. Luettelot saa tehdä viivalla alkavina riveinä.\n";
+		$prompt .= "- Sivuston osoite on {$home_url}. Kun viittaat sivuston sivuun, kirjoita koko osoite paljaana tekstinä (esim. {$home_url}/kauppa/) — chatti muuttaa sen automaattisesti linkiksi.\n";
 		$prompt .= "- Pysy yhdistyksen ja sen verkkosivujen aiheissa: jäsenyys, tapahtumat, sukujuhlat, sukututkimus, kuvat/albumit, digilehdet ja yhteystiedot.\n";
 		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
 		$prompt .= "- Älä täydennä puuttuvia kohtia yleisellä tiedolla, oletuksilla, vanhoilla verkkosivumalleilla tai WordPressin tavanomaisella toiminnalla.\n";
 		$prompt .= "- Älä keksi tietoa. Jos et tiedä vastausta, et löydä sitä lähteistä tai kysymys ei liity yhdistykseen, kerro se rehellisesti.\n";
 		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
+		$prompt .= "- Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa, toista vain lähteessä annetut nimet ja roolit. Älä täydennä listaa oletetuilla nimillä.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
 

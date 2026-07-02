@@ -44,11 +44,11 @@ Kaikki oletukset ovat suodatettavia:
 
 ## System-prompt
 
-`rytkoset_theme_chat_get_system_prompt()` kokoaa promptin, joka ohjeistaa assistentin: vastaa **vain suomeksi**, pysy yhdistyksen aiheissa, käytä faktoihin vain promptissa annettuja lähteitä, **älä keksi tietoa** ja ohjaa epävarmoissa sähköpostiin (`rytkoset_theme_get_contact_email()`). Se myös kieltää täydentämästä puuttuvia kohtia yleisellä tiedolla, WordPress-oletuksilla tai arvauksilla tulevista suunnitelmista, henkilöistä, julkaisujen saatavuudesta, tuotteiden ostettavuudesta, käyttöoikeuksista tai yksittäisten tilausten tilasta.
+`rytkoset_theme_chat_get_system_prompt()` kokoaa promptin, joka ohjeistaa assistentin: vastaa **vain suomeksi**, pysy yhdistyksen aiheissa, käytä faktoihin vain promptissa annettuja lähteitä, **älä keksi tietoa** ja ohjaa epävarmoissa sähköpostiin (`rytkoset_theme_get_contact_email()`). Se myös kieltää täydentämästä puuttuvia kohtia yleisellä tiedolla, WordPress-oletuksilla tai arvauksilla tulevista suunnitelmista, henkilöistä, julkaisujen saatavuudesta, tuotteiden ostettavuudesta, käyttöoikeuksista tai yksittäisten tilausten tilasta. Lisäksi prompt sisältää tulostyylisäännöt: vastaus pelkkänä tekstinä ilman markdownia, ja sivuston linkit täysinä paljaina osoitteina (`home_url()`-pohja) — widget muuttaa ne turvallisesti klikattaviksi.
 
 Promptin tietolähteet:
 
-1. **Pysyvä sivustokonteksti** (`rytkoset_theme_chat_get_stable_site_context()`): sivuston peruspolut ja vakioidut toimintalogiikat, joita mallin ei pidä päätellä. Mukana ovat mm. `/kauppa/`, `/oma-tili/tilaukset/`, `/foorumi/`, `/blogi/`, `/digilehdet/`, some-linkit, ehdollinen maksun jatkaminen, foorumin käytössäolo, blogitekstien vastaanotto ylläpidon kautta, digilehtien HTML-muoto, sukukirjan kirjastolainaus, julkaistu `Rytkösten sukulainen nro 9` -tuote sekä hallituksen sivu ja puheenjohtaja.
+1. **Pysyvä sivustokonteksti** (`rytkoset_theme_chat_get_stable_site_context()`): sivuston peruspolut ja vakioidut toimintalogiikat, joita mallin ei pidä päätellä. Mukana ovat mm. `/kauppa/`, `/oma-tili/tilaukset/`, `/foorumi/`, `/blogi/`, `/digilehdet/`, some-linkit, ehdollinen maksun jatkaminen, foorumin käytössäolo, blogitekstien vastaanotto ylläpidon kautta, digilehtien HTML-muoto, sukukirjan kirjastolainaus, julkaistu `Rytkösten sukulainen nro 9` -tuote sekä hallituksen sivu ja koko hallituslista.
 2. **Customizerin Tietopohja/FAQ-kenttä** (#414): ylläpitäjän vapaamuotoinen tietopohja vakiintuneille yhdistys- ja toimintaohjeille.
 3. **Automaattinen ajantasainen tietolohko** (#459): tulevat tapahtumat ja julkaistut jäsenyystuotteet sivuston omista lähteistä.
 
@@ -89,6 +89,7 @@ Ennen chatin vientiä tuotantoon testaa devissä ainakin kysymykset, joissa mall
 - "Onko sukukirjaa saatavana?" -> pitää kertoa, että sukukirjaa voi lainata eri kirjastoista; ei saa keksiä uutta käynnissä olevaa sukukirjaprojektia.
 - "Onko Rytkösten sukulainen nro 9 julkaistu?" -> pitää kertoa, että numero 9 on julkaistu ja myynnissä verkkokaupassa.
 - "Kuka on sukuseuran puheenjohtaja?" -> pitää vastata hallitussivun mukaan: Antti Rytkönen.
+- "Keitä sukuseuran hallitukseen kuuluu?" -> pitää käyttää pysyvän kontekstin listaa, eikä vastauksessa saa olla muita nimiä kuin listatut hallituksen jäsenet.
 - "Onko sukuseuralla some-tilejä?" -> pitää tunnistaa sivuston some-linkit.
 - "Saanko digilehden PDF:nä?" -> ei saa luvata PDF-latausta, ellei tietopohjaan ole lisätty erillistä ohjetta.
 - "Miten voin yrittää epäonnistunutta maksua uudelleen?" -> pitää käyttää ehdollista muotoa: vain jos tilauksella näkyy **Maksa / yritä uudelleen** -painike.
@@ -188,9 +189,10 @@ Kelluva chat-painike + paneeli (`inc/chat.php` renderöi kuoren `wp_footer`-kouk
 
 - **Näkyy vain kun backend on konfiguroitu ja chatti on kytketty päälle.** `rytkoset_theme_chat_widget_is_enabled()` palauttaa `true` vasta kun `RYTKOSET_CHAT_API_KEY` + `RYTKOSET_CHAT_API_ENDPOINT` on asetettu **ja** Customizerin Tukichatti-kytkin on päällä (#414) — muuten widgetiä ei renderöidä eikä assetteja ladata. Näyttämisen voi pakottaa/estää suodattimella `rytkoset_theme_chat_widget_enabled`.
 - **Keksitön:** keskusteluhistoria elää **vain JS-muistissa**. Ei `localStorage`/`sessionStorage`/keksejä → keksibanneria ei tarvita. Sivun lataus nollaa keskustelun (hyväksytty MVP-rajaus).
-- **Turvallinen renderöinti:** mallin vastaus lisätään DOMiin `textContent`illä (ei `innerHTML`) → ei XSS-riskiä. Rivinvaihdot säilyvät CSS:n `white-space: pre-wrap`illä.
+- **Turvallinen renderöinti:** mallin vastaus lisätään DOMiin ilman `innerHTML`:ää (tekstisolmut) → ei XSS-riskiä. Rivinvaihdot säilyvät CSS:n `white-space: pre-wrap`illä. Vastauksessa olevat **paljaat oman sivuston https-osoitteet** (nykyinen isäntä, `rytkoset.net` ja sen alidomainit) muutetaan klikattaviksi linkeiksi turvallisesti (`createElement('a')`, `new URL()`-validointi, protokolla vain http/https, `rel="noopener noreferrer"`, avautuu uuteen välilehteen jottei chat-keskustelu katkea). Muut osoitteet ja mahdollinen markdown-syntaksi jäävät pelkäksi tekstiksi. System-prompt ohjeistaa mallia vastaamaan ilman markdownia ja kirjoittamaan sivuston linkit täysinä osoitteina (`home_url()`-pohja, toimii oikein dev- ja tuotantoympäristössä).
 - **Saavutettavuus (WCAG 2.1 AA):** paneeli `role="dialog"`, viestiloki `role="log" aria-live="polite"` (uudet vastaukset ilmoitetaan ruudunlukijalle), näkyvä fokus, näppäimistökäyttö (Enter lähettää, Shift+Enter rivinvaihto, **Esc** sulkee ja palauttaa fokuksen painikkeeseen). Fokusansaa ei ole (paneeli ei ole modaali) — MVP-rajaus.
 - **Tumma teema:** widget käyttää vain design-tokeneita, jotka adaptoivat `:root[data-theme="dark"]`-teemaan.
+- **Mobiili (≤ 640px):** paneeli täyttää lähes koko ruudun (`chat.css`). iOS Safarissa kiinnitetyn (`position: fixed`) elementin sijainti lasketaan layout-viewportista, joka voi poiketa näkyvästä viewportista sekä virtuaalinäppäimistön ollessa auki että sivun mahdollisen vaakavierityksen takia — ilman korjausta paneeli voi jäädä osittain ruudun ulkopuolelle tai näppäimistön peittoon. `chat.js` pinnaa auki olevan paneelin `window.visualViewport`-rajapinnalla tarkasti näkyvään viewporttiin (`resize`/`scroll`-kuuntelu + `matchMedia`-rajan ylityksen käsittely), inline `left`/`top`/`width`/`height` korvaa CSS:n oletusarvot avattaessa ja puretaan suljettaessa (`chat.css`:n `@media (max-width: 640px)` toimii fallbackina selaimille ilman `visualViewport`-tukea).
 - **Disclaimer** näkyy paneelin yläosassa: "Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse."
 - **Syöteraja** (`maxlength`) jaetaan backendin kanssa: `rytkoset_theme_chat_get_max_input_length()`.
 
@@ -201,3 +203,5 @@ Widgetin nonce (`wp_create_nonce('wp_rest')`) upotetaan sivun HTML:ään `wp_add
 ### Manuaalinen selaintestaus
 
 Avaa chat kelluvasta painikkeesta, lähetä kysymys → "kirjoittaa…"-tila → suomenkielinen vastaus. Tarkista DevToolsin **Application**-välilehdeltä, ettei keksejä tai web storagea synny. Testaa mobiilileveys (390 px), tumma teema, näppäimistö (Tab/Esc), ruudunlukija (`aria-live`) ja `<script>`-syöte (renderöityy tekstinä, ei suoritu).
+
+**Oikealla mobiililaitteella (ei vain DevToolsin emulaattorilla — `visualViewport`-käyttäytyminen eroaa):** avaa paneeli, avaa virtuaalinäppäimistö koskettamalla syötekenttää → koko paneeli (viestiloki + syötekenttä + lähetyspainike) pysyy näkyvässä osassa ruutua näppäimistön yläpuolella, ei leikkaudu eikä jää näppäimistön alle. Yritä vetää sivua sivuttain paneelin ollessa auki → paneeli ei siirry pois paikaltaan.
