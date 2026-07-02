@@ -13,7 +13,7 @@ Tämä dokumentti kuvaa tiketin `#450` toimintamallin: bussikyydin (esim. Savo�
 ## Vaihe 1 — Bussikyytitapahtuman luonti (ylläpito)
 
 1. **Tapahtumat → Lisää uusi.** Anna otsikko (esim. *Bussikyyti Tampereen sukujuhliin*), kuvaus ja ajankohta.
-2. **Tapahtuman tiedot** -laatikko: aseta **Maksullisuus = Maksuton**. (Bussikyyti kerätään maksuttomalla lomakkeella; varsinainen maksu hoidetaan myöhemmin erikseen.) Poista tarvittaessa valinta **Kysy ruokavaliorajoitteet ja allergiat** — bussikyydissä ei ole tarjoiluita.
+2. **Tapahtuman tiedot** -laatikko: aseta **Maksullisuus = Maksuton**. (Bussikyyti kerätään maksuttomalla lomakkeella; varsinainen maksu hoidetaan myöhemmin erikseen.) Poista tarvittaessa valinta **Kysy ruokavaliorajoitteet ja allergiat** — bussikyydissä ei ole tarjoiluita. Kirjoita **Hintateksti**-kenttään ehdollinen maksuselite, esim. `45 € (maksetaan myöhemmin, jos ilmoittautuneita on vähintään 20)` — teksti näkyy tapahtumasivun HINTA-rivillä "Maksuton"-tekstin sijaan (#464).
 3. **Ilmoittautumisen lisävalinta** -laatikko:
    - Rastita **Lisää valintalista ilmoittautumislomakkeelle**.
    - **Kentän nimi**: `Lähtöpaikka`.

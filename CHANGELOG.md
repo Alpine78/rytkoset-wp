@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Fixed
+- `inc/events.php` / `tests/EventDisplayTest.php`: maksuttoman tapahtuman hintateksti näkyy nyt tapahtumasivun HINTA-rivillä (#464). `rytkoset_theme_get_event_fee_display()` näytti maksuttomalle tapahtumalle (`Maksullisuus = Maksuton`) aina kovakoodatun "Maksuton"-tekstin `Hintateksti`-kentän sisällöstä riippumatta — esim. Tampereen sukujuhlien bussikyydin ehdollista jälkikäteisveloitusta ("45 € (maksetaan myöhemmin, jos ilmoittautuneita on vähintään 20)") ei saanut näkyviin ilman, että samalla piti vaihtaa Maksullisuus tilaan "Ei määritelty" — mikä puolestaan piilotti vapaan ilmoittautumislomakkeen kokonaan (`rytkoset_theme_event_can_show_free_registration_form()` vaatii `fee_type === 'free'`). Korjattu niin, että `free`-tapahtuma näyttää `price_text`-kentän (muotoiltuna kuten `paid`-haarassa) kun se on asetettu, ja palaa oletustekstiin "Maksuton" vain kun kenttä on tyhjä; ilmoittautumislomakkeen näyttöehto ei muuttunut. Lisätty 1 PHPUnit-testi. php -l + phpcs + 362 PHPUnit-testiä vihreät (#464).
+
 ## [1.1.0] - 2026-06-29
 
 Jäsenyys ja jäsenedut (EPIC 10) sekä digilehdet (EPIC 9): manuaalinen ja WooCommerce-tilauksesta automaattinen jäsenyysstatus jaetulla aktiivisuusportilla, vain jäsenille -sivut ja -alennuskuponki, porrastettu digilehtien käyttöoikeus kahden tuotteen jäsen-/normaalihintamallilla sekä manuaaliset käyttöoikeudet. Lisäksi uudelleenkäytettävä tapahtumailmoittautumisen lisäkenttäkonfiguraatio (Tampere 2026 -bussikyyti), lainmukainen itsepalvelutilausperuutus, schema.org/JSON-LD-strukturoitu data, tietoturva- ja tietosuojakovennukset sekä uusi tietokannaton PHPUnit-harness ja WordPress Coding Standards kovina CI-portteina.
