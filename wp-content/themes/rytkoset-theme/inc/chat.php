@@ -102,6 +102,288 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_faq_text' ) ) {
 }
 
 /**
+ * Kertoo, liitetäänkö system-promptiin automaattisesti koottu ajantasainen
+ * tietolohko (tulevat tapahtumat + jäsenyystuotteet, #459).
+ *
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_live_context_is_enabled' ) ) {
+	function rytkoset_theme_chat_live_context_is_enabled() {
+		/**
+		 * Suodattaa ajantasaisen tietolohkon käytön (koko lohkon voi kytkeä pois).
+		 *
+		 * @param bool $enabled Liitetäänkö lohko system-promptiin.
+		 */
+		return (bool) apply_filters( 'rytkoset_theme_chat_live_context_enabled', true );
+	}
+}
+
+/**
+ * Muotoilee ISO-päivämäärän (YYYY-MM-DD) suomalaiseen muotoon (j.n.Y).
+ *
+ * Tarkoituksella riippumaton `date_format`-asetuksesta: promptin päivämäärän
+ * pitää olla deterministinen ja yksiselitteinen mallille.
+ *
+ * @param string $iso_date ISO-päivämäärä.
+ * @return string Muotoiltu päivämäärä tai tyhjä.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_format_iso_date' ) ) {
+	function rytkoset_theme_chat_format_iso_date( $iso_date ) {
+		$iso_date = trim( (string) $iso_date );
+
+		if ( '' === $iso_date ) {
+			return '';
+		}
+
+		$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $iso_date );
+
+		if ( false === $date || $date->format( 'Y-m-d' ) !== $iso_date ) {
+			return '';
+		}
+
+		return $date->format( 'j.n.Y' );
+	}
+}
+
+/**
+ * Palauttaa tulevien julkaistujen tapahtumien ID:t aikajärjestyksessä.
+ *
+ * "Tuleva" = tapahtumalla on kelvollinen päivämäärä eikä se ole mennyt
+ * (`rytkoset_theme_is_event_date_passed()` pitää tapahtumapäivän voimassa
+ * päivän loppuun). Määrä rajataan suodattimella.
+ *
+ * @param int $limit Enimmäismäärä; 0 = suodattimen oletus (5).
+ * @return array<int,int>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_upcoming_event_ids' ) ) {
+	function rytkoset_theme_chat_get_upcoming_event_ids( $limit = 0 ) {
+		$limit = (int) $limit;
+
+		if ( $limit <= 0 ) {
+			/**
+			 * Suodattaa promptiin liitettävien tulevien tapahtumien enimmäismäärän.
+			 *
+			 * @param int $max_events Tapahtumien enimmäismäärä.
+			 */
+			$limit = (int) apply_filters( 'rytkoset_theme_chat_live_context_max_events', 5 );
+		}
+
+		$limit = max( 1, $limit );
+
+		if ( ! function_exists( 'rytkoset_theme_get_event_date_raw' ) ) {
+			return array();
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'   => 'rytkoset_event',
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+
+		$upcoming = array();
+
+		foreach ( (array) $ids as $event_id ) {
+			$event_id = (int) $event_id;
+
+			if ( 'publish' !== get_post_status( $event_id ) ) {
+				continue;
+			}
+
+			$date = rytkoset_theme_get_event_date_raw( $event_id );
+
+			if ( '' === $date || rytkoset_theme_is_event_date_passed( $event_id ) ) {
+				continue;
+			}
+
+			$upcoming[ $event_id ] = $date;
+		}
+
+		// ISO-päivämäärät järjestyvät oikein merkkijonovertailulla.
+		asort( $upcoming );
+
+		return array_slice( array_keys( $upcoming ), 0, $limit );
+	}
+}
+
+/**
+ * Muotoilee yhden tapahtuman tekstilohkon ajantasaista tietolohkoa varten.
+ *
+ * Kokoaa olemassa olevista tapahtumagettereistä (nimi, ajankohta, paikka,
+ * hinta, ilmoittautumisen takaraja, #450-lisävalinnat, URL) tiiviin
+ * luettelokohdan. Ei lupaa paikkatilannetta (#459 rajaus).
+ *
+ * @param int $event_id Tapahtuman ID.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_format_event_context' ) ) {
+	function rytkoset_theme_chat_format_event_context( $event_id ) {
+		$event_id = (int) $event_id;
+		$title    = trim( (string) get_the_title( $event_id ) );
+
+		if ( '' === $title ) {
+			return '';
+		}
+
+		$lines   = array();
+		$lines[] = '- ' . $title;
+
+		$date = rytkoset_theme_chat_format_iso_date( rytkoset_theme_get_event_date_raw( $event_id ) );
+		$time = rytkoset_theme_get_event_time_display( $event_id );
+
+		if ( '' !== $date ) {
+			$lines[] = '  Ajankohta: ' . $date . ( '' !== $time ? ' klo ' . $time : '' );
+		}
+
+		$location = rytkoset_theme_get_event_location( $event_id );
+		if ( '' !== $location ) {
+			$lines[] = '  Paikka: ' . $location;
+		}
+
+		$fee = rytkoset_theme_get_event_fee_display( $event_id );
+		if ( '' !== $fee ) {
+			$lines[] = '  Hinta: ' . $fee;
+		}
+
+		if ( 'paid' === rytkoset_theme_get_event_fee_type( $event_id ) ) {
+			$lines[] = '  Ilmoittautuminen ja maksu tapahtuman sivun kautta.';
+		} else {
+			// Sama takaraja kuin julkisella lomakkeella: oma takaraja tai tapahtumapäivä.
+			$deadline = rytkoset_theme_get_free_event_registration_deadline_raw( $event_id );
+			if ( '' === $deadline ) {
+				$deadline = rytkoset_theme_get_event_date_raw( $event_id );
+			}
+
+			$deadline_display = rytkoset_theme_chat_format_iso_date( $deadline );
+			if ( '' !== $deadline_display ) {
+				$lines[] = '  Ilmoittautuminen viimeistään: ' . $deadline_display;
+			}
+		}
+
+		if ( rytkoset_theme_event_has_choice_field( $event_id ) ) {
+			$options = rytkoset_theme_get_event_choice_options( $event_id );
+
+			if ( ! empty( $options ) ) {
+				$lines[] = '  ' . rytkoset_theme_get_event_choice_field_label( $event_id ) . ': ' . implode( ', ', $options );
+			}
+		}
+
+		if ( rytkoset_theme_event_collects_quantity( $event_id ) ) {
+			$lines[] = '  Ilmoittautumisessa kysytään myös: ' . rytkoset_theme_get_event_quantity_field_label( $event_id );
+		}
+
+		$lines[] = '  Lisätiedot ja ilmoittautuminen: ' . get_permalink( $event_id );
+
+		return implode( "\n", $lines );
+	}
+}
+
+/**
+ * Kokoaa jäsenyystuotteiden rivit ajantasaista tietolohkoa varten.
+ *
+ * Fail-safe: ilman WooCommercea (tai jäsenyysmoduulia) palautuu tyhjä
+ * merkkijono eikä mikään kaadu. Vain julkaistut jäsenyystuotteet listataan.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_membership_context' ) ) {
+	function rytkoset_theme_chat_get_membership_context() {
+		if ( ! function_exists( 'wc_get_product' ) || ! function_exists( 'rytkoset_theme_is_membership_product' ) ) {
+			return '';
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'   => 'product',
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+				'meta_key'    => rytkoset_theme_get_membership_product_meta_key(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Jäsenyystuotteita on kourallinen; haku ajetaan vain chat-pyynnön yhteydessä.
+				'meta_value'  => 'yes', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Ks. yllä.
+			)
+		);
+
+		$lines = array();
+
+		foreach ( (array) $ids as $product_id ) {
+			$product = wc_get_product( (int) $product_id );
+
+			if ( ! rytkoset_theme_is_membership_product( $product ) || 'publish' !== $product->get_status() ) {
+				continue;
+			}
+
+			$name = trim( (string) $product->get_name() );
+			if ( '' === $name ) {
+				continue;
+			}
+
+			$price      = rytkoset_theme_format_event_price_text( (string) $product->get_price() );
+			$type_label = rytkoset_theme_get_membership_type_label( rytkoset_theme_get_membership_product_type( $product ) );
+			$expiry     = rytkoset_theme_chat_format_iso_date( rytkoset_theme_get_membership_product_expiry_date( $product ) );
+
+			$line = '- ' . $name;
+			if ( '' !== $price ) {
+				$line .= ': ' . $price;
+			}
+			$line .= ' (' . $type_label . ')';
+			if ( '' !== $expiry ) {
+				$line .= ' — jäsenyys voimassa ' . $expiry . ' asti';
+			}
+
+			$lines[] = $line;
+		}
+
+		return implode( "\n", $lines );
+	}
+}
+
+/**
+ * Kokoaa system-promptiin liitettävän ajantasaisen tietolohkon (#459).
+ *
+ * Tulevat tapahtumat -osio kertoo eksplisiittisesti, jos tapahtumia ei ole
+ * (ettei malli keksi niitä). Jäsenyysosio jätetään pois, jos tuotteita ei
+ * löydy. Koko lohko katkaistaan suodatettavaan merkkirajaan.
+ *
+ * @return string Tyhjä, kun lohko on kytketty pois suodattimella.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_live_context' ) ) {
+	function rytkoset_theme_chat_get_live_context() {
+		if ( ! rytkoset_theme_chat_live_context_is_enabled() ) {
+			return '';
+		}
+
+		$event_blocks = array();
+
+		foreach ( rytkoset_theme_chat_get_upcoming_event_ids() as $event_id ) {
+			$block = rytkoset_theme_chat_format_event_context( $event_id );
+
+			if ( '' !== $block ) {
+				$event_blocks[] = $block;
+			}
+		}
+
+		$sections   = array();
+		$sections[] = "Tulevat tapahtumat:\n" . ( ! empty( $event_blocks ) ? implode( "\n", $event_blocks ) : '- Ei tulevia tapahtumia tiedossa juuri nyt.' );
+
+		$membership = rytkoset_theme_chat_get_membership_context();
+		if ( '' !== $membership ) {
+			$sections[] = "Jäsenyystuotteet verkkokaupassa:\n" . $membership;
+		}
+
+		/**
+		 * Suodattaa ajantasaisen tietolohkon enimmäispituuden merkkeinä.
+		 *
+		 * @param int $max_length Merkkiraja.
+		 */
+		$max_length = (int) apply_filters( 'rytkoset_theme_chat_live_context_max_length', 4000 );
+
+		return rytkoset_theme_chat_truncate( implode( "\n\n", $sections ), max( 1, $max_length ) );
+	}
+}
+
+/**
  * Sanitoi Customizerin valintaruudun arvon boolean-arvoksi.
  *
  * @param mixed $value Syötetty arvo.
@@ -562,6 +844,14 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		if ( '' !== $faq ) {
 			$prompt .= "\n\nKäytä ensisijaisena tietolähteenä seuraavaa yhdistyksen tietopohjaa. Jos vastaus ei löydy siitä etkä ole varma, kerro ettet tiedä ja ohjaa sähköpostiin.\n\n";
 			$prompt .= "Tietopohja:\n" . $faq;
+		}
+
+		// Automaattisesti koottu ajantasainen tieto (#459): tapahtumat + jäsenyystuotteet.
+		$live_context = rytkoset_theme_chat_get_live_context();
+		if ( '' !== $live_context ) {
+			$prompt .= "\n\nAjantasaiset tiedot sivustolta (koottu automaattisesti tapahtumista ja verkkokaupan tuotteista; käytä näitä ensisijaisesti tapahtuma- ja jäsenmaksukysymyksiin):\n\n";
+			$prompt .= $live_context;
+			$prompt .= "\n\nÄlä arvioi vapaita paikkoja tai ilmoittautumistilannetta — ohjaa tarkistamaan ne tapahtuman sivulta.";
 		}
 
 		/**

@@ -213,6 +213,10 @@ class WC_Product {
 		return (string) ( $this->meta['_sku'] ?? '' );
 	}
 
+	public function get_price(): string {
+		return (string) ( $this->meta['_price'] ?? '' );
+	}
+
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
 	}
