@@ -817,6 +817,46 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_client_ip' ) ) {
 }
 
 /**
+ * Kokoaa chatin pysyvän sivustokontekstin.
+ *
+ * Tämä ei korvaa FAQ:ta eikä automaattista tapahtuma-/tuotelohkoa. Tarkoitus on
+ * lukita sivuston peruspolut ja vakioidut toimintalogiikat, joita mallin ei pidä
+ * päätellä tai keksiä, jos ylläpitäjän FAQ ei mainitse niitä.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
+	function rytkoset_theme_chat_get_stable_site_context() {
+		$lines = array(
+			'Sivuston pysyvät polut ja perustoiminnot:',
+			'- Verkkokauppa: /kauppa/. Ostoskori: /ostoskori/. Kassa: /kassa/. Oma tili: /oma-tili/. Tilaukset: /oma-tili/tilaukset/.',
+			'- Tapahtumat: /tapahtumat/. Foorumi: /foorumi/. Blogi: /blogi/. Digilehdet: /digilehdet/.',
+			'- Foorumi on käytössä sivustolla. Kirjautunut käyttäjä voi aloittaa keskustelun, jos hänellä on foorumin julkaisuoikeus. Älä väitä foorumia suljetuksi vain siksi, että viimeisin viesti on vanha.',
+			'- Blogi näyttää julkaistut kirjoitukset. Blogikirjoituksia voi ehdottaa tai lähettää ylläpidolle sähköpostitse; julkaisu tehdään ylläpidon kautta. Älä väitä, ettei blogitekstejä oteta vastaan.',
+			'- Blogikirjoituksissa ja albumeissa voi olla kommentointi käytössä; kommentit moderoidaan ennen julkaisua.',
+			'- Digilehdet ovat sivuston HTML-sisältöä, eivät PDF-latauksia. Älä lupaa PDF-latauksia, ellei erillinen tietopohja niin sano.',
+			'- Sosiaalisen median linkit ovat sivustolla: Facebook https://www.facebook.com/rytkoset, YouTube https://www.youtube.com/@rytkoset, Instagram https://www.instagram.com/rytkoset/ ja X https://x.com/rytkoset. Älä väitä, ettei some-tilejä ole.',
+			'- Sukukirjaa voi lainata eri kirjastoista. Älä väitä, ettei sukukirjaa ole olemassa tai että uusi sukukirjatyö olisi käynnissä, ellei ajantasainen tietopohja niin kerro.',
+			'- Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa: /kauppa/sukulehdet/rytkosten-sukulainen-nro-9/. Ohjaa tuotteen sivulle ajantasaisen hinnan ja saatavuuden tarkistamiseksi.',
+			'- Sukuseuran hallitus kerrotaan sivulla /sukuseura/sukuseuran-hallitus/. Sivun mukaan hallituskausi on 2023-2026 ja puheenjohtaja on Antti Rytkönen.',
+			'- Maksuongelmissa ohjeista Oma tili -> Tilaukset vain ehdollisesti: jos tilauksella näkyy Maksa / yritä uudelleen -painike, maksua voi jatkaa ja valita kassalla toisen maksutavan; jos painiketta ei näy, ohjaa sähköpostiin.',
+		);
+
+		/**
+		 * Suodattaa chatin pysyvän sivustokontekstin.
+		 *
+		 * @param string $context Rivinvaihdoilla koottu konteksti.
+		 * @param array  $lines   Kontekstin yksittäiset rivit.
+		 */
+		return (string) apply_filters(
+			'rytkoset_theme_chat_stable_site_context',
+			implode( "\n", $lines ),
+			$lines
+		);
+	}
+}
+
+/**
  * Kokoaa Mistralille annettavan system-promptin (rooli + ohjeet).
  *
  * MVP: yhdistyksen identiteetti ja käyttäytymisohjeet. Laajemman FAQ-tietämyksen
@@ -834,14 +874,23 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "Ohjeet:\n";
 		$prompt .= "- Vastaa aina ja vain suomeksi, ystävällisesti ja tiiviisti.\n";
 		$prompt .= "- Pysy yhdistyksen ja sen verkkosivujen aiheissa: jäsenyys, tapahtumat, sukujuhlat, sukututkimus, kuvat/albumit, digilehdet ja yhteystiedot.\n";
-		$prompt .= "- Älä keksi tietoa. Jos et tiedä vastausta tai kysymys ei liity yhdistykseen, kerro se rehellisesti.\n";
+		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
+		$prompt .= "- Älä täydennä puuttuvia kohtia yleisellä tiedolla, oletuksilla, vanhoilla verkkosivumalleilla tai WordPressin tavanomaisella toiminnalla.\n";
+		$prompt .= "- Älä keksi tietoa. Jos et tiedä vastausta, et löydä sitä lähteistä tai kysymys ei liity yhdistykseen, kerro se rehellisesti.\n";
+		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
 
-		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414) ensisijaisena lähteenä.
+		$stable_context = rytkoset_theme_chat_get_stable_site_context();
+		if ( '' !== $stable_context ) {
+			$prompt .= "\n\nPysyvä sivustokonteksti (käytä näitä perusasioita, kun kysymys koskee sivuston toimintoja tai polkuja):\n\n";
+			$prompt .= $stable_context;
+		}
+
+		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).
 		$faq = rytkoset_theme_chat_get_faq_text();
 		if ( '' !== $faq ) {
-			$prompt .= "\n\nKäytä ensisijaisena tietolähteenä seuraavaa yhdistyksen tietopohjaa. Jos vastaus ei löydy siitä etkä ole varma, kerro ettet tiedä ja ohjaa sähköpostiin.\n\n";
+			$prompt .= "\n\nKäytä seuraavaa ylläpitäjän tietopohjaa vakiintuneisiin yhdistys- ja toimintaohjeisiin. Jos vastaus ei löydy annetuista lähteistä etkä ole varma, kerro ettet tiedä ja ohjaa sähköpostiin.\n\n";
 			$prompt .= "Tietopohja:\n" . $faq;
 		}
 

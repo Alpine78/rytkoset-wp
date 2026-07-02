@@ -152,7 +152,55 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'vain suomeksi', $prompt );
 		$this->assertStringContainsString( 'Älä keksi tietoa', $prompt );
+		$this->assertStringContainsString( 'vain tässä system-promptissa annettuja lähteitä', $prompt );
+		$this->assertStringContainsString( 'Älä täydennä puuttuvia kohtia yleisellä tiedolla', $prompt );
+		$this->assertStringContainsString( 'Älä arvaa tulevia suunnitelmia', $prompt );
 		$this->assertStringContainsString( rytkoset_theme_get_contact_email(), $prompt );
+	}
+
+	public function test_stable_site_context_contains_known_paths_and_site_features(): void {
+		$context = rytkoset_theme_chat_get_stable_site_context();
+
+		$this->assertStringContainsString( 'Verkkokauppa: /kauppa/', $context );
+		$this->assertStringContainsString( 'Oma tili: /oma-tili/', $context );
+		$this->assertStringContainsString( 'Tilaukset: /oma-tili/tilaukset/', $context );
+		$this->assertStringContainsString( 'Foorumi: /foorumi/', $context );
+		$this->assertStringContainsString( 'Blogi: /blogi/', $context );
+		$this->assertStringContainsString( 'Digilehdet: /digilehdet/', $context );
+		$this->assertStringContainsString( 'Foorumi on käytössä sivustolla', $context );
+		$this->assertStringContainsString( 'Blogikirjoituksia voi ehdottaa tai lähettää', $context );
+		$this->assertStringContainsString( 'Digilehdet ovat sivuston HTML-sisältöä, eivät PDF-latauksia', $context );
+		$this->assertStringContainsString( 'https://www.facebook.com/rytkoset', $context );
+		$this->assertStringContainsString( 'https://www.youtube.com/@rytkoset', $context );
+		$this->assertStringContainsString( 'https://www.instagram.com/rytkoset/', $context );
+		$this->assertStringContainsString( 'https://x.com/rytkoset', $context );
+		$this->assertStringContainsString( 'Älä väitä, ettei some-tilejä ole', $context );
+		$this->assertStringContainsString( 'Sukukirjaa voi lainata eri kirjastoista', $context );
+		$this->assertStringContainsString( 'Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa', $context );
+		$this->assertStringContainsString( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-9/', $context );
+		$this->assertStringContainsString( 'hallituskausi on 2023-2026 ja puheenjohtaja on Antti Rytkönen', $context );
+		$this->assertStringContainsString( 'Maksa / yritä uudelleen -painike', $context );
+	}
+
+	public function test_system_prompt_includes_stable_site_context(): void {
+		$prompt = rytkoset_theme_chat_get_system_prompt();
+
+		$this->assertStringContainsString( 'Pysyvä sivustokonteksti', $prompt );
+		$this->assertStringContainsString( 'Foorumi on käytössä sivustolla', $prompt );
+		$this->assertStringContainsString( 'Blogikirjoituksia voi ehdottaa tai lähettää', $prompt );
+		$this->assertStringContainsString( 'Sukukirjaa voi lainata eri kirjastoista', $prompt );
+		$this->assertStringContainsString( 'Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa', $prompt );
+		$this->assertStringContainsString( 'puheenjohtaja on Antti Rytkönen', $prompt );
+	}
+
+	public function test_stable_site_context_is_filterable(): void {
+		$filter = static fn() => 'TESTIKONTEKSTI';
+		add_filter( 'rytkoset_theme_chat_stable_site_context', $filter );
+
+		$this->assertSame( 'TESTIKONTEKSTI', rytkoset_theme_chat_get_stable_site_context() );
+		$this->assertStringContainsString( 'TESTIKONTEKSTI', rytkoset_theme_chat_get_system_prompt() );
+
+		remove_filter( 'rytkoset_theme_chat_stable_site_context', $filter );
 	}
 
 	public function test_system_prompt_is_filterable(): void {

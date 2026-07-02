@@ -44,7 +44,15 @@ Kaikki oletukset ovat suodatettavia:
 
 ## System-prompt
 
-`rytkoset_theme_chat_get_system_prompt()` kokoaa promptin, joka ohjeistaa assistentin: vastaa **vain suomeksi**, pysy yhdistyksen aiheissa, **älä keksi tietoa** ja ohjaa epävarmoissa sähköpostiin (`rytkoset_theme_get_contact_email()`). Jos Customizerin **Tietopohja/FAQ-kenttä** (#414, ks. alla) ei ole tyhjä, sen sisältö liitetään promptin loppuun "ensisijaisena tietolähteenä". Promptin voi korvata tai laajentaa suodattimella `rytkoset_theme_chat_system_prompt` (argumentit: `$prompt`, `$contact_email`).
+`rytkoset_theme_chat_get_system_prompt()` kokoaa promptin, joka ohjeistaa assistentin: vastaa **vain suomeksi**, pysy yhdistyksen aiheissa, käytä faktoihin vain promptissa annettuja lähteitä, **älä keksi tietoa** ja ohjaa epävarmoissa sähköpostiin (`rytkoset_theme_get_contact_email()`). Se myös kieltää täydentämästä puuttuvia kohtia yleisellä tiedolla, WordPress-oletuksilla tai arvauksilla tulevista suunnitelmista, henkilöistä, julkaisujen saatavuudesta, tuotteiden ostettavuudesta, käyttöoikeuksista tai yksittäisten tilausten tilasta.
+
+Promptin tietolähteet:
+
+1. **Pysyvä sivustokonteksti** (`rytkoset_theme_chat_get_stable_site_context()`): sivuston peruspolut ja vakioidut toimintalogiikat, joita mallin ei pidä päätellä. Mukana ovat mm. `/kauppa/`, `/oma-tili/tilaukset/`, `/foorumi/`, `/blogi/`, `/digilehdet/`, some-linkit, ehdollinen maksun jatkaminen, foorumin käytössäolo, blogitekstien vastaanotto ylläpidon kautta, digilehtien HTML-muoto, sukukirjan kirjastolainaus, julkaistu `Rytkösten sukulainen nro 9` -tuote sekä hallituksen sivu ja puheenjohtaja.
+2. **Customizerin Tietopohja/FAQ-kenttä** (#414): ylläpitäjän vapaamuotoinen tietopohja vakiintuneille yhdistys- ja toimintaohjeille.
+3. **Automaattinen ajantasainen tietolohko** (#459): tulevat tapahtumat ja julkaistut jäsenyystuotteet sivuston omista lähteistä.
+
+Promptin voi korvata tai laajentaa suodattimella `rytkoset_theme_chat_system_prompt` (argumentit: `$prompt`, `$contact_email`). Pysyvää sivustokontekstia voi muokata suodattimella `rytkoset_theme_chat_stable_site_context`.
 
 ## Customizer-asetukset (#414)
 
@@ -62,7 +70,7 @@ Huom: chatti näkyy sivustolla vain kun **molemmat** ehdot täyttyvät — API-a
 
 ### Tietopohjan (FAQ) ylläpito
 
-FAQ-teksti on chatin ainoa yhdistyskohtainen tietolähde — malli ei hae tietoa sivustolta eikä internetistä. Kirjoitusohjeet:
+FAQ-teksti täydentää pysyvää sivustokontekstia ja automaattista tapahtuma-/tuotelohkoa. Malli ei hae tietoa internetistä eikä selaa sivustoa itse chat-pyynnön aikana. Kirjoitusohjeet:
 
 - **Rakenne:** otsikot ISOLLA omilla riveillään, faktat luettelomerkkeinä (`- `). Selkeä rakenne auttaa mallia poimimaan oikean kohdan.
 - **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen ja Mollie-erityistapaukset (ulkomaanmaksun hyväksyntä, RF-viitteen väliviivat Mollien sähköpostissa), maksun jatkaminen vain ehdollisesti ("jos tilauksella näkyy Maksa / yritä uudelleen -painike"), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot.
@@ -71,6 +79,19 @@ FAQ-teksti on chatin ainoa yhdistyskohtainen tietolähde — malli ei hae tietoa
 - **Rajaukset:** älä laita FAQ:hun henkilötietoja äläkä mitään, mikä ei saa näkyä julkisesti — FAQ:n sisältö voi päätyä chatin vastauksiin kenelle tahansa kävijälle.
 
 Testaa muutokset dev-ympäristössä kysymällä chatilta muutettuja kohtia ennen tuotantoon vientiä.
+
+### Tuotantovalmiuden savutestit
+
+Ennen chatin vientiä tuotantoon testaa devissä ainakin kysymykset, joissa malli on helposti taipuvainen arvaamaan:
+
+- "Toimiiko foorumi vielä?" -> ei saa väittää foorumia suljetuksi.
+- "Voinko lähettää blogitekstin?" -> pitää kertoa, että kirjoituksia voi ehdottaa/lähettää ylläpidolle sähköpostitse; käyttäjä ei itse julkaise ilman käyttöoikeuksia.
+- "Onko sukukirjaa saatavana?" -> pitää kertoa, että sukukirjaa voi lainata eri kirjastoista; ei saa keksiä uutta käynnissä olevaa sukukirjaprojektia.
+- "Onko Rytkösten sukulainen nro 9 julkaistu?" -> pitää kertoa, että numero 9 on julkaistu ja myynnissä verkkokaupassa.
+- "Kuka on sukuseuran puheenjohtaja?" -> pitää vastata hallitussivun mukaan: Antti Rytkönen.
+- "Onko sukuseuralla some-tilejä?" -> pitää tunnistaa sivuston some-linkit.
+- "Saanko digilehden PDF:nä?" -> ei saa luvata PDF-latausta, ellei tietopohjaan ole lisätty erillistä ohjetta.
+- "Miten voin yrittää epäonnistunutta maksua uudelleen?" -> pitää käyttää ehdollista muotoa: vain jos tilauksella näkyy **Maksa / yritä uudelleen** -painike.
 
 ## Ajantasainen tietolohko (#459)
 
