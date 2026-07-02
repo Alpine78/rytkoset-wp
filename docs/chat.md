@@ -65,7 +65,7 @@ Huom: chatti näkyy sivustolla vain kun **molemmat** ehdot täyttyvät — API-a
 FAQ-teksti on chatin ainoa yhdistyskohtainen tietolähde — malli ei hae tietoa sivustolta eikä internetistä. Kirjoitusohjeet:
 
 - **Rakenne:** otsikot ISOLLA omilla riveillään, faktat luettelomerkkeinä (`- `). Selkeä rakenne auttaa mallia poimimaan oikean kohdan.
-- **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen ja Mollie-erityistapaukset (ulkomaanmaksun hyväksyntä, RF-viitteen väliviivat Mollien sähköpostissa), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot.
+- **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen ja Mollie-erityistapaukset (ulkomaanmaksun hyväksyntä, RF-viitteen väliviivat Mollien sähköpostissa), maksun jatkaminen vain ehdollisesti ("jos tilauksella näkyy Maksa / yritä uudelleen -painike"), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot.
 - **Pituus:** teksti lähetetään Mistralille **jokaisen viestin mukana**, joten pidä se tiiviinä (nyrkkisääntö: alle ~5 000 merkkiä). Pitkä teksti kasvattaa kuluja ja heikentää vastausten tarkkuutta.
 - **Ajantasaisuus:** kun hinnat, päivämäärät tai käytännöt muuttuvat sivustolla, päivitä myös FAQ — chatti ei huomaa sivuston muutoksia itse. Nopeasti muuttuvien tietojen (esim. yksittäisen tapahtuman aikataulu) osalta parempi tapa on viitata tapahtumasivuun kuin kopioida yksityiskohdat FAQ:hun.
 - **Rajaukset:** älä laita FAQ:hun henkilötietoja äläkä mitään, mikä ei saa näkyä julkisesti — FAQ:n sisältö voi päätyä chatin vastauksiin kenelle tahansa kävijälle.
@@ -90,6 +90,13 @@ Suodattimet:
 | `rytkoset_theme_chat_live_context_max_length` | 4000 | Lohkon merkkiraja (katkaisu) |
 
 Työnjako FAQ:n kanssa: **rakenteinen, muuttuva tieto** (päivämäärät, hinnat, lähtöpaikat) tulee tästä lohkosta automaattisesti — sitä ei tarvitse eikä kannata kopioida FAQ:hun. FAQ:hun kirjoitetaan vain vakaat faktat ja toimintaohjeet (maksaminen, käytännöt, historia).
+
+Maksuohjeissa ei pidä luvata, että kaikki epäonnistuneet tai keskeneräiset
+Mollie-tilaukset voi aina vaihtaa itse toiseen maksutapaan. Käytä muotoa:
+"Avaa Oma tili -> Tilaukset. Jos tilauksen kohdalla näkyy Maksa / yritä
+uudelleen -painike, voit jatkaa maksua ja valita kassalla toisen maksutavan.
+Jos painiketta ei näy, ota yhteyttä sähköpostitse." Toteutus ja tarkempi
+rajaus on dokumentoitu tiedostossa `docs/woocommerce-mollie-payments.md`.
 
 ## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
 
