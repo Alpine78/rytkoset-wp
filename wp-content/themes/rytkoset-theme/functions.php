@@ -50,10 +50,12 @@ require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
 require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
+require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
+require_once get_template_directory() . '/inc/chat.php';
 
 /**
  * Returns the short display caption for an attachment.
@@ -350,7 +352,9 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 	}
 
 	$display_name = $current_user->display_name ? $current_user->display_name : $current_user->user_login;
-	$profile_url  = admin_url( 'profile.php' );
+	$account_url  = function_exists( 'rytkoset_theme_get_my_account_url' ) ? rytkoset_theme_get_my_account_url() : home_url( '/oma-tili/' );
+	$orders_url   = function_exists( 'rytkoset_theme_get_my_account_endpoint_url' ) ? rytkoset_theme_get_my_account_endpoint_url( 'orders' ) : trailingslashit( $account_url ) . 'orders/';
+	$profile_url  = function_exists( 'rytkoset_theme_get_my_account_endpoint_url' ) ? rytkoset_theme_get_my_account_endpoint_url( 'edit-account' ) : trailingslashit( $account_url ) . 'edit-account/';
 	$avatar       = wp_kses_post( get_avatar( $current_user->ID, 40 ) );
 
 	echo '<ul class="account-nav__list">';
@@ -367,8 +371,18 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 	echo '</button>';
 	echo '<ul class="sub-menu" aria-label="' . esc_attr__( 'Tilivalikko', 'rytkoset-theme' ) . '">';
 	echo '<li class="menu-item">';
+	echo '<a href="' . esc_url( $account_url ) . '">';
+	echo esc_html__( 'Oma tili', 'rytkoset-theme' );
+	echo '</a>';
+	echo '</li>';
+	echo '<li class="menu-item">';
+	echo '<a href="' . esc_url( $orders_url ) . '">';
+	echo esc_html__( 'Tilaukset', 'rytkoset-theme' );
+	echo '</a>';
+	echo '</li>';
+	echo '<li class="menu-item">';
 	echo '<a href="' . esc_url( $profile_url ) . '">';
-	echo esc_html__( 'Muokkaa profiilia', 'rytkoset-theme' );
+	echo esc_html__( 'Tilin tiedot', 'rytkoset-theme' );
 	echo '</a>';
 	echo '</li>';
 	echo '<li class="menu-item">';
@@ -387,7 +401,8 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 function rytkoset_theme_account_menu_logged_out_fallback() {
 	echo '<ul class="account-nav__list">';
 	echo '<li class="menu-item">';
-	echo '<a href="' . esc_url( wp_login_url() ) . '">';
+	$login_url = function_exists( 'rytkoset_theme_get_my_account_url' ) ? rytkoset_theme_get_my_account_url() : wp_login_url();
+	echo '<a href="' . esc_url( $login_url ) . '">';
 	echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
 	echo '</a>';
 	echo '</li>';
@@ -558,6 +573,39 @@ function rytkoset_theme_scripts() {
 			get_template_directory_uri() . '/assets/css/forum.css',
 			array( $core_css_dependency ),
 			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/forum.css' )
+		);
+	}
+
+	// AI-tukichatin widget (#413) — vain kun backend on konfiguroitu (#412).
+	if ( function_exists( 'rytkoset_theme_chat_widget_is_enabled' ) && rytkoset_theme_chat_widget_is_enabled() ) {
+		wp_enqueue_style(
+			'rytkoset-theme-chat',
+			get_template_directory_uri() . '/assets/css/chat.css',
+			array( $core_css_dependency ),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/chat.css' )
+		);
+
+		wp_enqueue_script(
+			'rytkoset-theme-chat',
+			get_template_directory_uri() . '/assets/js/chat.js',
+			array(),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/chat.js' ),
+			true
+		);
+
+		wp_add_inline_script(
+			'rytkoset-theme-chat',
+			'window.rytkosetChatConfig = ' . wp_json_encode(
+				array(
+					'restUrl'        => rest_url( 'rytkoset/v1/chat' ),
+					'nonce'          => wp_create_nonce( 'wp_rest' ),
+					'maxInputLength' => rytkoset_theme_chat_get_max_input_length(),
+					'typingText'     => __( 'Kirjoittaa…', 'rytkoset-theme' ),
+					'errorText'      => __( 'Vastauksen haku ei juuri nyt onnistunut. Yritä hetken kuluttua uudelleen tai ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
+					'sendingLabel'   => __( 'Lähetetään…', 'rytkoset-theme' ),
+				)
+			) . ';',
+			'before'
 		);
 	}
 

@@ -213,6 +213,10 @@ class WC_Product {
 		return (string) ( $this->meta['_sku'] ?? '' );
 	}
 
+	public function get_price(): string {
+		return (string) ( $this->meta['_price'] ?? '' );
+	}
+
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
 	}
@@ -274,6 +278,8 @@ class WC_Order {
 	public string $billing_email = '';
 	public string $payment_method = '';
 	public string $edit_order_url = '';
+	public bool $payment_needed = false;
+	public string $checkout_payment_url = '';
 	/** @var Rytkoset_Test_Order_Item[] */
 	public array $items = array();
 	/** @var string[] */
@@ -320,6 +326,18 @@ class WC_Order {
 
 	public function get_payment_method(): string {
 		return $this->payment_method;
+	}
+
+	public function needs_payment(): bool {
+		return $this->payment_needed;
+	}
+
+	public function get_checkout_payment_url( bool $on_checkout = false ): string {
+		if ( '' !== $this->checkout_payment_url ) {
+			return $this->checkout_payment_url;
+		}
+
+		return home_url( '/kassa/order-pay/' . $this->id . '/?pay_for_order=true&key=wc_order_' . $this->id );
 	}
 
 	/** @return Rytkoset_Test_Order_Item[] */
@@ -1087,7 +1105,19 @@ function wc_add_notice( $message, $notice_type = 'success' ): void {
 }
 
 function wc_get_account_endpoint_url( $endpoint ): string {
-	return home_url( '/tili/' . trim( (string) $endpoint, '/' ) . '/' );
+	$endpoint = trim( (string) $endpoint, '/' );
+	$slugs    = array(
+		'orders'          => 'tilaukset',
+		'view-order'      => 'tarkastele-tilausta',
+		'downloads'       => 'lataukset',
+		'edit-account'    => 'tilin-tiedot',
+		'edit-address'    => 'osoitteet',
+		'payment-methods' => 'maksutavat',
+		'lost-password'   => 'unohtunut-salasana',
+		'customer-logout' => 'kirjaudu-ulos',
+	);
+
+	return home_url( '/tili/' . ( $slugs[ $endpoint ] ?? $endpoint ) . '/' );
 }
 
 function wc_get_order_statuses(): array {

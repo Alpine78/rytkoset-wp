@@ -118,6 +118,48 @@ Jos jäsenstatusta ei voida varmistaa (kirjautumaton), ohjataan normaalihintaan.
 > local- ja dev-ympäristössä, joten linkitys **ei** siirry tuotesynkronointi-
 > työkalulla — aseta tuotteet jokaisessa ympäristössä erikseen.
 
+### Peruuttamisoikeuden menettämisen suostumus kassalla (#477)
+
+Kuluttajansuojalaki (38/1978) 6:15 § 2 mom ja 6:24 § 2 mom edellyttävät
+digitaalisen sisällön kohdalla kuluttajan **nimenomaista ennakkosuostumusta**
+sisällön välittömään toimitukseen ja **hyväksyntää** siitä, että
+peruuttamisoikeus päättyy toimituksen alkaessa. Ilman tätä digilehden ostaja
+säilyttää oletusarvoisen 14 vrk:n peruuttamisoikeuden riippumatta siitä, onko
+lukuoikeus jo myönnetty (ks. `docs/maksu-ja-toimitusehdot.md`, "Digitaaliset
+tuotteet").
+
+Kassalle (WooCommerce Block Checkout) on lisätty pakollinen valintaruutu
+(`inc/woocommerce-digital-magazine.php`), joka näkyy vain, kun ostoskorissa on
+vähintään yksi digilehteen linkitetty tuote (normaali- tai jäsenhintatuote):
+
+- **Kenttä:** `rytkoset/digital_magazine_cancellation_consent`, sijainti
+  `order` (näkyy checkoutin "Tilauksen lisätiedot" -osiossa, samoin kuin
+  uutiskirjetilaus).
+- **Näkyvyys ja pakollisuus:** teema julkaisee Store API:n
+  `cart.extensions.rytkoset_digital_magazine.consent_required`-kentän
+  (`rytkoset_theme_cart_has_digital_magazine_product()`); kenttä on piilotettu
+  ja vapaaehtoinen, kun arvo on epätosi, ja pakollinen (rasti on valittava
+  ennen tilauksen lähettämistä) kun arvo on tosi. Sama malli kuin Tampere
+  2026- ja jäsenmaksukenttien ehdollisuudessa.
+- **Tallennus:** WooCommerce Blocksin lisäkenttärajapinta tallentaa arvon
+  tilaukselle (`_wc_other/rytkoset/digital_magazine_cancellation_consent`) —
+  näkyy siis tilauksella todisteena annetusta suostumuksesta.
+  `rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order )`
+  lukee arvon takaisin.
+- **Rajaus:** tämä tiketti lisää vain suostumuksen keräämisen ja tallennuksen.
+  Itsepalvelutilauksen peruutuspainike (`inc/woocommerce-cancellation.php`,
+  `docs/woocommerce-peruutus.md`) ei toistaiseksi tarkista tätä suostumusta —
+  maksettu digilehtitilaus ohjautuu joka tapauksessa manuaaliseen käsittelyyn
+  samoin kuin muutkin `processing`-tilaukset, jolloin ylläpitäjä voi tarkistaa
+  suostumuksen tilaukselta ennen palautuspäätöstä. Suostumuksen kytkeminen
+  automaattisesti peruutuksen estävään logiikkaan on mahdollinen jatkoaskel.
+
+Todennettu paikallisesti selaimella (Playwright, Block Checkout): kenttä näkyy
+ja on pakollinen, kun korissa on digilehtituote (tyhjänä lähetys pysäytyy
+WooCommerce Blocksin omalla "Valitse tämä ruutu jatkaaksesi eteen päin"
+-virheellä); kenttä puuttuu kokonaan, kun korissa ei ole digilehteä; rastittu
+arvo tallentuu tilaukselle ja on luettavissa takaisin.
+
 ## Käyttöoikeuden myöntäminen manuaalisesti (#420)
 
 Osa digilehdistä myydään verkkokaupan ulkopuolella (käteinen, tilaisuudet,

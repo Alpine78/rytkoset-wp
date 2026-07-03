@@ -150,6 +150,33 @@ Maksutavan **Description**-kenttään (WooCommerce → Asetukset → Maksutavat)
 
 Nämä tekstit elävät WooCommercen asetuksissa (tietokannassa), eivät versionhallinnassa, joten ne pitää lisätä erikseen dev- ja tuotantoympäristöön.
 
+## Maksun jatkaminen epäonnistumisen jälkeen (#462)
+
+Asiakas löytää omat tilauksensa polusta **Oma tili -> Tilaukset**
+(`/oma-tili/tilaukset/`). Teema lisää kirjautuneen käyttäjän yläpalkin
+tilivalikon fallbackiin suorat linkit **Oma tili** ja **Tilaukset**, ja
+päävalikon `Kauppa -> Oma tili` -linkki pidetään edelleen suositeltuna
+valikkoasetuksena.
+
+Maksun uudelleenyritys tehdään WooCommercen omalla maksupolulla
+(`maksa-tilaus`, WooCommercen endpoint-avain `order-pay`). Teema
+ei luo omaa maksuprosessia eikä kutsu Mollien API:a suoraan, vaan näyttää
+tilausrivillä painikkeen **Maksa / yritä uudelleen** silloin, kun
+WooCommerce-tilausobjektin `needs_payment()` palauttaa `true` ja
+`get_checkout_payment_url()` antaa maksulinkin.
+
+Käyttäjäohjeissa pitää siksi käyttää ehdollista muotoa:
+
+> Jos maksu jäi kesken, kirjaudu sisään ja avaa **Oma tili -> Tilaukset**.
+> Jos tilauksen kohdalla näkyy **Maksa / yritä uudelleen**, voit jatkaa maksua
+> ja valita kassalla toisen maksutavan. Jos painiketta ei näy, ota yhteyttä
+> sähköpostitse: info@rytkoset.net.
+
+Älä lupaa, että kaikki keskeneräiset Mollie-tilaukset voi vaihtaa itse toiselle
+maksutavalle. Esimerkiksi pankki-/tilisiirtopolku voi jättää tilauksen tilaan,
+jossa WooCommerce ei enää pidä tilausta maksettavana samalla maksupolulla.
+Tällöin käyttäjälle näytetään korkeintaan peruutuspolku tai yhteydenotto-ohje.
+
 ## Lähteet
 
 - Mollie WooCommerce plugin: https://wordpress.org/plugins/mollie-payments-for-woocommerce/

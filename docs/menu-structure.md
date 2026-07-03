@@ -22,6 +22,11 @@ Päävalikon suositeltu järjestys:
 - Kassa: `/kassa/`
 - Oma tili: `/oma-tili/`
 
+Kirjautuneelle käyttäjälle teeman yläpalkin tilivalikon fallback näyttää myös
+`Oma tili`- ja `Tilaukset`-linkit. Päävalikon `Kauppa -> Oma tili` kannattaa
+silti pitää mukana, jotta tilisivu löytyy myös kaupan kontekstista ja
+kirjautumattomille käyttäjille.
+
 Lisää WooCommercen tuoteryhmät mukaan, kun niiden julkiset polut ovat devissä ja tuotannossa valmiit:
 
 - Sukulehdet
@@ -60,4 +65,4 @@ Pikalinkki ei korvaa `Kauppa`-alasivun `Ostoskori`-linkkiä, vaan varmistaa, ett
 - Desktopissa alavalikot avautuvat hoverilla ja näppäimistöfokuksella.
 - Mobiilissa sama valikkorakenne näkyy `Valikko`-paneelissa.
 - `Ostoskori`-pikalinkki näkyy mobiiliheaderissa ja vie `/ostoskori/`-sivulle.
-- `Albumit`, `Tapahtumat`, `Kauppa`, `Ostoskori`, `Kassa` ja `Oma tili` avautuvat ilman 404-virheitä.
+- `Albumit`, `Tapahtumat`, `Kauppa`, `Ostoskori`, `Kassa`, `Oma tili` ja `Oma tili -> Tilaukset` (`/oma-tili/tilaukset/`) avautuvat ilman 404-virheitä.

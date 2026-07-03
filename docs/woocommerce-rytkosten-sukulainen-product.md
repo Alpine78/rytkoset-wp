@@ -1,10 +1,10 @@
-# WooCommerce: Rytkösten sukulainen nro 9 -ennakkotilaustuote
+# WooCommerce: Rytkösten sukulainen nro 9
 
 Tämä dokumentti kuvaa #142-tiketin tuotemallin painetulle `Rytkösten sukulainen` -lehdelle.
 
 ## Rajaus
 
-Tässä vaiheessa lehti toteutetaan WooCommercen normaalina fyysisenä tuotteena ja pidetään luonnoksena, kunnes julkaisu voidaan hyväksyä.
+Lehti toteutetaan WooCommercen normaalina fyysisenä tuotteena. `Rytkösten sukulainen nro 9` on julkaistu ja myynnissä verkkokaupassa.
 
 Toteutus ei sisällä:
 
@@ -14,35 +14,35 @@ Toteutus ei sisällä:
 - varastosaldon automaatiota
 - teemakoodin muutoksia
 
-Vanhan nro 8 tilaussivun sisältöä voi käyttää referenssinä, mutta sitä ei kopioida sellaisenaan uuden tuotteen lopulliseksi sisällöksi.
+Ajantasainen hinta, varastotilanne ja ostettavuus tarkistetaan aina tuotteen omalta sivulta:
+`/kauppa/sukulehdet/rytkosten-sukulainen-nro-9/`.
 
-## Paikallinen tuote
+## Tuote
 
-Paikalliseen WooCommerceen on luotu luonnostilainen tuote:
+Tuotteen perusasetukset:
 
-- nimi: `Rytkösten sukulainen nro 9 – ennakkotilaus`
-- SKU: `RYTKOSTEN-SUKULAINEN-9-ENNAKKO`
+- nimi: `Rytkösten sukulainen nro 9`
+- SKU: `RYTKOSTEN-SUKULAINEN-9`
 - tyyppi: `Simple product`
-- hinta: `15,00 €`
-- status: `Draft`
+- status: `Published`
 - kategoria: `Sukulehdet`
 - ei `Virtual`
 - ei `Downloadable`
 - varastonhallinta pois päältä MVP-vaiheessa
 
-Tuote on paikallista WooCommerce-sisältöä. Sitä ei tallenneta repoon.
+Tuote on WooCommerce-sisältöä. Sitä ei tallenneta repoon.
 
 ## Tuotekuvaus
 
-Tuotekuvauksen pitää kertoa selkeästi, että kyse on painetun lehden ennakkotilauksesta.
+Tuotekuvauksen pitää kertoa selkeästi, että kyse on painetusta lehdestä.
 
 Minimisisältö:
 
 - kyseessä on painettu `Rytkösten sukulainen nro 9`
-- tuote on ennakkotilaus
-- toimitus tapahtuu painatuksen jälkeen
-- asiakas voi valita postituksen tai noudon tapahtumasta / sovitusti
-- lopullinen sisältö, hinta ja julkaisuajankohta vahvistetaan ennen julkaisua
+- julkaisuajankohta: kesäkuu 2026
+- sivumäärä ja koko
+- sisällysluettelo tai lyhyt sisältökuvaus
+- asiakas voi valita postituksen tai noudon, jos toimitustavat ovat kaupassa käytössä
 
 ## Toimitusmalli
 
@@ -53,36 +53,32 @@ Tuote käyttää fyysisten tuotteiden MVP-toimitusmallia:
 
 Toimitusmalli on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-physical-products.md`.
 
-## Julkaisun tarkistuslista
+## Ylläpidon tarkistuslista
 
-Ennen kuin tuote muutetaan luonnoksesta julkaistuksi:
+Kun tuotetta päivitetään:
 
-- hallitus tai sovittu vastuuhenkilö vahvistaa hinnan
-- painatusaikataulu ja arvioitu toimitusaika ovat tiedossa
-- tuotekuvaus viimeistellään asiakkaalle ymmärrettäväksi
-- toimitus- ja noutoteksti tarkistetaan
-- mahdollinen tuotekuva lisätään
-- postikulu `5,90 €` vahvistetaan oikealle painotuotteelle sopivaksi
-- tuotteen status muutetaan `Draft` -> `Published` vasta hyväksynnän jälkeen
+- tarkista hinta ja tuotteen ostettavuus
+- tarkista toimitus- ja noutoteksti
+- tarkista tuotekuva ja alt-teksti
+- tarkista sisällysluettelon sivunumerot
+- tarkista postikulu `5,90 €`, jos postitus on käytössä
 
 ## Testaus
 
-Paikallinen smoke-testi voidaan tehdä näin:
+Smoke-testi voidaan tehdä näin:
 
-1. Muuta tuote väliaikaisesti julkaistuksi.
+1. Avaa tuotteen sivu.
 2. Lisää tuote ostoskoriin.
 3. Siirry kassalle.
 4. Varmista, että kassalla näkyy toimitusosoite.
-5. Valitse `Postitus` ja varmista, että loppusummaan lisätään `5,90 €`.
+5. Valitse `Postitus` ja varmista, että loppusummaan lisätään `5,90 €`, jos postitus on käytössä.
 6. Valitse `Nouto tapahtumasta / sovitusti` ja varmista, ettei toimituskulua lisätä.
-7. Varmista, että `Tilisiirto` toimii fallback-maksutapana.
-8. Palauta tuotteen status testin jälkeen takaisin luonnokseksi.
+7. Varmista, että käytössä olevat maksutavat toimivat.
 
 ## Jatko
 
 Mahdolliset myöhemmät tarkennukset:
 
-- tuotteen lopullinen kansikuva
 - varastosaldo, jos painosmäärä on rajallinen
 - tarkempi toimitusviesti tilausvahvistukseen
 - mahdollinen kampanjateksti Tampere 2026 -sukujuhlan yhteyteen
