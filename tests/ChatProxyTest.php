@@ -158,6 +158,13 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( rytkoset_theme_get_contact_email(), $prompt );
 	}
 
+	public function test_system_prompt_forbids_guessing_numbers_dates_and_prices(): void {
+		$prompt = rytkoset_theme_chat_get_system_prompt();
+
+		$this->assertStringContainsString( 'Älä koskaan esitä vuosilukua, päivämäärää, hintaa tai lukumäärää', $prompt );
+		$this->assertStringContainsString( 'älä myöskään arvaa tai päättele sellaista', $prompt );
+	}
+
 	public function test_stable_site_context_contains_known_paths_and_site_features(): void {
 		$context = rytkoset_theme_chat_get_stable_site_context();
 
