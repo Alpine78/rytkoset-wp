@@ -408,11 +408,81 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_membership_context' ) ) {
 }
 
 /**
- * Kokoaa system-promptiin liitettävän ajantasaisen tietolohkon (#459).
+ * Kokoaa muiden verkkokaupan tuotteiden rivit ajantasaista tietolohkoa varten (#471).
+ *
+ * Sama rivimalli kuin `rytkoset_theme_chat_get_membership_context()`: nimi, hinta
+ * ja permalink. Jäsenyystuotteet jätetään pois, koska niillä on jo oma osionsa
+ * (ei duplikointia). "Ostettavissa oleva" tulkitaan yksinkertaisesti julkaistuksi
+ * tuotteeksi, jolla on hinta — sama perusehto kuin WooCommercen omassa
+ * `is_purchasable()`:ssa, mutta puhtaana ja testattavana ehtona ilman riippuvuutta
+ * nykyiseen käyttäjään. Fail-safe: ilman WooCommercea palautuu tyhjä merkkijono.
+ * Ei varastotilannetta eikä saatavuuslupauksia — tuotesivulle ohjaava guardrail on
+ * system-promptin puolella (`rytkoset_theme_chat_get_system_prompt()`).
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_shop_products_context' ) ) {
+	function rytkoset_theme_chat_get_shop_products_context() {
+		if ( ! function_exists( 'wc_get_product' ) || ! function_exists( 'rytkoset_theme_is_membership_product' ) ) {
+			return '';
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'   => 'product',
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+				'orderby'     => 'menu_order title',
+				'order'       => 'ASC',
+			)
+		);
+
+		/**
+		 * Suodattaa promptiin liitettävien muiden verkkokaupan tuotteiden enimmäismäärän.
+		 *
+		 * @param int $max_products Tuotteiden enimmäismäärä.
+		 */
+		$limit = max( 1, (int) apply_filters( 'rytkoset_theme_chat_live_context_max_products', 20 ) );
+
+		$lines = array();
+
+		foreach ( (array) $ids as $product_id ) {
+			if ( count( $lines ) >= $limit ) {
+				break;
+			}
+
+			$product = wc_get_product( (int) $product_id );
+
+			if ( ! $product instanceof WC_Product || 'publish' !== $product->get_status() ) {
+				continue;
+			}
+
+			if ( rytkoset_theme_is_membership_product( $product ) ) {
+				continue;
+			}
+
+			$name  = trim( (string) $product->get_name() );
+			$price = rytkoset_theme_format_event_price_text( (string) $product->get_price() );
+
+			if ( '' === $name || '' === $price ) {
+				continue;
+			}
+
+			$lines[] = '- ' . $name . ': ' . $price . ' — ' . get_permalink( (int) $product_id );
+		}
+
+		return implode( "\n", $lines );
+	}
+}
+
+/**
+ * Kokoaa system-promptiin liitettävän ajantasaisen tietolohkon (#459, #471).
  *
  * Tulevat tapahtumat -osio kertoo eksplisiittisesti, jos tapahtumia ei ole
- * (ettei malli keksi niitä). Jäsenyysosio jätetään pois, jos tuotteita ei
- * löydy. Koko lohko katkaistaan suodatettavaan merkkirajaan.
+ * (ettei malli keksi niitä). Jäsenyys- ja muut tuoteosiot jätetään kokonaan
+ * pois, jos tuotteita ei löydy. Koko lohko katkaistaan suodatettavaan
+ * merkkirajaan.
  *
  * @return string Tyhjä, kun lohko on kytketty pois suodattimella.
  */
@@ -438,6 +508,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_live_context' ) ) {
 		$membership = rytkoset_theme_chat_get_membership_context();
 		if ( '' !== $membership ) {
 			$sections[] = "Jäsenyystuotteet verkkokaupassa:\n" . $membership;
+		}
+
+		$shop_products = rytkoset_theme_chat_get_shop_products_context();
+		if ( '' !== $shop_products ) {
+			$sections[] = "Muut verkkokaupan tuotteet:\n" . $shop_products;
 		}
 
 		/**
@@ -966,12 +1041,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 			$prompt .= "Tietopohja:\n" . $faq;
 		}
 
-		// Automaattisesti koottu ajantasainen tieto (#459): tapahtumat + jäsenyystuotteet.
+		// Automaattisesti koottu ajantasainen tieto (#459, #471): tapahtumat + jäsenyys- ja muut verkkokaupan tuotteet.
 		$live_context = rytkoset_theme_chat_get_live_context();
 		if ( '' !== $live_context ) {
-			$prompt .= "\n\nAjantasaiset tiedot sivustolta (koottu automaattisesti tapahtumista ja verkkokaupan tuotteista; käytä näitä ensisijaisesti tapahtuma- ja jäsenmaksukysymyksiin):\n\n";
+			$prompt .= "\n\nAjantasaiset tiedot sivustolta (koottu automaattisesti tapahtumista ja verkkokaupan tuotteista; käytä näitä ensisijaisesti tapahtuma-, jäsenmaksu- ja tuotekysymyksiin):\n\n";
 			$prompt .= $live_context;
-			$prompt .= "\n\nÄlä arvioi vapaita paikkoja tai ilmoittautumistilannetta — ohjaa tarkistamaan ne tapahtuman sivulta.";
+			$prompt .= "\n\nÄlä arvioi vapaita paikkoja, ilmoittautumistilannetta tai tuotteiden varastotilannetta — ohjaa tarkistamaan ne tapahtuman tai tuotteen sivulta.";
 		}
 
 		/**
