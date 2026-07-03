@@ -215,4 +215,42 @@ final class DigitalMagazineProductTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertFalse( rytkoset_theme_filter_purchased_digital_magazine( false, 10, 1 ) );
 	}
+
+	// --- cancellation-right consent (#477) ----------------------------------
+
+	private function order_with_consent_field( string $value ): WC_Order {
+		$order     = new WC_Order();
+		$order->id = 477;
+
+		$meta_key                = '_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id();
+		$order->meta[ $meta_key ] = $value;
+
+		return $order;
+	}
+
+	public function test_consent_field_id_uses_rytkoset_namespace(): void {
+		$this->assertSame(
+			'rytkoset/digital_magazine_cancellation_consent',
+			rytkoset_theme_get_digital_magazine_consent_field_id()
+		);
+	}
+
+	public function test_order_consent_true_when_checkbox_checked(): void {
+		$this->assertTrue(
+			rytkoset_theme_order_has_digital_magazine_cancellation_consent( $this->order_with_consent_field( '1' ) )
+		);
+	}
+
+	public function test_order_consent_false_when_checkbox_unchecked(): void {
+		$this->assertFalse(
+			rytkoset_theme_order_has_digital_magazine_cancellation_consent( $this->order_with_consent_field( '0' ) )
+		);
+	}
+
+	public function test_order_consent_false_when_field_missing(): void {
+		$order     = new WC_Order();
+		$order->id = 477;
+
+		$this->assertFalse( rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order ) );
+	}
 }

@@ -337,6 +337,213 @@ function rytkoset_theme_validate_digital_magazine_member_cart_items() {
 add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_digital_magazine_member_cart_items' );
 
 /**
+ * Returns the additional checkout field ID for the digital magazine cancellation-consent
+ * checkbox (#477).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_digital_magazine_consent_field_id() {
+	return 'rytkoset/digital_magazine_cancellation_consent';
+}
+
+/**
+ * Returns the label shown for the digital magazine cancellation-consent checkbox.
+ *
+ * KSL 6:15 § 2 mom / 6:24 § 2 mom require both the consumer's explicit prior consent to
+ * immediate digital delivery and explicit acknowledgement of losing the cancellation right —
+ * this single checkbox states both.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_digital_magazine_consent_label() {
+	return __( 'Haluan digilehden lukuoikeuden heti maksun jälkeen enkä odota 14 vuorokauden peruuttamisaikaa. Ymmärrän ja hyväksyn, että tämän vuoksi menetän kuluttajansuojalain mukaisen peruuttamisoikeuteni heti, kun lukuoikeus on myönnetty.', 'rytkoset-theme' );
+}
+
+/**
+ * Returns true when the current cart contains at least one digital magazine product.
+ *
+ * @return bool
+ */
+function rytkoset_theme_cart_has_digital_magazine_product() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return false;
+	}
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( $product instanceof WC_Product && rytkoset_theme_get_magazine_id_by_product( $product->get_id() ) > 0 ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Returns the Store API extension namespace for digital magazine cart data.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_digital_magazine_store_api_namespace() {
+	return 'rytkoset_digital_magazine';
+}
+
+/**
+ * Returns digital magazine cart data for the WooCommerce Store API.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_digital_magazine_store_api_cart_data() {
+	return array(
+		'consent_required' => rytkoset_theme_cart_has_digital_magazine_product(),
+	);
+}
+
+/**
+ * Returns the schema for digital magazine Store API cart data.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_digital_magazine_store_api_cart_schema() {
+	return array(
+		'consent_required' => array(
+			'description' => __( 'Onko ostoskorissa digilehti, jonka peruuttamisoikeuden menettäminen vaatii nimenomaisen suostumuksen.', 'rytkoset-theme' ),
+			'type'        => 'boolean',
+			'readonly'    => true,
+		),
+	);
+}
+
+/**
+ * Registers digital magazine cart data for Checkout Block conditions.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_digital_magazine_store_api_cart_data() {
+	if (
+		! function_exists( 'woocommerce_store_api_register_endpoint_data' )
+		|| ! class_exists( '\Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema' )
+	) {
+		return;
+	}
+
+	woocommerce_store_api_register_endpoint_data(
+		array(
+			'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
+			'namespace'       => rytkoset_theme_get_digital_magazine_store_api_namespace(),
+			'data_callback'   => 'rytkoset_theme_get_digital_magazine_store_api_cart_data',
+			'schema_callback' => 'rytkoset_theme_get_digital_magazine_store_api_cart_schema',
+			'schema_type'     => ARRAY_A,
+		)
+	);
+}
+
+/**
+ * Registers Store API data after WooCommerce Blocks is available.
+ */
+if ( did_action( 'woocommerce_blocks_loaded' ) ) {
+	rytkoset_theme_register_digital_magazine_store_api_cart_data();
+} else {
+	add_action( 'woocommerce_blocks_loaded', 'rytkoset_theme_register_digital_magazine_store_api_cart_data' );
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when the cart requires cancellation consent.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_digital_magazine_consent_active_schema() {
+	$namespace = rytkoset_theme_get_digital_magazine_store_api_namespace();
+
+	return array(
+		'type'       => 'object',
+		'properties' => array(
+			'cart' => array(
+				'type'       => 'object',
+				'properties' => array(
+					'extensions' => array(
+						'type'       => 'object',
+						'properties' => array(
+							$namespace => array(
+								'type'       => 'object',
+								'properties' => array(
+									'consent_required' => array(
+										'type' => 'boolean',
+										'enum' => array( true ),
+									),
+								),
+								'required'   => array( 'consent_required' ),
+							),
+						),
+						'required'   => array( $namespace ),
+					),
+				),
+				'required'   => array( 'extensions' ),
+			),
+		),
+		'required'   => array( 'cart' ),
+	);
+}
+
+/**
+ * Returns a JSON Schema fragment that matches when the consent checkbox should be hidden.
+ *
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_digital_magazine_consent_hidden_schema() {
+	return array(
+		'not' => rytkoset_theme_get_digital_magazine_consent_active_schema(),
+	);
+}
+
+/**
+ * Registers the digital magazine cancellation-consent checkbox for the checkout flow (#477).
+ *
+ * Uses WooCommerce Blocks' additional checkout fields API so the field is always registered
+ * for Store API submissions and then conditionally required/shown based on the cart extension
+ * data published above — the same model as the Tampere 2026 and membership checkout fields.
+ *
+ * @return void
+ */
+function rytkoset_theme_register_digital_magazine_checkout_fields() {
+	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
+		return;
+	}
+
+	woocommerce_register_additional_checkout_field(
+		array(
+			'id'                => rytkoset_theme_get_digital_magazine_consent_field_id(),
+			'label'             => rytkoset_theme_get_digital_magazine_consent_label(),
+			'location'          => 'order',
+			'type'              => 'checkbox',
+			'required'          => rytkoset_theme_get_digital_magazine_consent_active_schema(),
+			'hidden'            => rytkoset_theme_get_digital_magazine_consent_hidden_schema(),
+			'sanitize_callback' => 'rest_sanitize_boolean',
+		)
+	);
+}
+add_action( 'woocommerce_init', 'rytkoset_theme_register_digital_magazine_checkout_fields' );
+
+/**
+ * Returns true when the order recorded explicit consent to lose the digital magazine
+ * cancellation right (#477).
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return bool
+ */
+function rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order ) {
+	if ( ! function_exists( 'rytkoset_theme_get_order_additional_checkout_field_bool' ) ) {
+		return false;
+	}
+
+	return rytkoset_theme_get_order_additional_checkout_field_bool(
+		$order,
+		rytkoset_theme_get_digital_magazine_consent_field_id()
+	);
+}
+
+/**
  * Sends the access email for magazines unlocked by a completed/processing order.
  *
  * Access itself stays a live lookup (Model A); this only sends the notification once per order
