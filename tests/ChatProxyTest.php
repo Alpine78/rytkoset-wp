@@ -259,6 +259,87 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		remove_filter( 'rytkoset_theme_chat_max_input_length', $filter );
 	}
 
+	// --- rytkoset_theme_chat_get_rate_limit() / ..._get_max_history() ---------
+
+	public function test_rate_limit_default_and_filterable(): void {
+		$this->assertSame( 20, rytkoset_theme_chat_get_rate_limit() );
+
+		$filter = static fn() => 200;
+		add_filter( 'rytkoset_theme_chat_rate_limit', $filter );
+
+		$this->assertSame( 200, rytkoset_theme_chat_get_rate_limit() );
+
+		remove_filter( 'rytkoset_theme_chat_rate_limit', $filter );
+	}
+
+	public function test_max_history_default_and_filterable(): void {
+		$this->assertSame( 8, rytkoset_theme_chat_get_max_history() );
+
+		$filter = static fn() => 30;
+		add_filter( 'rytkoset_theme_chat_max_history', $filter );
+
+		$this->assertSame( 30, rytkoset_theme_chat_get_max_history() );
+
+		remove_filter( 'rytkoset_theme_chat_max_history', $filter );
+	}
+
+	public function test_rate_limit_and_max_history_never_below_one(): void {
+		$filter = static fn() => 0;
+		add_filter( 'rytkoset_theme_chat_rate_limit', $filter );
+		add_filter( 'rytkoset_theme_chat_max_history', $filter );
+
+		$this->assertSame( 1, rytkoset_theme_chat_get_rate_limit() );
+		$this->assertSame( 1, rytkoset_theme_chat_get_max_history() );
+
+		remove_filter( 'rytkoset_theme_chat_rate_limit', $filter );
+		remove_filter( 'rytkoset_theme_chat_max_history', $filter );
+	}
+
+	// --- rytkoset_theme_chat_get_max_tokens() / ..._get_temperature() ---------
+
+	public function test_max_tokens_default_and_filterable(): void {
+		$this->assertSame( 800, rytkoset_theme_chat_get_max_tokens() );
+
+		$filter = static fn() => 300;
+		add_filter( 'rytkoset_theme_chat_max_tokens', $filter );
+
+		$this->assertSame( 300, rytkoset_theme_chat_get_max_tokens() );
+
+		remove_filter( 'rytkoset_theme_chat_max_tokens', $filter );
+	}
+
+	public function test_max_tokens_never_below_one(): void {
+		$filter = static fn() => -5;
+		add_filter( 'rytkoset_theme_chat_max_tokens', $filter );
+
+		$this->assertSame( 1, rytkoset_theme_chat_get_max_tokens() );
+
+		remove_filter( 'rytkoset_theme_chat_max_tokens', $filter );
+	}
+
+	public function test_temperature_default_and_filterable(): void {
+		$this->assertSame( 0.2, rytkoset_theme_chat_get_temperature() );
+
+		$filter = static fn() => 0.7;
+		add_filter( 'rytkoset_theme_chat_temperature', $filter );
+
+		$this->assertSame( 0.7, rytkoset_theme_chat_get_temperature() );
+
+		remove_filter( 'rytkoset_theme_chat_temperature', $filter );
+	}
+
+	public function test_temperature_is_clamped_between_zero_and_one(): void {
+		$high = static fn() => 3.5;
+		add_filter( 'rytkoset_theme_chat_temperature', $high );
+		$this->assertSame( 1.0, rytkoset_theme_chat_get_temperature() );
+		remove_filter( 'rytkoset_theme_chat_temperature', $high );
+
+		$low = static fn() => -1;
+		add_filter( 'rytkoset_theme_chat_temperature', $low );
+		$this->assertSame( 0.0, rytkoset_theme_chat_get_temperature() );
+		remove_filter( 'rytkoset_theme_chat_temperature', $low );
+	}
+
 	// --- rytkoset_theme_chat_widget_is_enabled() -----------------------------
 
 	public function test_widget_disabled_when_backend_not_configured(): void {

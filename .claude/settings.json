@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "kuluttajaoikeus@claude-for-legal-finland": true,
+    "tekoalysaantely@claude-for-legal-finland": true,
+    "tietosuoja@claude-for-legal-finland": true
+  }
+}

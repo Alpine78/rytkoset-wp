@@ -60,6 +60,75 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_max_input_length' ) ) {
 }
 
 /**
+ * Palauttaa rate limitin (viestiä / IP / ikkuna).
+ *
+ * Oletuksen (20) voi ylikirjoittaa ympäristökohtaisesti `wp-config.php`-vakiolla
+ * `RYTKOSET_CHAT_RATE_LIMIT` (esim. dev-testaus) — suodattimia ei voi käyttää
+ * wp-configissa, koska `add_filter()` ei ole siellä vielä määritelty.
+ * Suodatin `rytkoset_theme_chat_rate_limit` ajetaan vakion päälle.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_rate_limit' ) ) {
+	function rytkoset_theme_chat_get_rate_limit() {
+		$limit = defined( 'RYTKOSET_CHAT_RATE_LIMIT' ) ? (int) constant( 'RYTKOSET_CHAT_RATE_LIMIT' ) : 20;
+		$limit = (int) apply_filters( 'rytkoset_theme_chat_rate_limit', $limit );
+
+		return max( 1, $limit );
+	}
+}
+
+/**
+ * Palauttaa API-kutsuun sisällytettävän keskusteluhistorian enimmäispituuden.
+ *
+ * Oletuksen (8 viestiä) voi ylikirjoittaa ympäristökohtaisesti vakiolla
+ * `RYTKOSET_CHAT_MAX_HISTORY`; suodatin `rytkoset_theme_chat_max_history`
+ * ajetaan vakion päälle.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_max_history' ) ) {
+	function rytkoset_theme_chat_get_max_history() {
+		$max_history = defined( 'RYTKOSET_CHAT_MAX_HISTORY' ) ? (int) constant( 'RYTKOSET_CHAT_MAX_HISTORY' ) : 8;
+		$max_history = (int) apply_filters( 'rytkoset_theme_chat_max_history', $max_history );
+
+		return max( 1, $max_history );
+	}
+}
+
+/**
+ * Palauttaa vastauksen token-rajan (`max_tokens`) API-kutsulle.
+ *
+ * Oletus 800: 512 katkaisi monikohtaiset vastaukset (esim. jäsenyystyypit +
+ * ohjeet) kesken. Kuluvaikutus on pieni, koska rate limit rajaa viestimäärän.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_max_tokens' ) ) {
+	function rytkoset_theme_chat_get_max_tokens() {
+		$max_tokens = (int) apply_filters( 'rytkoset_theme_chat_max_tokens', 800 );
+
+		return max( 1, $max_tokens );
+	}
+}
+
+/**
+ * Palauttaa mallin temperature-arvon (0–1) API-kutsulle.
+ *
+ * Oletus 0.2: tukichatin vastaukset ovat faktavastauksia, joissa satunnaisuus
+ * lisää vain epäjohdonmukaisuutta ja hallusinaatioriskiä.
+ *
+ * @return float
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_temperature' ) ) {
+	function rytkoset_theme_chat_get_temperature() {
+		$temperature = (float) apply_filters( 'rytkoset_theme_chat_temperature', 0.2 );
+
+		return min( 1.0, max( 0.0, $temperature ) );
+	}
+}
+
+/**
  * Kertoo, onko chatti kytketty päälle Customizerissa.
  *
  * Oletus on päällä, jotta jo konfiguroitujen ympäristöjen toiminta säilyy
@@ -531,7 +600,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		}
 
 		// 3. Rate limit (IP-pohjainen, kustannussuoja).
-		$limit = (int) apply_filters( 'rytkoset_theme_chat_rate_limit', 20 );
+		$limit = rytkoset_theme_chat_get_rate_limit();
 		if ( rytkoset_theme_chat_register_rate_limit_hit( rytkoset_theme_chat_get_client_ip(), $limit ) ) {
 			return new WP_Error(
 				'rytkoset_chat_rate_limited',
@@ -542,7 +611,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 		// 4. Syötteen jäsennys ja rajat.
 		$max_input   = rytkoset_theme_chat_get_max_input_length();
-		$max_history = (int) apply_filters( 'rytkoset_theme_chat_max_history', 8 );
+		$max_history = rytkoset_theme_chat_get_max_history();
 
 		$raw_messages = $request->get_param( 'messages' );
 		if ( ! is_array( $raw_messages ) ) {
@@ -559,8 +628,6 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		}
 
 		// 5. Payload: system-prompt + rajattu historia.
-		$max_tokens = (int) apply_filters( 'rytkoset_theme_chat_max_tokens', 512 );
-
 		$payload_messages = array_merge(
 			array(
 				array(
@@ -574,8 +641,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		$payload = array(
 			'model'       => $config['model'],
 			'messages'    => $payload_messages,
-			'max_tokens'  => $max_tokens,
-			'temperature' => 0.3,
+			'max_tokens'  => rytkoset_theme_chat_get_max_tokens(),
+			'temperature' => rytkoset_theme_chat_get_temperature(),
 		);
 
 		// 6. Mistral-kutsu.
