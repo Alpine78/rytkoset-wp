@@ -24,19 +24,22 @@ julkaistuun versioon verrattuna:
   edellyttävät kuluttajan **nimenomaista ennakkosuostumusta ja hyväksyntää
   peruuttamisoikeuden menettämisestä** kassalla, ennen kuin sähköinen
   toimitus kesken peruuttamisajan poistaa oikeuden. Teeman koodista
-  (`inc/`) ei löytynyt tällaista suostumusmekanismia checkoutissa. **Päätös
-  (#476): suostumus-valintaruutu toteutetaan kassalle** — seurantana on
-  oma, pienempi koodiketiketti. Kunnes se on tehty, teksti **ei** väitä
-  digilehtien olevan poikkeuksen piirissä: ne noudattavat oletusarvoista
-  14 vrk:n peruuttamisoikeutta, ja alla oleva "ellei... vahvisteta
-  suostumustasi" -muotoilu on kirjoitettu niin, että se pysyy paikkansa
-  pitävänä myös ennen ko. koodimuutosta (poikkeus ei koskaan laukea, koska
-  suostumusaskelta ei vielä kysytä) ja aktivoituu automaattisesti sen
-  valmistuttua. *(Sivuhuomio: KSL 6:16 § 9-kohta poistaa
-  peruuttamisoikeuden "yksittäisen aikakausjulkaisun toimittamisesta" —
-  voisi periaatteessa koskea yksittäistä digilehteä, mutta soveltuvuus
-  verkkosisältöön on epäselvä ja tarkistettava juristilta ennen kuin siihen
-  nojataan.)*
+  ei aiemmin löytynyt tällaista suostumusmekanismia checkoutissa (#476). **Nyt
+  toteutettu (#477):** WooCommerce-kassalle lisättiin pakollinen
+  suostumus-valintaruutu, joka näkyy vain kun ostoskorissa on digilehteen
+  linkitetty tuote — ks. `inc/woocommerce-digital-magazine.php` ja
+  [`docs/digital-magazines.md`](digital-magazines.md):n "Peruuttamisoikeuden
+  menettämisen suostumus kassalla" -osio. Alla oleva "ellei... vahvisteta
+  suostumustasi" -muotoilu kuvaa siis nyt toteutunutta käyttäytymistä: ilman
+  rastia digilehti noudattaa oletusarvoista 14 vrk:n peruuttamisoikeutta,
+  rastilla peruuttamisoikeus päättyy heti lukuoikeuden myöntämiseen (kuten
+  #477:n perässä mainittu itsepalveluperuutuksen kytkentä toteaa, tätä ei
+  vielä tarkisteta automaattisesti peruutuspainikkeen puolella — ylläpitäjä
+  tarkistaa suostumuksen tilaukselta manuaalisen käsittelyn yhteydessä).
+  *(Sivuhuomio: KSL 6:16 § 9-kohta poistaa peruuttamisoikeuden "yksittäisen
+  aikakausjulkaisun toimittamisesta" — voisi periaatteessa koskea yksittäistä
+  digilehteä, mutta soveltuvuus verkkosisältöön on epäselvä ja tarkistettava
+  juristilta ennen kuin siihen nojataan.)*
 - **Jäsenmaksut**: mikään KSL 6:16 §:n poikkeuslista ei suoraan mainitse
   jäsenmaksua, eikä koodissa ole 15/16 §:n edellyttämää
   suostumusmekanismia. Syvempi avoin kysymys — onko yhdistyksen jäsenmaksu
