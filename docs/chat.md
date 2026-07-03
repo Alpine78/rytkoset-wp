@@ -37,10 +37,23 @@ Kaikki oletukset ovat suodatettavia:
 | Rate limit -ikkuna | `HOUR_IN_SECONDS` (1 h) | `rytkoset_theme_chat_rate_window` |
 | Yksittäisen viestin merkkiraja | 1000 | `rytkoset_theme_chat_max_input_length` |
 | Historian pituus (viimeisimmät viestit) | 8 | `rytkoset_theme_chat_max_history` |
-| Vastauksen `max_tokens` | 512 | `rytkoset_theme_chat_max_tokens` |
+| Vastauksen `max_tokens` | 800 | `rytkoset_theme_chat_max_tokens` |
+| Mallin `temperature` (0–1) | 0.2 | `rytkoset_theme_chat_temperature` |
 
-- **Rate limit**: kiinteä ikkuna transientilla (`rytkoset_chat_rl_<md5(ip)>`), IP luetaan vain `REMOTE_ADDR`:sta (välityspalvelinotsakkeisiin ei luoteta). Ylitys → HTTP 429.
+- **Rate limit**: kiinteä ikkuna transientilla (`rytkoset_chat_rl_<md5(ip)>`), IP luetaan vain `REMOTE_ADDR`:sta (välityspalvelinotsakkeisiin ei luoteta). Ylitys → HTTP 429. Huom: raja on IP-kohtainen, ei käyttäjäkohtainen — saman verkon (esim. sama WiFi tai operaattorin NAT) kävijät jakavat saman laskurin.
 - **Syöte- ja historiarajat**: `rytkoset_theme_chat_prepare_messages()` säilyttää vain `user`/`assistant`-roolit, sanitoi sisällön (`sanitize_textarea_field`), katkaisee jokaisen viestin merkkirajaan ja leikkaa historian viimeisimpiin viesteihin **ennen** API-kutsua.
+- **Temperature**: matala oletus (0.2), koska tukichatin vastaukset ovat faktavastauksia — satunnaisuus lisäisi vain epäjohdonmukaisuutta. Arvo rajataan välille 0–1.
+
+### Dev-ympäristön löysemmät rajat
+
+Pitkää testisessiota varten rate limitin ja keskustelumuistin voi ylikirjoittaa ympäristökohtaisesti `wp-config.php`-vakioilla (sama tiedosto, jossa chat-vakiot jo ovat — ei repossa, joten ei voi vuotaa tuotantoon):
+
+```php
+define( 'RYTKOSET_CHAT_RATE_LIMIT', 200 );  // dev: enemmän viestejä / IP / h (oletus 20)
+define( 'RYTKOSET_CHAT_MAX_HISTORY', 30 );  // dev: pidempi keskustelumuisti (oletus 8 viestiä)
+```
+
+> Huom: `add_filter()`-kutsut **eivät** toimi `wp-config.php`:ssä (WordPress lataa sen ennen `plugin.php`:tä) — siksi ylikirjoitus on toteutettu vakioina, samaan tapaan kuin `RYTKOSET_CHAT_API_KEY`. Suodattimet (`rytkoset_theme_chat_rate_limit`, `..._max_history`) ajetaan vakion päälle ja sopivat teeman/mu-pluginin koodiin. Älä löysää tuotannon rajoja ilman erillistä päätöstä — ne ovat kulusuojia.
 
 ## System-prompt
 
