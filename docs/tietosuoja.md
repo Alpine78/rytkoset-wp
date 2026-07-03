@@ -121,6 +121,8 @@ Sivustolla on tekoälyavusteinen tukichatti, joka vastaa sukuseuraa ja sivuston 
 
 Sivusto ei tallenna chat-keskusteluja: keskustelu säilyy vain selaimesi muistissa istunnon ajan ja katoaa, kun suljet sivun. Chatti ei käytä evästeitä. Väärinkäytön ja kulujen hallitsemiseksi sivusto käsittelee kävijän IP-osoitetta lyhytaikaisesti viestimäärän rajoittamiseksi; IP-osoitetta ei yhdistetä keskustelujen sisältöön eikä luovuteta Mistral AI:lle.
 
+Sivuston ylläpitäjä näkee wp-adminissa ainoastaan koontitietoa chatin käytöstä: lähetettyjen viestien ja rate limit -osumien kokonaismäärät ja viimeisimmät ajankohdat sekä mahdollisen viimeisimmän tekoälypalvelun virheen ajankohdan ja tyypin. Näissä luvuissa ei ole mukana yksittäisiä keskusteluja, IP-osoitteita eikä viestien sisältöä, eivätkä ne siten ole henkilötietoa.
+
 Älä kirjoita chattiin henkilötunnusta, salasanoja, maksukortin tietoja tai muita arkaluonteisia tietoja. Henkilökohtaisissa asioissa ota yhteyttä sähköpostitse: info@rytkoset.net.
 
 ### Sisältöön upotettu media

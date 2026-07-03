@@ -1,6 +1,6 @@
 # AI-tukichatti: backend-proxy, Mistral-integraatio ja ylläpito
 
-AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-avain **ei koskaan** päädy selaimeen. Kokonaisuus on toteutettu useassa siivussa (EPIC 11 / #411): backend-proxy ja kulusuojat (**#412**), chat-widget (**#413**), Customizer-asetukset, dokumentaatio ja GDPR (**#414**), automaattisesti koottu ajantasainen tietolohko tapahtumille ja jäsenyystuotteille (**#459**) sekä sen laajennus muuhun verkkokaupan tuotekatalogiin (**#471**).
+AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-avain **ei koskaan** päädy selaimeen. Kokonaisuus on toteutettu useassa siivussa (EPIC 11 / #411): backend-proxy ja kulusuojat (**#412**), chat-widget (**#413**), Customizer-asetukset, dokumentaatio ja GDPR (**#414**), automaattisesti koottu ajantasainen tietolohko tapahtumille ja jäsenyystuotteille (**#459**), sen laajennus muuhun verkkokaupan tuotekatalogiin (**#471**) sekä kulusuojien osumien ja peruskäyttölukujen näkyminen wp-adminissa (**#472**).
 
 Toteutus: `inc/chat.php`. Teeman koodia, ei ulkoisia kirjastoja. Tämä on teeman **ensimmäinen REST-päätepiste**.
 
@@ -136,6 +136,26 @@ uudelleen -painike, voit jatkaa maksua ja valita kassalla toisen maksutavan.
 Jos painiketta ei näy, ota yhteyttä sähköpostitse." Toteutus ja tarkempi
 rajaus on dokumentoitu tiedostossa `docs/woocommerce-mollie-payments.md`.
 
+## Käyttötilastot ylläpitäjälle (#472)
+
+Ennen tätä tikettiä kulusuojien osumat eivät näkyneet ylläpitäjälle mitenkään tuotannossa: `rytkoset_theme_chat_log_error()` kirjoittaa lokiin vain `WP_DEBUG`-tilassa, eikä rate limit -osumia kirjattu mihinkään. Nyt kolme kevyttä laskuria näyttävät suoraan wp-adminissa, käytetäänkö chattia, osuuko joku rate limitiin ja toimiiko Mistral-yhteys — ilman palvelimen lokien tarkistamista.
+
+**Näkyvyys:** WordPressin Dashboard-widget **"Tukichatti"** (`rytkoset_theme_chat_register_dashboard_widget()`, koukku `wp_dashboard_setup`), näkyy vain `manage_options`-käyttäjille. Widget näyttää chatin tilan (käytössä / pois päältä Customizerista / API-avain puuttuu), lähetettyjen viestien kokonaismäärän + viimeisimmän ajankohdan, rate limit -osumien kokonaismäärän + viimeisimmän ajankohdan sekä viimeisimmän Mistral-/yhteysvirheen kokonaismäärän, ajankohdan ja tyypin.
+
+**Tallennus:** kolme `wp_options`-riviä, `autoload = false`, päivitetään olemassa olevissa päätöspisteissä koodimuutoksella — ei erillistä seurantajärjestelmää:
+
+| Option | Sisältö | Päivityskohta |
+|---|---|---|
+| `rytkoset_chat_stat_messages` | `count`, `last_at` | `rytkoset_theme_chat_handle_request()`:n onnistunut paluu (`rytkoset_theme_chat_record_message_sent_stat()`) |
+| `rytkoset_chat_stat_rate_limit` | `count`, `last_at` | `rytkoset_theme_chat_register_rate_limit_hit()` palauttaa `true` (`rytkoset_theme_chat_record_rate_limit_hit_stat()`) |
+| `rytkoset_chat_stat_error` | `count`, `last_at`, `last_type` | Samat kolme kohtaa kuin `rytkoset_theme_chat_log_error()` (verkkovirhe, ei-2xx-HTTP-vastaus, tyhjä/odottamaton vastaus) — `log_error()` säilyy ennallaan WP_DEBUG-lokitusta varten, `rytkoset_theme_chat_record_error_stat( $type )` on erillinen, rinnakkainen kutsu |
+
+`last_type`-arvo on lyhyt, staattinen tunniste (`network`, `http_<koodi>`, `empty_reply`) — ei koskaan dynaamista virhesanomaa. `rytkoset_theme_chat_get_error_type_label()` muotoilee sen ihmisluettavaksi widgetissä.
+
+**Ei henkilötietoa:** laskurit eivät koskaan sisällä raakaa IP-osoitetta eivätkä viestisisältöä — vain lukumäärät, aikaleimat ja lyhyt virhetyypin tunniste, sama periaate kuin nykyisessä rate limit -transientissa (joka tallentaa vain MD5-tiivisteen). Koska data ei yksilöi ketään, se ei ole GDPR:n tarkoittamaa henkilötietoa eikä `docs/tietosuoja.md`-tietosuojaselosteen sisältöä tarvinnut tämän vuoksi muuttaa (ks. selosteen "AI-tukichatti"-kohta).
+
+**Puhtaat apufunktiot** (testattu `tests/ChatUsageStatsTest.php`:ssä): `rytkoset_theme_chat_bump_stat()` / `..._bump_error_stat()` (laskurin kasvatus, ei kosketa `wp_options`-tauluun), `rytkoset_theme_chat_get_usage_stats()` (yhteenveto widgetiä varten) ja `rytkoset_theme_chat_get_error_type_label()`. Itse Dashboard-widgetin rekisteröinti ja renderöinti ovat ohutta admin-liimakoodia, joka on tarkoituksella jätetty yksikkötestien ulkopuolelle (ks. `CLAUDE.md`:n testausohje render-raskaille admin-näkymille) — todennettu manuaalisesti wp-adminissa.
+
 ## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
 
 Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
@@ -197,8 +217,9 @@ Selosteteksti on sivun sisältöä (ei koodia), joten alla oleva on **ehdotus yl
 9. **FAQ**: lisää Tietopohja-kenttään tunnistettava fakta (esim. testihinta) → chatti käyttää sitä vastauksessa ilman koodimuutosta.
 10. **Ajantasainen tieto (#459)**: luo/muokkaa tuleva tapahtuma adminissa → chatti kertoo sen päivämäärän, paikan ja lähtöpaikkavaihtoehdot ilman FAQ-muutosta; kysy jäsenmaksun hintaa → vastaus vastaa verkkokaupan tuotetta. Kysy vapaita paikkoja → chatti ohjaa tapahtumasivulle eikä arvaa.
 11. **Kaupan tuotekatalogi (#471)**: julkaise uusi tuote (esim. t-paita, hinta asetettu) → chatti kertoo siitä nimellä ja hinnalla ilman FAQ- tai koodimuutosta. Lisää jäsenyystuote → se ei toistu "muut tuotteet" -listassa, koska se on jo jäsenyysosiossa. Aseta tuote luonnokseksi tai poista sen hinta → chatti ei enää mainitse sitä. Kysy tuotteen olevan varastossa → chatti ei väitä varastotilannetta vaan ohjaa tuotesivulle.
+12. **Käyttötilastot (#472)**: lähetä chatiin muutama viesti → wp-adminin Ohjausnäkymän **Tukichatti**-widget näyttää lähetettyjen viestien määrän kasvavan ja viimeisimmän ajankohdan päivittyvän. Täytä rate limit (esim. `RYTKOSET_CHAT_RATE_LIMIT` väliaikaisesti pieneksi devissä) → rate limit -osumien laskuri kasvaa. Aiheuta upstream-virhe (esim. väliaikaisesti virheellinen `RYTKOSET_CHAT_API_ENDPOINT`) → virhelaskuri kasvaa ja widget näyttää viimeisimmän virhetyypin. Poista `RYTKOSET_CHAT_API_KEY` → widgetin tila-rivi kertoo "API-avain puuttuu". Tarkista, ettei widgetissä näy IP-osoitteita eikä viestien sisältöä.
 
-Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta ja system-prompt. `tests/ChatLiveContextTest.php` kattaa ajantasaisen tietolohkon (tapahtumat, jäsenyystuotteet, muut verkkokaupan tuotteet). Verkko- ja REST-kytkentä varmistetaan yllä olevalla manuaalisella curl-testillä.
+Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta ja system-prompt. `tests/ChatLiveContextTest.php` kattaa ajantasaisen tietolohkon (tapahtumat, jäsenyystuotteet, muut verkkokaupan tuotteet). `tests/ChatUsageStatsTest.php` kattaa käyttötilastojen laskurit, tallennuksen ja yhteenvedon (#472). Verkko- ja REST-kytkentä sekä Dashboard-widget varmistetaan yllä olevalla manuaalisella curl-/selaintestillä.
 
 ## Käyttöliittymä (chat-widget, #413)
 

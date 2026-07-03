@@ -737,6 +737,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		// 7. Virheenkäsittely — avainta tai teknisiä yksityiskohtia ei vuodeta.
 		if ( is_wp_error( $response ) ) {
 			rytkoset_theme_chat_log_error( 'wp_remote_post: ' . $response->get_error_message() );
+			rytkoset_theme_chat_record_error_stat( 'network' );
 			return rytkoset_theme_chat_upstream_error();
 		}
 
@@ -745,6 +746,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 		if ( $status_code < 200 || $status_code >= 300 ) {
 			rytkoset_theme_chat_log_error( 'Mistral HTTP ' . $status_code );
+			rytkoset_theme_chat_record_error_stat( 'http_' . $status_code );
 			return rytkoset_theme_chat_upstream_error();
 		}
 
@@ -752,8 +754,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		$reply = rytkoset_theme_chat_extract_reply( $body );
 		if ( '' === $reply ) {
 			rytkoset_theme_chat_log_error( 'Tyhjä tai odottamaton Mistral-vaste.' );
+			rytkoset_theme_chat_record_error_stat( 'empty_reply' );
 			return rytkoset_theme_chat_upstream_error();
 		}
+
+		// 9. Onnistumislaskuri (#472) — ei sisältöä eikä IP:tä, vain määrä + ajankohta.
+		rytkoset_theme_chat_record_message_sent_stat();
 
 		return new WP_REST_Response( array( 'reply' => $reply ), 200 );
 	}
@@ -788,6 +794,279 @@ if ( ! function_exists( 'rytkoset_theme_chat_log_error' ) ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Vain WP_DEBUG-tilassa; ei sisällä salaisuuksia.
 			error_log( '[rytkoset-chat] ' . $message );
 		}
+	}
+}
+
+/**
+ * Palauttaa chatin käyttötilastojen wp_options-avaimet (#472).
+ *
+ * Kevyet laskurit ylläpitäjän näkyvyyteen (lähetetyt viestit, rate limit
+ * -osumat, Mistral-/upstream-virheet) — vain kokonaismäärä + viimeisin
+ * ajankohta (virheillä myös viimeisin tyyppi). Ei koskaan raakaa
+ * IP-osoitetta eikä viestisisältöä, sama periaate kuin rate limit
+ * -transientissa (joka tallentaa vain MD5-tiivisteen).
+ *
+ * @return array{messages:string,rate_limit:string,error:string}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
+	function rytkoset_theme_chat_get_stat_option_names() {
+		return array(
+			'messages'   => 'rytkoset_chat_stat_messages',
+			'rate_limit' => 'rytkoset_chat_stat_rate_limit',
+			'error'      => 'rytkoset_chat_stat_error',
+		);
+	}
+}
+
+/**
+ * Poimii kentän tallennetusta laskuriarvosta oletuksella (virheellinen tai
+ * puuttuva arvo palauttaa oletuksen).
+ *
+ * @param mixed  $stat     Tallennettu arvo (odotetusti array).
+ * @param string $key      Haettava kenttä.
+ * @param mixed  $fallback Oletusarvo.
+ * @return mixed
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_stat_value' ) ) {
+	function rytkoset_theme_chat_stat_value( $stat, $key, $fallback ) {
+		return is_array( $stat ) && isset( $stat[ $key ] ) ? $stat[ $key ] : $fallback;
+	}
+}
+
+/**
+ * Palauttaa kasvatetun laskuriarvon (count+1, last_at=nyt) nykyisen arvon pohjalta.
+ *
+ * Puhdas funktio (testattava): ei kosketa wp_options-tauluun.
+ *
+ * @param mixed $stat Nykyinen tallennettu arvo (tai puuttuva/virheellinen).
+ * @param int   $now  Nykyinen Unix-aikaleima.
+ * @return array{count:int,last_at:int}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_bump_stat' ) ) {
+	function rytkoset_theme_chat_bump_stat( $stat, $now ) {
+		return array(
+			'count'   => (int) rytkoset_theme_chat_stat_value( $stat, 'count', 0 ) + 1,
+			'last_at' => (int) $now,
+		);
+	}
+}
+
+/**
+ * Sama kuin rytkoset_theme_chat_bump_stat(), ja tallentaa lisäksi virhetyypin.
+ *
+ * @param mixed  $stat Nykyinen tallennettu arvo.
+ * @param int    $now  Nykyinen Unix-aikaleima.
+ * @param string $type Lyhyt virhetyypin tunniste (ei viestisisältöä eikä IP:tä).
+ * @return array{count:int,last_at:int,last_type:string}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_bump_error_stat' ) ) {
+	function rytkoset_theme_chat_bump_error_stat( $stat, $now, $type ) {
+		$bumped              = rytkoset_theme_chat_bump_stat( $stat, $now );
+		$bumped['last_type'] = (string) $type;
+
+		return $bumped;
+	}
+}
+
+/**
+ * Kirjaa yhden onnistuneesti lähetetyn chat-viestin käyttötilastoon.
+ *
+ * Kutsutaan `rytkoset_theme_chat_handle_request()`:sta onnistuneen vastauksen
+ * jälkeen. Ei tallenna viestin sisältöä eikä IP:tä.
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_message_sent_stat' ) ) {
+	function rytkoset_theme_chat_record_message_sent_stat() {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['messages'],
+			rytkoset_theme_chat_bump_stat( get_option( $names['messages'], array() ), time() ),
+			false
+		);
+	}
+}
+
+/**
+ * Kirjaa yhden rate limit -osuman käyttötilastoon.
+ *
+ * Kutsutaan `rytkoset_theme_chat_register_rate_limit_hit()`:sta, kun raja on
+ * ylittynyt (paluuarvo `true`).
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_rate_limit_hit_stat' ) ) {
+	function rytkoset_theme_chat_record_rate_limit_hit_stat() {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['rate_limit'],
+			rytkoset_theme_chat_bump_stat( get_option( $names['rate_limit'], array() ), time() ),
+			false
+		);
+	}
+}
+
+/**
+ * Kirjaa yhden Mistral-/upstream-virheen käyttötilastoon.
+ *
+ * Kutsutaan samoista kohdista kuin `rytkoset_theme_chat_log_error()`, joka
+ * säilyy ennallaan WP_DEBUG-lokitusta varten. Tyyppi on lyhyt, staattinen
+ * tunniste (esim. "network", "http_502", "empty_reply") — ei koskaan
+ * dynaamista virhesanomaa, joka voisi sisältää teknisiä yksityiskohtia.
+ *
+ * @param string $type Virhetyypin tunniste.
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_error_stat' ) ) {
+	function rytkoset_theme_chat_record_error_stat( $type ) {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['error'],
+			rytkoset_theme_chat_bump_error_stat( get_option( $names['error'], array() ), time(), $type ),
+			false
+		);
+	}
+}
+
+/**
+ * Palauttaa chatin käyttötilastot dashboard-widgetiä varten.
+ *
+ * @return array{
+ *     messages_sent: array{count:int,last_at:int},
+ *     rate_limit_hits: array{count:int,last_at:int},
+ *     last_error: array{count:int,last_at:int,last_type:string}
+ * }
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
+	function rytkoset_theme_chat_get_usage_stats() {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		$messages   = get_option( $names['messages'], array() );
+		$rate_limit = get_option( $names['rate_limit'], array() );
+		$error      = get_option( $names['error'], array() );
+
+		return array(
+			'messages_sent'   => array(
+				'count'   => (int) rytkoset_theme_chat_stat_value( $messages, 'count', 0 ),
+				'last_at' => (int) rytkoset_theme_chat_stat_value( $messages, 'last_at', 0 ),
+			),
+			'rate_limit_hits' => array(
+				'count'   => (int) rytkoset_theme_chat_stat_value( $rate_limit, 'count', 0 ),
+				'last_at' => (int) rytkoset_theme_chat_stat_value( $rate_limit, 'last_at', 0 ),
+			),
+			'last_error'      => array(
+				'count'     => (int) rytkoset_theme_chat_stat_value( $error, 'count', 0 ),
+				'last_at'   => (int) rytkoset_theme_chat_stat_value( $error, 'last_at', 0 ),
+				'last_type' => (string) rytkoset_theme_chat_stat_value( $error, 'last_type', '' ),
+			),
+		);
+	}
+}
+
+/**
+ * Muotoilee tallennetun virhetyypin tunnisteen ihmisluettavaksi (dashboard-widget).
+ *
+ * @param string $type Tallennettu virhetyypin tunniste.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_error_type_label' ) ) {
+	function rytkoset_theme_chat_get_error_type_label( $type ) {
+		$type = (string) $type;
+
+		if ( '' === $type ) {
+			return '';
+		}
+
+		if ( 'network' === $type ) {
+			return __( 'Yhteysvirhe Mistraliin', 'rytkoset-theme' );
+		}
+
+		if ( 'empty_reply' === $type ) {
+			return __( 'Tyhjä vastaus Mistralilta', 'rytkoset-theme' );
+		}
+
+		if ( 0 === strpos( $type, 'http_' ) ) {
+			return sprintf(
+				/* translators: %s: HTTP-tilakoodi. */
+				__( 'Mistral vastasi HTTP-virheellä %s', 'rytkoset-theme' ),
+				substr( $type, 5 )
+			);
+		}
+
+		return $type;
+	}
+}
+
+/**
+ * Rekisteröi wp-adminin Dashboard-widgetin tukichatin käyttötilastoille (#472).
+ *
+ * Vain manage_options-käyttäjille: sisältää operatiivista tietoa chatin
+ * käytöstä ja mahdollisista virheistä, ei tarkoitettu kaikille kirjautuneille.
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_register_dashboard_widget' ) ) {
+	function rytkoset_theme_chat_register_dashboard_widget() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		wp_add_dashboard_widget(
+			'rytkoset_chat_stats',
+			__( 'Tukichatti', 'rytkoset-theme' ),
+			'rytkoset_theme_chat_render_dashboard_widget'
+		);
+	}
+}
+add_action( 'wp_dashboard_setup', 'rytkoset_theme_chat_register_dashboard_widget' );
+
+/**
+ * Tulostaa Dashboard-widgetin sisällön: chatin tila, lähetetyt viestit,
+ * rate limit -osumat ja viimeisin Mistral-/upstream-virhe.
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
+	function rytkoset_theme_chat_render_dashboard_widget() {
+		$config = rytkoset_theme_chat_get_config();
+
+		if ( ! $config['is_configured'] ) {
+			$status = __( 'Ei käytössä — API-avain puuttuu (wp-config.php).', 'rytkoset-theme' );
+		} elseif ( ! rytkoset_theme_chat_admin_enabled() ) {
+			$status = __( 'Pois päältä (Ulkoasu → Mukauta → Tukichatti).', 'rytkoset-theme' );
+		} else {
+			$status = __( 'Käytössä.', 'rytkoset-theme' );
+		}
+
+		$stats = rytkoset_theme_chat_get_usage_stats();
+
+		echo '<p><strong>' . esc_html__( 'Tila:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $status ) . '</p>';
+
+		echo '<ul>';
+
+		echo '<li>' . esc_html__( 'Lähetettyjä viestejä yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['messages_sent']['count'] ) ) . '</strong>';
+		if ( $stats['messages_sent']['last_at'] > 0 ) {
+			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['messages_sent']['last_at'] ) );
+		}
+		echo '</li>';
+
+		echo '<li>' . esc_html__( 'Rate limit -osumia yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['rate_limit_hits']['count'] ) ) . '</strong>';
+		if ( $stats['rate_limit_hits']['last_at'] > 0 ) {
+			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['rate_limit_hits']['last_at'] ) );
+		}
+		echo '</li>';
+
+		echo '<li>' . esc_html__( 'Mistral-/yhteysvirheitä yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['last_error']['count'] ) ) . '</strong>';
+		if ( $stats['last_error']['last_at'] > 0 ) {
+			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['last_error']['last_at'] ) );
+			echo ' (' . esc_html( rytkoset_theme_chat_get_error_type_label( $stats['last_error']['last_type'] ) ) . ')';
+		}
+		echo '</li>';
+
+		echo '</ul>';
 	}
 }
 
@@ -904,10 +1183,17 @@ if ( ! function_exists( 'rytkoset_theme_chat_register_rate_limit_hit' ) ) {
 				),
 				$window
 			);
-			return rytkoset_theme_chat_rate_limit_exceeded( 0, $limit );
+
+			$exceeded = rytkoset_theme_chat_rate_limit_exceeded( 0, $limit );
+			if ( $exceeded ) {
+				rytkoset_theme_chat_record_rate_limit_hit_stat();
+			}
+
+			return $exceeded;
 		}
 
 		if ( rytkoset_theme_chat_rate_limit_exceeded( (int) $record['count'], $limit ) ) {
+			rytkoset_theme_chat_record_rate_limit_hit_stat();
 			return true;
 		}
 
