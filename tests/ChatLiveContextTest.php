@@ -224,6 +224,92 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringNotContainsString( 'Sukukirja', $context );
 	}
 
+	// --- rytkoset_theme_chat_get_shop_products_context() ---------------------
+
+	/**
+	 * Registers a product usable by both get_posts() (post_type=product) and
+	 * wc_get_product() (status/meta/price), mirroring register_event() above.
+	 *
+	 * @param int                 $id         Product post ID.
+	 * @param string              $name       Product name.
+	 * @param string              $status     Product status.
+	 * @param array<string,mixed> $meta       Extra meta key => value map (e.g. _price).
+	 * @param int                 $menu_order Shop sort order.
+	 * @return WC_Product
+	 */
+	private function register_shop_product( int $id, string $name, string $status = 'publish', array $meta = array(), int $menu_order = 0 ): WC_Product {
+		rytkoset_test_register_post( $id, 'product', $name, 0, $menu_order );
+
+		return rytkoset_test_register_product( $id, $status, $name, $meta );
+	}
+
+	public function test_shop_products_context_lists_only_published_products_with_a_price(): void {
+		$this->register_shop_product( 30, 'Rytkösten sukulainen nro 9', 'publish', array( '_price' => '15' ) );
+		$this->register_shop_product( 31, 'Luonnostuote', 'draft', array( '_price' => '10' ) );
+		$this->register_shop_product( 32, 'Hinnoittelematon tuote', 'publish', array() );
+
+		$context = rytkoset_theme_chat_get_shop_products_context();
+
+		$this->assertStringContainsString(
+			'- Rytkösten sukulainen nro 9: 15 € — https://rytkoset.test/?p=30',
+			$context
+		);
+		$this->assertStringNotContainsString( 'Luonnostuote', $context );
+		$this->assertStringNotContainsString( 'Hinnoittelematon tuote', $context );
+	}
+
+	public function test_shop_products_context_excludes_membership_products(): void {
+		$this->register_shop_product(
+			30,
+			'Vuosijäsenyys',
+			'publish',
+			array(
+				'_rytkoset_membership_product' => 'yes',
+				'_price'                       => '30',
+			)
+		);
+		$this->register_shop_product( 31, 'T-paita', 'publish', array( '_price' => '20' ) );
+
+		$context = rytkoset_theme_chat_get_shop_products_context();
+
+		$this->assertStringNotContainsString( 'Vuosijäsenyys', $context );
+		$this->assertStringContainsString( '- T-paita: 20 €', $context );
+	}
+
+	public function test_shop_products_context_respects_max_products_filter_in_menu_order(): void {
+		$this->register_shop_product( 30, 'Öljylamppu', 'publish', array( '_price' => '5' ), 1 );
+		$this->register_shop_product( 31, 'Aakkoset', 'publish', array( '_price' => '8' ), 2 );
+
+		$filter = static fn() => 1;
+		add_filter( 'rytkoset_theme_chat_live_context_max_products', $filter );
+
+		$context = rytkoset_theme_chat_get_shop_products_context();
+
+		remove_filter( 'rytkoset_theme_chat_live_context_max_products', $filter );
+
+		// menu_order 1 wins the cap even though "Aakkoset" sorts first alphabetically.
+		$this->assertStringContainsString( 'Öljylamppu', $context );
+		$this->assertStringNotContainsString( 'Aakkoset', $context );
+	}
+
+	public function test_shop_products_context_empty_when_no_products(): void {
+		$this->assertSame( '', rytkoset_theme_chat_get_shop_products_context() );
+	}
+
+	public function test_shop_products_context_empty_when_only_membership_products_exist(): void {
+		$this->register_shop_product(
+			30,
+			'Vuosijäsenyys',
+			'publish',
+			array(
+				'_rytkoset_membership_product' => 'yes',
+				'_price'                       => '30',
+			)
+		);
+
+		$this->assertSame( '', rytkoset_theme_chat_get_shop_products_context() );
+	}
+
 	// --- rytkoset_theme_chat_get_live_context() ------------------------------
 
 	public function test_live_context_states_when_no_upcoming_events(): void {
@@ -251,6 +337,32 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		remove_filter( 'rytkoset_theme_chat_live_context_max_length', $filter );
 	}
 
+	public function test_live_context_includes_shop_products_without_duplicating_membership(): void {
+		// rytkoset_theme_chat_get_membership_context() finds its candidates via a
+		// get_posts() meta_key/meta_value query against post meta (not WC_Product meta).
+		update_post_meta( 30, '_rytkoset_membership_product', 'yes' );
+		$this->register_shop_product(
+			30,
+			'Vuosijäsenyys',
+			'publish',
+			array(
+				'_rytkoset_membership_product' => 'yes',
+				'_price'                       => '30',
+			)
+		);
+		$this->register_shop_product( 31, 'T-paita', 'publish', array( '_price' => '20' ) );
+
+		$context = rytkoset_theme_chat_get_live_context();
+
+		$this->assertStringContainsString( 'Muut verkkokaupan tuotteet:', $context );
+		$this->assertStringContainsString( '- T-paita: 20 €', $context );
+		$this->assertSame( 1, substr_count( $context, 'Vuosijäsenyys' ) );
+	}
+
+	public function test_live_context_omits_shop_products_section_when_empty(): void {
+		$this->assertStringNotContainsString( 'Muut verkkokaupan tuotteet', rytkoset_theme_chat_get_live_context() );
+	}
+
 	// --- system prompt wiring -------------------------------------------------
 
 	public function test_system_prompt_includes_live_context_and_guardrail(): void {
@@ -261,6 +373,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Ajantasaiset tiedot sivustolta', $prompt );
 		$this->assertStringContainsString( 'Sukujuhla 2026', $prompt );
 		$this->assertStringContainsString( 'Älä arvioi vapaita paikkoja', $prompt );
+		$this->assertStringContainsString( 'tuotteiden varastotilannetta', $prompt );
 	}
 
 	public function test_system_prompt_omits_live_section_when_disabled(): void {

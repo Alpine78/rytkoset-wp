@@ -1,6 +1,6 @@
 # AI-tukichatti: backend-proxy, Mistral-integraatio ja ylläpito
 
-AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-avain **ei koskaan** päädy selaimeen. Kokonaisuus on toteutettu neljässä siivussa (EPIC 11 / #411): backend-proxy ja kulusuojat (**#412**), chat-widget (**#413**), Customizer-asetukset, dokumentaatio ja GDPR (**#414**) sekä automaattisesti koottu ajantasainen tietolohko (**#459**).
+AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-avain **ei koskaan** päädy selaimeen. Kokonaisuus on toteutettu useassa siivussa (EPIC 11 / #411): backend-proxy ja kulusuojat (**#412**), chat-widget (**#413**), Customizer-asetukset, dokumentaatio ja GDPR (**#414**), automaattisesti koottu ajantasainen tietolohko tapahtumille ja jäsenyystuotteille (**#459**) sekä sen laajennus muuhun verkkokaupan tuotekatalogiin (**#471**).
 
 Toteutus: `inc/chat.php`. Teeman koodia, ei ulkoisia kirjastoja. Tämä on teeman **ensimmäinen REST-päätepiste**.
 
@@ -63,7 +63,7 @@ Promptin tietolähteet:
 
 1. **Pysyvä sivustokonteksti** (`rytkoset_theme_chat_get_stable_site_context()`): sivuston peruspolut ja vakioidut toimintalogiikat, joita mallin ei pidä päätellä. Mukana ovat mm. `/kauppa/`, `/oma-tili/tilaukset/`, `/foorumi/`, `/blogi/`, `/digilehdet/`, some-linkit, ehdollinen maksun jatkaminen, foorumin käytössäolo, blogitekstien vastaanotto ylläpidon kautta, digilehtien HTML-muoto, sukukirjan kirjastolainaus, julkaistu `Rytkösten sukulainen nro 9` -tuote sekä hallituksen sivu ja koko hallituslista.
 2. **Customizerin Tietopohja/FAQ-kenttä** (#414): ylläpitäjän vapaamuotoinen tietopohja vakiintuneille yhdistys- ja toimintaohjeille.
-3. **Automaattinen ajantasainen tietolohko** (#459): tulevat tapahtumat ja julkaistut jäsenyystuotteet sivuston omista lähteistä.
+3. **Automaattinen ajantasainen tietolohko** (#459, #471): tulevat tapahtumat, julkaistut jäsenyystuotteet ja muut verkkokaupan tuotteet sivuston omista lähteistä.
 
 Promptin voi korvata tai laajentaa suodattimella `rytkoset_theme_chat_system_prompt` (argumentit: `$prompt`, `$contact_email`). Pysyvää sivustokontekstia voi muokata suodattimella `rytkoset_theme_chat_stable_site_context`.
 
@@ -106,15 +106,17 @@ Ennen chatin vientiä tuotantoon testaa devissä ainakin kysymykset, joissa mall
 - "Onko sukuseuralla some-tilejä?" -> pitää tunnistaa sivuston some-linkit.
 - "Saanko digilehden PDF:nä?" -> ei saa luvata PDF-latausta, ellei tietopohjaan ole lisätty erillistä ohjetta.
 - "Miten voin yrittää epäonnistunutta maksua uudelleen?" -> pitää käyttää ehdollista muotoa: vain jos tilauksella näkyy **Maksa / yritä uudelleen** -painike.
+- "Mitä kaupassa on myynnissä?" -> pitää listata julkaistut tuotteet nimellä ja hinnalla (#471), ei saa väittää tuotteen olevan varastossa/loppu, ja pitää ohjata tuotesivulle ajantasaisen saatavuuden tarkistamiseen.
 
-## Ajantasainen tietolohko (#459)
+## Ajantasainen tietolohko (#459, #471)
 
 FAQ:n lisäksi system-promptiin liitetään **automaattisesti koottu** tietolohko, joka luetaan suoraan samoista lähteistä kuin sivuston omat näkymät — sitä ei ylläpidetä käsin, eikä se vanhene:
 
 - **Tulevat tapahtumat** (`rytkoset_event`, julkaistut, tapahtumapäivä tänään tai myöhemmin; tapahtumapäivä on voimassa päivän loppuun): nimi, päivämäärä, kellonaika, paikka, hinta, ilmoittautumisen takaraja samasta lähteestä kuin tapahtumasivun yhteenvetokortilla (maksuttomat: oma takaraja tai tapahtumapäivä; linkitetyt maksulliset tuotteet: tuotteen takaraja), #450-lisävalinnat (esim. bussin lähtöpaikat + määräkentän nimi) ja tapahtuman osoite. Maksulliset tapahtumat ohjataan tapahtumasivulle. Enintään 5 tapahtumaa aikajärjestyksessä. Jos tulevia tapahtumia ei ole, lohko toteaa sen eksplisiittisesti, ettei malli keksi tapahtumia.
 - **Jäsenyystuotteet** (`_rytkoset_membership_product = yes`, vain julkaistut): nimi, hinta, jäsenyystyyppi ja "jäsenyys voimassa X asti" -päivä. Osio jää kokonaan pois, jos WooCommerce ei ole aktiivinen (fail-safe).
+- **Muut verkkokaupan tuotteet** (#471, esim. sukulehdet, t-paidat): kaikki muut julkaistut ja hinnalliset WooCommerce-tuotteet — nimi, hinta, permalink — `menu_order`/nimi-järjestyksessä (sama järjestys kuin kaupan oletuslajittelu). Jäsenyystuotteet jätetään pois, koska niillä on jo oma osionsa yllä — ei duplikointia. Enintään 20 tuotetta. Osio jää kokonaan pois, jos julkaistuja ei-jäsenyystuotteita ei löydy.
 
-Lohkon perään lisätään ohje, ettei malli arvioi vapaita paikkoja tai ilmoittautumistilannetta vaan ohjaa tapahtumasivulle. Toteutus: `rytkoset_theme_chat_get_live_context()` + apufunktiot (`..._get_upcoming_event_ids()`, `..._format_event_context()`, `..._get_membership_context()`) `inc/chat.php`:ssä; ei välimuistia (kevyet kyselyt ajetaan vain chat-pyynnön yhteydessä, rate limit rajaa volyymin).
+Lohkon perään lisätään ohje, ettei malli arvioi vapaita paikkoja, ilmoittautumistilannetta tai tuotteiden varastotilannetta vaan ohjaa tapahtuman tai tuotteen sivulle. Toteutus: `rytkoset_theme_chat_get_live_context()` + apufunktiot (`..._get_upcoming_event_ids()`, `..._format_event_context()`, `..._get_membership_context()`, `..._get_shop_products_context()`) `inc/chat.php`:ssä; ei välimuistia (kevyet kyselyt ajetaan vain chat-pyynnön yhteydessä, rate limit rajaa volyymin).
 
 Suodattimet:
 
@@ -122,9 +124,10 @@ Suodattimet:
 |---|---|---|
 | `rytkoset_theme_chat_live_context_enabled` | `true` | Koko lohkon voi kytkeä pois |
 | `rytkoset_theme_chat_live_context_max_events` | 5 | Tapahtumien enimmäismäärä |
+| `rytkoset_theme_chat_live_context_max_products` | 20 | Muiden verkkokaupan tuotteiden enimmäismäärä (#471) |
 | `rytkoset_theme_chat_live_context_max_length` | 4000 | Lohkon merkkiraja (katkaisu) |
 
-Työnjako FAQ:n kanssa: **rakenteinen, muuttuva tieto** (päivämäärät, hinnat, lähtöpaikat) tulee tästä lohkosta automaattisesti — sitä ei tarvitse eikä kannata kopioida FAQ:hun. FAQ:hun kirjoitetaan vain vakaat faktat ja toimintaohjeet (maksaminen, käytännöt, historia).
+Työnjako FAQ:n kanssa: **rakenteinen, muuttuva tieto** (päivämäärät, hinnat, lähtöpaikat) tulee tästä lohkosta automaattisesti — sitä ei tarvitse eikä kannata kopioida FAQ:hun. FAQ:hun kirjoitetaan vain vakaat faktat ja toimintaohjeet (maksaminen, käytännöt, historia). Uuden tuotteen lisääminen kauppaan riittää — chatti kertoo siitä ilman FAQ- tai koodimuutosta heti kun tuote on julkaistu ja sillä on hinta.
 
 Maksuohjeissa ei pidä luvata, että kaikki epäonnistuneet tai keskeneräiset
 Mollie-tilaukset voi aina vaihtaa itse toiseen maksutapaan. Käytä muotoa:
@@ -193,8 +196,9 @@ Selosteteksti on sivun sisältöä (ei koodia), joten alla oleva on **ehdotus yl
 8. **Customizer-kytkin**: ota chatti pois päältä (Ulkoasu → Mukauta → Tukichatti) → widget ei renderöidy ja suora REST-kutsu palauttaa HTTP 503 (`rytkoset_chat_disabled`).
 9. **FAQ**: lisää Tietopohja-kenttään tunnistettava fakta (esim. testihinta) → chatti käyttää sitä vastauksessa ilman koodimuutosta.
 10. **Ajantasainen tieto (#459)**: luo/muokkaa tuleva tapahtuma adminissa → chatti kertoo sen päivämäärän, paikan ja lähtöpaikkavaihtoehdot ilman FAQ-muutosta; kysy jäsenmaksun hintaa → vastaus vastaa verkkokaupan tuotetta. Kysy vapaita paikkoja → chatti ohjaa tapahtumasivulle eikä arvaa.
+11. **Kaupan tuotekatalogi (#471)**: julkaise uusi tuote (esim. t-paita, hinta asetettu) → chatti kertoo siitä nimellä ja hinnalla ilman FAQ- tai koodimuutosta. Lisää jäsenyystuote → se ei toistu "muut tuotteet" -listassa, koska se on jo jäsenyysosiossa. Aseta tuote luonnokseksi tai poista sen hinta → chatti ei enää mainitse sitä. Kysy tuotteen olevan varastossa → chatti ei väitä varastotilannetta vaan ohjaa tuotesivulle.
 
-Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta ja system-prompt. Verkko- ja REST-kytkentä varmistetaan yllä olevalla manuaalisella curl-testillä.
+Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta ja system-prompt. `tests/ChatLiveContextTest.php` kattaa ajantasaisen tietolohkon (tapahtumat, jäsenyystuotteet, muut verkkokaupan tuotteet). Verkko- ja REST-kytkentä varmistetaan yllä olevalla manuaalisella curl-testillä.
 
 ## Käyttöliittymä (chat-widget, #413)
 
