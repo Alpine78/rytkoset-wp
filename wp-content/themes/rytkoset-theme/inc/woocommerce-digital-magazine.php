@@ -544,6 +544,128 @@ function rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order 
 }
 
 /**
+ * Returns true when an order contains at least one digital-magazine-linked product (#491).
+ *
+ * @param WC_Order|null $order WooCommerce order object.
+ * @return bool
+ */
+function rytkoset_theme_order_has_digital_magazine_product( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	foreach ( $order->get_items() as $item ) {
+		$product = is_object( $item ) && method_exists( $item, 'get_product' ) ? $item->get_product() : null;
+
+		if ( $product instanceof WC_Product && rytkoset_theme_get_magazine_id_by_product( $product->get_id() ) > 0 ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Hides the digital magazine cancellation-consent field from order confirmation views and
+ * emails when the order does not contain a digital magazine product (#491).
+ *
+ * WooCommerce Blocks stores an unchecked hidden checkbox as `false` on every order regardless of
+ * whether the field actually applied, which otherwise renders a misleading "…: Ei" line about
+ * digital magazines on unrelated orders (e.g. a Tampere 2026 registration) — the same mechanism
+ * already guarded for the Tampere 2026 participant fields in inc/woocommerce-tampere-2026.php.
+ *
+ * @param bool                 $show    Whether WooCommerce would show the field.
+ * @param array<string, mixed> $field   Field data.
+ * @param array<string, mixed> $fields  All fields in the current confirmation context.
+ * @param array<string, mixed> $context Confirmation context.
+ * @return bool
+ */
+function rytkoset_theme_filter_digital_magazine_consent_order_confirmation_field( $show, $field, $fields, $context ) {
+	if ( ! function_exists( 'rytkoset_theme_get_order_confirmation_checkout_field_id' ) ) {
+		return $show;
+	}
+
+	$field_id = rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields );
+
+	if ( rytkoset_theme_get_digital_magazine_consent_field_id() !== $field_id ) {
+		return $show;
+	}
+
+	$order = isset( $context['order'] ) && $context['order'] instanceof WC_Order ? $context['order'] : null;
+
+	return $show && rytkoset_theme_order_has_digital_magazine_product( $order );
+}
+add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_digital_magazine_consent_order_confirmation_field', 10, 4 );
+
+/**
+ * Returns true when an admin order field key/definition is the digital magazine
+ * cancellation-consent field, regardless of whether the `_wc_other/` order-meta prefix is
+ * present on the key (#491).
+ *
+ * @param string               $field_key Field array key.
+ * @param array<string, mixed> $field     Field data.
+ * @return bool
+ */
+function rytkoset_theme_is_digital_magazine_consent_admin_field( $field_key, $field ) {
+	$field_id = is_array( $field ) && isset( $field['id'] ) ? (string) $field['id'] : (string) $field_key;
+	$prefix   = '_wc_other/';
+
+	if ( 0 === strpos( $field_id, $prefix ) ) {
+		$field_id = substr( $field_id, strlen( $prefix ) );
+	}
+
+	return rytkoset_theme_get_digital_magazine_consent_field_id() === $field_id;
+}
+
+/**
+ * Removes the digital magazine cancellation-consent field from WooCommerce admin order screens
+ * when the order does not contain a digital magazine product (#491). Also covers orders created
+ * before this guard existed, since the check runs on every admin render rather than at checkout.
+ *
+ * @param array<string, mixed> $fields Admin field definitions.
+ * @param WC_Order|null        $order  Order object.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_filter_digital_magazine_consent_admin_order_fields( $fields, $order = null ) {
+	if ( ! $order instanceof WC_Order || rytkoset_theme_order_has_digital_magazine_product( $order ) ) {
+		return $fields;
+	}
+
+	foreach ( $fields as $field_key => $field ) {
+		if ( rytkoset_theme_is_digital_magazine_consent_admin_field( $field_key, $field ) ) {
+			unset( $fields[ $field_key ] );
+		}
+	}
+
+	return $fields;
+}
+add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_digital_magazine_consent_admin_order_fields', 20, 2 );
+
+/**
+ * Deletes the digital magazine cancellation-consent meta from new orders that do not contain a
+ * digital magazine product (#491) — the field is registered for every checkout, so WooCommerce
+ * Blocks otherwise stores an unchecked `false` value even when the field was hidden.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_cleanup_digital_magazine_consent_order_meta( $order ) {
+	if ( ! $order instanceof WC_Order || rytkoset_theme_order_has_digital_magazine_product( $order ) ) {
+		return;
+	}
+
+	$meta_key = '_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id();
+
+	if ( ! $order->meta_exists( $meta_key ) ) {
+		return;
+	}
+
+	$order->delete_meta_data( $meta_key );
+	$order->save();
+}
+add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cleanup_digital_magazine_consent_order_meta', 20 );
+
+/**
  * Sends the access email for magazines unlocked by a completed/processing order.
  *
  * Access itself stays a live lookup (Model A); this only sends the notification once per order
