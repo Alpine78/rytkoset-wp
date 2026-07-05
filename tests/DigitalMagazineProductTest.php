@@ -253,4 +253,114 @@ final class DigitalMagazineProductTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertFalse( rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order ) );
 	}
+
+	// --- consent field leak guard (#491) ------------------------------------
+
+	private function order_with_items( WC_Product ...$products ): WC_Order {
+		$order = new WC_Order();
+
+		foreach ( $products as $product ) {
+			$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Tuote', 1 );
+		}
+
+		return $order;
+	}
+
+	public function test_order_has_digital_magazine_product_true_when_linked(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order = $this->order_with_items( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+
+		$this->assertTrue( rytkoset_theme_order_has_digital_magazine_product( $order ) );
+	}
+
+	public function test_order_has_digital_magazine_product_false_for_unrelated_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order = $this->order_with_items( new WC_Product( array(), 99, 'publish', 'Tampere 2026' ) );
+
+		$this->assertFalse( rytkoset_theme_order_has_digital_magazine_product( $order ) );
+	}
+
+	public function test_order_has_digital_magazine_product_false_for_non_order(): void {
+		$this->assertFalse( rytkoset_theme_order_has_digital_magazine_product( null ) );
+	}
+
+	public function test_consent_confirmation_field_hidden_for_unrelated_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order = $this->order_with_items( new WC_Product( array(), 99, 'publish', 'Tampere 2026' ) );
+		$field = array( 'id' => rytkoset_theme_get_digital_magazine_consent_field_id() );
+
+		$this->assertFalse(
+			rytkoset_theme_filter_digital_magazine_consent_order_confirmation_field( true, $field, array(), array( 'order' => $order ) )
+		);
+	}
+
+	public function test_consent_confirmation_field_shown_for_magazine_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order = $this->order_with_items( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+		$field = array( 'id' => rytkoset_theme_get_digital_magazine_consent_field_id() );
+
+		$this->assertTrue(
+			rytkoset_theme_filter_digital_magazine_consent_order_confirmation_field( true, $field, array(), array( 'order' => $order ) )
+		);
+	}
+
+	public function test_consent_confirmation_field_untouched_for_other_field(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order = $this->order_with_items( new WC_Product( array(), 99, 'publish', 'Tampere 2026' ) );
+		$field = array( 'id' => 'rytkoset/participant_1_name' );
+
+		$this->assertTrue(
+			rytkoset_theme_filter_digital_magazine_consent_order_confirmation_field( true, $field, array(), array( 'order' => $order ) )
+		);
+	}
+
+	public function test_is_digital_magazine_consent_admin_field_matches_plain_id(): void {
+		$this->assertTrue(
+			rytkoset_theme_is_digital_magazine_consent_admin_field(
+				rytkoset_theme_get_digital_magazine_consent_field_id(),
+				array()
+			)
+		);
+	}
+
+	public function test_is_digital_magazine_consent_admin_field_matches_prefixed_key(): void {
+		$this->assertTrue(
+			rytkoset_theme_is_digital_magazine_consent_admin_field(
+				'_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id(),
+				array()
+			)
+		);
+	}
+
+	public function test_is_digital_magazine_consent_admin_field_rejects_other_field(): void {
+		$this->assertFalse(
+			rytkoset_theme_is_digital_magazine_consent_admin_field( 'rytkoset/participant_1_name', array() )
+		);
+	}
+
+	public function test_admin_order_fields_strip_consent_for_unrelated_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order  = $this->order_with_items( new WC_Product( array(), 99, 'publish', 'Tampere 2026' ) );
+		$fields = array(
+			'_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id() => array(),
+			'first_name' => array(),
+		);
+
+		$filtered = rytkoset_theme_filter_digital_magazine_consent_admin_order_fields( $fields, $order );
+
+		$this->assertArrayNotHasKey( '_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id(), $filtered );
+		$this->assertArrayHasKey( 'first_name', $filtered );
+	}
+
+	public function test_admin_order_fields_keep_consent_for_magazine_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order  = $this->order_with_items( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+		$fields = array(
+			'_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id() => array(),
+		);
+
+		$filtered = rytkoset_theme_filter_digital_magazine_consent_admin_order_fields( $fields, $order );
+
+		$this->assertArrayHasKey( '_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id(), $filtered );
+	}
 }
