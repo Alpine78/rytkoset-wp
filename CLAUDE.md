@@ -155,9 +155,12 @@ Chat knowledge guardrail: `inc/chat.php` includes a stable site context helper,
 `rytkoset_theme_chat_stable_site_context`), in every system prompt. It locks in
 site basics that must not be left to model inference: Finnish store/account
 paths (`/kauppa/`, `/oma-tili/tilaukset/`), the album gallery at `/albumit/`
-(with an explicit denial of the nonexistent `/kuvat/`), forum availability,
-blog-submission handling via maintainers, social links, digital magazines as
-HTML content rather than PDFs, sukukirja library borrowing, the published
+(with an explicit denial of the nonexistent `/kuvat/`), the fact that album
+pages can embed YouTube videos in their own "Videot" section and event pages
+can embed a recording (added after production claimed the site had no videos
+at all, contradicting album/event pages that do embed them), forum
+availability, blog-submission handling via maintainers, social links, digital
+magazines as HTML content rather than PDFs, sukukirja library borrowing, the published
 `Rytkösten sukulainen nro 9` product, the board page and full 2023-2026 board
 member list, and conditional payment retry wording. A dynamically built sitemap
 block (`rytkoset_theme_chat_get_sitemap_context()`) additionally lists all

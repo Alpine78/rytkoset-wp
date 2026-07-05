@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Fixed
+- `inc/chat.php` / `tests/ChatProxyTest.php` / `CLAUDE.md`: korjattu AI-tukichatin videohallusinaatio. Tuotannossa chatti vastasi kysymykseen "Onko sivustolla videoita?" väittämällä, ettei sivustolla ole videoita — vaikka albumisivuilla on oma "Videot"-osio upotetuille YouTube-videoille ja tapahtumasivun sisältöön voidaan upottaa tallenne. Pysyvä sivustokonteksti (`rytkoset_theme_chat_get_stable_site_context()`) ei maininnut tätä lainkaan, joten malli päätteli asian väärin. Lisätty rivi, joka kertoo videoiden olemassaolosta ja kieltää väittämästä, ettei niitä ole. 2 uutta assertiota olemassa olevaan testiin. `php -l` + phpcs + PHPUnit vihreät.
+
 ## [1.2.0] - 2026-07-03
 
 AI-tukichatti (EPIC 11): palvelinpuolen REST-välityskerros Mistraliin, kelluva chat-widget, Customizer-asetukset, ajantasainen tietolohko (tapahtumat, jäsenyystuotteet, kaupan tuotekatalogi) ja käyttötilastot wp-adminin Dashboard-widgetiin. Lisäksi asiakkaan tilausnäkymään näkyvä maksun jatkamisen/uudelleenyrityksen polku (#462), digilehtien kassalle lisätty nimenomainen suostumus peruuttamisoikeuden menettämisestä (#477, KSL 6:15 § 2 mom / 6:24 § 2 mom) sekä maksu- ja toimitusehtojen ja rekisteriselosteen versioitujen lähdekopioiden viimeistely (#476).
