@@ -224,6 +224,86 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringNotContainsString( 'Sukukirja', $context );
 	}
 
+	// --- rytkoset_theme_chat_get_digital_magazine_context() ------------------
+
+	/**
+	 * Registers a published top-level digital magazine with an access mode.
+	 *
+	 * @param int    $id     Magazine post ID.
+	 * @param string $title  Magazine title.
+	 * @param string $mode   Access mode meta value, empty to skip.
+	 * @param int    $parent Post parent (0 = top-level magazine, >0 = article).
+	 * @return WP_Post
+	 */
+	private function register_digital_magazine( int $id, string $title, string $mode = '', int $parent = 0 ): WP_Post {
+		$post = rytkoset_test_register_post( $id, 'digital_magazine', $title, $parent );
+
+		if ( '' !== $mode ) {
+			update_post_meta( $id, '_rytkoset_magazine_access_mode', $mode );
+		}
+
+		return $post;
+	}
+
+	public function test_digital_magazine_context_lists_published_top_level_magazines(): void {
+		$this->register_digital_magazine( 40, 'Rytkösten sukulainen — Digilehti 1', 'free' );
+
+		$context = rytkoset_theme_chat_get_digital_magazine_context();
+
+		$this->assertStringContainsString(
+			'- Rytkösten sukulainen — Digilehti 1 (Kaikille ilmainen): https://rytkoset.test/?p=40',
+			$context
+		);
+	}
+
+	public function test_digital_magazine_context_excludes_articles_and_drafts(): void {
+		$this->register_digital_magazine( 40, 'Julkaistu lehti', 'free' );
+		$this->register_digital_magazine( 41, 'Lehden juttu', 'free', 40 );
+		$draft              = $this->register_digital_magazine( 42, 'Luonnoslehti', 'free' );
+		$draft->post_status = 'draft';
+
+		$context = rytkoset_theme_chat_get_digital_magazine_context();
+
+		$this->assertStringContainsString( 'Julkaistu lehti', $context );
+		$this->assertStringNotContainsString( 'Lehden juttu', $context );
+		$this->assertStringNotContainsString( 'Luonnoslehti', $context );
+	}
+
+	public function test_digital_magazine_context_respects_max_magazines_filter(): void {
+		$this->register_digital_magazine( 40, 'Eka lehti', 'free' );
+		$this->register_digital_magazine( 41, 'Toka lehti', 'free' );
+
+		$filter = static fn() => 1;
+		add_filter( 'rytkoset_theme_chat_live_context_max_magazines', $filter );
+
+		$context = rytkoset_theme_chat_get_digital_magazine_context();
+
+		remove_filter( 'rytkoset_theme_chat_live_context_max_magazines', $filter );
+
+		$this->assertSame( 1, substr_count( $context, 'lehti' ) );
+	}
+
+	public function test_digital_magazine_context_empty_when_no_magazines(): void {
+		$this->assertSame( '', rytkoset_theme_chat_get_digital_magazine_context() );
+	}
+
+	public function test_live_context_states_when_no_digital_magazines(): void {
+		$this->assertStringContainsString(
+			'Digilehtiä ei ole vielä julkaistu.',
+			rytkoset_theme_chat_get_live_context()
+		);
+	}
+
+	public function test_live_context_includes_published_digital_magazine(): void {
+		$this->register_digital_magazine( 40, 'Rytkösten sukulainen — Digilehti 1', 'members_only' );
+
+		$context = rytkoset_theme_chat_get_live_context();
+
+		$this->assertStringContainsString( 'Digilehdet:', $context );
+		$this->assertStringContainsString( '- Rytkösten sukulainen — Digilehti 1 (Vain jäsenille)', $context );
+		$this->assertStringNotContainsString( 'Digilehtiä ei ole vielä julkaistu.', $context );
+	}
+
 	// --- rytkoset_theme_chat_get_shop_products_context() ---------------------
 
 	/**

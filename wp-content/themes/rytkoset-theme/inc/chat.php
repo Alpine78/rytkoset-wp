@@ -408,6 +408,71 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_membership_context' ) ) {
 }
 
 /**
+ * Kokoaa julkaistujen digilehtien rivit ajantasaista tietolohkoa varten.
+ *
+ * Digilehdet-sisältötyyppi on olemassa, mutta arkisto voi olla tyhjä eikä
+ * yhtään lehteä ole vielä julkaistu — ilman tätä lohkoa malli päättelisi
+ * pysyvän kontekstin HTML-muotomaininnasta virheellisesti, että digilehtiä
+ * on jo saatavilla (tuotannossa havaittu tapaus). Vain ylälehdet lasketaan
+ * mukaan, ei niiden alle kuuluvia juttuja. Fail-safe: tyhjä merkkijono, jos
+ * digilehti-CPT ei ole rekisteröity.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_digital_magazine_context' ) ) {
+	function rytkoset_theme_chat_get_digital_magazine_context() {
+		if ( ! function_exists( 'rytkoset_theme_get_digital_magazine_access_mode_label' ) ) {
+			return '';
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'   => 'digital_magazine',
+				'post_status' => 'publish',
+				'post_parent' => 0,
+				'numberposts' => -1,
+				'fields'      => 'ids',
+			)
+		);
+
+		/**
+		 * Suodattaa promptiin liitettävien digilehtien enimmäismäärän.
+		 *
+		 * @param int $max_magazines Digilehtien enimmäismäärä.
+		 */
+		$limit = max( 1, (int) apply_filters( 'rytkoset_theme_chat_live_context_max_magazines', 10 ) );
+
+		$lines = array();
+
+		foreach ( (array) $ids as $magazine_id ) {
+			if ( count( $lines ) >= $limit ) {
+				break;
+			}
+
+			$magazine_id = (int) $magazine_id;
+
+			if ( 'publish' !== get_post_status( $magazine_id ) ) {
+				continue;
+			}
+
+			$title = trim( (string) get_the_title( $magazine_id ) );
+
+			if ( '' === $title ) {
+				continue;
+			}
+
+			$access_label = rytkoset_theme_get_digital_magazine_access_mode_label(
+				rytkoset_theme_get_digital_magazine_access_mode( $magazine_id )
+			);
+
+			$lines[] = '- ' . $title . ' (' . $access_label . '): ' . get_permalink( $magazine_id );
+		}
+
+		return implode( "\n", $lines );
+	}
+}
+
+/**
  * Kokoaa muiden verkkokaupan tuotteiden rivit ajantasaista tietolohkoa varten (#471).
  *
  * Sama rivimalli kuin `rytkoset_theme_chat_get_membership_context()`: nimi, hinta
@@ -479,10 +544,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_shop_products_context' ) ) {
 /**
  * Kokoaa system-promptiin liitettävän ajantasaisen tietolohkon (#459, #471).
  *
- * Tulevat tapahtumat -osio kertoo eksplisiittisesti, jos tapahtumia ei ole
- * (ettei malli keksi niitä). Jäsenyys- ja muut tuoteosiot jätetään kokonaan
- * pois, jos tuotteita ei löydy. Koko lohko katkaistaan suodatettavaan
- * merkkirajaan.
+ * Tulevat tapahtumat- ja Digilehdet-osiot kertovat eksplisiittisesti, jos
+ * tapahtumia/digilehtiä ei ole (ettei malli keksi niitä tai päättele niitä
+ * olemassa olevan pysyvän kontekstin yleisluontoisista maininnoista).
+ * Jäsenyys- ja muut tuoteosiot jätetään kokonaan pois, jos tuotteita ei
+ * löydy. Koko lohko katkaistaan suodatettavaan merkkirajaan.
  *
  * @return string Tyhjä, kun lohko on kytketty pois suodattimella.
  */
@@ -504,6 +570,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_live_context' ) ) {
 
 		$sections   = array();
 		$sections[] = "Tulevat tapahtumat:\n" . ( ! empty( $event_blocks ) ? implode( "\n", $event_blocks ) : '- Ei tulevia tapahtumia tiedossa juuri nyt.' );
+
+		$magazines  = rytkoset_theme_chat_get_digital_magazine_context();
+		$sections[] = "Digilehdet:\n" . ( '' !== $magazines ? $magazines : '- Digilehtiä ei ole vielä julkaistu.' );
 
 		$membership = rytkoset_theme_chat_get_membership_context();
 		if ( '' !== $membership ) {
@@ -1264,10 +1333,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 			'- Foorumi on käytössä sivustolla. Kirjautunut käyttäjä voi aloittaa keskustelun, jos hänellä on foorumin julkaisuoikeus. Älä väitä foorumia suljetuksi vain siksi, että viimeisin viesti on vanha.',
 			'- Blogi näyttää julkaistut kirjoitukset. Blogikirjoituksia voi ehdottaa tai lähettää ylläpidolle sähköpostitse; julkaisu tehdään ylläpidon kautta. Älä väitä, ettei blogitekstejä oteta vastaan.',
 			'- Blogikirjoituksissa ja albumeissa voi olla kommentointi käytössä; kommentit moderoidaan ennen julkaisua.',
-			'- Digilehdet ovat sivuston HTML-sisältöä, eivät PDF-latauksia. Älä lupaa PDF-latauksia, ellei erillinen tietopohja niin sano.',
+			'- Digilehdet ovat sivuston HTML-sisältöä, eivät PDF-latauksia — mutta älä oleta niitä olevan jo julkaistu. Digilehtien ajantasainen julkaisutilanne (onko yhtään julkaistu, ja mitkä) kerrotaan ajantasaisen tietolohkon Digilehdet-osiossa; jos osio kertoo ettei digilehtiä ole vielä julkaistu, älä väitä toisin. Älä myöskään lupaa PDF-latauksia, ellei erillinen tietopohja niin sano.',
 			'- Sosiaalisen median linkit ovat sivustolla: Facebook https://www.facebook.com/rytkoset, YouTube https://www.youtube.com/@rytkoset, Instagram https://www.instagram.com/rytkoset/ ja X https://x.com/rytkoset. Älä väitä, ettei some-tilejä ole.',
 			'- Sukukirjaa voi lainata eri kirjastoista. Älä väitä, ettei sukukirjaa ole olemassa tai että uusi sukukirjatyö olisi käynnissä, ellei ajantasainen tietopohja niin kerro.',
-			'- Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa: /kauppa/sukulehdet/rytkosten-sukulainen-nro-9/. Ohjaa tuotteen sivulle ajantasaisen hinnan ja saatavuuden tarkistamiseksi.',
+			'- Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa: /kauppa/sukulehdet/rytkosten-sukulainen-nro-9/. Se on painettu lehti eikä digilehti — älä väitä sen olevan saatavilla digilehtenä, ellei ajantasainen tietolohko niin kerro. Ohjaa tuotteen sivulle ajantasaisen hinnan ja saatavuuden tarkistamiseksi.',
 			'- Sukuseuran hallitus kerrotaan sivulla /sukuseura/sukuseuran-hallitus/. Hallituskausi on 2023-2026. Hallitukseen kuuluvat: Esa Rytkönen (jäsen, Espoo / Maaninka), Mikko Rytkönen (suvun esimies, Runni), Antti Rytkönen (puheenjohtaja, Tampere), Eeli Rytkönen (Kinnulanlahti / Maaninka), Eeva-Liisa Ryhänen (jäsen, Helsinki), Ilkka Rytkönen (jäsen / rytkoset.net ylläpitäjä, Kuopio), Juha Rytkönen (jäsen, Maavesi / Joroinen), Mauri Rytkönen (jäsen, Helsinki), Tapani Rytkönen (sihteeri, Pieksämäki) ja Kimmo Tuulenkari (jäsen, Kajaani). Kun kysytään hallituksesta, käytä vain tätä listaa äläkä lisää muita nimiä.',
 			'- Maksuongelmissa ohjeista Oma tili -> Tilaukset vain ehdollisesti: jos tilauksella näkyy Maksa / yritä uudelleen -painike, maksua voi jatkaa ja valita kassalla toisen maksutavan; jos painiketta ei näy, ohjaa sähköpostiin.',
 		);

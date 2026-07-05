@@ -177,6 +177,7 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Foorumi on käytössä sivustolla', $context );
 		$this->assertStringContainsString( 'Blogikirjoituksia voi ehdottaa tai lähettää', $context );
 		$this->assertStringContainsString( 'Digilehdet ovat sivuston HTML-sisältöä, eivät PDF-latauksia', $context );
+		$this->assertStringContainsString( 'mutta älä oleta niitä olevan jo julkaistu', $context );
 		$this->assertStringContainsString( 'https://www.facebook.com/rytkoset', $context );
 		$this->assertStringContainsString( 'https://www.youtube.com/@rytkoset', $context );
 		$this->assertStringContainsString( 'https://www.instagram.com/rytkoset/', $context );
@@ -185,6 +186,7 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Sukukirjaa voi lainata eri kirjastoista', $context );
 		$this->assertStringContainsString( 'Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa', $context );
 		$this->assertStringContainsString( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-9/', $context );
+		$this->assertStringContainsString( 'Se on painettu lehti eikä digilehti', $context );
 		$this->assertStringContainsString( 'Hallituskausi on 2023-2026', $context );
 		$this->assertStringContainsString( 'Esa Rytkönen (jäsen, Espoo / Maaninka)', $context );
 		$this->assertStringContainsString( 'Mikko Rytkönen (suvun esimies, Runni)', $context );
