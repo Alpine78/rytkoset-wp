@@ -1260,6 +1260,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 			'- Verkkokauppa: /kauppa/. Ostoskori: /ostoskori/. Kassa: /kassa/. Oma tili: /oma-tili/. Tilaukset: /oma-tili/tilaukset/.',
 			'- Tapahtumat: /tapahtumat/. Kuvat ja albumit: /albumit/. Foorumi: /foorumi/. Blogi: /blogi/. Digilehdet: /digilehdet/.',
 			'- Kuvagalleria on osoitteessa /albumit/ — sivustolla ei ole /kuvat/- eikä /galleria/-osoitetta.',
+			'- Osalla albumisivuista on upotettuja YouTube-videoita omassa Videot-osiossaan, ja tapahtumasivun sisältöön voidaan upottaa tallenteen video. Älä väitä, ettei sivustolla ole videoita — jos et tiedä onko tietyllä albumilla tai tapahtumalla videota, ohjaa albumi- tai tapahtumasivulle tarkistettavaksi.',
 			'- Foorumi on käytössä sivustolla. Kirjautunut käyttäjä voi aloittaa keskustelun, jos hänellä on foorumin julkaisuoikeus. Älä väitä foorumia suljetuksi vain siksi, että viimeisin viesti on vanha.',
 			'- Blogi näyttää julkaistut kirjoitukset. Blogikirjoituksia voi ehdottaa tai lähettää ylläpidolle sähköpostitse; julkaisu tehdään ylläpidon kautta. Älä väitä, ettei blogitekstejä oteta vastaan.',
 			'- Blogikirjoituksissa ja albumeissa voi olla kommentointi käytössä; kommentit moderoidaan ennen julkaisua.',

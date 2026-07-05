@@ -199,6 +199,8 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'äläkä lisää muita nimiä', $context );
 		$this->assertStringNotContainsString( 'Jari Rytkönen', $context );
 		$this->assertStringContainsString( 'Maksa / yritä uudelleen -painike', $context );
+		$this->assertStringContainsString( 'upotettuja YouTube-videoita omassa Videot-osiossaan', $context );
+		$this->assertStringContainsString( 'Älä väitä, ettei sivustolla ole videoita', $context );
 	}
 
 	public function test_system_prompt_includes_stable_site_context(): void {
