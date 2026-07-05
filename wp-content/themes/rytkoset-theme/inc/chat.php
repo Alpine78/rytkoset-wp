@@ -1258,7 +1258,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 		$lines = array(
 			'Sivuston pysyvät polut ja perustoiminnot:',
 			'- Verkkokauppa: /kauppa/. Ostoskori: /ostoskori/. Kassa: /kassa/. Oma tili: /oma-tili/. Tilaukset: /oma-tili/tilaukset/.',
-			'- Tapahtumat: /tapahtumat/. Foorumi: /foorumi/. Blogi: /blogi/. Digilehdet: /digilehdet/.',
+			'- Tapahtumat: /tapahtumat/. Kuvat ja albumit: /albumit/. Foorumi: /foorumi/. Blogi: /blogi/. Digilehdet: /digilehdet/.',
+			'- Kuvagalleria on osoitteessa /albumit/ — sivustolla ei ole /kuvat/- eikä /galleria/-osoitetta.',
 			'- Foorumi on käytössä sivustolla. Kirjautunut käyttäjä voi aloittaa keskustelun, jos hänellä on foorumin julkaisuoikeus. Älä väitä foorumia suljetuksi vain siksi, että viimeisin viesti on vanha.',
 			'- Blogi näyttää julkaistut kirjoitukset. Blogikirjoituksia voi ehdottaa tai lähettää ylläpidolle sähköpostitse; julkaisu tehdään ylläpidon kautta. Älä väitä, ettei blogitekstejä oteta vastaan.',
 			'- Blogikirjoituksissa ja albumeissa voi olla kommentointi käytössä; kommentit moderoidaan ennen julkaisua.',
@@ -1285,6 +1286,100 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 }
 
 /**
+ * Kokoaa sivustokartan chatin system-promptiin.
+ *
+ * Listaa julkaistut sivut sekä tapahtuma- ja albumiarkistot otsikkoineen ja
+ * osoitteineen suoraan WordPressistä, jotta malli viittaa vain oikeisiin
+ * osoitteisiin eikä keksi polkuja (tuotannossa havaittu keksitty /kuvat/).
+ * Fail-safe: tyhjä merkkijono, jos sivuja ei löydy tai lohko on kytketty pois.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
+	function rytkoset_theme_chat_get_sitemap_context() {
+		/**
+		 * Suodattaa sivustokarttalohkon käytön (koko lohkon voi kytkeä pois).
+		 *
+		 * @param bool $enabled Liitetäänkö sivustokartta system-promptiin.
+		 */
+		if ( ! apply_filters( 'rytkoset_theme_chat_sitemap_enabled', true ) ) {
+			return '';
+		}
+
+		$lines = array();
+
+		// CPT-arkistot, joilla ei ole omaa WordPress-sivua.
+		$archives = array(
+			'rytkoset_event' => 'Tapahtumat (arkisto)',
+			'gallery_album'  => 'Kuvat ja albumit (arkisto)',
+		);
+
+		foreach ( $archives as $post_type => $label ) {
+			$archive_url = get_post_type_archive_link( $post_type );
+
+			if ( is_string( $archive_url ) && '' !== $archive_url ) {
+				$lines[] = '- ' . $label . ': ' . $archive_url;
+			}
+		}
+
+		/**
+		 * Suodattaa sivustokarttaan listattavien sivujen enimmäismäärän.
+		 *
+		 * @param int $max_pages Sivujen enimmäismäärä.
+		 */
+		$max_pages = max( 1, (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_pages', 60 ) );
+
+		$page_ids = get_posts(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'fields'      => 'ids',
+				'orderby'     => 'menu_order title',
+				'order'       => 'ASC',
+			)
+		);
+
+		$page_count = 0;
+
+		foreach ( (array) $page_ids as $page_id ) {
+			if ( $page_count >= $max_pages ) {
+				break;
+			}
+
+			$page_id = (int) $page_id;
+
+			if ( 'publish' !== get_post_status( $page_id ) ) {
+				continue;
+			}
+
+			$title = trim( (string) get_the_title( $page_id ) );
+			$url   = get_permalink( $page_id );
+
+			if ( '' === $title || ! is_string( $url ) || '' === $url ) {
+				continue;
+			}
+
+			$lines[] = '- ' . $title . ': ' . $url;
+			++$page_count;
+		}
+
+		if ( empty( $lines ) ) {
+			return '';
+		}
+
+		/**
+		 * Suodattaa sivustokarttalohkon enimmäispituuden merkkeinä.
+		 *
+		 * @param int $max_length Merkkiraja.
+		 */
+		$max_length = (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_length', 3000 );
+
+		return rytkoset_theme_chat_truncate( implode( "\n", $lines ), max( 1, $max_length ) );
+	}
+}
+
+/**
  * Kokoaa Mistralille annettavan system-promptin (rooli + ohjeet).
  *
  * MVP: yhdistyksen identiteetti ja käyttäytymisohjeet. Laajemman FAQ-tietämyksen
@@ -1305,10 +1400,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Vastaa aina ja vain suomeksi, ystävällisesti ja tiiviisti.\n";
 		$prompt .= "- Vastaa pelkkänä tekstinä ilman muotoilumerkintöjä: ei Markdownia, ei tähtiä lihavointiin, ei [teksti](osoite)-linkkejä eikä otsikkomerkkejä. Luettelot saa tehdä viivalla alkavina riveinä.\n";
 		$prompt .= "- Sivuston osoite on {$home_url}. Kun viittaat sivuston sivuun, kirjoita koko osoite paljaana tekstinä (esim. {$home_url}/kauppa/) — chatti muuttaa sen automaattisesti linkiksi.\n";
+		$prompt .= "- Käytä vain tässä system-promptissa annettuja osoitteita (sivustokartta ja muut lähteet). Älä koskaan keksi, arvaa tai päättele osoitetta — jos sopivaa osoitetta ei löydy lähteistä, jätä osoite mainitsematta.\n";
 		$prompt .= "- Pysy yhdistyksen ja sen verkkosivujen aiheissa: jäsenyys, tapahtumat, sukujuhlat, sukututkimus, kuvat/albumit, digilehdet ja yhteystiedot.\n";
 		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
 		$prompt .= "- Älä täydennä puuttuvia kohtia yleisellä tiedolla, oletuksilla, vanhoilla verkkosivumalleilla tai WordPressin tavanomaisella toiminnalla.\n";
 		$prompt .= "- Älä keksi tietoa. Jos et tiedä vastausta, et löydä sitä lähteistä tai kysymys ei liity yhdistykseen, kerro se rehellisesti.\n";
+		$prompt .= "- Älä koskaan esitä vuosilukua, päivämäärää, hintaa tai lukumäärää, jota ei ole annetuissa lähteissä — älä myöskään arvaa tai päättele sellaista. Jos tarkkaa lukua ei löydy lähteistä, kerro ettet tiedä sitä.\n";
 		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
 		$prompt .= "- Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa, toista vain lähteessä annetut nimet ja roolit. Älä täydennä listaa oletetuilla nimillä.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
@@ -1318,6 +1415,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		if ( '' !== $stable_context ) {
 			$prompt .= "\n\nPysyvä sivustokonteksti (käytä näitä perusasioita, kun kysymys koskee sivuston toimintoja tai polkuja):\n\n";
 			$prompt .= $stable_context;
+		}
+
+		// Sivustokartta: julkaistut sivut ja arkistot suoraan WordPressistä.
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+		if ( '' !== $sitemap ) {
+			$prompt .= "\n\nSivustokartta (sivuston julkaistut sivut ja arkistot; nämä ovat sivuston ainoat sivuosoitteet — älä viittaa muihin osoitteisiin kuin näihin tai muissa lähteissä annettuihin):\n\n";
+			$prompt .= $sitemap;
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).
