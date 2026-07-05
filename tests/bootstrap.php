@@ -653,6 +653,10 @@ function get_permalink( $post_id ) {
 	return 'https://rytkoset.test/?p=' . (int) ( $post_id instanceof WP_Post ? $post_id->ID : $post_id );
 }
 
+function get_post_type_archive_link( $post_type ) {
+	return 'https://rytkoset.test/' . (string) $post_type . '/';
+}
+
 function get_edit_post_link( $post = 0, $context = 'display' ) {
 	$id = $post instanceof WP_Post ? $post->ID : (int) $post;
 
