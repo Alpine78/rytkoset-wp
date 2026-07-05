@@ -160,6 +160,21 @@ WooCommerce Blocksin omalla "Valitse tämä ruutu jatkaaksesi eteen päin"
 -virheellä); kenttä puuttuu kokonaan, kun korissa ei ole digilehteä; rastittu
 arvo tallentuu tilaukselle ja on luettavissa takaisin.
 
+**Vuotokorjaus muihin tilauksiin (#491):** WooCommerce Blocks tallentaa
+piilotetun, rastittamattoman lisäkentän arvoksi `false` **jokaiselle**
+tilaukselle riippumatta siitä, sisälsikö tilaus digilehteä — tämä näkyi mm.
+Tampere 2026 -osallistumismaksun tilauksissa harhaanjohtavana "Haluan
+digilehden lukuoikeuden…: Ei" -rivinä, vaikka tilauksessa ei ollut lainkaan
+digilehteä. Korjattu samalla kolmen vartijan mallilla kuin Tampere 2026
+-osallistujakentät (`inc/woocommerce-tampere-2026.php`):
+`rytkoset_theme_order_has_digital_magazine_product( $order )` tarkistaa onko
+tilauksella digilehteen linkitetty tuote, ja tätä käyttävät
+`woocommerce_filter_fields_for_order_confirmation` (piilottaa vahvistuksesta ja
+sähköpostista), `woocommerce_admin_shipping_fields` (piilottaa admin-tilaus­
+näkymästä — kattaa myös ennen korjausta syntyneet tilaukset) sekä
+`woocommerce_store_api_checkout_order_processed` (siivoaa turhan
+`false`-metan uusilta tilauksilta).
+
 ## Käyttöoikeuden myöntäminen manuaalisesti (#420)
 
 Osa digilehdistä myydään verkkokaupan ulkopuolella (käteinen, tilaisuudet,
