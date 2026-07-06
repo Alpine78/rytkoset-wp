@@ -1,0 +1,936 @@
+/* Oma tili (WooCommerce My Account) -uudistus (#496).
+   Ladataan shop.css:n jälkeen vain My Account -sivuilla (is_account_page()).
+   Rakenne: sivupalkkikortti (työpöytä) / vaakasuunnassa vieritettävä
+   pilleririvi (mobiili), sisältöalueen kortit ja taulukot. Sivupalkin
+   luokat on nimetty rytkoset-account-* -prefiksillä, koska .account-nav
+   on jo headerin tilivalikon käytössä (nav.account.css). */
+
+body.woocommerce-account {
+  --acct-surface: #ffffff;
+  --acct-surface-alt: #f9fafb;
+  --acct-hover: #f3f5f9;
+  --acct-divider: #e6e9ef;
+  --acct-accent-soft: #fef3c7;
+  --acct-text-soft: #8a94a6;
+  --acct-heading: var(--color-primary-deeper);
+  --acct-link: var(--color-primary);
+  --acct-danger: #b91c1c;
+  --acct-danger-bg: #fef2f2;
+  --acct-chip-done-bg: #e5f3ec;
+  --acct-chip-done-text: #196b46;
+  --acct-chip-neutral-bg: #eef0f4;
+  --acct-chip-neutral-text: #5b6577;
+  --acct-chip-pending-bg: var(--acct-accent-soft);
+  --acct-chip-pending-text: #8a5a00;
+  --acct-chip-cancelled-bg: #fdeeee;
+  --acct-chip-cancelled-text: #a33a3a;
+}
+
+:root[data-theme="dark"] body.woocommerce-account {
+  --acct-surface: var(--color-surface);
+  --acct-surface-alt: var(--color-surface-alt);
+  --acct-hover: var(--color-surface-alt);
+  --acct-divider: rgba(255, 255, 255, 0.1);
+  --acct-accent-soft: rgba(251, 191, 36, 0.16);
+  --acct-text-soft: #77839a;
+  --acct-heading: var(--color-text-light);
+  --acct-link: var(--color-primary-light);
+  --acct-danger: #f87171;
+  --acct-danger-bg: rgba(248, 113, 113, 0.12);
+  --acct-chip-done-bg: rgba(47, 158, 110, 0.18);
+  --acct-chip-done-text: #6fd3a4;
+  --acct-chip-neutral-bg: rgba(255, 255, 255, 0.08);
+  --acct-chip-neutral-text: #aab6ca;
+  --acct-chip-pending-bg: rgba(251, 191, 36, 0.16);
+  --acct-chip-pending-text: #ffd76a;
+  --acct-chip-cancelled-bg: rgba(248, 113, 113, 0.16);
+  --acct-chip-cancelled-text: #f5a3a3;
+}
+
+/* -----------------------------------------------------------------
+   Asettelu: sivupalkki + sisältö
+
+   page.php kaventaa sisällön 720 px:iin (.section__narrow) — vapautetaan
+   leveys vain kun tilinavigaatio on näkyvissä (kirjautunut käyttäjä),
+   jotta kirjautumislomake pysyy kapeana lukuleveytenä.
+   ----------------------------------------------------------------- */
+
+body.woocommerce-account .section .container.section__narrow:has(.woocommerce-MyAccount-navigation) {
+  max-width: none;
+}
+
+body.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation) {
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 24px 48px;
+  align-items: start;
+}
+
+/* WooCommercen clearfix-pseudoelementit muuttuisivat grid-itemeiksi ja
+   veisivät ensimmäisen solun — poistetaan ne grid-kontista. */
+body.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation)::before,
+body.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation)::after {
+  content: none;
+}
+
+body.woocommerce-account .woocommerce > .woocommerce-notices-wrapper {
+  grid-column: 1 / -1;
+}
+
+body.woocommerce-account .woocommerce > .woocommerce-notices-wrapper:empty {
+  display: none;
+}
+
+/* WooCommercen oletus-floatit pois */
+body.woocommerce-account .woocommerce-MyAccount-navigation,
+body.woocommerce-account .woocommerce-MyAccount-content {
+  float: none;
+  width: auto;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content {
+  min-width: 0;
+}
+
+/* -----------------------------------------------------------------
+   Sivupalkin tilivalikko (peilaa headerin tilivalikon kieltä)
+   ----------------------------------------------------------------- */
+
+body.woocommerce-account .woocommerce-MyAccount-navigation {
+  position: sticky;
+  top: 24px;
+  padding: 10px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: 16px;
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.rytkoset-account-nav__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 14px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--acct-divider);
+}
+
+.rytkoset-account-nav__avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-text-inverted);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .rytkoset-account-nav__avatar {
+  background: #2c4a75;
+}
+
+/* Gravatar-kuva täyttää ympyrän; nimikirjaimet ovat fallback kun kuvaa ei ole */
+.rytkoset-account-nav__avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.rytkoset-account-nav__id {
+  min-width: 0;
+}
+
+.rytkoset-account-nav__name {
+  display: block;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* Pitkä sähköposti katkaistaan ellipsiksellä yhdelle riville — keskeltä
+   sanaa rivittyminen (overflow-wrap: anywhere) näytti rikkinäiseltä.
+   Koko osoite on title-attribuutissa (navigation.php). */
+.rytkoset-account-nav__email {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-mute);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 11px 12px;
+  border-radius: var(--radius-m);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link a svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--color-text-mute);
+  transition: color var(--transition-fast);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link a:hover {
+  background: var(--acct-hover);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link a:hover svg {
+  color: var(--acct-link);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link a:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 2px;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a {
+  background: var(--acct-accent-soft);
+  color: var(--acct-heading);
+  font-weight: 700;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a svg {
+  color: var(--acct-link);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--color-accent);
+}
+
+:root[data-theme="dark"] body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a {
+  color: #ffd76a;
+}
+
+:root[data-theme="dark"] body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a svg {
+  color: var(--color-accent);
+}
+
+/* Uloskirjautuminen: jakoviiva ja varovainen punainen hover */
+body.woocommerce-account .woocommerce-MyAccount-navigation-link--customer-logout {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--acct-divider);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link--customer-logout a {
+  color: var(--color-text-mute);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link--customer-logout a:hover {
+  background: var(--acct-danger-bg);
+  color: var(--acct-danger);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-navigation-link--customer-logout a:hover svg {
+  color: var(--acct-danger);
+}
+
+/* -----------------------------------------------------------------
+   Sisältöalueen perustypografia
+   ----------------------------------------------------------------- */
+
+.rytkoset-account-h2,
+body.woocommerce-account .woocommerce-MyAccount-content h2 {
+  margin: 0 0 6px;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.rytkoset-account-lede {
+  max-width: 560px;
+  margin: 0 0 28px;
+  color: var(--color-text-mute);
+  font-size: 0.9375rem;
+}
+
+.rytkoset-account-lede a {
+  color: var(--acct-link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.rytkoset-account-lede a:hover,
+.rytkoset-account-lede a:focus-visible {
+  text-decoration: underline;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content > p:first-child {
+  margin-top: 0;
+}
+
+/* -----------------------------------------------------------------
+   Hallintapaneelin pikakortit
+   ----------------------------------------------------------------- */
+
+.rytkoset-account-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 0 0 32px;
+}
+
+.rytkoset-account-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.rytkoset-account-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+/* Sivuston yleiset linkkityylit eivät saa alleviivata korttia */
+.rytkoset-account-card,
+.rytkoset-account-card:hover,
+.rytkoset-account-card:focus-visible {
+  text-decoration: none;
+}
+
+.rytkoset-account-card:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 2px;
+}
+
+.rytkoset-account-card__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-m);
+  background: var(--acct-accent-soft);
+  color: var(--acct-link);
+}
+
+:root[data-theme="dark"] .rytkoset-account-card__icon {
+  color: var(--color-accent);
+}
+
+.rytkoset-account-card__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rytkoset-account-card__title {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.rytkoset-account-card:hover .rytkoset-account-card__title {
+  color: var(--acct-link);
+}
+
+.rytkoset-account-card__meta {
+  margin: 0;
+  color: var(--color-text-mute);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* -----------------------------------------------------------------
+   Sisältölohko + otsakerivi (esim. "Tuoreimmat tilaukset")
+   ----------------------------------------------------------------- */
+
+.rytkoset-account-section {
+  margin: 0 0 36px;
+}
+
+.rytkoset-account-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.rytkoset-account-section__title,
+body.woocommerce-account .woocommerce-MyAccount-content .rytkoset-account-section__title {
+  margin: 0;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.rytkoset-account-section__link {
+  color: var(--acct-link);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rytkoset-account-section__link:hover,
+.rytkoset-account-section__link:focus-visible {
+  text-decoration: underline;
+}
+
+/* -----------------------------------------------------------------
+   Taulukot (tilaukset, lataukset, tilausrivit)
+   ----------------------------------------------------------------- */
+
+body.woocommerce-account .woocommerce table.shop_table {
+  width: 100%;
+  margin: 0 0 24px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+body.woocommerce-account .woocommerce table.shop_table th,
+body.woocommerce-account .woocommerce table.shop_table td {
+  border: 0;
+  border-bottom: 1px solid var(--acct-divider);
+  padding: 14px 20px;
+}
+
+body.woocommerce-account .woocommerce table.shop_table thead th {
+  background: var(--acct-surface-alt);
+  color: var(--color-text-mute);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+body.woocommerce-account .woocommerce table.shop_table tbody th,
+body.woocommerce-account .woocommerce table.shop_table td {
+  color: var(--color-text);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+body.woocommerce-account .woocommerce table.shop_table tbody tr:last-child > th,
+body.woocommerce-account .woocommerce table.shop_table tbody tr:last-child > td {
+  border-bottom: 0;
+}
+
+body.woocommerce-account .woocommerce table.shop_table tbody tr {
+  transition: background-color var(--transition-fast);
+}
+
+body.woocommerce-account .woocommerce table.shop_table.my_account_orders tbody tr:hover {
+  background: var(--acct-surface-alt);
+}
+
+/* Tilausnumero ja tuotelinkit */
+body.woocommerce-account .woocommerce table.shop_table a:not(.button) {
+  color: var(--acct-link);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+body.woocommerce-account .woocommerce table.shop_table a:not(.button):hover,
+body.woocommerce-account .woocommerce table.shop_table a:not(.button):focus-visible {
+  text-decoration: underline;
+}
+
+body.woocommerce-account .woocommerce table.shop_table .woocommerce-orders-table__cell-order-date {
+  color: var(--color-text-mute);
+  font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+}
+
+body.woocommerce-account .woocommerce table.shop_table .woocommerce-orders-table__cell-order-number a {
+  white-space: nowrap;
+}
+
+/* Hyvitetty summa: vanha hinta yliviivattuna, uusi ilman alleviivausta */
+body.woocommerce-account .woocommerce table.shop_table del {
+  color: var(--acct-text-soft);
+  font-weight: 500;
+}
+
+body.woocommerce-account .woocommerce table.shop_table ins {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* Tilaustaulukon toimintopainikkeet: haamupainike (Katso yms.),
+   maksu pysyy aksenttipainikkeena, peruutus punaisena (shop.css). */
+body.woocommerce-account .woocommerce table.shop_table .button:not(.pay):not(.rytkoset-cancel-order) {
+  background: transparent;
+  border-color: var(--color-border-neutral);
+  color: var(--acct-link);
+}
+
+body.woocommerce-account .woocommerce table.shop_table .button:not(.pay):not(.rytkoset-cancel-order):hover {
+  background: var(--acct-hover);
+  border-color: var(--acct-link);
+  color: var(--acct-link);
+}
+
+body.woocommerce-account .woocommerce table.shop_table .woocommerce-orders-table__cell-order-actions .button {
+  margin: 2px 8px 2px 0;
+  padding: 0.35rem 1rem;
+  min-height: 36px;
+  font-size: 0.85rem;
+}
+
+/* -----------------------------------------------------------------
+   Tilan chipit
+   ----------------------------------------------------------------- */
+
+.rytkoset-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 12px 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rytkoset-status-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+.rytkoset-status-chip--done {
+  background: var(--acct-chip-done-bg);
+  color: var(--acct-chip-done-text);
+}
+
+.rytkoset-status-chip--neutral {
+  background: var(--acct-chip-neutral-bg);
+  color: var(--acct-chip-neutral-text);
+}
+
+.rytkoset-status-chip--pending {
+  background: var(--acct-chip-pending-bg);
+  color: var(--acct-chip-pending-text);
+}
+
+.rytkoset-status-chip--cancelled {
+  background: var(--acct-chip-cancelled-bg);
+  color: var(--acct-chip-cancelled-text);
+}
+
+/* Yksittäisen tilauksen tilarivi ("Tilaus #1102 tehtiin…"):
+   mark-elementit chipeiksi ilman statuskohtaista väriä. */
+body.woocommerce-account .woocommerce-MyAccount-content mark {
+  background: var(--acct-accent-soft);
+  color: var(--acct-chip-pending-text);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 0.9em;
+}
+
+/* -----------------------------------------------------------------
+   Osoitteet
+   ----------------------------------------------------------------- */
+
+body.woocommerce-account .woocommerce-Addresses {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+/* WooCommercen clearfix-pseudoelementit pois myös osoitegridistä */
+body.woocommerce-account .woocommerce-Addresses::before,
+body.woocommerce-account .woocommerce-Addresses::after {
+  content: none;
+}
+
+/* Kolmiosainen valitsin voittaa WooCommercen .woocommerce .col2-set .col-1
+   -leveyssäännön (48 %), jotta kortit täyttävät grid-solunsa */
+body.woocommerce-account .woocommerce-Addresses .woocommerce-Address,
+body.woocommerce-account .woocommerce-MyAccount-content .woocommerce-Address {
+  float: none;
+  width: auto;
+  max-width: none;
+  padding: 22px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+body.woocommerce-account .woocommerce-Address-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--acct-divider);
+}
+
+body.woocommerce-account .woocommerce-Address-title h2 {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 1.1rem;
+  /* base.css antaa otsikoille overflow-wrap: anywhere, joka flex-lapsena
+     kutistaisi otsikon kirjaimen levyiseksi */
+  overflow-wrap: normal;
+}
+
+body.woocommerce-account .woocommerce-Address-title a.edit {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.35rem 1rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-pill);
+  color: var(--acct-link);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+body.woocommerce-account .woocommerce-Address-title a.edit:hover {
+  background: var(--acct-hover);
+  border-color: var(--acct-link);
+}
+
+body.woocommerce-account .woocommerce-Address-title a.edit:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 2px;
+}
+
+body.woocommerce-account .woocommerce-Address address {
+  color: var(--color-text);
+  font-style: normal;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Yksittäisen tilauksen laskutusosoite (view-order) samaan korttityyliin */
+body.woocommerce-account .woocommerce-customer-details address {
+  padding: 22px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text);
+  font-style: normal;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* -----------------------------------------------------------------
+   Lomakkeet (Tilin tiedot, osoitteen muokkaus)
+   ----------------------------------------------------------------- */
+
+body.woocommerce-account .woocommerce-EditAccountForm,
+body.woocommerce-account .woocommerce-address-fields {
+  max-width: 620px;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content fieldset {
+  margin: 0 0 20px;
+  padding: 24px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: 16px;
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content fieldset legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .form-row label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .input-text,
+body.woocommerce-account .woocommerce-MyAccount-content select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: 12px;
+  background: var(--acct-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.9375rem;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+:root[data-theme="dark"] body.woocommerce-account .woocommerce-MyAccount-content .input-text,
+:root[data-theme="dark"] body.woocommerce-account .woocommerce-MyAccount-content select {
+  background: var(--acct-surface-alt);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .input-text:focus,
+body.woocommerce-account .woocommerce-MyAccount-content select:focus {
+  outline: none;
+  border-color: var(--acct-link);
+  box-shadow: var(--shop-focus-ring);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .form-row {
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+/* Etunimi/sukunimi vierekkäin WooCommercen omalla float + .clear -mallilla */
+body.woocommerce-account .woocommerce-MyAccount-content .form-row-first,
+body.woocommerce-account .woocommerce-MyAccount-content .form-row-last {
+  float: left;
+  width: calc(50% - 8px);
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .form-row-last {
+  float: right;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .clear {
+  clear: both;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content #account_display_name_description em {
+  display: block;
+  margin-top: 6px;
+  color: var(--color-text-mute);
+  font-size: 0.8rem;
+  font-style: normal;
+}
+
+/* Käyttäjätunnus vain luku -tietona Tilin tiedot -lomakkeen alussa */
+.rytkoset-account-username {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: 12px;
+  background: var(--acct-surface-alt);
+  color: var(--color-text-mute);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.rytkoset-account-username strong {
+  color: var(--color-text);
+}
+
+/* Salasanan näyttöpainike (WooCommercen oma silmäikoni) */
+body.woocommerce-account .woocommerce-MyAccount-content .password-input {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+body.woocommerce-account .woocommerce-MyAccount-content .show-password-input {
+  top: 12px;
+  right: 12px;
+}
+
+/* -----------------------------------------------------------------
+   Mobiili (≤ 768 px): navigaatio pilleririviksi, kortit pinoon.
+   Raja on sama kuin WooCommercen woocommerce-smallscreen.css:n
+   breakpoint, jotta taulukoiden pinoutuminen ja korttityylit
+   aktivoituvat yhtä aikaa.
+   ----------------------------------------------------------------- */
+
+@media (max-width: 768px) {
+  body.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation) {
+    display: block;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation {
+    position: static;
+    margin-bottom: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .rytkoset-account-nav__user {
+    display: none;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation ul {
+    flex-direction: row;
+    gap: 8px;
+    padding: 2px 2px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation ul::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation-link a {
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1.5px solid var(--color-border-neutral);
+    border-radius: var(--radius-pill);
+    background: var(--acct-surface);
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation-link a svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-primary-deeper);
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a svg,
+  :root[data-theme="dark"] body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a svg {
+    color: var(--color-primary-deeper);
+  }
+
+  :root[data-theme="dark"] body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a {
+    color: var(--color-primary-deeper);
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation-link.is-active a::before {
+    display: none;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-navigation-link--customer-logout {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .rytkoset-account-cards {
+    grid-template-columns: 1fr;
+  }
+
+  body.woocommerce-account .woocommerce-Addresses {
+    grid-template-columns: 1fr;
+  }
+
+  body.woocommerce-account .woocommerce-MyAccount-content .form-row-first,
+  body.woocommerce-account .woocommerce-MyAccount-content .form-row-last {
+    display: block;
+    width: 100%;
+    margin-right: 0;
+  }
+
+  /* Responsiivinen tilaustaulukko: rivit korteiksi. WooCommercen oma
+     mobiili-CSS piilottaa theadin ja näyttää data-title-etiketit. */
+  body.woocommerce-account .woocommerce table.shop_table_responsive {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  body.woocommerce-account .woocommerce table.shop_table_responsive tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    padding: 6px 0;
+    border: 1px solid var(--color-border-neutral);
+    border-radius: var(--radius-l);
+    background: var(--acct-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  body.woocommerce-account .woocommerce table.shop_table_responsive tbody tr:hover {
+    background: var(--acct-surface);
+  }
+
+  body.woocommerce-account .woocommerce table.shop_table_responsive tr th,
+  body.woocommerce-account .woocommerce table.shop_table_responsive tr td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--acct-divider);
+    background: transparent !important;
+    text-align: right;
+  }
+
+  body.woocommerce-account .woocommerce table.shop_table_responsive tr th:last-child,
+  body.woocommerce-account .woocommerce table.shop_table_responsive tr td:last-child {
+    border-bottom: 0;
+  }
+
+  body.woocommerce-account .woocommerce table.shop_table_responsive tr td::before {
+    float: none;
+    flex-shrink: 0;
+    color: var(--color-text-mute);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+}
