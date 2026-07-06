@@ -68,6 +68,13 @@ Ne voi suomentaa kohdassa **WooCommerce -> Asetukset -> Lisäasetukset**.
 Tallenna muutoksen jälkeen myös **Asetukset -> Osoiterakenne -> Tallenna
 muutokset**, jotta rewrite-säännöt päivittyvät.
 
+> **Huom. (#496):** tämä on ympäristökohtainen admin-asetus, ei koodia — se on
+> tarkistettava/tallennettava erikseen sekä dev- että tuotantoympäristössä.
+> Paikallisessa ympäristössä alla olevat arvot on todennettu käytössä oleviksi.
+> Teeman koodi käyttää endpointteja aina avaimilla (`orders`, `edit-address`,
+> …) `wc_get_account_endpoint_url()`-funktion kautta, joten julkisen
+> loppuliitteen kieli ei vaikuta koodin toimintaan.
+
 ### Kassa
 
 | Kenttä | Arvo |

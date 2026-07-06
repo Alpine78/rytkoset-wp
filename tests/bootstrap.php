@@ -496,6 +496,10 @@ function esc_html( $text ) {
 	return htmlspecialchars( (string) $text, ENT_QUOTES );
 }
 
+function esc_attr( $text ) {
+	return htmlspecialchars( (string) $text, ENT_QUOTES );
+}
+
 function sanitize_key( $key ) {
 	$key = strtolower( (string) $key );
 

@@ -40,9 +40,10 @@
 		</properties>
 	</rule>
 
-	<!-- bbPress-template overrides must invoke the plugin's public hooks verbatim. -->
+	<!-- bbPress and WooCommerce template overrides must invoke the plugin's public hooks verbatim. -->
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound">
 		<exclude-pattern>*/bbpress/*</exclude-pattern>
+		<exclude-pattern>*/woocommerce/*</exclude-pattern>
 	</rule>
 
 	<!-- CPT slugs contain underscores, as required by WordPress template hierarchy. -->
