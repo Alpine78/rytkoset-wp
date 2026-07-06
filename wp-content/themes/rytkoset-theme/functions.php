@@ -401,8 +401,7 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 function rytkoset_theme_account_menu_logged_out_fallback() {
 	echo '<ul class="account-nav__list">';
 	echo '<li class="menu-item">';
-	$login_url = function_exists( 'rytkoset_theme_get_my_account_url' ) ? rytkoset_theme_get_my_account_url() : wp_login_url();
-	echo '<a href="' . esc_url( $login_url ) . '">';
+	echo '<a href="' . esc_url( wp_login_url() ) . '">';
 	echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
 	echo '</a>';
 	echo '</li>';
