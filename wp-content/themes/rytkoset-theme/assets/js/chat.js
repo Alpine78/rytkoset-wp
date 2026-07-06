@@ -2,7 +2,10 @@
  * AI-tukichatin widget (#413).
  *
  * Kelluva painike + paneeli, joka juttelee REST-reitin `rytkoset/v1/chat` kautta.
- * Keskusteluhistoria pidetään VAIN muistissa (ei localStorage/sessionStorage/keksejä).
+ * Keskusteluhistoria säilyy sivulatausten yli välilehtikohtaisessa
+ * sessionStoragessa (#498) ja tyhjenee, kun välilehti suljetaan. Ei
+ * localStoragea eikä keksejä; jos storage ei ole käytettävissä, historia
+ * elää vain muistissa ja nollautuu sivulatauksessa.
  * Mallin vastaus renderöidään turvallisesti DOMiin ilman innerHTML:ää: teksti
  * textContent/createTextNode-solmuina, ja vain oman sivuston paljaat
  * https-osoitteet muutetaan linkeiksi (createElement('a') + validoitu href).
@@ -33,10 +36,59 @@
       return;
     }
 
-    // Keskusteluhistoria vain muistissa. Ei web storagea, ei keksejä.
+    // Keskusteluhistoria + paneelin auki-tila välilehtikohtaisessa
+    // sessionStoragessa (#498). Ei localStoragea eikä keksejä; storage-virheissä
+    // pudotaan muistinvaraiseen toimintaan (sivulataus nollaa keskustelun).
+    var STORAGE_KEY = 'rytkosetChat.v1';
+    var MAX_STORED_MESSAGES = 40;
     var history = [];
     var isSending = false;
     var typingEl = null;
+
+    /**
+     * Lukee ja validoi tallennetun istunnon. Palauttaa null, jos storagea ei
+     * ole, data on rikki tai selain estää pääsyn (esim. tiukka yksityisyystila).
+     */
+    function loadStoredSession() {
+      try {
+        var raw = window.sessionStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          return null;
+        }
+        var data = JSON.parse(raw);
+        if (!data || !Array.isArray(data.history)) {
+          return null;
+        }
+        var messages = [];
+        for (var i = 0; i < data.history.length; i++) {
+          var msg = data.history[i];
+          if (msg && (msg.role === 'user' || msg.role === 'assistant') && typeof msg.content === 'string') {
+            messages.push({ role: msg.role, content: msg.content });
+          }
+        }
+        return { history: messages, open: data.open === true };
+      } catch (e) {
+        return null;
+      }
+    }
+
+    /**
+     * Tallentaa istunnon sessionStorageen. Virheet (storage estetty/täynnä)
+     * nielaistaan: chatti jatkaa silloin muistinvaraisena kuten ennen #498:aa.
+     */
+    function saveSession() {
+      try {
+        window.sessionStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            history: history.slice(-MAX_STORED_MESSAGES),
+            open: isOpen()
+          })
+        );
+      } catch (e) {
+        // Ei storagea: keskustelu elää vain muistissa.
+      }
+    }
 
     // JS on käytettävissä: paljasta widget (ilman JS:ää se pysyy piilossa).
     root.hidden = false;
@@ -101,12 +153,17 @@
       });
     }
 
-    function openPanel() {
+    function openPanel(options) {
       panel.hidden = false;
       toggle.setAttribute('aria-expanded', 'true');
       root.classList.add('is-open');
       pinPanelToViewport();
-      input.focus();
+      // Istunnon palautuksessa fokusta ei varasteta sivulta (eikä mobiilin
+      // näppäimistöä avata), vaikka paneeli avataan uudelleen.
+      if (!options || !options.skipFocus) {
+        input.focus();
+      }
+      saveSession();
     }
 
     function closePanel() {
@@ -115,6 +172,7 @@
       root.classList.remove('is-open');
       unpinPanel();
       toggle.focus();
+      saveSession();
     }
 
     function togglePanel() {
@@ -181,8 +239,13 @@
         var link = document.createElement('a');
         link.href = url.href;
         link.textContent = candidate;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
+        // Oman hostin linkit avautuvat samassa välilehdessä, jotta keskustelu
+        // jatkuu sessionStoragesta (#498) — sessionStorage ei siirry uuteen
+        // välilehteen. Muut sallitut hostit avataan edelleen uuteen välilehteen.
+        if (url.hostname !== window.location.hostname) {
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+        }
         el.appendChild(link);
 
         lastIndex = match.index + candidate.length;
@@ -240,6 +303,7 @@
      */
     function sendMessage(text) {
       history.push({ role: 'user', content: text });
+      saveSession();
       appendMessage('user', text);
       setSending(true);
       showTyping();
@@ -268,6 +332,7 @@
           hideTyping();
           if (result.ok && result.data && result.data.reply) {
             history.push({ role: 'assistant', content: result.data.reply });
+            saveSession();
             appendMessage('assistant', result.data.reply, 'start');
           } else {
             var message = (result.data && result.data.message) || config.errorText;
@@ -283,6 +348,22 @@
           input.style.height = 'auto';
           input.focus();
         });
+    }
+
+    // --- Istunnon palautus (#498) -------------------------------------------
+
+    // Palautetaan edellisen sivulatauksen keskustelu ja paneelin auki-tila.
+    // Viestit renderöidään samaa turvallista polkua kuin livenä (assistentin
+    // viestit renderMessageContent, käyttäjän viestit textContent).
+    var storedSession = loadStoredSession();
+    if (storedSession && storedSession.history.length) {
+      history = storedSession.history;
+      for (var msgIndex = 0; msgIndex < history.length; msgIndex++) {
+        appendMessage(history[msgIndex].role, history[msgIndex].content);
+      }
+    }
+    if (storedSession && storedSession.open) {
+      openPanel({ skipFocus: true });
     }
 
     // --- Tapahtumankäsittelijät ---------------------------------------------

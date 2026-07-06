@@ -52,6 +52,7 @@ require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
 require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
+require_once get_template_directory() . '/inc/woocommerce-my-account.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
@@ -355,14 +356,24 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 	$account_url  = function_exists( 'rytkoset_theme_get_my_account_url' ) ? rytkoset_theme_get_my_account_url() : home_url( '/oma-tili/' );
 	$orders_url   = function_exists( 'rytkoset_theme_get_my_account_endpoint_url' ) ? rytkoset_theme_get_my_account_endpoint_url( 'orders' ) : trailingslashit( $account_url ) . 'orders/';
 	$profile_url  = function_exists( 'rytkoset_theme_get_my_account_endpoint_url' ) ? rytkoset_theme_get_my_account_endpoint_url( 'edit-account' ) : trailingslashit( $account_url ) . 'edit-account/';
-	$avatar       = wp_kses_post( get_avatar( $current_user->ID, 40 ) );
+
+	// Sama avatar-logiikka kuin Oma tili -sivupalkissa (#496): Gravatar-kuva
+	// ensisijaisesti (transient-välimuistitettu olemassaolotarkistus),
+	// nimikirjaimet fallbackina harmaan oletushahmon sijaan.
+	$avatar_url = function_exists( 'rytkoset_theme_get_account_avatar_image_url' ) ? rytkoset_theme_get_account_avatar_image_url( $current_user ) : '';
 
 	echo '<ul class="account-nav__list">';
 	echo '<li class="menu-item menu-item-has-children account-menu__user">';
 	/* translators: %s: logged-in user's display name. */
 	echo '<button type="button" class="account-menu__user-trigger" aria-haspopup="true" aria-expanded="false" aria-label="' . esc_attr( sprintf( __( 'Avaa tilivalikko (%s)', 'rytkoset-theme' ), $display_name ) ) . '">';
 	echo '<span class="account-menu__avatar">';
-	echo wp_kses_post( $avatar );
+	if ( '' !== $avatar_url ) {
+		echo '<img src="' . esc_url( $avatar_url ) . '" alt="" width="30" height="30" loading="lazy" />';
+	} elseif ( function_exists( 'rytkoset_theme_get_account_avatar_initials' ) ) {
+		echo '<span class="account-menu__initials" aria-hidden="true">' . esc_html( rytkoset_theme_get_account_avatar_initials( $display_name ) ) . '</span>';
+	} else {
+		echo wp_kses_post( get_avatar( $current_user->ID, 40 ) );
+	}
 	echo '</span>';
 	echo '<span class="account-menu__meta">';
 	echo '<span class="account-menu__greeting">' . esc_html__( 'Kirjautunut', 'rytkoset-theme' ) . '</span>';
@@ -401,8 +412,7 @@ function rytkoset_theme_account_menu_logged_in_fallback() {
 function rytkoset_theme_account_menu_logged_out_fallback() {
 	echo '<ul class="account-nav__list">';
 	echo '<li class="menu-item">';
-	$login_url = function_exists( 'rytkoset_theme_get_my_account_url' ) ? rytkoset_theme_get_my_account_url() : wp_login_url();
-	echo '<a href="' . esc_url( $login_url ) . '">';
+	echo '<a href="' . esc_url( wp_login_url() ) . '">';
 	echo esc_html__( 'Kirjaudu', 'rytkoset-theme' );
 	echo '</a>';
 	echo '</li>';
@@ -565,6 +575,17 @@ function rytkoset_theme_scripts() {
 			) . ';',
 			'before'
 		);
+
+		// Oma tili -sivujen tyylit (#496) shop.css:n päälle, jotta
+		// My Account -säännöt voivat yliajata yleiset kauppatyylit.
+		if ( function_exists( 'is_account_page' ) && is_account_page() ) {
+			wp_enqueue_style(
+				'rytkoset-theme-account',
+				get_template_directory_uri() . '/assets/css/account.css',
+				array( 'rytkoset-theme-shop' ),
+				rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/account.css' )
+			);
+		}
 	}
 
 	if ( function_exists( 'is_bbpress' ) && is_bbpress() ) {

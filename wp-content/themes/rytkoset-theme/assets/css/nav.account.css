@@ -121,6 +121,23 @@
   border-radius: 50%;
 }
 
+/* Nimikirjaimet, kun Gravatar-kuvaa ei ole (#496): huurrettu tausta toimii
+   sekä vaalean että tumman teeman headerin sinisellä pohjalla */
+.account-menu__initials {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--color-text-inverted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
 .account-menu__meta,
 .account-menu__greeting,
 .account-menu__name {
