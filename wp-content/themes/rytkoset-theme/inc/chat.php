@@ -10,8 +10,9 @@
  *
  * Sivun lukutyökalu (#501): malli saa `lue_sivu`-function calling -työkalun,
  * jolla se voi tarvittaessa hakea sivustokartassa listatun julkisen sivun
- * tekstisisällön (yksi lisäkierros Mistralille). Peruskysymykset vastataan
- * edelleen yhdellä API-kutsulla suoraan promptin lähteistä.
+ * tekstisisällön. Työkalukysymyksissä sallitaan rajattu määrä lisäkierroksia
+ * Mistralille; peruskysymykset vastataan edelleen yhdellä API-kutsulla suoraan
+ * promptin lähteistä.
  *
  * Vastauksen escapetys ja käyttöliittymä kuuluvat widget-tikettiin (#413).
  *
