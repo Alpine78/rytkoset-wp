@@ -1587,6 +1587,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_max_length' ) ) {
  * Yksi kierros = yksi ylimääräinen API-kutsu työkalutulosten kanssa. Kova
  * yläraja 3 sitoo kustannuksen, vaikka suodatin palauttaisi suuremman arvon.
  *
+ * Oletus 2 (ei 1): devin savutestissä yhden kierroksen raja pakotti mallin
+ * vastaamaan sillä yhdellä sivulla, jonka se ensin arvasi sivustokartan
+ * otsikoista — jos arvaus osui väärään sivuun (esim. henkilön nimi, joka ei
+ * ole ilmeisesti minkään otsikon aiheena), mallilla ei ollut mahdollisuutta
+ * kokeilla toista sivua ennen kuin `tool_choice: none` pakotti tekstivastauksen.
+ * Kaksi kierrosta antaa mallille yhden uudelleenyrityksen.
+ *
  * @return int
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_max_rounds' ) ) {
@@ -1596,7 +1603,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_max_rounds' ) ) {
 		 *
 		 * @param int $max_rounds Kierrosten enimmäismäärä.
 		 */
-		$max_rounds = (int) apply_filters( 'rytkoset_theme_chat_page_tool_max_rounds', 1 );
+		$max_rounds = (int) apply_filters( 'rytkoset_theme_chat_page_tool_max_rounds', 2 );
 
 		return min( 3, max( 1, $max_rounds ) );
 	}
@@ -1859,7 +1866,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
 		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita sivustolla, ellet ole ensin tarkistanut asiaa työkalulla sopivimmalta sivulta. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).

@@ -299,8 +299,14 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		// ettei sivulla näkyvää nimeä mainita sivustolla — ohjeen pidettävä
 		// työkalun kokeilu sallittuna ja kiellettävä tarkistamaton kielto.
 		$this->assertStringContainsString( 'työkalun kokeileminen ei ole kiellettyä arvaamista', $prompt );
-		$this->assertStringContainsString( 'Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita sivustolla', $prompt );
 		$this->assertStringContainsString( 'sallittu lähde', $prompt );
+		// Devin toisessa savutestissä yksi väärä sivuarvaus (esim. henkilön nimi
+		// joka ei ole minkään otsikon ilmeinen aihe) johti virheelliseen
+		// "ei mainita sivustolla" -väitteeseen, koska mallilla ei ollut
+		// mahdollisuutta kokeilla toista sivua (max_rounds oli 1). Ohjeen pitää
+		// nyt nimenomaan kehottaa kokeilemaan toista sivua ennen kieltäytymistä.
+		$this->assertStringContainsString( 'kokeile vielä toista aiheeseen sopivaa sivustokartan sivua', $prompt );
+		$this->assertStringContainsString( 'Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua', $prompt );
 	}
 
 	public function test_system_prompt_unchanged_when_tool_disabled(): void {
@@ -317,8 +323,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 	// --- cost-guard getters -----------------------------------------------------
 
-	public function test_max_rounds_defaults_to_one_and_is_capped_at_three(): void {
-		$this->assertSame( 1, rytkoset_theme_chat_get_page_tool_max_rounds() );
+	public function test_max_rounds_defaults_to_two_and_is_capped_at_three(): void {
+		$this->assertSame( 2, rytkoset_theme_chat_get_page_tool_max_rounds() );
 
 		$filter = static fn() => 10;
 		add_filter( 'rytkoset_theme_chat_page_tool_max_rounds', $filter );
