@@ -163,6 +163,8 @@ class WP_Post {
 	public string $post_name    = '';
 	public int $post_author     = 0;
 	public string $post_status  = 'publish';
+	public string $post_content = '';
+	public string $post_password = '';
 
 	public function __construct( int $id = 0, string $type = 'post', string $title = '', int $parent = 0, int $menu_order = 0 ) {
 		$this->ID          = $id;
