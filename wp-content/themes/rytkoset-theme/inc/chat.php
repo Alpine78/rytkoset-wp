@@ -1616,7 +1616,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_definition' ) ) {
 			'type'     => 'function',
 			'function' => array(
 				'name'        => 'lue_sivu',
-				'description' => 'Palauttaa sivuston julkaistun julkisen sivun tekstisisällön sivustokartassa annetulla sivu-id:llä. Käytä vain, kun vastausta ei löydy jo annetuista lähteistä ja kysymykseen todennäköisesti vastaa jokin sivustokartan sivu.',
+				'description' => 'Palauttaa sivuston julkaistun julkisen sivun tekstisisällön sivustokartassa annetulla sivu-id:llä. Kutsu tätä aina ennen kuin vastaat, ettet tiedä: valitse sivustokartasta otsikoltaan sopivin sivu ja lue sen sisältö. Älä kutsu, kun vastaus on jo annetuissa lähteissä.',
 				'parameters'  => array(
 					'type'       => 'object',
 					'properties' => array(
@@ -1853,9 +1853,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 			$prompt .= $sitemap;
 		}
 
-		// Sivun lukutyökalu (#501): ohje käyttää lue_sivu-työkalua vain tarvittaessa.
+		// Sivun lukutyökalu (#501): ohje kutsua lue_sivu-työkalua ennen kieltäytymistä.
+		// Sanamuoto tarkoituksella matalakynnyksinen: devissä havaittiin, että
+		// "todennäköisesti"-ehto + promptin arvauskiellot saivat mallin jättämään
+		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
+		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Jos vastaus ei löydy tässä annetuista lähteistä, mutta se todennäköisesti on jollakin sivustokartan sivulla, hae sivun sisältö työkalulla ennen vastaamista ja vastaa vain haetun sisällön perusteella. Älä käytä työkalua, kun vastaus on jo annetuissa lähteissä. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita sivustolla, ellet ole ensin tarkistanut asiaa työkalulla sopivimmalta sivulta. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).
