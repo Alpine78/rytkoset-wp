@@ -22,13 +22,14 @@ if ( ! function_exists( 'rytkoset_theme_get_account_menu_item_icon' ) ) {
 	 */
 	function rytkoset_theme_get_account_menu_item_icon( $endpoint ) {
 		$icons = array(
-			'dashboard'       => 'home',
-			'orders'          => 'package',
-			'downloads'       => 'download',
-			'edit-address'    => 'map-pin',
-			'edit-account'    => 'user',
-			'payment-methods' => 'credit-card',
-			'customer-logout' => 'log-out',
+			'dashboard'           => 'home',
+			'orders'              => 'package',
+			'downloads'           => 'download',
+			'edit-address'        => 'map-pin',
+			'rytkoset_newsletter' => 'mail',
+			'edit-account'        => 'user',
+			'payment-methods'     => 'credit-card',
+			'customer-logout'     => 'log-out',
 		);
 
 		return isset( $icons[ $endpoint ] ) ? $icons[ $endpoint ] : '';
@@ -199,6 +200,340 @@ if ( ! function_exists( 'rytkoset_theme_render_account_username_note' ) ) {
 	}
 }
 add_action( 'woocommerce_edit_account_form_start', 'rytkoset_theme_render_account_username_note' );
+
+if ( ! function_exists( 'rytkoset_theme_get_account_newsletter_endpoint' ) ) {
+	/**
+	 * Palauttaa uutiskirjeen hallinnan My Account -endpoint-avaimen.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_newsletter_endpoint() {
+		return 'rytkoset_newsletter';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_account_newsletter_endpoint_slug' ) ) {
+	/**
+	 * Palauttaa uutiskirjeen hallinnan URL-slugin.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_newsletter_endpoint_slug() {
+		return 'uutiskirje';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_register_account_newsletter_endpoint_query_var' ) ) {
+	/**
+	 * Rekisteröi uutiskirjeen hallinnan WooCommerce My Account -endpointiksi.
+	 *
+	 * @param array<string, string> $vars WooCommerce-endpointtien query var -muuttujat.
+	 * @return array<string, string>
+	 */
+	function rytkoset_theme_register_account_newsletter_endpoint_query_var( $vars ) {
+		$vars[ rytkoset_theme_get_account_newsletter_endpoint() ] = rytkoset_theme_get_account_newsletter_endpoint_slug();
+
+		return $vars;
+	}
+}
+add_filter( 'woocommerce_get_query_vars', 'rytkoset_theme_register_account_newsletter_endpoint_query_var' );
+
+if ( ! function_exists( 'rytkoset_theme_get_account_newsletter_endpoint_rewrite_version' ) ) {
+	/**
+	 * Rewrite-flushin vartioarvo uutiskirje-endpointille.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_newsletter_endpoint_rewrite_version() {
+		return rytkoset_theme_get_account_newsletter_endpoint() . ':' . rytkoset_theme_get_account_newsletter_endpoint_slug() . ':v1';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_account_newsletter_endpoint_rewrite_rules_exist' ) ) {
+	/**
+	 * Tarkistaa, löytyykö uutiskirje-endpoint jo tallennetuista rewrite-säännöistä.
+	 *
+	 * @return bool
+	 */
+	function rytkoset_theme_account_newsletter_endpoint_rewrite_rules_exist() {
+		$rules = get_option( 'rewrite_rules', array() );
+
+		if ( ! is_array( $rules ) ) {
+			return false;
+		}
+
+		$endpoint_slug = rytkoset_theme_get_account_newsletter_endpoint_slug();
+
+		foreach ( array_keys( $rules ) as $regex ) {
+			if ( false !== strpos( (string) $regex, $endpoint_slug ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_maybe_flush_account_newsletter_endpoint' ) ) {
+	/**
+	 * Flushaa rewrite-säännöt kerran, kun uutiskirje-endpoint on lisätty.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_maybe_flush_account_newsletter_endpoint() {
+		if (
+			rytkoset_theme_get_account_newsletter_endpoint_rewrite_version() === get_option( 'rytkoset_theme_account_newsletter_endpoint_flushed' )
+			&& rytkoset_theme_account_newsletter_endpoint_rewrite_rules_exist()
+		) {
+			return;
+		}
+
+		flush_rewrite_rules( false );
+		update_option( 'rytkoset_theme_account_newsletter_endpoint_flushed', rytkoset_theme_get_account_newsletter_endpoint_rewrite_version() );
+	}
+}
+add_action( 'init', 'rytkoset_theme_maybe_flush_account_newsletter_endpoint', 99 );
+
+if ( ! function_exists( 'rytkoset_theme_flush_account_newsletter_endpoint_on_activation' ) ) {
+	/**
+	 * Flushaa uutiskirje-endpointin rewrite-säännöt teeman aktivoinnissa.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_flush_account_newsletter_endpoint_on_activation() {
+		delete_option( 'rytkoset_theme_account_newsletter_endpoint_flushed' );
+		flush_rewrite_rules( false );
+		update_option( 'rytkoset_theme_account_newsletter_endpoint_flushed', rytkoset_theme_get_account_newsletter_endpoint_rewrite_version() );
+	}
+}
+add_action( 'after_switch_theme', 'rytkoset_theme_flush_account_newsletter_endpoint_on_activation' );
+
+if ( ! function_exists( 'rytkoset_theme_add_account_newsletter_menu_item' ) ) {
+	/**
+	 * Lisää Uutiskirje-kohdan Oma tili -valikkoon ennen Tilin tietoja.
+	 *
+	 * @param array<string, string> $items WooCommerce My Account -valikkokohdat.
+	 * @return array<string, string>
+	 */
+	function rytkoset_theme_add_account_newsletter_menu_item( $items ) {
+		$endpoint = rytkoset_theme_get_account_newsletter_endpoint();
+		$label    = __( 'Uutiskirje', 'rytkoset-theme' );
+
+		unset( $items[ $endpoint ] );
+
+		$inserted = false;
+		$updated  = array();
+
+		foreach ( $items as $key => $item_label ) {
+			if ( ! $inserted && in_array( $key, array( 'edit-account', 'customer-logout' ), true ) ) {
+				$updated[ $endpoint ] = $label;
+				$inserted             = true;
+			}
+
+			$updated[ $key ] = $item_label;
+		}
+
+		if ( ! $inserted ) {
+			$updated[ $endpoint ] = $label;
+		}
+
+		return $updated;
+	}
+}
+add_filter( 'woocommerce_account_menu_items', 'rytkoset_theme_add_account_newsletter_menu_item' );
+
+if ( ! function_exists( 'rytkoset_theme_get_account_newsletter_status' ) ) {
+	/**
+	 * Palauttaa kirjautuneen käyttäjän uutiskirjetilan endpointin käyttöön.
+	 *
+	 * @param int   $user_id  WordPress-käyttäjän ID. Oletus: nykyinen käyttäjä.
+	 * @param int[] $list_ids AcyMailing-lista-ID:t. Oletus: footer-lomakkeen listat.
+	 * @return string subscribed|not_subscribed|missing_list|invalid_user|invalid_email
+	 */
+	function rytkoset_theme_get_account_newsletter_status( $user_id = 0, $list_ids = array() ) {
+		$user_id = absint( $user_id );
+		$user_id = $user_id > 0 ? $user_id : get_current_user_id();
+
+		if ( 0 === $user_id ) {
+			return 'invalid_user';
+		}
+
+		$user = get_user_by( 'id', $user_id );
+
+		if ( ! $user instanceof WP_User || ! is_email( $user->user_email ) ) {
+			return 'invalid_email';
+		}
+
+		if ( empty( $list_ids ) && function_exists( 'rytkoset_theme_get_newsletter_list_ids' ) ) {
+			$list_ids = rytkoset_theme_get_newsletter_list_ids();
+		}
+
+		$list_ids = function_exists( 'rytkoset_theme_normalize_newsletter_list_ids' )
+			? rytkoset_theme_normalize_newsletter_list_ids( $list_ids )
+			: array_values( array_unique( array_filter( array_map( 'absint', (array) $list_ids ) ) ) );
+
+		if ( empty( $list_ids ) ) {
+			return 'missing_list';
+		}
+
+		return function_exists( 'rytkoset_theme_user_has_newsletter_subscription' ) && rytkoset_theme_user_has_newsletter_subscription( $user_id, $list_ids )
+			? 'subscribed'
+			: 'not_subscribed';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_account_newsletter_url' ) ) {
+	/**
+	 * Palauttaa uutiskirje-endpointin URL:n.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_newsletter_url() {
+		if ( function_exists( 'wc_get_account_endpoint_url' ) ) {
+			return wc_get_account_endpoint_url( rytkoset_theme_get_account_newsletter_endpoint() );
+		}
+
+		return home_url( '/oma-tili/' . rytkoset_theme_get_account_newsletter_endpoint_slug() . '/' );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_handle_account_newsletter_submit' ) ) {
+	/**
+	 * Käsittelee Oma tili > Uutiskirje -lomakkeen lähetyksen.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_handle_account_newsletter_submit() {
+		if ( empty( $_POST['rytkoset_account_newsletter_action'] ) ) {
+			return;
+		}
+
+		$action = sanitize_key( wp_unslash( $_POST['rytkoset_account_newsletter_action'] ) );
+
+		if ( ! in_array( $action, array( 'subscribe', 'unsubscribe' ), true ) ) {
+			wc_add_notice( __( 'Uutiskirjeen tilausta ei voitu muuttaa.', 'rytkoset-theme' ), 'error' );
+			return;
+		}
+
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+
+		if ( ! is_user_logged_in() || ! wp_verify_nonce( $nonce, 'rytkoset_account_newsletter_' . $action ) ) {
+			wc_add_notice( __( 'Uutiskirjeen tilausta ei voitu vahvistaa. Yritä uudelleen.', 'rytkoset-theme' ), 'error' );
+			return;
+		}
+
+		$user  = wp_get_current_user();
+		$email = $user instanceof WP_User ? sanitize_email( $user->user_email ) : '';
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			wc_add_notice( __( 'Tililläsi ei ole kelvollista sähköpostiosoitetta.', 'rytkoset-theme' ), 'error' );
+			return;
+		}
+
+		$result = 'subscribe' === $action
+			? rytkoset_theme_subscribe_email_to_newsletter( $email, 'my_account', get_current_user_id() )
+			: rytkoset_theme_unsubscribe_email_from_newsletter( $email, 'my_account' );
+
+		if ( is_wp_error( $result ) ) {
+			wc_add_notice( $result->get_error_message(), 'error' );
+		} elseif ( 'subscribe' === $action ) {
+			wc_add_notice( __( 'Uutiskirjeen tilaus on nyt voimassa.', 'rytkoset-theme' ), 'success' );
+		} else {
+			wc_add_notice( __( 'Uutiskirjeen tilaus on peruttu.', 'rytkoset-theme' ), 'success' );
+		}
+
+		wp_safe_redirect( rytkoset_theme_get_account_newsletter_url() );
+		exit;
+	}
+}
+add_action( 'template_redirect', 'rytkoset_theme_handle_account_newsletter_submit' );
+
+if ( ! function_exists( 'rytkoset_theme_render_account_newsletter_endpoint' ) ) {
+	/**
+	 * Renderöi Oma tili > Uutiskirje -endpointin sisällön.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_render_account_newsletter_endpoint() {
+		$user = wp_get_current_user();
+
+		echo '<h2 class="rytkoset-account-h2">' . esc_html__( 'Uutiskirje', 'rytkoset-theme' ) . '</h2>';
+		echo '<p class="rytkoset-account-lede">' . esc_html__( 'Hallitse sukuseuran uutiskirjeen tilausta. Tilaus koskee vain omaa sähköpostiosoitettasi.', 'rytkoset-theme' ) . '</p>';
+
+		if ( ! $user instanceof WP_User || ! $user->exists() ) {
+			wc_print_notice( __( 'Kirjaudu sisään hallitaksesi uutiskirjeen tilausta.', 'rytkoset-theme' ), 'error' );
+			return;
+		}
+
+		$email = sanitize_email( $user->user_email );
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			wc_print_notice( __( 'Tililläsi ei ole kelvollista sähköpostiosoitetta.', 'rytkoset-theme' ), 'error' );
+			return;
+		}
+
+		$list_ids = function_exists( 'rytkoset_theme_get_newsletter_list_ids' ) ? rytkoset_theme_get_newsletter_list_ids() : array();
+		$status   = rytkoset_theme_get_account_newsletter_status( $user->ID, $list_ids );
+
+		if ( 'missing_list' === $status ) {
+			?>
+			<div class="rytkoset-account-newsletter-card">
+				<div class="rytkoset-account-newsletter-card__head">
+					<span class="rytkoset-account-newsletter-card__icon" aria-hidden="true">
+						<?php echo rytkoset_theme_inline_icon( 'mail', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
+					</span>
+					<div>
+						<h3 class="rytkoset-account-newsletter-card__title"><?php esc_html_e( 'Uutiskirje ei ole vielä käytettävissä', 'rytkoset-theme' ); ?></h3>
+						<p class="rytkoset-account-newsletter-card__email"><?php echo esc_html( $email ); ?></p>
+					</div>
+				</div>
+				<div class="rytkoset-account-newsletter-card__body">
+					<p><?php esc_html_e( 'Uutiskirjeen kohdelistaa ei ole määritetty, joten tilausta ei voi muuttaa tästä näkymästä juuri nyt.', 'rytkoset-theme' ); ?></p>
+				</div>
+			</div>
+			<?php
+			return;
+		}
+
+		$is_subscribed = 'subscribed' === $status;
+		$action        = $is_subscribed ? 'unsubscribe' : 'subscribe';
+		$icon          = $is_subscribed ? 'check' : 'mail';
+		$title         = $is_subscribed
+			? __( 'Uutiskirje on tilattu', 'rytkoset-theme' )
+			: __( 'Et ole tilannut uutiskirjettä', 'rytkoset-theme' );
+		$description   = $is_subscribed
+			? __( 'Saat sukuseuran uutiskirjeen tähän osoitteeseen. Voit perua tilauksen milloin tahansa. Peruminen koskee vain yleistä uutiskirjettä.', 'rytkoset-theme' )
+			: __( 'Uutiskirjeessä kerromme sukukokouksista, tapahtumista ja julkaisuista muutaman kerran vuodessa.', 'rytkoset-theme' );
+		$button_label  = $is_subscribed
+			? __( 'Peru tilaus', 'rytkoset-theme' )
+			: __( 'Tilaa uutiskirje', 'rytkoset-theme' );
+		?>
+		<div class="rytkoset-account-newsletter-card rytkoset-account-newsletter-card--<?php echo $is_subscribed ? 'subscribed' : 'unsubscribed'; ?>">
+			<div class="rytkoset-account-newsletter-card__head">
+				<span class="rytkoset-account-newsletter-card__icon <?php echo $is_subscribed ? 'rytkoset-account-newsletter-card__icon--success' : ''; ?>" aria-hidden="true">
+					<?php echo rytkoset_theme_inline_icon( $icon, 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
+				</span>
+				<div>
+					<h3 class="rytkoset-account-newsletter-card__title"><?php echo esc_html( $title ); ?></h3>
+					<p class="rytkoset-account-newsletter-card__email"><?php echo esc_html( $email ); ?></p>
+				</div>
+			</div>
+			<div class="rytkoset-account-newsletter-card__body">
+				<p><?php echo esc_html( $description ); ?></p>
+				<form method="post" action="<?php echo esc_url( rytkoset_theme_get_account_newsletter_url() ); ?>" class="rytkoset-account-newsletter-card__form">
+					<?php wp_nonce_field( 'rytkoset_account_newsletter_' . $action ); ?>
+					<input type="hidden" name="rytkoset_account_newsletter_action" value="<?php echo esc_attr( $action ); ?>" />
+					<button type="submit" class="button rytkoset-account-newsletter-card__button rytkoset-account-newsletter-card__button--<?php echo esc_attr( $action ); ?>">
+						<?php echo esc_html( $button_label ); ?>
+					</button>
+				</form>
+				<p class="rytkoset-account-newsletter-card__note"><?php esc_html_e( 'Muutos tallentuu heti ja näet vahvistuksen tällä sivulla.', 'rytkoset-theme' ); ?></p>
+			</div>
+		</div>
+		<?php
+	}
+}
+add_action( 'woocommerce_account_rytkoset_newsletter_endpoint', 'rytkoset_theme_render_account_newsletter_endpoint' );
 
 if ( ! function_exists( 'rytkoset_theme_get_account_dashboard_orders_summary' ) ) {
 	/**

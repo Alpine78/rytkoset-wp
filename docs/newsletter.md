@@ -201,6 +201,7 @@ Teema:
 - näyttää kirjautuneelle käyttäjälle pelkän tilauspainikkeen, jos käyttäjä ei vielä ole kohdelistan tilaaja; painike käyttää kirjautuneen käyttäjän sähköpostiosoitetta piilotettuna kenttänä
 - vaihtaa kirjautuneen käyttäjän tilauspainikkeen onnistuneen AcyMailing-vastauksen jälkeen heti tekstiksi `Olet jo uutiskirjeen tilaaja.`, jotta käyttäjän ei tarvitse päivittää sivua nähdäkseen tilan
 - tarjoaa yhteisen AcyMailing-helperin, jolla rekisteröityminen, maksuton tapahtumailmoittautuminen ja WooCommerce-kassa voivat tilata sähköpostiosoitteen samalle kohdelistalle
+- tarjoaa My Account -näkymälle perumishelperin, joka hakee AcyMailing-tilaajan kirjautuneen käyttäjän sähköpostilla ja peruu vain yleisen uutiskirjelistan tilauksen AcyMailingin `unsubscribe()`-API:lla
 - näyttää opt-in-checkboxin vain, jos footer-shortcode ja sen AcyMailing-kohdelista ovat käytettävissä
 - piilottaa opt-in-checkboxin kirjautuneelta käyttäjältä, joka on jo kohdelistan aktiivinen tilaaja
 - poistaa footerissa renderöidystä AcyMailing-lomakkeesta lomakkeen omat sisäiset `<style>`-tagit, jotta AcyMailingin shortcode-preview-tyylit eivät tee footeriin erillistä valkoista laatikkoa
@@ -209,6 +210,23 @@ Teema:
 AcyMailingin plugin-koodissa automaattiset popup/header/footer-lomakkeet tarkistetaan Enterprise-tasoa vasten, mutta shortcode rekisteröidään erikseen WordPress-shortcodena. Siksi teema ei riipu Enterprise-footer-ominaisuudesta.
 
 Kirjautuneen käyttäjän tilaustila tarkistetaan AcyMailingin tauluista `wp_acym_user` ja `wp_acym_user_has_list`. Tarkistus käyttää footer-shortcoden lomake-ID:tä ja lomakkeen listavalintoja, joten listan numeerista ID:tä ei kovakoodata teemaan.
+
+## Oma tili -välilehti
+
+WooCommercen Oma tili -sivulla on kirjautuneelle käyttäjälle `Uutiskirje`-välilehti (`/oma-tili/uutiskirje/`). Endpointin avain on `rytkoset_newsletter` ja julkinen slug `uutiskirje`.
+
+Välilehti näyttää vain kirjautuneen käyttäjän oman WordPress-tilin sähköpostiosoitteen uutiskirjetilan. Näkymässä ei ole avointa sähköpostikenttää, eikä sillä voi tilata tai perua toisen osoitteen tilausta.
+
+Toiminnot:
+
+- jos käyttäjä ei ole yleisen uutiskirjelistan aktiivinen tilaaja, hän näkee `Tilaa uutiskirje` -painikkeen
+- jos käyttäjä on aktiivinen tilaaja, hän näkee `Peru tilaus` -painikkeen
+- molemmat toiminnot lähetetään POST-pyyntönä WordPress-noncella
+- tilaus käyttää samaa `rytkoset_theme_subscribe_email_to_newsletter()`-helperiä kuin muut opt-in-paikat
+- peruminen ei poista AcyMailing-tilaajatietuetta, vaan merkitsee vain footer-shortcoden kohdelistan tilauksen perutuksi AcyMailingin omalla `unsubscribe()`-mekanismilla
+- onnistumis- ja virheviestit näytetään WooCommercen noticeina
+
+Endpoint rekisteröidään teemassa WooCommercen `woocommerce_get_query_vars` -suodattimella. Rewrite-säännöt flushataan versionoidulla option-vartijalla, joka tarkistaa myös tallennetut rewrite-säännöt, jotta olemassa olevat asennukset eivät jää 404-tilaan.
 
 ## Opt-in-paikat
 
@@ -234,6 +252,10 @@ Testaa käyttöönoton jälkeen:
 - kirjautunut käyttäjä, joka ei ole kohdelistan tilaaja, voi tilata uutiskirjeen ilman sähköpostiosoitteen uudelleenkirjoittamista
 - kirjautuneen käyttäjän tilauspainike näyttää lähetyksen aikana tilan `Tilataan...` ja onnistumisen jälkeen tekstin `Olet jo uutiskirjeen tilaaja.`
 - kirjautunut käyttäjä, joka on jo kohdelistan tilaaja, ei näe pre-footer-kaistaa lainkaan (vain slim footer)
+- Oma tili -> Uutiskirje näyttää kirjautuneen käyttäjän tilaustilan ja toimii ilman 404-virhettä
+- Oma tili -> Uutiskirje: ei tilaaja voi tilata uutiskirjeen yhdellä painikkeella ja sivun uusi lataus näyttää tilan muuttuneen
+- Oma tili -> Uutiskirje: tilaaja voi perua uutiskirjeen yleisen listatilauksen yhdellä painikkeella ja sivun uusi lataus näyttää tilan muuttuneen
+- Oma tili -> Uutiskirje: POST ilman oikeaa noncea ei muuta tilausta
 - rekisteröitymisen opt-in lisää uuden käyttäjän sähköpostin uutiskirjelistalle
 - maksuttoman tapahtumailmoittautumisen opt-in lisää ilmoittautujan sähköpostin uutiskirjelistalle eikä estä ilmoittautumista, jos AcyMailing-tilaus epäonnistuu
 - WooCommerce-kassan opt-in lisää billing email -osoitteen uutiskirjelistalle eikä estä tilausta, jos AcyMailing-tilaus epäonnistuu

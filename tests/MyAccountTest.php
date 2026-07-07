@@ -65,6 +65,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'package', rytkoset_theme_get_account_menu_item_icon( 'orders' ) );
 		$this->assertSame( 'download', rytkoset_theme_get_account_menu_item_icon( 'downloads' ) );
 		$this->assertSame( 'map-pin', rytkoset_theme_get_account_menu_item_icon( 'edit-address' ) );
+		$this->assertSame( 'mail', rytkoset_theme_get_account_menu_item_icon( 'rytkoset_newsletter' ) );
 		$this->assertSame( 'user', rytkoset_theme_get_account_menu_item_icon( 'edit-account' ) );
 		$this->assertSame( 'credit-card', rytkoset_theme_get_account_menu_item_icon( 'payment-methods' ) );
 		$this->assertSame( 'log-out', rytkoset_theme_get_account_menu_item_icon( 'customer-logout' ) );
@@ -87,5 +88,75 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		// show_avatars-optiota ei ole asetettu stub-storeen → get_option()
 		// palauttaa false ja helperin pitää palauttaa tyhjä (ei HTTP-kutsua).
 		$this->assertSame( '', rytkoset_theme_get_account_avatar_image_url( $user ) );
+	}
+
+	public function test_newsletter_endpoint_query_var_uses_finnish_slug(): void {
+		$vars = rytkoset_theme_register_account_newsletter_endpoint_query_var( array() );
+
+		$this->assertSame( 'uutiskirje', $vars['rytkoset_newsletter'] );
+	}
+
+	public function test_newsletter_menu_item_inserted_before_account_details(): void {
+		$items = rytkoset_theme_add_account_newsletter_menu_item(
+			array(
+				'dashboard'       => 'Hallintapaneeli',
+				'orders'          => 'Tilaukset',
+				'edit-account'    => 'Tilin tiedot',
+				'customer-logout' => 'Kirjaudu ulos',
+			)
+		);
+
+		$this->assertSame(
+			array( 'dashboard', 'orders', 'rytkoset_newsletter', 'edit-account', 'customer-logout' ),
+			array_keys( $items )
+		);
+		$this->assertSame( 'Uutiskirje', $items['rytkoset_newsletter'] );
+	}
+
+	public function test_newsletter_menu_item_falls_back_before_logout(): void {
+		$items = rytkoset_theme_add_account_newsletter_menu_item(
+			array(
+				'dashboard'       => 'Hallintapaneeli',
+				'customer-logout' => 'Kirjaudu ulos',
+			)
+		);
+
+		$this->assertSame(
+			array( 'dashboard', 'rytkoset_newsletter', 'customer-logout' ),
+			array_keys( $items )
+		);
+	}
+
+	public function test_newsletter_status_invalid_without_logged_in_user(): void {
+		$this->assertSame( 'invalid_user', rytkoset_theme_get_account_newsletter_status( 0, array( 1 ) ) );
+	}
+
+	public function test_newsletter_status_missing_list_without_target_lists(): void {
+		rytkoset_test_register_user( 7, 'ilkka@example.test', 'Ilkka Rytkönen' );
+
+		$this->assertSame( 'missing_list', rytkoset_theme_get_account_newsletter_status( 7 ) );
+	}
+
+	public function test_newsletter_status_checks_subscription_table_result(): void {
+		rytkoset_test_register_user( 7, 'ilkka@example.test', 'Ilkka Rytkönen' );
+
+		$GLOBALS['wpdb']->get_var_result = 1;
+
+		$this->assertSame( 'subscribed', rytkoset_theme_get_account_newsletter_status( 7, array( 3 ) ) );
+
+		$GLOBALS['wpdb']->get_var_result = 0;
+
+		$this->assertSame( 'not_subscribed', rytkoset_theme_get_account_newsletter_status( 7, array( 3 ) ) );
+	}
+
+	public function test_newsletter_rewrite_rules_exist_when_slug_is_present(): void {
+		update_option(
+			'rewrite_rules',
+			array(
+				'^tili/uutiskirje/?$' => 'index.php?pagename=tili&rytkoset_newsletter=1',
+			)
+		);
+
+		$this->assertTrue( rytkoset_theme_account_newsletter_endpoint_rewrite_rules_exist() );
 	}
 }
