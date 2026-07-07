@@ -1443,6 +1443,105 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 }
 
 /**
+ * Lisää uniikin termin sivustokartan hakuvihjelistaan.
+ *
+ * @param array<int,string>  $terms Hakuvihjeet.
+ * @param array<string,bool> $seen  Jo lisätyt termit pienaakkosina.
+ * @param string             $term  Lisättävä termi.
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_add_sitemap_hint_term' ) ) {
+	function rytkoset_theme_chat_add_sitemap_hint_term( &$terms, &$seen, $term ) {
+		$term = trim( preg_replace( '/\s+/u', ' ', wp_strip_all_tags( wp_specialchars_decode( (string) $term, ENT_QUOTES ) ) ) );
+
+		if ( '' === $term || mb_strlen( $term ) < 4 ) {
+			return;
+		}
+
+		$key = mb_strtolower( $term );
+
+		if ( isset( $seen[ $key ] ) ) {
+			return;
+		}
+
+		$seen[ $key ] = true;
+		$terms[]      = $term;
+	}
+}
+
+/**
+ * Kertoo, voiko sivustokarttaan lisätä sivun sisältöön perustuvia hakuvihjeitä.
+ *
+ * Hakuvihjeet auttavat mallia valitsemaan oikean sivun lue_sivu-työkalulle,
+ * joten niitä lisätään vain julkisille sivuille. Jäsensivuille ei lisätä
+ * sisältövihjeitä, ettei sivustokartasta synny rajatun sisällön vuotoreittiä.
+ *
+ * @param WP_Post $post Sivupostaus.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_can_include_sitemap_hints' ) ) {
+	function rytkoset_theme_chat_can_include_sitemap_hints( $post ) {
+		if ( ! $post instanceof WP_Post || 'page' !== $post->post_type || 'publish' !== get_post_status( $post ) ) {
+			return false;
+		}
+
+		if ( '' !== trim( (string) $post->post_password ) ) {
+			return false;
+		}
+
+		if ( ! function_exists( 'rytkoset_theme_page_is_members_only' ) ) {
+			return false;
+		}
+
+		return ! rytkoset_theme_page_is_members_only( $post );
+	}
+}
+
+/**
+ * Kokoaa sivun otsikoista ja erisnimistä lyhyet hakuvihjeet sivustokarttaan.
+ *
+ * Vihjeet eivät ole vastauslähde; ne vain auttavat mallia valitsemaan, mikä
+ * julkinen sivu kannattaa lukea työkalulla, kun sivun otsikko on liian yleinen.
+ *
+ * @param WP_Post $post Sivupostaus.
+ * @return string Hakuvihjeet pilkuilla eroteltuna.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
+	function rytkoset_theme_chat_get_sitemap_page_hints( $post ) {
+		if ( ! rytkoset_theme_chat_can_include_sitemap_hints( $post ) ) {
+			return '';
+		}
+
+		$terms = array();
+		$seen  = array();
+		$html  = (string) $post->post_content;
+
+		if ( preg_match_all( '/<h[1-6][^>]*>(.*?)<\/h[1-6]>/is', $html, $heading_matches ) ) {
+			foreach ( $heading_matches[1] as $heading ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $heading );
+			}
+		}
+
+		$text = rytkoset_theme_chat_extract_page_text( $html );
+
+		$capitalized_word = '[A-ZÅÄÖ][\p{L}]{2,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?';
+		if ( preg_match_all( '/\b' . $capitalized_word . '(?:\s+' . $capitalized_word . '){1,3}\b/u', $text, $phrase_matches ) ) {
+			foreach ( $phrase_matches[0] as $phrase ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $phrase );
+			}
+		}
+
+		if ( preg_match_all( '/\b' . $capitalized_word . '\b/u', $text, $word_matches ) ) {
+			foreach ( $word_matches[0] as $word ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $word );
+			}
+		}
+
+		return rytkoset_theme_chat_truncate( implode( ', ', $terms ), 280 );
+	}
+}
+
+/**
  * Kokoaa sivustokartan chatin system-promptiin.
  *
  * Listaa julkaistut sivut sekä tapahtuma- ja albumiarkistot otsikkoineen ja
@@ -1524,6 +1623,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 
 			if ( $include_ids ) {
 				$line .= ' (sivu-id: ' . $page_id . ')';
+
+				$hints = rytkoset_theme_chat_get_sitemap_page_hints( get_post( $page_id ) );
+				if ( '' !== $hints ) {
+					$line .= ' — aiheita: ' . $hints;
+				}
 			}
 
 			$lines[] = $line;
@@ -1539,7 +1643,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 		 *
 		 * @param int $max_length Merkkiraja.
 		 */
-		$max_length = (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_length', 3000 );
+		$max_length = (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_length', 6000 );
 
 		return rytkoset_theme_chat_truncate( implode( "\n", $lines ), max( 1, $max_length ) );
 	}
@@ -1857,7 +1961,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// Sivustokartta: julkaistut sivut ja arkistot suoraan WordPressistä.
 		$sitemap = rytkoset_theme_chat_get_sitemap_context();
 		if ( '' !== $sitemap ) {
-			$prompt .= "\n\nSivustokartta (sivuston julkaistut sivut ja arkistot; nämä ovat sivuston ainoat sivuosoitteet — älä viittaa muihin osoitteisiin kuin näihin tai muissa lähteissä annettuihin):\n\n";
+			$prompt .= "\n\nSivustokartta (sivuston julkaistut sivut ja arkistot; nämä ovat sivuston ainoat sivuosoitteet — älä viittaa muihin osoitteisiin kuin näihin tai muissa lähteissä annettuihin. Sivurivien aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan, eivät faktavastauksen lähde):\n\n";
 			$prompt .= $sitemap;
 		}
 
@@ -1867,7 +1971,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
 		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).
