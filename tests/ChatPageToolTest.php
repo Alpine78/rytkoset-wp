@@ -300,6 +300,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		// työkalun kokeilu sallittuna ja kiellettävä tarkistamaton kielto.
 		$this->assertStringContainsString( 'työkalun kokeileminen ei ole kiellettyä arvaamista', $prompt );
 		$this->assertStringContainsString( 'sallittu lähde', $prompt );
+		$this->assertStringContainsString( 'aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan', $prompt );
+		$this->assertStringContainsString( 'älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla', $prompt );
 		// Devin toisessa savutestissä yksi väärä sivuarvaus (esim. henkilön nimi
 		// joka ei ole minkään otsikon ilmeinen aihe) johti virheelliseen
 		// "ei mainita sivustolla" -väitteeseen, koska mallilla ei ollut

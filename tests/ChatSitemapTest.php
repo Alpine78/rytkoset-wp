@@ -25,6 +25,50 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( '- Sukututkimus: https://rytkoset.test/?p=21', $sitemap );
 	}
 
+	public function test_sitemap_includes_public_page_hints_for_tool_selection(): void {
+		$page               = rytkoset_test_register_post( 21, 'page', 'Sukututkimus' );
+		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen.</p>';
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		$this->assertStringContainsString( '- Sukututkimus: https://rytkoset.test/?p=21 (sivu-id: 21)', $sitemap );
+		$this->assertStringContainsString( 'aiheita:', $sitemap );
+		$this->assertStringContainsString( 'Nimen alkuperä ja suvun levinneisyys', $sitemap );
+		$this->assertStringContainsString( 'Rodhger', $sitemap );
+		$this->assertStringContainsString( 'Arvo Korpela', $sitemap );
+		$this->assertStringContainsString( 'Taavi Kilven', $sitemap );
+	}
+
+	public function test_sitemap_omits_hints_when_page_tool_disabled(): void {
+		$page               = rytkoset_test_register_post( 21, 'page', 'Sukututkimus' );
+		$page->post_content = '<p>Rodhger ja Arvo Korpela mainitaan sivulla.</p>';
+
+		$filter = static fn() => false;
+		add_filter( 'rytkoset_theme_chat_page_tool_enabled', $filter );
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		remove_filter( 'rytkoset_theme_chat_page_tool_enabled', $filter );
+
+		$this->assertStringContainsString( '- Sukututkimus: https://rytkoset.test/?p=21', $sitemap );
+		$this->assertStringNotContainsString( 'sivu-id', $sitemap );
+		$this->assertStringNotContainsString( 'aiheita:', $sitemap );
+		$this->assertStringNotContainsString( 'Rodhger', $sitemap );
+		$this->assertStringNotContainsString( 'Arvo Korpela', $sitemap );
+	}
+
+	public function test_sitemap_omits_hints_for_members_only_pages(): void {
+		$page               = rytkoset_test_register_post( 21, 'page', 'Jäsenille' );
+		$page->post_content = '<p>Jäsenille rajattu koodi on SUKU2026.</p>';
+		update_post_meta( 21, rytkoset_theme_get_members_only_page_meta_key(), 'yes' );
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		$this->assertStringContainsString( '- Jäsenille: https://rytkoset.test/?p=21 (sivu-id: 21)', $sitemap );
+		$this->assertStringNotContainsString( 'aiheita:', $sitemap );
+		$this->assertStringNotContainsString( 'SUKU2026', $sitemap );
+	}
+
 	public function test_sitemap_includes_event_and_album_archives(): void {
 		$sitemap = rytkoset_theme_chat_get_sitemap_context();
 
