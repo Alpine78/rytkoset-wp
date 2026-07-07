@@ -8,6 +8,12 @@
  * selaimeen. Julkinen reitti (`__return_true`); väärinkäyttöä vastaan suojaavat
  * `wp_rest`-nonce, IP-pohjainen rate limit sekä syöte-, historia- ja token-rajat.
  *
+ * Sivun lukutyökalu (#501): malli saa `lue_sivu`-function calling -työkalun,
+ * jolla se voi tarvittaessa hakea sivustokartassa listatun julkisen sivun
+ * tekstisisällön. Työkalukysymyksissä sallitaan rajattu määrä lisäkierroksia
+ * Mistralille; peruskysymykset vastataan edelleen yhdellä API-kutsulla suoraan
+ * promptin lähteistä.
+ *
  * Vastauksen escapetys ja käyttöliittymä kuuluvat widget-tikettiin (#413).
  *
  * @package Rytkoset_Theme
@@ -771,7 +777,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 			);
 		}
 
-		// 5. Payload: system-prompt + rajattu historia.
+		// 5. Payload: system-prompt + rajattu historia (+ sivun lukutyökalu, #501).
 		$payload_messages = array_merge(
 			array(
 				array(
@@ -789,34 +795,81 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 			'temperature' => rytkoset_theme_chat_get_temperature(),
 		);
 
-		// 6. Mistral-kutsu.
-		$response = wp_remote_post(
-			$config['endpoint'],
-			array(
-				'timeout' => 20,
-				'headers' => array(
-					'Authorization' => 'Bearer ' . $config['api_key'],
-					'Content-Type'  => 'application/json',
-					'Accept'        => 'application/json',
-				),
-				'body'    => wp_json_encode( $payload ),
-			)
-		);
+		$tool_enabled = rytkoset_theme_chat_page_tool_is_enabled();
+		$max_rounds   = $tool_enabled ? rytkoset_theme_chat_get_page_tool_max_rounds() : 0;
 
-		// 7. Virheenkäsittely — avainta tai teknisiä yksityiskohtia ei vuodeta.
-		if ( is_wp_error( $response ) ) {
-			rytkoset_theme_chat_log_error( 'wp_remote_post: ' . $response->get_error_message() );
-			rytkoset_theme_chat_record_error_stat( 'network' );
-			return rytkoset_theme_chat_upstream_error();
+		if ( $tool_enabled ) {
+			$payload['tools'] = array( rytkoset_theme_chat_get_page_tool_definition() );
 		}
 
-		$status_code = (int) wp_remote_retrieve_response_code( $response );
-		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+		// 6.–7. Mistral-kutsu + työkalusilmukka (#501) ja virheenkäsittely — avainta
+		// tai teknisiä yksityiskohtia ei vuodeta. Peruskysymys päättyy ensimmäiseen
+		// kierrokseen (ei tool_calls-vastausta) täsmälleen kuten ennen työkalua.
+		$rounds_used = 0;
+		$body        = null;
 
-		if ( $status_code < 200 || $status_code >= 300 ) {
-			rytkoset_theme_chat_log_error( 'Mistral HTTP ' . $status_code );
-			rytkoset_theme_chat_record_error_stat( 'http_' . $status_code );
-			return rytkoset_theme_chat_upstream_error();
+		while ( true ) {
+			$response = wp_remote_post(
+				$config['endpoint'],
+				array(
+					'timeout' => 20,
+					'headers' => array(
+						'Authorization' => 'Bearer ' . $config['api_key'],
+						'Content-Type'  => 'application/json',
+						'Accept'        => 'application/json',
+					),
+					'body'    => wp_json_encode( $payload ),
+				)
+			);
+
+			if ( is_wp_error( $response ) ) {
+				rytkoset_theme_chat_log_error( 'wp_remote_post: ' . $response->get_error_message() );
+				rytkoset_theme_chat_record_error_stat( 'network' );
+				return rytkoset_theme_chat_upstream_error();
+			}
+
+			$status_code = (int) wp_remote_retrieve_response_code( $response );
+			$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( $status_code < 200 || $status_code >= 300 ) {
+				rytkoset_theme_chat_log_error( 'Mistral HTTP ' . $status_code );
+				rytkoset_theme_chat_record_error_stat( 'http_' . $status_code );
+				return rytkoset_theme_chat_upstream_error();
+			}
+
+			$tool_calls = $tool_enabled ? rytkoset_theme_chat_extract_tool_calls( $body ) : array();
+
+			if ( empty( $tool_calls ) || $rounds_used >= $max_rounds ) {
+				break;
+			}
+
+			++$rounds_used;
+
+			// Assistentin tool-call-viesti takaisin keskusteluun sellaisenaan;
+			// jokainen tool_call_id saa vastaavan tool-viestin (API vaatii sen).
+			$payload['messages'][] = $body['choices'][0]['message'];
+
+			foreach ( $tool_calls as $index => $tool_call ) {
+				// Kulusuoja: sivusisältö luetaan enintään kolmelle kutsulle per kierros.
+				if ( $index < 3 ) {
+					$content = rytkoset_theme_chat_run_page_tool( $tool_call['name'], $tool_call['arguments'] );
+					rytkoset_theme_chat_record_tool_call_stat();
+				} else {
+					$content = 'Työkalukutsuja oli liikaa yhdellä kierroksella.';
+				}
+
+				$payload['messages'][] = array(
+					'role'         => 'tool',
+					'tool_call_id' => $tool_call['id'],
+					'name'         => $tool_call['name'],
+					'content'      => $content,
+				);
+			}
+
+			if ( $rounds_used >= $max_rounds ) {
+				// Viimeinen kierros: pakota tekstivastaus, ettei malli jää kutsumaan työkalua.
+				$payload['tool_choice'] = 'none';
+			}
 		}
 
 		// 8. Vastauksen poiminta.
@@ -875,7 +928,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_log_error' ) ) {
  * IP-osoitetta eikä viestisisältöä, sama periaate kuin rate limit
  * -transientissa (joka tallentaa vain MD5-tiivisteen).
  *
- * @return array{messages:string,rate_limit:string,error:string}
+ * @return array{messages:string,rate_limit:string,error:string,tool_calls:string}
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
 	function rytkoset_theme_chat_get_stat_option_names() {
@@ -883,6 +936,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
 			'messages'   => 'rytkoset_chat_stat_messages',
 			'rate_limit' => 'rytkoset_chat_stat_rate_limit',
 			'error'      => 'rytkoset_chat_stat_error',
+			'tool_calls' => 'rytkoset_chat_stat_tool_calls',
 		);
 	}
 }
@@ -958,6 +1012,27 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_message_sent_stat' ) ) {
 }
 
 /**
+ * Kirjaa yhden suoritetun lue_sivu-työkalukutsun käyttötilastoon (#501).
+ *
+ * Kasvaa vain kutsuista, joille sivunluku oikeasti suoritettiin — ei
+ * kierroskaton ylittäneistä, ohitetuista kutsuista. Viestimäärälaskuri
+ * kasvaa edelleen vain kerran per käyttäjäpyyntö.
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_tool_call_stat' ) ) {
+	function rytkoset_theme_chat_record_tool_call_stat() {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['tool_calls'],
+			rytkoset_theme_chat_bump_stat( get_option( $names['tool_calls'], array() ), time() ),
+			false
+		);
+	}
+}
+
+/**
  * Kirjaa yhden rate limit -osuman käyttötilastoon.
  *
  * Kutsutaan `rytkoset_theme_chat_register_rate_limit_hit()`:sta, kun raja on
@@ -1006,7 +1081,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_error_stat' ) ) {
  * @return array{
  *     messages_sent: array{count:int,last_at:int},
  *     rate_limit_hits: array{count:int,last_at:int},
- *     last_error: array{count:int,last_at:int,last_type:string}
+ *     last_error: array{count:int,last_at:int,last_type:string},
+ *     tool_calls: array{count:int,last_at:int}
  * }
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
@@ -1016,6 +1092,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 		$messages   = get_option( $names['messages'], array() );
 		$rate_limit = get_option( $names['rate_limit'], array() );
 		$error      = get_option( $names['error'], array() );
+		$tool_calls = get_option( $names['tool_calls'], array() );
 
 		return array(
 			'messages_sent'   => array(
@@ -1030,6 +1107,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 				'count'     => (int) rytkoset_theme_chat_stat_value( $error, 'count', 0 ),
 				'last_at'   => (int) rytkoset_theme_chat_stat_value( $error, 'last_at', 0 ),
 				'last_type' => (string) rytkoset_theme_chat_stat_value( $error, 'last_type', '' ),
+			),
+			'tool_calls'      => array(
+				'count'   => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'count', 0 ),
+				'last_at' => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'last_at', 0 ),
 			),
 		);
 	}
@@ -1125,6 +1206,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 		echo '<li>' . esc_html__( 'Rate limit -osumia yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['rate_limit_hits']['count'] ) ) . '</strong>';
 		if ( $stats['rate_limit_hits']['last_at'] > 0 ) {
 			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['rate_limit_hits']['last_at'] ) );
+		}
+		echo '</li>';
+
+		echo '<li>' . esc_html__( 'Sivunlukuhakuja (lue_sivu-työkalu) yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['tool_calls']['count'] ) ) . '</strong>';
+		if ( $stats['tool_calls']['last_at'] > 0 ) {
+			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['tool_calls']['last_at'] ) );
 		}
 		echo '</li>';
 
@@ -1356,6 +1443,105 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 }
 
 /**
+ * Lisää uniikin termin sivustokartan hakuvihjelistaan.
+ *
+ * @param array<int,string>  $terms Hakuvihjeet.
+ * @param array<string,bool> $seen  Jo lisätyt termit pienaakkosina.
+ * @param string             $term  Lisättävä termi.
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_add_sitemap_hint_term' ) ) {
+	function rytkoset_theme_chat_add_sitemap_hint_term( &$terms, &$seen, $term ) {
+		$term = trim( preg_replace( '/\s+/u', ' ', wp_strip_all_tags( wp_specialchars_decode( (string) $term, ENT_QUOTES ) ) ) );
+
+		if ( '' === $term || mb_strlen( $term ) < 4 ) {
+			return;
+		}
+
+		$key = mb_strtolower( $term );
+
+		if ( isset( $seen[ $key ] ) ) {
+			return;
+		}
+
+		$seen[ $key ] = true;
+		$terms[]      = $term;
+	}
+}
+
+/**
+ * Kertoo, voiko sivustokarttaan lisätä sivun sisältöön perustuvia hakuvihjeitä.
+ *
+ * Hakuvihjeet auttavat mallia valitsemaan oikean sivun lue_sivu-työkalulle,
+ * joten niitä lisätään vain julkisille sivuille. Jäsensivuille ei lisätä
+ * sisältövihjeitä, ettei sivustokartasta synny rajatun sisällön vuotoreittiä.
+ *
+ * @param WP_Post $post Sivupostaus.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_can_include_sitemap_hints' ) ) {
+	function rytkoset_theme_chat_can_include_sitemap_hints( $post ) {
+		if ( ! $post instanceof WP_Post || 'page' !== $post->post_type || 'publish' !== get_post_status( $post ) ) {
+			return false;
+		}
+
+		if ( '' !== trim( (string) $post->post_password ) ) {
+			return false;
+		}
+
+		if ( ! function_exists( 'rytkoset_theme_page_is_members_only' ) ) {
+			return false;
+		}
+
+		return ! rytkoset_theme_page_is_members_only( $post );
+	}
+}
+
+/**
+ * Kokoaa sivun otsikoista ja erisnimistä lyhyet hakuvihjeet sivustokarttaan.
+ *
+ * Vihjeet eivät ole vastauslähde; ne vain auttavat mallia valitsemaan, mikä
+ * julkinen sivu kannattaa lukea työkalulla, kun sivun otsikko on liian yleinen.
+ *
+ * @param WP_Post $post Sivupostaus.
+ * @return string Hakuvihjeet pilkuilla eroteltuna.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
+	function rytkoset_theme_chat_get_sitemap_page_hints( $post ) {
+		if ( ! rytkoset_theme_chat_can_include_sitemap_hints( $post ) ) {
+			return '';
+		}
+
+		$terms = array();
+		$seen  = array();
+		$html  = (string) $post->post_content;
+
+		if ( preg_match_all( '/<h[1-6][^>]*>(.*?)<\/h[1-6]>/is', $html, $heading_matches ) ) {
+			foreach ( $heading_matches[1] as $heading ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $heading );
+			}
+		}
+
+		$text = rytkoset_theme_chat_extract_page_text( $html );
+
+		$capitalized_word = '[A-ZÅÄÖ][\p{L}]{2,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?';
+		if ( preg_match_all( '/\b' . $capitalized_word . '(?:\s+' . $capitalized_word . '){1,3}\b/u', $text, $phrase_matches ) ) {
+			foreach ( $phrase_matches[0] as $phrase ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $phrase );
+			}
+		}
+
+		if ( preg_match_all( '/\b' . $capitalized_word . '\b/u', $text, $word_matches ) ) {
+			foreach ( $word_matches[0] as $word ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $word );
+			}
+		}
+
+		return rytkoset_theme_chat_truncate( implode( ', ', $terms ), 280 );
+	}
+}
+
+/**
  * Kokoaa sivustokartan chatin system-promptiin.
  *
  * Listaa julkaistut sivut sekä tapahtuma- ja albumiarkistot otsikkoineen ja
@@ -1412,6 +1598,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 
 		$page_count = 0;
 
+		// Sivu-id:t vain kun lue_sivu-työkalu on käytössä (#501) — muuten lohko pysyy entisellään.
+		$include_ids = rytkoset_theme_chat_page_tool_is_enabled();
+
 		foreach ( (array) $page_ids as $page_id ) {
 			if ( $page_count >= $max_pages ) {
 				break;
@@ -1430,7 +1619,18 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 				continue;
 			}
 
-			$lines[] = '- ' . $title . ': ' . $url;
+			$line = '- ' . $title . ': ' . $url;
+
+			if ( $include_ids ) {
+				$line .= ' (sivu-id: ' . $page_id . ')';
+
+				$hints = rytkoset_theme_chat_get_sitemap_page_hints( get_post( $page_id ) );
+				if ( '' !== $hints ) {
+					$line .= ' — aiheita: ' . $hints;
+				}
+			}
+
+			$lines[] = $line;
 			++$page_count;
 		}
 
@@ -1443,9 +1643,280 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 		 *
 		 * @param int $max_length Merkkiraja.
 		 */
-		$max_length = (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_length', 3000 );
+		$max_length = (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_length', 6000 );
 
 		return rytkoset_theme_chat_truncate( implode( "\n", $lines ), max( 1, $max_length ) );
+	}
+}
+
+/**
+ * Kertoo, onko sivun lukutyökalu (#501) käytössä.
+ *
+ * Kun työkalu on pois päältä, API-payload ja system-prompt ovat täsmälleen
+ * entisellään (ei `tools`-kenttää, ei sivu-id-merkintöjä sivustokartassa).
+ *
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_page_tool_is_enabled' ) ) {
+	function rytkoset_theme_chat_page_tool_is_enabled() {
+		/**
+		 * Suodattaa sivun lukutyökalun käytön (#501).
+		 *
+		 * @param bool $enabled Annetaanko mallille lue_sivu-työkalu.
+		 */
+		return (bool) apply_filters( 'rytkoset_theme_chat_page_tool_enabled', true );
+	}
+}
+
+/**
+ * Palauttaa työkalun palauttaman sivusisällön merkkirajan (#501, kulusuoja).
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_max_length' ) ) {
+	function rytkoset_theme_chat_get_page_tool_max_length() {
+		/**
+		 * Suodattaa työkalun palauttaman sivusisällön enimmäispituuden merkkeinä.
+		 *
+		 * @param int $max_length Merkkiraja.
+		 */
+		$max_length = (int) apply_filters( 'rytkoset_theme_chat_page_tool_max_length', 5000 );
+
+		return max( 1, $max_length );
+	}
+}
+
+/**
+ * Palauttaa työkalukierrosten enimmäismäärän per käyttäjäviesti (#501, kulusuoja).
+ *
+ * Yksi kierros = yksi ylimääräinen API-kutsu työkalutulosten kanssa. Kova
+ * yläraja 3 sitoo kustannuksen, vaikka suodatin palauttaisi suuremman arvon.
+ *
+ * Oletus 2 (ei 1): devin savutestissä yhden kierroksen raja pakotti mallin
+ * vastaamaan sillä yhdellä sivulla, jonka se ensin arvasi sivustokartan
+ * otsikoista — jos arvaus osui väärään sivuun (esim. henkilön nimi, joka ei
+ * ole ilmeisesti minkään otsikon aiheena), mallilla ei ollut mahdollisuutta
+ * kokeilla toista sivua ennen kuin `tool_choice: none` pakotti tekstivastauksen.
+ * Kaksi kierrosta antaa mallille yhden uudelleenyrityksen.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_max_rounds' ) ) {
+	function rytkoset_theme_chat_get_page_tool_max_rounds() {
+		/**
+		 * Suodattaa työkalukierrosten enimmäismäärän.
+		 *
+		 * @param int $max_rounds Kierrosten enimmäismäärä.
+		 */
+		$max_rounds = (int) apply_filters( 'rytkoset_theme_chat_page_tool_max_rounds', 2 );
+
+		return min( 3, max( 1, $max_rounds ) );
+	}
+}
+
+/**
+ * Palauttaa lue_sivu-työkalun määrittelyn Mistralin chat-completions-kutsuun (#501).
+ *
+ * Kuvaus ohjaa mallia käyttämään työkalua säästeliäästi: peruskysymykset
+ * vastataan suoraan promptin lähteistä ilman toista API-kutsua.
+ *
+ * @return array<string,mixed>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_definition' ) ) {
+	function rytkoset_theme_chat_get_page_tool_definition() {
+		return array(
+			'type'     => 'function',
+			'function' => array(
+				'name'        => 'lue_sivu',
+				'description' => 'Palauttaa sivuston julkaistun julkisen sivun tekstisisällön sivustokartassa annetulla sivu-id:llä. Kutsu tätä aina ennen kuin vastaat, ettet tiedä: valitse sivustokartasta otsikoltaan sopivin sivu ja lue sen sisältö. Älä kutsu, kun vastaus on jo annetuissa lähteissä.',
+				'parameters'  => array(
+					'type'       => 'object',
+					'properties' => array(
+						'sivu_id' => array(
+							'type'        => 'integer',
+							'description' => 'Sivun id sivustokartan "(sivu-id: N)" -merkinnästä.',
+						),
+					),
+					'required'   => array( 'sivu_id' ),
+				),
+			),
+		);
+	}
+}
+
+/**
+ * Poimii Mistralin vastauksesta assistentin työkalukutsut (#501).
+ *
+ * Puhdas funktio (testattava): odottaa jo dekoodattua vastausrakennetta ja
+ * palauttaa tyhjän listan, jos rakenne on odottamaton tai kutsuja ei ole.
+ * Vain kutsut, joissa on sekä id että funktion nimi, kelpuutetaan — muut
+ * ohitetaan hiljaisesti (hallittu fallback: silmukka päättyy tekstivastaukseen).
+ *
+ * @param mixed $body Dekoodattu API-vaste.
+ * @return array<int,array{id:string,name:string,arguments:mixed}>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_extract_tool_calls' ) ) {
+	function rytkoset_theme_chat_extract_tool_calls( $body ) {
+		if ( ! is_array( $body ) || empty( $body['choices'][0]['message']['tool_calls'] ) || ! is_array( $body['choices'][0]['message']['tool_calls'] ) ) {
+			return array();
+		}
+
+		$calls = array();
+
+		foreach ( $body['choices'][0]['message']['tool_calls'] as $call ) {
+			if ( ! is_array( $call ) ) {
+				continue;
+			}
+
+			$id   = isset( $call['id'] ) && is_string( $call['id'] ) ? trim( $call['id'] ) : '';
+			$name = isset( $call['function']['name'] ) && is_string( $call['function']['name'] ) ? trim( $call['function']['name'] ) : '';
+
+			if ( '' === $id || '' === $name ) {
+				continue;
+			}
+
+			$calls[] = array(
+				'id'        => $id,
+				'name'      => $name,
+				'arguments' => $call['function']['arguments'] ?? '',
+			);
+		}
+
+		return $calls;
+	}
+}
+
+/**
+ * Jäsentää lue_sivu-työkalun argumenteista sivun id:n (#501).
+ *
+ * Puhdas funktio (testattava): hyväksyy sekä JSON-merkkijonon että valmiin
+ * taulukon. Virheellinen JSON, puuttuva tai ei-positiivinen id palauttaa 0
+ * (hallittu fallback — ei koskaan poikkeusta tai negatiivista id:tä).
+ *
+ * @param mixed $arguments Työkalukutsun argumentit (JSON-merkkijono tai taulukko).
+ * @return int Sivun id (>= 1) tai 0 virhetilanteessa.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_parse_page_tool_args' ) ) {
+	function rytkoset_theme_chat_parse_page_tool_args( $arguments ) {
+		if ( is_string( $arguments ) ) {
+			$arguments = json_decode( $arguments, true );
+		}
+
+		if ( ! is_array( $arguments ) || ! isset( $arguments['sivu_id'] ) || ! is_numeric( $arguments['sivu_id'] ) ) {
+			return 0;
+		}
+
+		$page_id = (int) $arguments['sivu_id'];
+
+		return $page_id > 0 ? $page_id : 0;
+	}
+}
+
+/**
+ * Riisuu sivun sisällön turvalliseksi tekstiksi promptia varten (#501).
+ *
+ * Puhdas funktio (testattava). MVP-linja tarkoituksella ilman dynaamista
+ * renderöintiä: block-kommentit, HTML-tagit ja shortcodet poistetaan raa'asta
+ * `post_content`ista — shortcodeja tai dynaamisia blokkeja ei suoriteta.
+ * Kappalerajat säilytetään rivinvaihtoina, ettei teksti puuroudu.
+ *
+ * @param string $html Sivun raaka `post_content`.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_extract_page_text' ) ) {
+	function rytkoset_theme_chat_extract_page_text( $html ) {
+		$text = (string) $html;
+		$text = preg_replace( '/<!--.*?-->/s', "\n", $text );
+		$text = preg_replace( '/<(script|style)\b[^>]*>.*?<\/\1>/is', '', $text );
+		$text = preg_replace( '/<br\s*\/?>|<\/(p|div|li|h[1-6]|blockquote|figcaption|td|th|tr)>/i', "\n", $text );
+		$text = wp_strip_all_tags( $text );
+		$text = preg_replace( '/\[\/?[a-z][^\]\n]*\]/i', '', $text );
+		$text = wp_specialchars_decode( $text, ENT_QUOTES );
+		$text = preg_replace( "/[ \t]+/", ' ', $text );
+		$text = implode( "\n", array_map( 'trim', explode( "\n", $text ) ) );
+		$text = preg_replace( "/\n{3,}/", "\n\n", $text );
+
+		return trim( $text );
+	}
+}
+
+/**
+ * Palauttaa työkalun geneerisen virhetekstin (#501).
+ *
+ * Sama teksti kaikille epäämissyille (tuntematon id, luonnos, väärä
+ * sisältötyyppi, salasanasuojattu, jäsensivu), ettei vastauksesta voi
+ * päätellä rajatun sisällön olemassaoloa.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_error_text' ) ) {
+	function rytkoset_theme_chat_get_page_tool_error_text() {
+		return 'Sivua ei löytynyt tai se ei ole julkisesti saatavilla.';
+	}
+}
+
+/**
+ * Hakee ja validoi työkalun pyytämän sivun sisällön (#501).
+ *
+ * Vuotosuoja: vain julkaistut, julkiset sivut kelpaavat. Jäsenille rajatut
+ * sivut (#392) suodatetaan ehdottomasti ja katsojasta riippumatta — chatin
+ * vastaukset menevät kolmannen osapuolen API:in eikä chatti saa toimia
+ * jäsenmuurin ohitusreittinä edes kirjautuneelle jäsenelle. Fail-closed:
+ * jos jäsensivumoduulia ei ole ladattu, mitään sivua ei palauteta.
+ *
+ * @param int $page_id Sivun id.
+ * @return string Sivun tekstisisältö otsikolla ja osoitteella, tai virheteksti.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
+	function rytkoset_theme_chat_resolve_page_tool_result( $page_id ) {
+		$page_id = (int) $page_id;
+
+		if ( $page_id < 1 ) {
+			return rytkoset_theme_chat_get_page_tool_error_text();
+		}
+
+		$post = get_post( $page_id );
+
+		if ( ! $post instanceof WP_Post || 'page' !== $post->post_type || 'publish' !== get_post_status( $post ) ) {
+			return rytkoset_theme_chat_get_page_tool_error_text();
+		}
+
+		if ( '' !== trim( (string) $post->post_password ) ) {
+			return rytkoset_theme_chat_get_page_tool_error_text();
+		}
+
+		if ( ! function_exists( 'rytkoset_theme_page_is_members_only' ) || rytkoset_theme_page_is_members_only( $post ) ) {
+			return rytkoset_theme_chat_get_page_tool_error_text();
+		}
+
+		$text = rytkoset_theme_chat_extract_page_text( (string) $post->post_content );
+
+		if ( '' === $text ) {
+			return 'Sivulla ei ole luettavaa tekstisisältöä.';
+		}
+
+		$title = trim( (string) get_the_title( $post->ID ) );
+		$url   = get_permalink( $post->ID );
+		$head  = 'Sivu: ' . $title . ( is_string( $url ) && '' !== $url ? ' (' . $url . ')' : '' );
+
+		return rytkoset_theme_chat_truncate( $head . "\n\n" . $text, rytkoset_theme_chat_get_page_tool_max_length() );
+	}
+}
+
+/**
+ * Suorittaa yhden työkalukutsun ja palauttaa tool-viestin sisällön (#501).
+ *
+ * @param string $name      Kutsutun työkalun nimi.
+ * @param mixed  $arguments Työkalukutsun argumentit.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_run_page_tool' ) ) {
+	function rytkoset_theme_chat_run_page_tool( $name, $arguments ) {
+		if ( 'lue_sivu' !== (string) $name ) {
+			return 'Tuntematon työkalu.';
+		}
+
+		return rytkoset_theme_chat_resolve_page_tool_result( rytkoset_theme_chat_parse_page_tool_args( $arguments ) );
 	}
 }
 
@@ -1490,8 +1961,17 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// Sivustokartta: julkaistut sivut ja arkistot suoraan WordPressistä.
 		$sitemap = rytkoset_theme_chat_get_sitemap_context();
 		if ( '' !== $sitemap ) {
-			$prompt .= "\n\nSivustokartta (sivuston julkaistut sivut ja arkistot; nämä ovat sivuston ainoat sivuosoitteet — älä viittaa muihin osoitteisiin kuin näihin tai muissa lähteissä annettuihin):\n\n";
+			$prompt .= "\n\nSivustokartta (sivuston julkaistut sivut ja arkistot; nämä ovat sivuston ainoat sivuosoitteet — älä viittaa muihin osoitteisiin kuin näihin tai muissa lähteissä annettuihin. Sivurivien aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan, eivät faktavastauksen lähde):\n\n";
 			$prompt .= $sitemap;
+		}
+
+		// Sivun lukutyökalu (#501): ohje kutsua lue_sivu-työkalua ennen kieltäytymistä.
+		// Sanamuoto tarkoituksella matalakynnyksinen: devissä havaittiin, että
+		// "todennäköisesti"-ehto + promptin arvauskiellot saivat mallin jättämään
+		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
+		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
+		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).

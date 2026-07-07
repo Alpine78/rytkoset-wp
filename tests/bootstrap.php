@@ -49,6 +49,7 @@ $GLOBALS['rytkoset_test_is_singular']  = false;   // is_singular()
 $GLOBALS['rytkoset_test_queried_id']   = 0;       // get_queried_object_id()
 $GLOBALS['rytkoset_test_has_excerpt']  = array(); // [post_id] => bool (has_excerpt())
 $GLOBALS['rytkoset_test_wc_notices']   = array(); // ["type:message"] => true (wc_has_notice())
+$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 
 // The hook registry is populated once at module load below and must NOT be reset between tests,
 // otherwise add_filter()/add_action() registrations from the loaded modules would be lost.
@@ -85,6 +86,11 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_has_excerpt']   = array();
 	$GLOBALS['rytkoset_test_wc_notices']    = array();
 	$GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
+	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
+
+	if ( isset( $GLOBALS['wpdb'] ) && $GLOBALS['wpdb'] instanceof Rytkoset_Test_WPDB ) {
+		$GLOBALS['wpdb']->reset();
+	}
 }
 
 /**
@@ -151,6 +157,10 @@ class WP_User {
 		$this->display_name = $display_name;
 		$this->user_login   = '' !== $login ? $login : 'user' . $id;
 	}
+
+	public function exists(): bool {
+		return $this->ID > 0;
+	}
 }
 
 class WP_Post {
@@ -163,6 +173,8 @@ class WP_Post {
 	public string $post_name    = '';
 	public int $post_author     = 0;
 	public string $post_status  = 'publish';
+	public string $post_content = '';
+	public string $post_password = '';
 
 	public function __construct( int $id = 0, string $type = 'post', string $title = '', int $parent = 0, int $menu_order = 0 ) {
 		$this->ID          = $id;
@@ -444,6 +456,62 @@ class WP_Role {
 	}
 }
 
+class Rytkoset_Test_WPDB {
+	public string $prefix = 'wp_';
+	public string $last_query = '';
+	/** @var array<int,mixed> */
+	public array $last_prepare_args = array();
+	public $get_var_result = null;
+	/** @var array<int,array<string,mixed>> */
+	public array $updates = array();
+
+	public function reset(): void {
+		$this->last_query        = '';
+		$this->last_prepare_args = array();
+		$this->get_var_result    = null;
+		$this->updates           = array();
+	}
+
+	public function prepare( string $query, ...$args ): string {
+		if ( 1 === count( $args ) && is_array( $args[0] ) ) {
+			$args = $args[0];
+		}
+
+		$this->last_prepare_args = $args;
+
+		foreach ( $args as $arg ) {
+			$replacement = is_int( $arg ) || is_float( $arg )
+				? (string) $arg
+				: "'" . addslashes( (string) $arg ) . "'";
+			$query       = (string) preg_replace( '/%d|%s/', $replacement, $query, 1 );
+		}
+
+		return $query;
+	}
+
+	public function get_var( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_var_result;
+	}
+
+	/**
+	 * @param array<string,mixed> $data
+	 * @param array<string,mixed> $where
+	 */
+	public function update( string $table, array $data, array $where, array $format = array(), array $where_format = array() ): int {
+		$this->updates[] = array(
+			'table' => $table,
+			'data'  => $data,
+			'where' => $where,
+		);
+
+		return 1;
+	}
+}
+
+$GLOBALS['wpdb'] = new Rytkoset_Test_WPDB();
+
 // ---------------------------------------------------------------------------
 // WordPress function stubs.
 // ---------------------------------------------------------------------------
@@ -460,6 +528,22 @@ if ( ! defined( 'DAY_IN_SECONDS' ) ) {
 
 function __( $text, $domain = 'default' ) {
 	return $text;
+}
+
+function esc_html__( $text, $domain = 'default' ) {
+	return esc_html( __( $text, $domain ) );
+}
+
+function esc_attr__( $text, $domain = 'default' ) {
+	return esc_attr( __( $text, $domain ) );
+}
+
+function esc_html_e( $text, $domain = 'default' ): void {
+	echo esc_html__( $text, $domain ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Test bootstrap escaping helper.
+}
+
+function esc_attr_e( $text, $domain = 'default' ): void {
+	echo esc_attr__( $text, $domain ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Test bootstrap escaping helper.
 }
 
 function is_wp_error( $thing ): bool {
@@ -498,6 +582,14 @@ function esc_html( $text ) {
 
 function esc_attr( $text ) {
 	return htmlspecialchars( (string) $text, ENT_QUOTES );
+}
+
+function esc_url( $url ) {
+	return (string) $url;
+}
+
+function wp_kses_post( $data ) {
+	return (string) $data;
 }
 
 function sanitize_key( $key ) {
@@ -583,6 +675,12 @@ function get_current_user_id(): int {
 
 function is_user_logged_in(): bool {
 	return get_current_user_id() > 0;
+}
+
+function wp_get_current_user(): WP_User {
+	$user = get_userdata( get_current_user_id() );
+
+	return $user instanceof WP_User ? $user : new WP_User();
 }
 
 function get_user_meta( $user_id, $key = '', $single = false ) {
@@ -990,6 +1088,16 @@ function update_option( $option, $value ): bool {
 	return true;
 }
 
+function delete_option( $option ): bool {
+	unset( $GLOBALS['rytkoset_test_options'][ $option ] );
+
+	return true;
+}
+
+function flush_rewrite_rules( $hard = true ): void {
+	++$GLOBALS['rytkoset_test_flush_rewrite_rules_count'];
+}
+
 function get_role( $role ) {
 	return $GLOBALS['rytkoset_test_roles'][ $role ] ?? null;
 }
@@ -1030,6 +1138,10 @@ function wp_strip_all_tags( $text, $remove_breaks = false ) {
 
 function has_shortcode( $content, $tag ): bool {
 	return is_string( $content ) && 1 === preg_match( '/\[' . preg_quote( $tag, '/' ) . '\b/', $content );
+}
+
+function shortcode_exists( $tag ): bool {
+	return 'acymailing_form_shortcode' === $tag;
 }
 
 function shortcode_parse_atts( $text ) {
@@ -1112,6 +1224,11 @@ function wc_add_notice( $message, $notice_type = 'success' ): void {
 	$GLOBALS['rytkoset_test_wc_notices'][ $notice_type . ':' . $message ] = true;
 }
 
+function wc_print_notice( $message, $notice_type = 'success' ): void {
+	wc_add_notice( $message, $notice_type );
+	echo '<div class="woocommerce-' . esc_attr( $notice_type ) . '">' . esc_html( $message ) . '</div>';
+}
+
 function wc_get_account_endpoint_url( $endpoint ): string {
 	$endpoint = trim( (string) $endpoint, '/' );
 	$slugs    = array(
@@ -1123,6 +1240,7 @@ function wc_get_account_endpoint_url( $endpoint ): string {
 		'payment-methods' => 'maksutavat',
 		'lost-password'   => 'unohtunut-salasana',
 		'customer-logout' => 'kirjaudu-ulos',
+		'rytkoset_newsletter' => 'uutiskirje',
 	);
 
 	return home_url( '/tili/' . ( $slugs[ $endpoint ] ?? $endpoint ) . '/' );

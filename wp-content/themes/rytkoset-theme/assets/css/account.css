@@ -778,6 +778,123 @@ body.woocommerce-account .woocommerce-MyAccount-content #account_display_name_de
   color: var(--color-text);
 }
 
+/* -----------------------------------------------------------------
+   Uutiskirjeen hallinta
+   ----------------------------------------------------------------- */
+
+.rytkoset-account-newsletter-card {
+  max-width: 620px;
+  padding: 24px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.rytkoset-account-newsletter-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--acct-divider);
+}
+
+.rytkoset-account-newsletter-card__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--acct-surface-alt);
+  color: var(--color-text-mute);
+}
+
+.rytkoset-account-newsletter-card__icon--success {
+  background: var(--acct-chip-done-bg);
+  color: var(--acct-chip-done-text);
+}
+
+.rytkoset-account-newsletter-card__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.rytkoset-account-newsletter-card__title {
+  margin: 0;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.rytkoset-account-newsletter-card__email {
+  margin: 4px 0 0;
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.rytkoset-account-newsletter-card__body {
+  padding-top: 18px;
+}
+
+.rytkoset-account-newsletter-card__body p {
+  max-width: 540px;
+  margin: 0 0 18px;
+  color: var(--color-text);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.rytkoset-account-newsletter-card__form {
+  margin: 0 0 12px;
+}
+
+body.woocommerce-account .rytkoset-account-newsletter-card__button {
+  min-height: 40px;
+  padding: 0.45rem 1.2rem;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+}
+
+body.woocommerce-account .rytkoset-account-newsletter-card__button--subscribe {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-primary-deeper);
+}
+
+body.woocommerce-account .rytkoset-account-newsletter-card__button--subscribe:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: var(--color-primary-deeper);
+}
+
+body.woocommerce-account .rytkoset-account-newsletter-card__button--unsubscribe {
+  background: transparent;
+  border-color: var(--acct-danger);
+  color: var(--acct-danger);
+}
+
+body.woocommerce-account .rytkoset-account-newsletter-card__button--unsubscribe:hover {
+  background: var(--acct-danger-bg);
+  border-color: var(--acct-danger);
+  color: var(--acct-danger);
+}
+
+body.woocommerce-account .rytkoset-account-newsletter-card__button:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 3px;
+}
+
+.rytkoset-account-newsletter-card__note,
+.rytkoset-account-newsletter-card__body .rytkoset-account-newsletter-card__note {
+  margin: 0;
+  color: var(--color-text-mute);
+  font-size: 0.82rem;
+}
+
 /* Salasanan näyttöpainike (WooCommercen oma silmäikoni) */
 body.woocommerce-account .woocommerce-MyAccount-content .password-input {
   position: relative;
@@ -882,6 +999,15 @@ body.woocommerce-account .woocommerce-MyAccount-content .show-password-input {
     display: block;
     width: 100%;
     margin-right: 0;
+  }
+
+  .rytkoset-account-newsletter-card {
+    max-width: none;
+    padding: 20px;
+  }
+
+  .rytkoset-account-newsletter-card__head {
+    gap: 12px;
   }
 
   /* Responsiivinen tilaustaulukko: rivit korteiksi. WooCommercen oma
