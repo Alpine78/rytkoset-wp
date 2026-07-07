@@ -151,7 +151,19 @@ if ( ! function_exists( 'rytkoset_theme_get_newsletter_form_list_ids' ) ) {
 			$list_ids = array_merge( $list_ids, array_map( 'absint', $settings['lists'][ $key ] ) );
 		}
 
-		return array_values( array_unique( array_filter( $list_ids ) ) );
+		return rytkoset_theme_normalize_newsletter_list_ids( $list_ids );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_normalize_newsletter_list_ids' ) ) {
+	/**
+	 * Normalizes AcyMailing newsletter list IDs.
+	 *
+	 * @param array<int|string> $list_ids Raw list IDs.
+	 * @return int[]
+	 */
+	function rytkoset_theme_normalize_newsletter_list_ids( $list_ids ) {
+		return array_values( array_unique( array_filter( array_map( 'absint', (array) $list_ids ) ) ) );
 	}
 }
 
@@ -193,7 +205,7 @@ if ( ! function_exists( 'rytkoset_theme_email_has_newsletter_subscription' ) ) {
 			$list_ids = rytkoset_theme_get_newsletter_list_ids();
 		}
 
-		$list_ids = array_values( array_unique( array_filter( array_map( 'absint', $list_ids ) ) ) );
+		$list_ids = rytkoset_theme_normalize_newsletter_list_ids( $list_ids );
 
 		if ( empty( $list_ids ) ) {
 			return false;
@@ -235,7 +247,7 @@ if ( ! function_exists( 'rytkoset_theme_current_user_has_newsletter_subscription
 			return false;
 		}
 
-		$list_ids = array_values( array_unique( array_filter( array_map( 'absint', $list_ids ) ) ) );
+		$list_ids = rytkoset_theme_normalize_newsletter_list_ids( $list_ids );
 
 		if ( empty( $list_ids ) ) {
 			return false;
@@ -291,7 +303,7 @@ if ( ! function_exists( 'rytkoset_theme_user_has_newsletter_subscription' ) ) {
 			$list_ids = rytkoset_theme_get_newsletter_list_ids();
 		}
 
-		$list_ids = array_values( array_unique( array_filter( array_map( 'absint', $list_ids ) ) ) );
+		$list_ids = rytkoset_theme_normalize_newsletter_list_ids( $list_ids );
 
 		if ( empty( $list_ids ) ) {
 			return false;
@@ -324,6 +336,47 @@ if ( ! function_exists( 'rytkoset_theme_user_has_newsletter_subscription' ) ) {
 		// phpcs:enable WordPress.DB.PreparedSQL, WordPress.DB.PreparedSQLPlaceholders
 
 		return $subscription_count > 0;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_newsletter_subscriber_id_from_record' ) ) {
+	/**
+	 * Resolves an AcyMailing subscriber ID from an API record.
+	 *
+	 * @param mixed $subscriber AcyMailing subscriber object or array.
+	 * @return int
+	 */
+	function rytkoset_theme_get_newsletter_subscriber_id_from_record( $subscriber ) {
+		if ( is_object( $subscriber ) && isset( $subscriber->id ) ) {
+			return absint( $subscriber->id );
+		}
+
+		if ( is_array( $subscriber ) && isset( $subscriber['id'] ) ) {
+			return absint( $subscriber['id'] );
+		}
+
+		return 0;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_newsletter_subscriber_id_by_email' ) ) {
+	/**
+	 * Resolves an AcyMailing subscriber ID by email address.
+	 *
+	 * @param string $email Email address.
+	 * @return int
+	 */
+	function rytkoset_theme_get_newsletter_subscriber_id_by_email( $email ) {
+		$email = sanitize_email( $email );
+
+		if ( '' === $email || ! is_email( $email ) || ! class_exists( '\AcyMailing\Classes\UserClass' ) ) {
+			return 0;
+		}
+
+		$user_class               = new \AcyMailing\Classes\UserClass();
+		$user_class->checkVisitor = false; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- AcyMailing public API property.
+
+		return rytkoset_theme_get_newsletter_subscriber_id_from_record( $user_class->getOneByEmail( $email ) );
 	}
 }
 
@@ -457,6 +510,69 @@ if ( ! function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
 			rytkoset_theme_log_newsletter_error( $source, $message );
 
 			return new WP_Error( 'acymailing_subscribe_failed', $message );
+		}
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_unsubscribe_email_from_newsletter' ) ) {
+	/**
+	 * Unsubscribes an email address from the configured AcyMailing newsletter list.
+	 *
+	 * The subscriber record is kept in AcyMailing. Only the configured newsletter
+	 * list subscription is marked unsubscribed through AcyMailing's own API.
+	 *
+	 * @param string $email    Email address.
+	 * @param string $source   Source workflow.
+	 * @param int[]  $list_ids Optional AcyMailing list IDs. Defaults to the configured newsletter lists.
+	 * @return true|WP_Error
+	 */
+	function rytkoset_theme_unsubscribe_email_from_newsletter( $email, $source = 'my_account', $list_ids = array() ) {
+		$email  = sanitize_email( $email );
+		$source = sanitize_key( $source );
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			return new WP_Error( 'invalid_email', __( 'Uutiskirjeen tilausta ei voitu perua virheellisen sähköpostiosoitteen takia.', 'rytkoset-theme' ) );
+		}
+
+		if ( empty( $list_ids ) ) {
+			$list_ids = rytkoset_theme_get_newsletter_list_ids();
+		}
+
+		$list_ids = rytkoset_theme_normalize_newsletter_list_ids( $list_ids );
+
+		if ( empty( $list_ids ) ) {
+			return new WP_Error( 'missing_newsletter_list', __( 'Uutiskirjeen kohdelistaa ei ole määritetty.', 'rytkoset-theme' ) );
+		}
+
+		if ( ! class_exists( '\AcyMailing\Classes\UserClass' ) ) {
+			return new WP_Error( 'acymailing_missing', __( 'AcyMailing ei ole käytettävissä.', 'rytkoset-theme' ) );
+		}
+
+		if ( function_exists( 'acym_setVar' ) ) {
+			acym_setVar( 'acy_source', $source );
+		}
+
+		$subscriber_id = rytkoset_theme_get_newsletter_subscriber_id_by_email( $email );
+
+		if ( 0 === $subscriber_id ) {
+			if ( ! rytkoset_theme_email_has_newsletter_subscription( $email, $list_ids ) ) {
+				return true;
+			}
+
+			return new WP_Error( 'acymailing_subscriber_missing', __( 'Uutiskirjeen tilaajaa ei löytynyt.', 'rytkoset-theme' ) );
+		}
+
+		$user_class               = new \AcyMailing\Classes\UserClass();
+		$user_class->checkVisitor = false; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- AcyMailing public API property.
+		$unsubscribed             = $user_class->unsubscribe( array( $subscriber_id ), $list_ids );
+
+		if ( ! $unsubscribed && rytkoset_theme_email_has_newsletter_subscription( $email, $list_ids ) ) {
+			$message = rytkoset_theme_get_newsletter_error_message( $user_class->errors, __( 'Uutiskirjeen peruminen epäonnistui.', 'rytkoset-theme' ) );
+			rytkoset_theme_log_newsletter_error( $source, $message );
+
+			return new WP_Error( 'acymailing_unsubscribe_failed', $message );
 		}
 
 		return true;

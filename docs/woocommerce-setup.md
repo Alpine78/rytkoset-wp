@@ -98,6 +98,12 @@ muutokset**, jotta rewrite-säännöt päivittyvät.
 | Salasana unohtunut | `unohtunut-salasana` |
 | Kirjaudu ulos | `kirjaudu-ulos` |
 
+Lisäksi teema rekisteröi oman Oma tili -endpointin uutiskirjeen hallintaan:
+
+| Endpoint-avain | Slug | Huomio |
+|---|---|---|
+| `rytkoset_newsletter` | `uutiskirje` | Teeman koodissa rekisteröity, ei WooCommercen admin-asetus. URL rakentuu `wc_get_account_endpoint_url()`-funktion kautta. |
+
 ## Huomio
 
 `Tilisiirto` on käytössä paikallisessa ympäristössä fallback-maksutapana. Mollie on dokumentoitu erillisenä testikäyttöönottona, mutta ennen tuotantokäyttöä asetukset, maksutavat, webhookit ja pankkitiedot on vielä tarkistettava dev- ja tuotantoympäristöissä erikseen.
