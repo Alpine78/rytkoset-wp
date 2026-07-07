@@ -294,7 +294,13 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$prompt = rytkoset_theme_chat_get_system_prompt();
 
 		$this->assertStringContainsString( 'lue_sivu-työkalu', $prompt );
-		$this->assertStringContainsString( 'Älä käytä työkalua, kun vastaus on jo annetuissa lähteissä.', $prompt );
+		$this->assertStringContainsString( 'Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä.', $prompt );
+		// Devissä havaitut ongelmat: työkalu jäi käyttämättä ja malli väitti,
+		// ettei sivulla näkyvää nimeä mainita sivustolla — ohjeen pidettävä
+		// työkalun kokeilu sallittuna ja kiellettävä tarkistamaton kielto.
+		$this->assertStringContainsString( 'työkalun kokeileminen ei ole kiellettyä arvaamista', $prompt );
+		$this->assertStringContainsString( 'Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita sivustolla', $prompt );
+		$this->assertStringContainsString( 'sallittu lähde', $prompt );
 	}
 
 	public function test_system_prompt_unchanged_when_tool_disabled(): void {
