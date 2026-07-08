@@ -149,6 +149,48 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'not_subscribed', rytkoset_theme_get_account_newsletter_status( 7, array( 3 ) ) );
 	}
 
+	public function test_login_redirect_excluded_endpoints_cover_lost_password_and_logout(): void {
+		$this->assertSame(
+			array( 'lost-password', 'customer-logout' ),
+			rytkoset_theme_get_account_login_redirect_excluded_endpoints()
+		);
+	}
+
+	public function test_login_redirect_needed_for_logged_out_visitor_on_account_page(): void {
+		$this->assertTrue(
+			rytkoset_theme_account_needs_login_redirect( false, true, '', array( 'lost-password', 'customer-logout' ) )
+		);
+	}
+
+	public function test_login_redirect_needed_on_deep_endpoint_not_in_exclusions(): void {
+		$this->assertTrue(
+			rytkoset_theme_account_needs_login_redirect( false, true, 'orders', array( 'lost-password', 'customer-logout' ) )
+		);
+	}
+
+	public function test_login_redirect_not_needed_when_logged_in(): void {
+		$this->assertFalse(
+			rytkoset_theme_account_needs_login_redirect( true, true, '', array( 'lost-password', 'customer-logout' ) )
+		);
+	}
+
+	public function test_login_redirect_not_needed_outside_account_page(): void {
+		$this->assertFalse(
+			rytkoset_theme_account_needs_login_redirect( false, false, '', array( 'lost-password', 'customer-logout' ) )
+		);
+	}
+
+	public function test_login_redirect_not_needed_on_excluded_endpoints(): void {
+		$excluded = array( 'lost-password', 'customer-logout' );
+
+		$this->assertFalse(
+			rytkoset_theme_account_needs_login_redirect( false, true, 'lost-password', $excluded )
+		);
+		$this->assertFalse(
+			rytkoset_theme_account_needs_login_redirect( false, true, 'customer-logout', $excluded )
+		);
+	}
+
 	public function test_newsletter_rewrite_rules_exist_when_slug_is_present(): void {
 		update_option(
 			'rewrite_rules',

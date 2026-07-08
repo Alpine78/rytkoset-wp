@@ -76,3 +76,6 @@ wp-content/ai1wm-backups/
 
 # LiteSpeed Cache plugin runtime/state (per-environment, regenerated)
 wp-content/litespeed/
+
+# Editor-local settings (e.g. personal MCP server config)
+/.vscode/

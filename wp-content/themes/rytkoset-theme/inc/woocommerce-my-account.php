@@ -13,6 +13,87 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! function_exists( 'rytkoset_theme_get_account_login_redirect_excluded_endpoints' ) ) {
+	/**
+	 * Palauttaa My Account -endpointit, joilta kirjautumatonta ei ohjata wp-loginiin.
+	 *
+	 * lost-password: WooCommercen salasanan palautus (myös reset-lomake
+	 * show-reset-form-parametrilla) elää tällä endpointilla ilman kirjautumista —
+	 * ohjaus katkaisisi sähköpostin palautuslinkin. customer-logout: WooCommerce
+	 * hoitaa kirjautumattoman uloskirjautujan ohjauksen itse.
+	 *
+	 * @return string[] Endpoint-avaimet.
+	 */
+	function rytkoset_theme_get_account_login_redirect_excluded_endpoints() {
+		return apply_filters(
+			'rytkoset_theme_account_login_redirect_excluded_endpoints',
+			array( 'lost-password', 'customer-logout' )
+		);
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_account_needs_login_redirect' ) ) {
+	/**
+	 * Päättää, ohjataanko kävijä Oma tili -sivulta wp-login-kirjautumissivulle (#512).
+	 *
+	 * @param bool     $is_logged_in       Onko käyttäjä kirjautunut.
+	 * @param bool     $is_account_page    Onko nykyinen sivu My Account -sivu.
+	 * @param string   $current_endpoint   Nykyinen My Account -endpoint-avain, tai '' jos ei endpointtia.
+	 * @param string[] $excluded_endpoints Endpointit, joilta ei ohjata.
+	 * @return bool
+	 */
+	function rytkoset_theme_account_needs_login_redirect( $is_logged_in, $is_account_page, $current_endpoint, $excluded_endpoints ) {
+		if ( $is_logged_in || ! $is_account_page ) {
+			return false;
+		}
+
+		if ( '' === (string) $current_endpoint ) {
+			return true;
+		}
+
+		return ! in_array( (string) $current_endpoint, array_map( 'strval', (array) $excluded_endpoints ), true );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_redirect_logged_out_account_page' ) ) {
+	/**
+	 * Ohjaa kirjautumattoman Oma tili -kävijän uudistetulle kirjautumissivulle (#512).
+	 *
+	 * WooCommercen tyylittelemättömän Kirjaudu/Rekisteröidy-lomakkeen sijaan
+	 * kävijä näkee teeman wp-login-uudistuksen (inc/login.php). Alkuperäinen
+	 * osoite (myös syvälinkit, esim. /oma-tili/tilaukset/) kulkee redirect_to-
+	 * parametrina, joten kirjautumisen jälkeen matka jatkuu oikeasta paikasta.
+	 */
+	function rytkoset_theme_redirect_logged_out_account_page() {
+		if ( ! function_exists( 'is_account_page' ) || ! function_exists( 'is_wc_endpoint_url' ) ) {
+			return;
+		}
+
+		$excluded_endpoints = rytkoset_theme_get_account_login_redirect_excluded_endpoints();
+		$current_endpoint   = '';
+
+		foreach ( (array) $excluded_endpoints as $endpoint ) {
+			if ( is_wc_endpoint_url( $endpoint ) ) {
+				$current_endpoint = (string) $endpoint;
+				break;
+			}
+		}
+
+		if ( ! rytkoset_theme_account_needs_login_redirect( is_user_logged_in(), is_account_page(), $current_endpoint, $excluded_endpoints ) ) {
+			return;
+		}
+
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$redirect    = '' !== $request_uri
+			? home_url( $request_uri )
+			: ( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/' ) );
+
+		wp_safe_redirect( wp_login_url( $redirect ) );
+		exit;
+	}
+}
+add_action( 'template_redirect', 'rytkoset_theme_redirect_logged_out_account_page' );
+
 if ( ! function_exists( 'rytkoset_theme_get_account_menu_item_icon' ) ) {
 	/**
 	 * Palauttaa My Account -valikkokohdan UI-ikonin nimen.
