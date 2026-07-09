@@ -57,6 +57,7 @@ require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';
 require_once get_template_directory() . '/inc/coming-soon.php';
 require_once get_template_directory() . '/inc/chat.php';
+require_once get_template_directory() . '/inc/legacy-redirects.php';
 
 /**
  * Returns the short display caption for an attachment.
