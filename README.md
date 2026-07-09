@@ -111,7 +111,7 @@ ominaisuusohjeet ovat hakemistossa `docs/`.
 
 Paikallinen ympäristö toimii Docker Composella.
 
-- Mitä tekee: käynnistää WordPressin, MariaDB:n ja valinnaisen Joomla-migraatiokannan.
+- Mitä tekee: käynnistää WordPressin ja MariaDB:n.
 - Kohde: paikallinen Docker-ympäristö.
 - Komento: `docker compose up -d`
 
@@ -129,7 +129,7 @@ Kontit:
 
 - `rytkoset-wp` - WordPress / PHP 8.3 / Apache
 - `rytkoset-db` - MariaDB 10.11 WordPressille
-- `rytkoset-joomla-db` - MariaDB 10.11 valinnaiseen Joomla-migraatiotyöhön
+- `wpcli` - pyydettäessä käynnistyvä WP-CLI-palvelu yksittäisiin komentoihin (ei käynnisty `docker compose up`:lla, `cli`-profiili). Käyttö: `docker compose run --rm wpcli wp <komento>`
 
 Vain `wp-content/` on mountattu hostilta konttiin. Teemamuutokset näkyvät ilman
 kontin uudelleenrakennusta.
@@ -142,20 +142,30 @@ Ensimmäinen käynnistys:
 
 ## Validointi
 
-Projektissa ei ole Node-pohjaista build-vaihetta.
+Projektissa ei ole Node-pohjaista build-vaihetta. `.github/workflows/php-ci.yml`
+ajaa jokaiselle PR:lle ja `main`-branchin pushille kolme kovaa porttia: PHP-syntaksitarkistuksen,
+PHPCS/WordPress Coding Standardsin ja PHPUnit-testit.
 
-Tarkista PHP-syntaksi ennen PR:ää tai deployta:
+PHP-syntaksitarkistus:
 
 - Mitä tekee: ajaa PHP-syntaksitarkistuksen kaikille teeman PHP-tiedostoille.
 - Kohde: `wp-content/themes/rytkoset-theme/`.
 - Komento: `find wp-content/themes/rytkoset-theme -name "*.php" -print0 | xargs -0 -n1 php -l`
 
-GitHub Actions ajaa saman tarkistuksen workflowlla `.github/workflows/php-ci.yml`
-pull requesteille ja `main`-branchin pusheille.
+PHPCS / WordPress Coding Standards ja PHPUnit-yksikkötestit ovat Composer-riippuvuuksia
+(`composer.json`, ainoa Composer-käyttö repossa; `vendor/` on gitignoroitu). PHPCS
+tarkistaa teeman lisäksi `wp-content/maintenance.php`- ja `wp-content/mu-plugins/`-polut,
+jotta versionhallinnassa olevat erilliset operointitiedostot eivät jää CI:n ulkopuolelle.
+PHPUnit-testit (`tests/`) ovat kevyitä yksikkötestejä ilman WordPress-testiasennusta —
+`tests/bootstrap.php` määrittelee juuri sen verran WordPress/WooCommerce-stubeja, että
+teeman moduulit latautuvat ilman tietokantaa.
 
-PHPCS / WordPress Coding Standards tarkistaa teeman lisäksi `wp-content/maintenance.php`-
-ja `wp-content/mu-plugins/`-polut, jotta versionhallinnassa olevat erilliset
-operointitiedostot eivät jää CI:n ulkopuolelle.
+- Asennus (kertaalleen): `composer install`
+- Lint: `composer run lint` (`composer run lint:fix` korjaa automaattisesti osan löydöksistä)
+- Testit: `composer run test`
+
+Jos PHP ei ole asennettuna paikallisesti, komennot voi ajaa Dockerin kautta, esim.
+`docker compose run --rm -v "$PWD":/app -w /app --entrypoint sh wordpress -lc 'vendor/bin/phpunit'`.
 
 ## Branchit ja deployt
 
@@ -210,19 +220,43 @@ SEO-metatiedot, some-linkit ja Customizer-asetukset.
 Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 
 - `docs/design-system.md` - design-tokenit ja frontend-käytännöt
+- `docs/menu-structure.md` - päävalikon tavoiterakenne
+- `docs/comments.md` - blogin ja albumien kommentointi
 - `docs/events.md` - tapahtuma-CPT ja ilmoittautumisvirta
-- `docs/digital-magazines.md` - digilehtien sisältömalli ja julkinen näkymä
 - `docs/event-participants-admin.md` - osallistujahallinta
 - `docs/event-participants-messaging.md` - tapahtumaviestien lähetysjono
-- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
 - `docs/media-saavutettavuus.md` - median ja gallerioiden saavutettavuus
+- `docs/media-library-ordering.md` - mediakirjaston ja albumien kuvajärjestys
+- `docs/digital-magazines.md` - digilehtien sisältömalli ja julkinen näkymä
+- `docs/digilehdet.md` - digilehtien käyttöoikeus- ja hinnoittelumalli
+- `docs/jasenyys.md` - käyttäjän jäsenyystilan asettaminen
+- `docs/jasenille-rajatut-sivut.md` - vain jäsenille näkyvät sisältösivut
+- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
+- `docs/chat.md` - AI-tukichatin backend-proxy, widget ja ylläpito
 - `docs/woocommerce-setup.md` - WooCommercen perusasetukset
 - `docs/woocommerce-membership-products.md` - jäsenmaksutuotteet
+- `docs/woocommerce-jasenalennus.md` - jäsenyyteen sidottu alennuskuponki
+- `docs/woocommerce-physical-products.md` - fyysisten tuotteiden MVP-malli
+- `docs/woocommerce-digital-products.md` - digitaalisten tuotteiden MVP-malli
+- `docs/woocommerce-rytkosten-sukulainen-product.md` - painetun jäsenlehden tuotemalli
+- `docs/woocommerce-product-sync.md` - tuotteiden synkronointi ympäristöjen välillä
+- `docs/woocommerce-event-product-link.md` - tapahtuman linkitys maksutuotteeseen
+- `docs/woocommerce-tampere-2026-product.md` - Tampere 2026 -osallistumismaksutuote
+- `docs/woocommerce-tampere-2026-checkout-fields.md` - Tampere 2026 checkout-kentät
 - `docs/woocommerce-tampere-2026-management.md` - Tampere 2026 -hallinta
+- `docs/woocommerce-tampere-2026-notifications.md` - maksullisten tapahtumien järjestäjäilmoitukset
+- `docs/woocommerce-tampere-2026-bussikyyti.md` - bussikyydin ilmoittautuminen ja maksu jälkikäteen
 - `docs/woocommerce-mollie-payments.md` - Mollie-maksut
+- `docs/woocommerce-mollie-go-live.md` - Mollie dev→live-käyttöönotto ja hyväksymistestaus
+- `docs/woocommerce-mollie-mobilepay.md` - Mollie MobilePay-käyttöönotto
+- `docs/woocommerce-peruutus.md` - tilauksen itsepalveluperuutus
 - `docs/woocommerce-saavutettavuus.md` - WooCommerce-saavutettavuus
+- `docs/saavutettavuus-analyysi.md` - koko sivuston WCAG 2.1 AA -analyysi
 - `docs/tietosuoja.md` - tietosuojamuistiinpanot
-- `docs/migration-guide.md` - migraatiomuistiinpanot
+- `docs/tietoturva.md` - tietoturvakovennukset
+- `docs/maksu-ja-toimitusehdot.md` - kaupan maksu- ja toimitusehdot (versionoitu sivukopio)
+- `docs/rekisteriseloste.md` - sukututkimusrekisterin rekisteriseloste (versionoitu sivukopio)
+- `docs/local-dev-wsl.md` - paikallinen kehitys Windowsilla WSL2:lla ilman Docker Desktopia
 
 ## Muu repo-dokumentaatio
 
@@ -231,10 +265,3 @@ Muut repo-ohjeet ovat erillisissä tiedostoissa:
 - `AGENTS.md` - AI-avusteisen kehityksen säännöt ja projektin kehitysperiaatteet
 - `CONTRIBUTING.md` - commit-viestien formaatti
 - `CLAUDE.md` - Claude Coden tekninen ohjeistus
-
-## Valinnainen Joomla-migraatiokanta
-
-`joomla-db`-kontti on olemassa vain migraatiotyötä varten. Se ei kuulu normaaliin
-teemakehitykseen.
-
-Lue `docs/migration-guide.md` ennen kuin muutat tähän liittyviä asioita.

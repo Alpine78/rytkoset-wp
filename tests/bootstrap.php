@@ -1169,7 +1169,29 @@ function wp_date( $format, $timestamp = null, $timezone = null ) {
 }
 
 function wp_parse_url( $url, $component = -1 ) {
-	return parse_url( (string) $url );
+	$parsed = parse_url( (string) $url );
+
+	if ( -1 === $component ) {
+		return $parsed;
+	}
+
+	if ( false === $parsed ) {
+		return null;
+	}
+
+	$keys = array(
+		PHP_URL_SCHEME   => 'scheme',
+		PHP_URL_HOST     => 'host',
+		PHP_URL_PORT     => 'port',
+		PHP_URL_USER     => 'user',
+		PHP_URL_PASS     => 'pass',
+		PHP_URL_PATH     => 'path',
+		PHP_URL_QUERY    => 'query',
+		PHP_URL_FRAGMENT => 'fragment',
+	);
+	$key  = $keys[ $component ] ?? null;
+
+	return ( $key && isset( $parsed[ $key ] ) ) ? $parsed[ $key ] : null;
 }
 
 function add_query_arg( $args, $url ) {
@@ -1200,6 +1222,18 @@ function get_theme_mod( $name, $default_value = false ) {
 	}
 
 	return $GLOBALS['rytkoset_test_options'][ 'theme_mod_' . $name ] ?? $default_value;
+}
+
+function wp_login_url( $redirect = '' ): string {
+	return home_url( '/wp-login.php' ) . ( '' !== $redirect ? '?redirect_to=' . rawurlencode( $redirect ) : '' );
+}
+
+function wp_registration_url(): string {
+	return home_url( '/wp-login.php?action=register' );
+}
+
+function wp_lostpassword_url( $redirect = '' ): string {
+	return home_url( '/wp-login.php?action=lostpassword' ) . ( '' !== $redirect ? '&redirect_to=' . rawurlencode( $redirect ) : '' );
 }
 
 function home_url( $path = '' ) {
