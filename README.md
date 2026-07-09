@@ -111,7 +111,7 @@ ominaisuusohjeet ovat hakemistossa `docs/`.
 
 Paikallinen ympäristö toimii Docker Composella.
 
-- Mitä tekee: käynnistää WordPressin, MariaDB:n ja valinnaisen Joomla-migraatiokannan.
+- Mitä tekee: käynnistää WordPressin ja MariaDB:n.
 - Kohde: paikallinen Docker-ympäristö.
 - Komento: `docker compose up -d`
 
@@ -129,7 +129,6 @@ Kontit:
 
 - `rytkoset-wp` - WordPress / PHP 8.3 / Apache
 - `rytkoset-db` - MariaDB 10.11 WordPressille
-- `rytkoset-joomla-db` - MariaDB 10.11 valinnaiseen Joomla-migraatiotyöhön
 - `wpcli` - pyydettäessä käynnistyvä WP-CLI-palvelu yksittäisiin komentoihin (ei käynnisty `docker compose up`:lla, `cli`-profiili). Käyttö: `docker compose run --rm wpcli wp <komento>`
 
 Vain `wp-content/` on mountattu hostilta konttiin. Teemamuutokset näkyvät ilman
@@ -257,7 +256,6 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/tietoturva.md` - tietoturvakovennukset
 - `docs/maksu-ja-toimitusehdot.md` - kaupan maksu- ja toimitusehdot (versionoitu sivukopio)
 - `docs/rekisteriseloste.md` - sukututkimusrekisterin rekisteriseloste (versionoitu sivukopio)
-- `docs/migration-guide.md` - migraatiomuistiinpanot
 - `docs/local-dev-wsl.md` - paikallinen kehitys Windowsilla WSL2:lla ilman Docker Desktopia
 
 ## Muu repo-dokumentaatio
@@ -267,10 +265,3 @@ Muut repo-ohjeet ovat erillisissä tiedostoissa:
 - `AGENTS.md` - AI-avusteisen kehityksen säännöt ja projektin kehitysperiaatteet
 - `CONTRIBUTING.md` - commit-viestien formaatti
 - `CLAUDE.md` - Claude Coden tekninen ohjeistus
-
-## Valinnainen Joomla-migraatiokanta
-
-`joomla-db`-kontti on olemassa vain migraatiotyötä varten. Se ei kuulu normaaliin
-teemakehitykseen.
-
-Lue `docs/migration-guide.md` ennen kuin muutat tähän liittyviä asioita.
