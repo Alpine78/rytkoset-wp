@@ -134,13 +134,34 @@ ylläpitonäkymä. Logiikka on moduulissa
 
 **Erityistilanteet:**
 
-- **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Tilaukselle kirjataan aikaleima `_rytkoset_membership_order_processed`.
-- **Ei käyttäjää:** vierasostokset tai tilaukset, joita ei voida yhdistää WordPress-käyttäjään, saavat tilausmuistiinpanon ylläpitäjälle manuaalista vientiä varten.
+- **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Käyttäjään yhdistetty tilaus saa aikaleiman `_rytkoset_membership_order_processed`; ilman tiliä jäänyt tilaus merkitään sen sijaan odottamaan tilikytkentää (ks. seuraava kohta).
+- **Ei käyttäjää (#518):** vierasostos, jonka laskutussähköpostilla ei ole tiliä, jää odottamaan tilikytkentää (order meta `_rytkoset_membership_awaiting_account`, `processed`-metaa ei aseteta). Ostajalle lähetetään laskutussähköpostiin suomenkielinen "luo tili" -viesti (kertaalleen per tilaus, merkintä `_rytkoset_membership_account_notice_sent`): jäsenmaksu on vastaanotettu, jäsenedut vaativat tilin ja tili kannattaa luoda samalla sähköpostiosoitteella, jolloin jäsenyys aktivoituu automaattisesti. Tilaukseen kirjataan aina myös muistiinpano ylläpitäjälle; jos laskutussähköposti puuttuu tai on epäkelpo, viestiä ei lähetetä ja jäljelle jää vain muistiinpano.
 - **Jäsenyyttä ei lyhennetä:** jos käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys (ainaisjäsen, tai aktiivinen määräaikainen jäsenyys jonka voimassaolopäivä on sama tai myöhäisempi), ostoa ei sovelleta ja tilaukseen kirjataan muistiinpano. Tämä estää vahingossa ostetun lyhyemmän jäsenyyden lyhentämästä voimassa olevaa jäsenyyttä.
 - **Puuttuva tyyppi:** jos jäsenmaksutuotteelta puuttuu jäsenmaksun tyyppi, jäsenyyttä ei voida määrittää ja tilaukseen kirjataan muistiinpano ylläpitäjälle.
 - **Puuttuva voimassaolopäivä:** jos vuosi-/perhejäsentuotteelta puuttuu **Jäsenyys voimassa asti** -päivä, jäsenyyttä ei voida aktivoida. Tyyppi tallennetaan, mutta jäsenyys ei aktivoidu (fail closed) eikä kuittaussähköpostia lähetetä; tilaukseen kirjataan muistiinpano, jossa pyydetään asettamaan voimassaolopäivä käyttäjähallinnassa.
 
 Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
+
+## Automaattinen kytkentä tilin luonnin yhteydessä (#518)
+
+Kun uusi käyttäjätili luodaan (`user_register`-hook), teema etsii käyttäjän
+sähköpostilla maksetut (`processing`/`completed`) jäsenmaksutilaukset, jotka
+odottavat tilikytkentää, ja ajaa niille saman jäsenyyden sovelluslogiikan kuin
+tilaussiirtymissä. Käytännössä: vierasostaja, joka sai "luo tili" -viestin ja
+rekisteröityy samalla sähköpostiosoitteella, saa jäsenyyden automaattisesti —
+vahvistusviesti (`#390`) lähtee ja tilaukseen kirjataan muistiinpano.
+
+Huomioita:
+
+- Vain odottavassa tilassa olevat tilaukset käsitellään (`awaiting`-meta
+  asetettu, `processed`-meta tyhjä). Jo sovellettuja tai ennen tätä ominaisuutta
+  käsiteltyjä tilauksia ei käsitellä uudelleen.
+- "Jäsenyyttä ei koskaan lyhennetä" -sääntö pätee myös tätä kautta.
+- Turvallisuus: WordPressin rekisteröinti varmistaa sähköpostiosoitteen
+  hallinnan salasanan asetuslinkillä, joten jäsenyys ei päädy väärälle
+  henkilölle, vaikka joku rekisteröisi tilin toisen sähköpostilla.
+- Perhejäsenyyden jäsenrivien (jäsenet 2–6) kytkentä ei kuulu tähän — tämä
+  koskee vain ostajaa/laskutussähköpostia (jatko: `#519`, `#524`).
 
 ## Rajaus
 
