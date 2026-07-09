@@ -1397,7 +1397,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 	if ( 'lifetime' !== $membership['type'] ) {
 		$current_covers_new = 'lifetime' === $current['type']
 			|| (
-				rytkoset_theme_user_is_active_member( $user_id )
+				rytkoset_theme_user_has_own_active_membership( $user_id )
 				&& '' !== $current['expires']
 				&& '' !== $membership['expires']
 				&& $current['expires'] >= $membership['expires']
@@ -1413,7 +1413,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		}
 	}
 
-	$was_active  = rytkoset_theme_user_is_active_member( $user_id );
+	$was_active  = rytkoset_theme_user_has_own_active_membership( $user_id );
 	$type_key    = rytkoset_theme_get_user_membership_type_meta_key();
 	$period_key  = rytkoset_theme_get_user_membership_period_meta_key();
 	$expires_key = rytkoset_theme_get_user_membership_expires_meta_key();
@@ -1456,7 +1456,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		);
 	}
 
-	$is_now_active = rytkoset_theme_user_is_active_member( $user_id );
+	$is_now_active = rytkoset_theme_user_has_own_active_membership( $user_id );
 
 	// A time-bound membership that cannot be activated (the product has no expiry date set) is
 	// stored but flagged so an admin sets the expiry date manually.

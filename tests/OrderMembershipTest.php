@@ -128,6 +128,41 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
 	}
 
+	public function test_apply_sends_confirmation_when_user_only_inherits_family_membership(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+		rytkoset_test_register_user( 80, 'paakayttaja@rytkoset.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 81, 'lapsi@rytkoset.test', 'Lapsi' );
+		update_user_meta( 80, rytkoset_theme_get_user_membership_type_meta_key(), 'family' );
+		update_user_meta( 80, rytkoset_theme_get_user_membership_period_meta_key(), '2026-2029' );
+		update_user_meta( 80, rytkoset_theme_get_user_membership_expires_meta_key(), '2029-12-31' );
+		rytkoset_theme_update_family_members(
+			80,
+			array(
+				array(
+					'name'           => 'Lapsi',
+					'email'          => 'lapsi@rytkoset.test',
+					'linked_user_id' => 81,
+					'status'         => 'active',
+				),
+			)
+		);
+
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 81 ) );
+		$this->assertFalse( rytkoset_theme_user_has_own_active_membership( 81 ) );
+
+		$order = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2030-12-31', '2026-2030' ) ),
+			81
+		);
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( 'annual', rytkoset_theme_get_user_membership( 81 )['type'] );
+		$this->assertTrue( rytkoset_theme_user_has_own_active_membership( 81 ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'], 'Inherited family membership must not suppress the own-membership confirmation.' );
+		$this->assertSame( 'lapsi@rytkoset.test', $GLOBALS['rytkoset_test_mails'][0]['to'] );
+	}
+
 	public function test_apply_resolves_guest_order_by_billing_email(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
 		rytkoset_test_register_user( 11, 'match@rytkoset.test', 'Match' );
