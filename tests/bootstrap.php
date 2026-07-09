@@ -976,6 +976,34 @@ function wc_get_order( $order_id ) {
 	return $GLOBALS['rytkoset_test_orders'][ (int) $order_id ] ?? false;
 }
 
+/**
+ * Minimal wc_get_orders(): supports billing_email (case-insensitive), status and limit
+ * against the rytkoset_test_orders registry. Enough for the #518 registration-time
+ * membership order lookup.
+ */
+function wc_get_orders( $args = array() ) {
+	$matches = array();
+
+	foreach ( $GLOBALS['rytkoset_test_orders'] as $order ) {
+		if ( isset( $args['billing_email'] )
+			&& 0 !== strcasecmp( $order->get_billing_email(), (string) $args['billing_email'] ) ) {
+			continue;
+		}
+
+		if ( isset( $args['status'] ) && ! in_array( $order->get_status(), (array) $args['status'], true ) ) {
+			continue;
+		}
+
+		$matches[] = $order;
+	}
+
+	if ( isset( $args['limit'] ) && (int) $args['limit'] > 0 ) {
+		$matches = array_slice( $matches, 0, (int) $args['limit'] );
+	}
+
+	return $matches;
+}
+
 function wc_customer_bought_product( $email, $user_id, $product_id ): bool {
 	return ! empty( $GLOBALS['rytkoset_test_bought'][ (int) $user_id . ':' . (int) $product_id ] );
 }

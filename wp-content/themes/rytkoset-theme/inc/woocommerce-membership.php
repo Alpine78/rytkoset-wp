@@ -1182,6 +1182,10 @@ function rytkoset_theme_resolve_order_membership( $membership_items ) {
 /**
  * Returns the order meta key used to mark a membership order as processed.
  *
+ * Set only when the order could be matched to a WordPress user (whether or not
+ * the membership was ultimately applied). A guest order without an account is
+ * marked awaiting instead (#518) so a later registration can still apply it.
+ *
  * @return string
  */
 function rytkoset_theme_get_membership_order_processed_meta_key() {
@@ -1189,10 +1193,149 @@ function rytkoset_theme_get_membership_order_processed_meta_key() {
 }
 
 /**
+ * Returns the order meta key marking a guest membership order as awaiting a site account (#518).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_awaiting_account_meta_key() {
+	return '_rytkoset_membership_awaiting_account';
+}
+
+/**
+ * Returns the order meta key marking that the "create an account" notice email was sent (#518).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_account_notice_sent_meta_key() {
+	return '_rytkoset_membership_account_notice_sent';
+}
+
+/**
+ * Returns true when a membership order is still awaiting a site account (#518).
+ *
+ * Awaiting = the guest path marked the order, and no user-matched processing has
+ * locked it via the processed meta.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return bool
+ */
+function rytkoset_theme_order_membership_is_awaiting_account( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	return '' !== (string) $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key(), true )
+		&& '' === (string) $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key(), true );
+}
+
+/**
+ * Sends the "create an account" notice to a guest membership buyer (#518).
+ *
+ * Plain-text Finnish email to the billing address: the membership fee was
+ * received, member benefits need a site account, and registering with this
+ * same email address activates the membership automatically. Sender comes
+ * from the inc/email.php wp_mail filters.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return bool True when the email was sent.
+ */
+function rytkoset_theme_send_membership_account_notice_email( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	$email = trim( (string) $order->get_billing_email() );
+
+	if ( ! is_email( $email ) ) {
+		return false;
+	}
+
+	$subject = __( 'Jäsenmaksusi on vastaanotettu – luo tili jäsenetuja varten', 'rytkoset-theme' );
+
+	$lines = array(
+		__( 'Hei,', 'rytkoset-theme' ),
+		'',
+		__( 'kiitos! Jäsenmaksusi Rytkösten sukuseura ry:lle on vastaanotettu.', 'rytkoset-theme' ),
+		'',
+		__( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat käyttäjätilin. Jäsenyytesi automaattinen aktivointi odottaa, että sinulla on tili sivustolla.', 'rytkoset-theme' ),
+		'',
+		sprintf(
+			/* translators: %s: buyer's billing email address. */
+			__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin jäsenyytesi aktivoituu automaattisesti:', 'rytkoset-theme' ),
+			$email
+		),
+		wp_registration_url(),
+	);
+
+	$contact_email = rytkoset_theme_get_contact_email();
+
+	$lines[] = '';
+
+	if ( is_email( $contact_email ) ) {
+		$lines[] = sprintf(
+			/* translators: %s: association contact email address. */
+			__( 'Kysymyksissä voit olla yhteydessä: %s', 'rytkoset-theme' ),
+			$contact_email
+		);
+		$lines[] = '';
+	}
+
+	$lines[] = __( 'Terveisin', 'rytkoset-theme' );
+	$lines[] = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+	return wp_mail(
+		$email,
+		$subject,
+		implode( "\n", $lines ),
+		array( 'Content-Type: text/plain; charset=UTF-8' )
+	);
+}
+
+/**
+ * Marks a guest membership order as awaiting a site account (#518).
+ *
+ * The processed meta is intentionally not set, so a later registration with the
+ * same billing email can still apply the membership. Runs once per order:
+ * repeated processing/completed transitions return without a new note or email.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_mark_membership_order_awaiting_account( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+
+	if ( '' !== (string) $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key(), true ) ) {
+		return;
+	}
+
+	$order->update_meta_data( rytkoset_theme_get_membership_awaiting_account_meta_key(), current_time( 'mysql' ) );
+
+	if ( rytkoset_theme_send_membership_account_notice_email( $order ) ) {
+		$order->update_meta_data( rytkoset_theme_get_membership_account_notice_sent_meta_key(), current_time( 'mysql' ) );
+		$order->add_order_note(
+			__( 'Jäsenmaksutilausta ei voitu yhdistää WordPress-käyttäjään. Ostajalle lähetettiin laskutussähköpostiin ohje luoda tili: jäsenyys kytkeytyy automaattisesti, kun tili luodaan samalla sähköpostiosoitteella. Tarvittaessa jäsenyyden voi asettaa manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			false
+		);
+	} else {
+		$order->add_order_note(
+			__( 'Jäsenmaksutilausta ei voitu yhdistää WordPress-käyttäjään, eikä ostajalle voitu lähettää ohjetta tilin luontiin, koska laskutussähköposti puuttuu tai on epäkelpo. Tarkista ja aseta jäsenyystiedot manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			false
+		);
+	}
+
+	$order->save();
+}
+
+/**
  * Applies membership from a WooCommerce order to the associated WordPress user.
  *
  * Idempotent: a processed order is marked with order meta so status transitions
  * (e.g. on-hold → processing → completed) do not apply the membership twice.
+ * A guest order without a matching account is marked awaiting instead of
+ * processed (#518), so a later registration with the same billing email can
+ * still run this function successfully.
  *
  * @param WC_Order $order WooCommerce order object.
  * @return void
@@ -1228,16 +1371,12 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		}
 	}
 
-	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
-
 	if ( ! $user_id ) {
-		$order->add_order_note(
-			__( 'Jäsenmaksun automaattinen jäsenyystilan päivitys ohitettiin: tilausta ei voitu yhdistää WordPress-käyttäjään. Tarkista ja aseta jäsenyystiedot manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
-			false
-		);
-		$order->save();
+		rytkoset_theme_mark_membership_order_awaiting_account( $order );
 		return;
 	}
+
+	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
 
 	$membership = rytkoset_theme_resolve_order_membership( $membership_items );
 
@@ -1353,3 +1492,61 @@ function rytkoset_theme_maybe_apply_membership_from_order( $order_id, $order ) {
 }
 add_action( 'woocommerce_order_status_processing', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
 add_action( 'woocommerce_order_status_completed', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
+
+// ---------------------------------------------------------------------------
+// Membership linking on account registration (#518)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns paid membership orders awaiting an account for a billing email (#518).
+ *
+ * @param string $email Billing email address.
+ * @return WC_Order[]
+ */
+function rytkoset_theme_get_awaiting_membership_orders_for_email( $email ) {
+	$email = trim( (string) $email );
+
+	if ( ! is_email( $email ) || ! function_exists( 'wc_get_orders' ) ) {
+		return array();
+	}
+
+	$orders = wc_get_orders(
+		array(
+			'billing_email' => $email,
+			'status'        => array( 'processing', 'completed' ),
+			'limit'         => -1,
+			'return'        => 'objects',
+		)
+	);
+
+	if ( ! is_array( $orders ) ) {
+		return array();
+	}
+
+	return array_values( array_filter( $orders, 'rytkoset_theme_order_membership_is_awaiting_account' ) );
+}
+
+/**
+ * Applies awaiting guest membership orders when a new account is registered (#518).
+ *
+ * WordPress registration verifies control of the email address via the password
+ * set link, so the membership cannot be used by the wrong person. Each awaiting
+ * order goes through the same apply path (never-shorten rule, confirmation
+ * email, order note) as a normal status transition; the apply resolves the new
+ * user by billing email.
+ *
+ * @param int $user_id Newly registered user ID.
+ * @return void
+ */
+function rytkoset_theme_apply_membership_on_user_register( $user_id ) {
+	$user = get_userdata( (int) $user_id );
+
+	if ( ! $user instanceof WP_User ) {
+		return;
+	}
+
+	foreach ( rytkoset_theme_get_awaiting_membership_orders_for_email( (string) $user->user_email ) as $order ) {
+		rytkoset_theme_apply_membership_from_order( $order );
+	}
+}
+add_action( 'user_register', 'rytkoset_theme_apply_membership_on_user_register' );

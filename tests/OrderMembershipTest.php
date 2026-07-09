@@ -141,9 +141,13 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		rytkoset_theme_apply_membership_from_order( $order );
 
 		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 11 )['type'] );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key() ), 'A matched guest order must not be marked awaiting an account.' );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'], 'Only the membership confirmation email, no create-account notice.' );
 	}
 
-	public function test_apply_leaves_note_for_unmatched_guest(): void {
+	// --- Guest order awaiting an account (#518) -------------------------------
+
+	public function test_apply_marks_unmatched_guest_awaiting_and_sends_notice(): void {
 		$order = $this->membership_order(
 			array( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ) ),
 			0,
@@ -152,8 +156,126 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 
 		rytkoset_theme_apply_membership_from_order( $order );
 
-		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ), 'The processed meta must not lock an order awaiting an account.' );
+		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key() ) );
+		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_membership_account_notice_sent_meta_key() ) );
+		$this->assertTrue( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
 		$this->assertNotEmpty( $order->notes );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertSame( 'nobody@rytkoset.test', $GLOBALS['rytkoset_test_mails'][0]['to'] );
+		$this->assertStringContainsString( wp_registration_url(), $GLOBALS['rytkoset_test_mails'][0]['message'] );
+	}
+
+	public function test_apply_skips_notice_email_without_valid_billing_email(): void {
+		$order = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ) ),
+			0,
+			'not-an-email'
+		);
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertTrue( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_account_notice_sent_meta_key() ) );
+		$this->assertNotEmpty( $order->notes, 'The admin note is still added when the notice email cannot be sent.' );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
+	}
+
+	public function test_apply_does_not_repeat_notice_on_reprocessing(): void {
+		$order = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ) ),
+			0,
+			'nobody@rytkoset.test'
+		);
+
+		rytkoset_theme_apply_membership_from_order( $order );
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertCount( 1, $order->notes );
+	}
+
+	public function test_awaiting_account_state_requires_awaiting_meta_without_processed(): void {
+		$order = $this->membership_order( array(), 0 );
+		$this->assertFalse( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+
+		$order->update_meta_data( rytkoset_theme_get_membership_awaiting_account_meta_key(), '2026-07-01 12:00:00' );
+		$this->assertTrue( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+
+		$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), '2026-07-02 12:00:00' );
+		$this->assertFalse( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+
+		$this->assertFalse( rytkoset_theme_order_membership_is_awaiting_account( null ) );
+	}
+
+	// --- Membership linking on account registration (#518) --------------------
+
+	public function test_registration_applies_awaiting_membership_order(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ) ),
+			0,
+			'uusi@rytkoset.test'
+		);
+		$order->status = 'processing';
+
+		rytkoset_theme_apply_membership_from_order( $order );
+		$GLOBALS['rytkoset_test_orders'][1] = $order;
+		$mails_before_registration          = count( $GLOBALS['rytkoset_test_mails'] );
+
+		rytkoset_test_register_user( 30, 'uusi@rytkoset.test', 'Uusi' );
+		rytkoset_theme_apply_membership_on_user_register( 30 );
+
+		$this->assertSame( 'annual', rytkoset_theme_get_user_membership( 30 )['type'] );
+		$this->assertSame( '2029-12-31', rytkoset_theme_get_user_membership( 30 )['expires'] );
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 30 ) );
+		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
+		$this->assertFalse( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+		$this->assertCount( 2, $order->notes, 'The awaiting note plus the applied note.' );
+		$this->assertSame( $mails_before_registration + 1, count( $GLOBALS['rytkoset_test_mails'] ), 'The membership confirmation email (#390) is sent on linking.' );
+		$this->assertSame( 'uusi@rytkoset.test', $GLOBALS['rytkoset_test_mails'][ $mails_before_registration ]['to'] );
+	}
+
+	public function test_registration_ignores_processed_and_wrong_status_orders(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		$processed         = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ) ),
+			0,
+			'valmis@rytkoset.test'
+		);
+		$processed->status = 'processing';
+		$processed->update_meta_data( rytkoset_theme_get_membership_awaiting_account_meta_key(), '2026-06-01 12:00:00' );
+		$processed->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), '2026-06-01 12:00:00' );
+
+		$refunded         = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ) ),
+			0,
+			'valmis@rytkoset.test'
+		);
+		$refunded->status = 'refunded';
+		$refunded->update_meta_data( rytkoset_theme_get_membership_awaiting_account_meta_key(), '2026-06-01 12:00:00' );
+
+		$GLOBALS['rytkoset_test_orders'] = array(
+			1 => $processed,
+			2 => $refunded,
+		);
+
+		rytkoset_test_register_user( 31, 'valmis@rytkoset.test', 'Valmis' );
+		rytkoset_theme_apply_membership_on_user_register( 31 );
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 31 )['type'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
+	}
+
+	public function test_registration_without_membership_orders_changes_nothing(): void {
+		rytkoset_test_register_user( 32, 'tyhja@rytkoset.test', 'Tyhja' );
+
+		rytkoset_theme_apply_membership_on_user_register( 32 );
+		rytkoset_theme_apply_membership_on_user_register( 999 ); // unknown user
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 32 )['type'] );
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
 	}
 
