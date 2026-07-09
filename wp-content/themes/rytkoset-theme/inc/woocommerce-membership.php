@@ -908,6 +908,122 @@ function rytkoset_theme_register_membership_checkout_fields() {
 add_action( 'woocommerce_init', 'rytkoset_theme_register_membership_checkout_fields' );
 
 /**
+ * Returns the prefill name for member row 1 from a user's profile.
+ *
+ * Prefers the profile first and last name; falls back to the display name.
+ *
+ * @param WP_User|null $user User object.
+ * @return string Prefill name, or an empty string when none is available.
+ */
+function rytkoset_theme_get_membership_member_prefill_name( $user ) {
+	if ( ! $user instanceof WP_User || ! $user->exists() ) {
+		return '';
+	}
+
+	$first_name = trim( (string) get_user_meta( $user->ID, 'first_name', true ) );
+	$last_name  = trim( (string) get_user_meta( $user->ID, 'last_name', true ) );
+	$name       = trim( $first_name . ' ' . $last_name );
+
+	if ( '' === $name ) {
+		$name = trim( (string) $user->display_name );
+	}
+
+	return $name;
+}
+
+/**
+ * Returns the prefill email for member row 1 from a user's account email.
+ *
+ * @param WP_User|null $user User object.
+ * @return string Prefill email, or an empty string when none is available.
+ */
+function rytkoset_theme_get_membership_member_prefill_email( $user ) {
+	if ( ! $user instanceof WP_User || ! $user->exists() ) {
+		return '';
+	}
+
+	$email = trim( (string) $user->user_email );
+
+	return is_email( $email ) ? $email : '';
+}
+
+/**
+ * Returns true when member row 1 may be prefilled in the current request.
+ *
+ * @return bool
+ */
+function rytkoset_theme_membership_member_prefill_is_available() {
+	if ( is_admin() || ! is_user_logged_in() ) {
+		return false;
+	}
+
+	return rytkoset_theme_cart_requires_member_names();
+}
+
+/**
+ * Returns the member row 1 prefill values for a user, or an empty array when
+ * there is nothing to prefill.
+ *
+ * @param WP_User|null $user User object.
+ * @return array<string, string> Field ID => prefill value.
+ */
+function rytkoset_theme_get_membership_member_prefill_values( $user ) {
+	$values = array(
+		'rytkoset/member_1_name'  => rytkoset_theme_get_membership_member_prefill_name( $user ),
+		'rytkoset/member_1_email' => rytkoset_theme_get_membership_member_prefill_email( $user ),
+	);
+
+	return array_filter( $values, 'strlen' );
+}
+
+/**
+ * Enqueues the checkout script that suggests the logged-in buyer's own details
+ * for member row 1.
+ *
+ * WooCommerce's server-side additional-field default filter
+ * (woocommerce_get_default_value_for_*) proved unreliable in Block Checkout
+ * hydration: on the first checkout visit the client store ignores the default,
+ * and the customer-object read overrides values already saved on the draft
+ * order. The script instead fills only still-empty member 1 fields once via
+ * the checkout data store, so user-edited or draft-persisted values are never
+ * overwritten.
+ *
+ * @return void
+ */
+function rytkoset_theme_enqueue_membership_checkout_prefill() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	if ( ! rytkoset_theme_membership_member_prefill_is_available() ) {
+		return;
+	}
+
+	$values = rytkoset_theme_get_membership_member_prefill_values( wp_get_current_user() );
+
+	if ( empty( $values ) ) {
+		return;
+	}
+
+	$script_path = '/assets/js/membership-checkout-prefill.js';
+
+	wp_enqueue_script(
+		'rytkoset-membership-checkout-prefill',
+		get_template_directory_uri() . $script_path,
+		array( 'wp-data' ),
+		rytkoset_theme_get_asset_version( get_template_directory() . $script_path ),
+		true
+	);
+
+	wp_add_inline_script(
+		'rytkoset-membership-checkout-prefill',
+		'window.rytkosetMembershipPrefill = ' . wp_json_encode( $values ) . ';',
+		'before'
+	);
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_membership_checkout_prefill' );
+
+/**
  * Returns structured member rows saved on an order.
  *
  * @param WC_Order $order WooCommerce order object.

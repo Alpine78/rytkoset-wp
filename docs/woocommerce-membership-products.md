@@ -61,6 +61,17 @@ Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php
 - Tyhjien jäsenrivien lisäkenttämetat poistetaan uusilta Store API -tilauksilta, eikä tyhjiä rivejä näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
 - Kenttien autocomplete on rajattu pois, jotta selaimen autofill ei kirjoita arvoja vääriin riveihin.
 
+### Jäsen 1 -kenttien esitäyttö kirjautuneelle käyttäjälle (#521)
+
+Kun kirjautunut käyttäjä ostaa nimet vaativan jäsenmaksutuotteen, kassalla ehdotetaan jäsenriville 1 oletuksena käyttäjän omia tietoja:
+
+- Nimi: profiilin etu- ja sukunimi; jos ne puuttuvat, näyttönimi (`rytkoset_theme_get_membership_member_prefill_name()`).
+- Sähköposti: tilin `user_email` (`rytkoset_theme_get_membership_member_prefill_email()`).
+- Koskee kaikkia jäsenmaksutyyppejä, joilla `_rytkoset_member_names_required = yes`. Perhejäsenyydessä vain rivi 1 esitäytetään; rivit 2–6 jäävät tyhjiksi.
+- Vierasostajille ei tehdä esitäyttöä (skripti ja arvot eivät edes lataudu sivulle).
+
+Toteutus on rajattu checkout-JS (`assets/js/membership-checkout-prefill.js`), joka täyttää checkout-datastoren (`wc/store/checkout`, `setAdditionalFields`) kautta vain tyhjinä pysyvät jäsen 1 -kentät. Täyttöä yritetään uudelleen lyhyen käynnistysikkunan ajan (15 s), koska Checkout Block voi mountin jälkeen tehdä asynkronisen refreshin, joka nollaa lisäkentät ja pyyhkisi kertatäytön; heti kun käyttäjä itse koskee jäsen 1 -kenttään, täyttö lopetetaan pysyvästi. Esitäyttö on ehdotus, ei lukitus: käyttäjän muokkaamia tai kassan draft-tilaukselle jo tallentuneita arvoja ei koskaan ylikirjoiteta (tyhjennetty kenttä pysyy tyhjänä), ja tilaukselle tallentuu se arvo, jonka käyttäjä lopulta hyväksyy. Huomaa, että tuoreen draft-tilauksen hydraatiossa storen `additionalFields`-objektissa ei välttämättä ole member-avaimia lainkaan, joten skripti käyttää renderöityä kenttää (ei avaimen olemassaoloa) merkkinä kentän käytöstä. WooCommercen palvelinpuolen oletusarvosuodatin (`woocommerce_get_default_value_for_*`) todettiin toteutuksessa epäluotettavaksi Block Checkoutin hydraatiosykleissä (ensikäynnillä arvo ei näy; asiakasobjektin oletus yliajaa draft-tilaukselle tallennetun muokkauksen), joten sitä ei käytetä.
+
 ## Jäsenmaksutilausten käsittelymalli
 
 Jäsenmaksutilaukset käsitellään toistaiseksi manuaalisesti WooCommerce-adminin tietojen perusteella.
