@@ -181,6 +181,8 @@ public functions change.
 
 All functions use `if ( ! function_exists('rytkoset_theme_...') )` guard and `rytkoset_theme_` prefix.
 
+Code comments and PHPDoc blocks: English. User-facing strings (admin UI text, emails, `docs/*.md`) stay Finnish/mixed per existing convention. This is a going-forward norm for new/changed code, not a retroactive cleanup of existing Finnish comments.
+
 ### CSS structure
 
 All local theme CSS/JS assets, including login assets and vendored PhotoSwipe files, use `rytkoset_theme_get_asset_version()` for `filemtime()`-based cache busting with the theme version as a missing-file fallback.

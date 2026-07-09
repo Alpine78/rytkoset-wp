@@ -239,6 +239,13 @@ Avoid:
 - Custom DB tables unless necessary
 - Complex abstractions
 
+### Code comment language
+
+- Code comments and PHPDoc blocks: **English**
+- User-facing strings (admin UI text, emails, `docs/*.md`): Finnish/mixed, per existing convention
+- This applies to all agents (Claude, Codex, etc.) working in this repo
+- Going-forward norm for new/changed code — not a retroactive cleanup of existing Finnish comments
+
 ---
 
 ## 🧪 Testing Strategy
