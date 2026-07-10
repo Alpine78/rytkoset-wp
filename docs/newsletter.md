@@ -234,7 +234,7 @@ Uutiskirjeen vapaaehtoinen opt-in on käytössä näissä työnkuluissa:
 
 - WordPress-rekisteröityminen: checkbox `Tilaa uutiskirje`, ei oletuksena valittu. Valittu opt-in käsitellään `user_register`-hookissa.
 - Maksuton tapahtumailmoittautuminen: checkbox näkyy lomakkeella, jos käyttäjä ei ole kirjautuneena jo tilaaja. Tilaus käsitellään vasta onnistuneen ilmoittautumisen tallennuksen jälkeen.
-- WooCommerce Checkout Block: checkbox `Tilaa uutiskirje` näkyy kaikille tilauksille, paitsi kirjautuneelle jo tilaajana olevalle käyttäjälle. Tilaus käsitellään Store API -checkoutin order processed -hookissa.
+- WooCommerce Checkout Block: checkbox `Tilaa sukuseuran uutiskirje tähän osoitteeseen` näkyy Yhteystiedot-osiossa sähköpostikentän alla (`location => 'contact'`, #520) kaikille tilauksille, paitsi kirjautuneelle jo tilaajana olevalle käyttäjälle. Arvo tallentuu edelleen samaan `_wc_other/rytkoset/newsletter_opt_in` -tilausmetaan, ja tilaus käsitellään Store API -checkoutin order processed -hookissa.
 
 Kirjautumattomille käyttäjille opt-in näytetään, koska tilaustilaa ei voi päätellä luotettavasti ennen sähköpostiosoitteen syöttämistä. Jos syötetty sähköposti on jo tilaaja, integraatio käsittelee tilanteen onnistumisena eikä näytä käyttäjälle virhettä.
 

@@ -91,6 +91,63 @@ function rytkoset_theme_mollie_finnish_contexts( $translated, $original, $contex
 add_filter( 'gettext_with_context', 'rytkoset_theme_mollie_finnish_contexts', 10, 4 );
 
 /**
+ * Returns the Mollie Components placeholder color for its white iframe surface.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_mollie_components_placeholder_color() {
+	return '#5b6577';
+}
+
+/**
+ * Adds theme placeholder styles to Mollie's iframe component configuration.
+ *
+ * Mollie renders card inputs inside cross-origin iframes, so external CSS
+ * cannot reach their placeholders. The plugin localizes its component config
+ * immediately before its checkout script; add an inline config adjustment to
+ * that same handle after localization and before Mollie mounts the iframes.
+ * This uses Mollie Components' documented styles.base['::placeholder'] API
+ * and does not mutate the saved plugin settings.
+ *
+ * @return void
+ */
+function rytkoset_theme_add_mollie_components_checkout_styles() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	$placeholder_color = wp_json_encode( rytkoset_theme_get_mollie_components_placeholder_color() );
+	$script            = <<<JS
+(function () {
+	var componentData = window.mollieServerData && window.mollieServerData.componentData;
+	var settings = componentData && componentData.componentsSettings;
+
+	if (!settings) {
+		return;
+	}
+
+	Object.keys(settings).forEach(function (gateway) {
+		var styles = settings[gateway] && settings[gateway].styles;
+
+		if (!styles) {
+			return;
+		}
+
+		if (Array.isArray(styles.base)) {
+			styles.base = {};
+		}
+
+		styles.base = styles.base || {};
+		styles.base['::placeholder'] = { color: {$placeholder_color} };
+	});
+}());
+JS;
+
+	wp_add_inline_script( 'mollie_block_index', $script, 'before' );
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_add_mollie_components_checkout_styles', 20 );
+
+/**
  * Keeps selected Mollie gateway titles understandable for Finnish checkout users.
  *
  * @param string $title      Payment gateway title.

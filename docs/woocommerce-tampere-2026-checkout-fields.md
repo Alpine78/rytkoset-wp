@@ -31,14 +31,14 @@ Jokaiselle osallistujalle kerätään:
 - ruokarajoitteet / allergiat
 - perjantain `28.8.2026` buffet-illalliselle osallistuminen (`kyllä` / `ei`)
 
-Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatiosta, eikä sitä kysytä uudelleen checkoutissa.
+Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatiosta, eikä sitä kysytä uudelleen checkoutissa. Kassalla jokainen osallistuja näytetään omana numeroituna korttinaan, jonka otsake näyttää osallistujatyypin ja osallistumismaksun yksikköhinnan. Osallistujien määrä tulee suoraan ostoskorin osallistumismaksuista, joten näissä korteissa ei ole lisäys- tai poistopainikkeita. Kenttien labelit on sovitettu kortin sisäreunaan myös mobiilissa, jotta pitkä osallistujateksti ei valu kehyksen ulkopuolelle.
 
 ## Tekninen toteutus
 
 - Checkout-kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla.
 - Kentät aktivoituvat vain, jos ostoskorissa on Tampere 2026 -tuote tai jokin sen variaatioista.
 - Kenttien määrä perustuu Tampere 2026 -variaatioiden yhteenlaskettuun kappalemäärään.
-- Teema julkaisee tämän osallistujamäärän Checkout Blockille Store API:n `cart.extensions.rytkoset_tampere_2026.participant_count`-kentässä. Muut ostoskorin tuotteet eivät vaikuta osallistujakenttien määrään.
+- Teema julkaisee tämän osallistujamäärän Checkout Blockille Store API:n `cart.extensions.rytkoset_tampere_2026.participant_count`-kentässä. Saman extensionin `participants`-lista sisältää korttiotsakkeissa käytettävän osallistujatyypin ja yksikköhinnan ostoskorijärjestyksessä. Muut ostoskorin tuotteet eivät vaikuta osallistujakenttien määrään tai kortteihin.
 - Tunnistus tehdään ensisijaisesti parent-tuotteen SKU:lla `tampere-2026-osallistumismaksu`.
 - Kentät tallentuvat tilauksen lisäkentiksiin order-metana.
 - Piilotettuja ylimääräisiä osallistujakenttiä ei näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
@@ -47,6 +47,8 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä.
 - Osallistujatyyppi puretaan tilauksen rivien variaatioista samassa järjestyksessä kuin osallistujakohtaiset checkout-kentät.
 - Kenttien autocomplete on tarkoituksella rajattu pois, jotta selaimen autofill ei kirjoita nimiä ruokarajoitekenttiin.
+- Korttien otsakkeet tuottaa `assets/js/tampere-checkout-participants.js`, ja kehys-, mobiili- sekä tumman teeman tyylit ovat `assets/css/shop.css`-tiedostossa. Sama skripti injektoi korttien yläpuolelle **Osallistujat — Tampere 2026** -osio-otsikon ja ohjetekstin.
+- Tuotekohtaiset lisätiedot ja mahdollinen tilausmuistiinpano näytetään ennen maksutapoja. Maksutavat ovat näin kassan viimeinen muokattava osio ennen ehtojen hyväksyntää ja teeman keltaista **Lähetä tilaus** -painiketta.
 
 ## Rajaus tässä vaiheessa
 
@@ -66,6 +68,7 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Varmista, ettei osallistujien 2-10 tyhjiä buffet-kenttiä näytetä arvolla `Ei`
 - Lisää Tampere 2026 -tuotetta ostoskoriin yksi aikuinen ja yksi lapsi sekä pidä mukana yksi muu tuote
 - Varmista, että kassalla näkyy 2 osallistujan kentät
+- Varmista työpöytä- ja mobiilikoossa, että pitkät osallistujalabelit pysyvät korttien sisällä, maksutavat tulevat lisätietojen jälkeen ja **Lähetä tilaus** -painike on teeman keltainen pyöristetty painike
 - Täytä molempien osallistujien nimet
 - Lisää toiselle ruokarajoite
 - Merkitse toiselle perjantain buffet-illallinen

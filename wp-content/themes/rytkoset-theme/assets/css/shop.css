@@ -10,6 +10,8 @@
   --shop-notice-bg: #f6f5f8;
   --shop-notice-success: #8fae1b;
   --shop-notice-error: #b91c1c;
+  --shop-danger-soft: #fdecea;
+  --shop-danger-border: rgba(179, 38, 30, 0.25);
 }
 
 :root[data-theme="dark"] .woocommerce,
@@ -22,6 +24,8 @@
   --shop-notice-bg: var(--color-surface-alt);
   --shop-notice-success: #a3c72b;
   --shop-notice-error: #f87171;
+  --shop-danger-soft: rgba(248, 113, 113, 0.12);
+  --shop-danger-border: rgba(248, 113, 113, 0.3);
 }
 
 /* Shop, cart and checkout render through the generic page template, which
@@ -1274,4 +1278,603 @@ body.single-product.woocommerce-page div.product .woocommerce-tabs ul.tabs li a:
   gap: 0.75rem;
   align-items: center;
   margin-top: 1.5rem;
+}
+
+/* Keep the payment step at the end of the editable checkout fields: contact
+   and billing first, product-specific additional fields and notes next, then
+   payment immediately before the terms and place-order action. */
+body.woocommerce-checkout .wc-block-checkout__form {
+  display: flex;
+  flex-direction: column;
+}
+
+body.woocommerce-checkout .wc-block-checkout__form > .wp-block-woocommerce-checkout-additional-information-block {
+  order: 3;
+}
+
+body.woocommerce-checkout .wc-block-checkout__form > .wp-block-woocommerce-checkout-order-note-block {
+  order: 4;
+}
+
+body.woocommerce-checkout .wc-block-checkout__form > .wp-block-woocommerce-checkout-payment-block {
+  order: 5;
+}
+
+body.woocommerce-checkout .wc-block-checkout__form > .wp-block-woocommerce-checkout-terms-block {
+  order: 6;
+}
+
+body.woocommerce-checkout .wc-block-checkout__form > .wp-block-woocommerce-checkout-actions-block {
+  order: 7;
+}
+
+/* Match the theme's primary pill button instead of WooCommerce Blocks'
+   full-width dark rectangle. */
+body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block-checkout__actions_row {
+  justify-content: flex-start;
+}
+
+body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block-components-checkout-place-order-button {
+  width: auto;
+  min-height: 44px;
+  padding: 0.7rem 1.5rem;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.2;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block-components-checkout-place-order-button:hover {
+  border-color: var(--color-accent-hover);
+  background: var(--color-accent-hover);
+  color: var(--color-primary-deeper);
+  transform: translateY(-1px);
+}
+
+body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block-components-checkout-place-order-button:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--shop-focus-ring);
+}
+
+body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block-components-checkout-place-order-button:disabled {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+  cursor: not-allowed;
+  opacity: 0.62;
+  transform: none;
+}
+
+body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block-components-button__text {
+  color: inherit;
+}
+
+/* ============================================================
+   Checkout member rows (#520): dynamic numbered rows with a
+   delete control and an "Add member" button. Block Checkout
+   renders the server-registered fields as flat siblings in
+   #order, so CSS grid and :has() provide the layout while
+   assets/js/membership-checkout-rows.js injects the controls.
+   ============================================================ */
+
+/* Number | name | email | delete control. */
+#order.wc-block-components-address-form:has([class*="address-form__rytkoset-member_1_name"]) {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) 44px;
+  column-gap: 12px;
+  counter-reset: rytkoset-member;
+}
+
+#order.wc-block-components-address-form:has([class*="address-form__rytkoset-member_1_name"]) > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"][class*="_name"] {
+  grid-column: 2;
+  order: 2;
+  position: relative;
+  counter-increment: rytkoset-member;
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"][class*="_email"] {
+  grid-column: 3;
+  order: 2;
+  position: relative;
+}
+
+/* Row number. */
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"][class*="_name"]::before {
+  content: counter(rytkoset-member);
+  position: absolute;
+  left: -44px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#order.wc-block-components-address-form > .wc-block-components-address-form__rytkoset-member_1_name::before {
+  background: var(--shop-accent-soft);
+  color: var(--color-primary-deeper);
+}
+
+:root[data-theme="dark"] #order.wc-block-components-address-form > .wc-block-components-address-form__rytkoset-member_1_name::before {
+  color: var(--color-text);
+}
+
+/* New-row entrance. */
+@media (prefers-reduced-motion: no-preference) {
+  #order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"] {
+    animation: rytkoset-member-in 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  }
+
+  @keyframes rytkoset-member-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Delete button injected into the email field wrapper. */
+.wc-block-components-text-input .rytkoset-member-remove {
+  position: absolute;
+  right: -56px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-m);
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: var(--color-text-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.wc-block-components-text-input .rytkoset-member-remove:hover {
+  color: var(--shop-notice-error);
+  background: var(--shop-danger-soft);
+  border-color: var(--shop-danger-border);
+}
+
+.wc-block-components-text-input .rytkoset-member-remove:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Add-member controls injected after the last member row. */
+.rytkoset-member-add {
+  grid-column: 2 / -1;
+  order: 2;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.rytkoset-member-add__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: var(--radius-pill);
+  border: 1.5px dashed var(--color-primary-light);
+  background: transparent;
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.rytkoset-member-add__btn:hover {
+  background: var(--color-surface-alt);
+  border-style: solid;
+  border-color: var(--color-primary);
+}
+
+.rytkoset-member-add__btn:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.rytkoset-member-add__btn:disabled {
+  border-color: var(--color-border-neutral);
+  color: var(--color-text-mute);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.rytkoset-member-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+.rytkoset-member-max-note {
+  font-size: 13px;
+  color: var(--color-text-mute);
+}
+
+.rytkoset-member-error {
+  flex-basis: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--shop-notice-error);
+}
+
+.rytkoset-member-error:empty {
+  display: none;
+}
+
+/* ============================================================
+   Tampere 2026 checkout participant cards (#520): the three
+   field wrappers draw the card frame, while the numbered header
+   with participant type and price is injected by
+   assets/js/tampere-checkout-participants.js.
+   ============================================================ */
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"] {
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  order: 1;
+  margin: 0;
+  padding-left: 20px;
+  padding-right: 20px;
+  border-left: 1.5px solid var(--color-border-neutral);
+  border-right: 1.5px solid var(--color-border-neutral);
+  background: var(--color-surface);
+}
+
+/* WooCommerce positions floating labels relative to the field wrapper. The
+   participant card adds wrapper padding, so offset labels by the same amount
+   and constrain them to the input's inner width. */
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"].wc-block-components-text-input label {
+  left: 30px;
+  max-width: calc(100% - 64px);
+}
+
+/* The name field starts the card. The header space is wrapper padding (not
+   margin) so the card's side borders stay continuous, and the injected
+   .rytkoset-participant-head draws the card top inside that padding with a
+   6px clearance so the input's top border and focus outline are never
+   covered. The floating label is offset by the same padding below. */
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_name"] {
+  margin-top: 14px; /* Card gap. */
+  padding-top: 64px; /* 58px header + 6px clearance. */
+  border-top: 0;
+  /* Without this, the wrapper's own straight side borders run underneath the
+     injected header's rounded top corners and poke through in the curved
+     corner gap as short straight tails. Rounding the wrapper to match the
+     header's radius makes the sides curve away cleanly instead. */
+  border-top-left-radius: var(--radius-l);
+  border-top-right-radius: var(--radius-l);
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_name"].wc-block-components-text-input label {
+  top: 89px; /* WooCommerce resting-state default 25px + 64px header padding. */
+}
+
+/* WooCommerce floats the label to top:6px (plus a scale transform) when the
+   field has a value or is focused (.is-active). Our resting-state override
+   above has higher specificity than WooCommerce's own .is-active rule, so
+   without this the label never floats here and sits on top of the entered
+   text instead of shrinking above it. */
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_name"].wc-block-components-text-input.is-active label,
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_name"].wc-block-components-text-input input:-webkit-autofill + label {
+  top: 70px; /* WooCommerce active-state default 6px + 64px header padding. */
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_diet"] {
+  padding-top: 12px;
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_diet"].wc-block-components-text-input label {
+  top: 37px; /* WooCommerce resting-state default 25px + 12px wrapper padding. */
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_diet"].wc-block-components-text-input.is-active label,
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_diet"].wc-block-components-text-input input:-webkit-autofill + label {
+  top: 18px; /* WooCommerce active-state default 6px + 12px wrapper padding. */
+}
+
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_friday_buffet"] {
+  padding-top: 14px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px solid var(--color-border-neutral);
+  border-radius: 0 0 var(--radius-l) var(--radius-l);
+}
+
+/* Uutiskirjeen opt-in-checkbox (#520, siirretty Yhteystiedot-osioon
+   sähköpostikentän alle). WooCommercen kenttien välinen 16 px pystyväli tulee
+   Block Checkoutin flex-container-kyselyistä, jotka eivät aktivoidu kapealla
+   (<400px container) leveydellä, jolloin checkbox jää kiinni yläpuolisen
+   sähköpostikentän alareunaan. Kiinteä margin-top varmistaa saman välin
+   kaikilla leveyksillä. */
+.wc-block-components-address-form__rytkoset-newsletter_opt_in {
+  margin-top: 16px;
+}
+
+/* Kupongin "Ota käyttöön" -painike (#520). WordPressin ydin-globaalityyli
+   (:root :where(.wp-element-button)) antaa sille kiinteän tumman taustan ja
+   valkoisen tekstin riippumatta teemasta; vaaleassa teemassa se erottuu
+   vieraana elementtinä kortin sisällä. Korvataan teeman omilla väritokeneilla
+   molemmissa teemoissa (:where() on 0-spesifisyyttä, joten tämä voittaa
+   ilman !important). */
+.wc-block-components-totals-coupon__button.wp-element-button {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-m);
+  font-weight: 700;
+}
+
+.wc-block-components-totals-coupon__button.wp-element-button:not(:disabled):hover {
+  background-color: var(--color-surface-alt);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.wc-block-components-totals-coupon__button.wp-element-button:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* A translucent (opacity) disabled state blends border and text toward the
+   card background, landing under WCAG AA's 4.5:1 text contrast in light
+   theme (measured ~4.05:1 for #1f2933 at 60% opacity on white). WCAG exempts
+   inactive controls from the contrast requirement, but a muted, still-legible
+   color reads better than a washed-out one — full opacity with the theme's
+   own muted-text token instead (~5.9:1 in light theme; dark theme's own
+   muted token stays legible against the dark surface too). This state is
+   genuinely inert (pointer-events: none, set inline by WooCommerce Blocks,
+   plus the native `disabled` attribute) until the coupon field has a value —
+   typing a code both restores full contrast and the pointer cursor via the
+   enabled-state rules below, so no separate cursor override is needed here. */
+.wc-block-components-totals-coupon__button.wp-element-button:disabled {
+  color: var(--color-text-mute);
+  border-color: var(--color-border-neutral);
+}
+
+/* Maksutapavalinnan valitun rivin reunaviiva (#520). WooCommerce Blocks
+   piirtää koko listan ympärille himmeän `currentcolor`-reunan (20 % peitto)
+   ja valitulle riville oman, täyspeittävän `currentcolor`-box-shadow'n
+   (1.5 px) — molemmat samalla värisävyllä mutta eri peitolla. Tummassa
+   teemassa `currentcolor` on vaalea, jolloin ero näkyy selvänä saumana
+   valitun rivin yläreunassa (listan reuna vaihtuu äkkiä himmeästä
+   täyteen). Korvataan molemmat kiinteillä, tarkoituksella eri väritokeneilla
+   (neutraali lista + korostettu valinta), jolloin ero näyttää tarkoitetulta
+   eikä väriglitchiltä kummassakaan teemassa. */
+.wc-block-components-radio-control--highlight-checked::after {
+  border-color: var(--color-border-neutral);
+}
+
+/* Matches WooCommerce's own compound selector (ancestor class + this class)
+   so ours wins on specificity, not just source order — otherwise WC's own
+   `box-shadow: currentcolor …` rule keeps winning and this never applies. */
+.wc-block-components-radio-control--highlight-checked .wc-block-components-radio-control-accordion-option--checked-option-highlighted,
+.wc-block-components-radio-control--highlight-checked label.wc-block-components-radio-control__option--checked-option-highlighted {
+  box-shadow: 0 0 0 1.5px var(--color-primary) inset;
+}
+
+/* components.css gives every payment option a dark surface in dark mode. An
+   accordion option's label is a full-width child of the highlighted wrapper,
+   so that opaque surface covers the wrapper's inset highlight along the label
+   row. Light mode does not set this background, which is why the frame only
+   appeared broken in dark mode. Let the selected accordion label inherit the
+   wrapper surface so the highlight remains visible around the whole option. */
+:root[data-theme="dark"] .wc-block-components-radio-control-accordion-option--checked-option-highlighted > .wc-block-components-radio-control__option-checked {
+  background: transparent;
+}
+
+/* The box-shadow above never shows on the TOP edge: every option has its own
+   generated ::after divider bar (top: 0, height: 1px, a positioned child) —
+   and a child's own box always paints after/above its parent's own inset
+   box-shadow, regardless of z-index on the parent. Rather than fight that
+   paint order, repurpose the selected option's own divider bar as the top
+   edge of the highlight (it already reliably wins there) so all four sides
+   read as one continuous border. Matches WooCommerce's own compound selector
+   for this ::after (`.highlight-checked div.accordion-option::after`, class +
+   type + class) so ours doesn't quietly lose on specificity the way the
+   box-shadow rule above originally did. */
+.wc-block-components-radio-control--highlight-checked div.wc-block-components-radio-control-accordion-option--checked-option-highlighted::after {
+  background-color: var(--color-primary);
+  height: 1.5px;
+}
+
+/* Mollie Components -korttikentät saavat pluginilta width: 100 % content-box-
+   laatikkomallilla, jolloin padding ja border vuotavat maksutapalaatikon oikean
+   reunan yli Block Checkoutissa. */
+.wc-block-checkout .mollie-component {
+  box-sizing: border-box;
+}
+
+/* Mollie's stylesheet hardcodes component labels to #222, which disappears
+   against the checkout's dark surface. The iframe fields stay white in both
+   themes, but their external labels must follow the theme text token. */
+:root[data-theme="dark"] .wc-block-checkout .mollie-component-label {
+  color: var(--color-text);
+}
+
+/* Kenttäryhmien otsikot (Jäsentiedot / Osallistujat — Tampere 2026), injektoitu
+   JS:llä ryhmän ensimmäisen kentän edelle (#520). Order-arvot vastaavat
+   kenttäryhmien omia arvoja (osallistujat 1, jäsenrivit 2), jotta otsikko
+   pysyy ryhmänsä edellä gridin visuaalisessa järjestyksessä. */
+.rytkoset-checkout-fields-heading {
+  margin-top: 28px;
+}
+
+.rytkoset-participant-heading {
+  order: 1;
+}
+
+.rytkoset-member-heading {
+  order: 2;
+}
+
+.rytkoset-checkout-fields-heading__title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.rytkoset-checkout-fields-heading__intro {
+  margin: 6px 0 0;
+  max-width: 560px;
+  font-size: 13.5px;
+  color: var(--color-text-mute);
+}
+
+.rytkoset-participant-head {
+  position: absolute;
+  top: 0;
+  left: -1.5px;
+  right: -1.5px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  border: 1.5px solid var(--color-border-neutral);
+  border-bottom: 0;
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  background: var(--color-surface);
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.rytkoset-participant-head__num {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rytkoset-participant-head__title {
+  flex: 0 0 auto; /* The type chip truncates first; the title must never collapse. */
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.rytkoset-participant-head__type {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+}
+
+.rytkoset-participant-head__price {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--color-text-mute);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mobile: stack fields and use narrower control columns. */
+@media (max-width: 560px) {
+  #order.wc-block-components-address-form:has([class*="address-form__rytkoset-member_1_name"]) {
+    grid-template-columns: 28px minmax(0, 1fr) 40px;
+    column-gap: 10px;
+  }
+
+  #order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"][class*="_name"],
+  #order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"][class*="_email"] {
+    grid-column: 2;
+  }
+
+  #order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"][class*="_name"]::before {
+    left: -38px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .wc-block-components-text-input .rytkoset-member-remove {
+    right: -48px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .rytkoset-member-add__btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rytkoset-participant-head {
+    padding: 0 14px;
+    gap: 6px;
+  }
+
+  #order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"] {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  #order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"].wc-block-components-text-input label {
+    left: 24px;
+    max-width: calc(100% - 52px);
+  }
+}
+
+@media (max-width: 400px) {
+  .rytkoset-participant-head__title {
+    display: none;
+  }
 }

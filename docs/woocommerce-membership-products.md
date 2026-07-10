@@ -45,8 +45,7 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Rakenteisten jäsenkenttien näkyminen kassalla määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
 - Lippu on käytössä sekä vuosijäsenmaksuilla että ainaisjäsenmaksulla.
-- Teema näyttää lyhyen kassaohjeen ja rakenteiset kentät silloin, kun korissa on nimet vaativa jäsenmaksutuote.
-- Kassaohjeen renderöinti tehdään teemassa, koska WooCommerce Block Checkout ei näyttänyt luotettavasti normaalia sivusisältöä nykyisessä teemassa.
+- Teema näyttää rakenteiset kentät silloin, kun korissa on nimet vaativa jäsenmaksutuote; kenttien käyttöä selittää niiden yläpuolelle injektoitu **Jäsentiedot**-osio-otsikko (ks. alla), ei erillinen ylätiedote — aiempi erillinen kassaohje-banneri poistettiin #520:n viimeistelyssä päällekkäisenä, kun otsikko lisättiin suoraan kenttien yhteyteen.
 - WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
 
 ### Rakenteiset jäsenkentät kassalla
@@ -54,12 +53,17 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php`, `docs/woocommerce-tampere-2026-checkout-fields.md`):
 
 - Kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla (`woocommerce_register_additional_checkout_field`, `location = order`): `rytkoset/member_X_name` ja `rytkoset/member_X_email` (X = 1–6).
-- Teema julkaisee Checkout Blockille näytettävien rivien määrän Store API:n `cart.extensions.rytkoset_membership.member_row_count` -kentässä: 1 yksityis-/ainaisjäsenmaksulle, 6 perhejäsenmaksulle, 0 kun korissa ei ole nimet vaativaa jäsenmaksua.
+- Teema julkaisee Checkout Blockille näytettävien rivien määrän Store API:n `cart.extensions.rytkoset_membership.member_row_count` -kentässä: 1 yksityis-/ainaisjäsenmaksulle, käyttäjän lisäämä määrä 1–6 perhejäsenmaksulle ja 0, kun korissa ei ole nimet vaativaa jäsenmaksua.
+- Perhejäsenmaksu alkaa yhdestä rivistä. **+ Lisää jäsen** lisää uuden rivin ilman sivulatausta ja rivien 2–6 roskakoripainike poistaa rivin; riviä 1 ei voi poistaa. Poisto tiivistää myöhemmät arvot järjestykseen ja tyhjentää viimeisen rivin, jotta poistettu tieto ei tallennu tilaukselle.
+- Rivimäärä tallennetaan WooCommerce-sessioon `extensionCartUpdate`-päivityksellä. Palvelin clampaa arvon aina tuotetyypin sallimaan väliin; `rytkoset_theme_membership_max_member_rows`-suodattimella voi muuttaa oletusmaksimia 6.
 - Rivit, joiden indeksi ylittää `member_row_count`-arvon, piilotetaan ja niiden validointi ohitetaan ehdollisella JSON-skeemalla.
 - Rivin 1 nimi ja sähköposti ovat pakollisia; lisärivit ovat valinnaisia. Sähköpostin muoto tarkistetaan `validate_callback`-funktiolla (`is_email`); tyhjät valinnaiset rivit ohitetaan.
 - Kentät tallentuvat tilauksen lisäkentiksi order-metana (`_wc_other/rytkoset/member_X_name`, `_wc_other/rytkoset/member_X_email`).
 - Tyhjien jäsenrivien lisäkenttämetat poistetaan uusilta Store API -tilauksilta, eikä tyhjiä rivejä näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
 - Kenttien autocomplete on rajattu pois, jotta selaimen autofill ei kirjoita arvoja vääriin riveihin.
+- Dynaamisten kontrollien näppäimistö- ja ruudunlukijakäyttö on huomioitu: poistopainikkeilla on rivikohtaiset `aria-label`-tekstit, muutoksista ilmoitetaan live-alueella ja fokus siirtyy lisäyksen jälkeen uuden rivin nimeen sekä poiston jälkeen seuraavaan järkevään kontrolliin.
+- Jäsenrivien yläpuolelle injektoidaan **Jäsentiedot**-osio-otsikko ja lyhyt ohjeteksti (`assets/js/membership-checkout-rows.js`); teksti vaihtuu perhe- ja yksilö-/ainaisjäsenmaksun välillä. Skripti latautuu aina, kun korissa on nimet vaativa jäsenmaksu — lisäys-/poistokontrollit renderöityvät vain perhejäsenmaksulla.
+- Jäsen- ja muut tuotekohtaiset lisätiedot sekä mahdollinen tilausmuistiinpano näytetään ennen maksutapoja. Maksutavat ovat viimeinen muokattava osio ennen ehtoja ja teeman keltaista, pyöristettyä **Lähetä tilaus** -painiketta.
 
 ### Jäsen 1 -kenttien esitäyttö kirjautuneelle käyttäjälle (#521)
 
