@@ -58,6 +58,48 @@ final class Tampere2026Test extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 10, rytkoset_theme_get_tampere_2026_max_participants() );
 	}
 
+	public function test_cart_participant_lines_expand_registration_quantities_in_cart_order(): void {
+		$adult = new WC_Product(
+			array(
+				'_rytkoset_registration_mode' => 'tampere_2026',
+				'_price'                      => '49',
+				'osallistujatyyppi'           => 'aikuinen',
+			)
+		);
+		$child = new WC_Product(
+			array(
+				'_rytkoset_registration_mode' => 'tampere_2026',
+				'_price'                      => '24.5',
+				'osallistujatyyppi'           => 'lapsi-3-12-vuotta',
+			)
+		);
+
+		$lines = rytkoset_theme_build_tampere_2026_cart_participant_lines(
+			array(
+				array( 'data' => $adult, 'quantity' => 2 ),
+				array( 'data' => $this->plain_product(), 'quantity' => 4 ),
+				array( 'data' => $child, 'quantity' => 1 ),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				array( 'type' => 'aikuinen', 'price' => '49,00 €' ),
+				array( 'type' => 'aikuinen', 'price' => '49,00 €' ),
+				array( 'type' => 'lapsi 3 12 vuotta', 'price' => '24,50 €' ),
+			),
+			$lines
+		);
+	}
+
+	public function test_store_api_schema_includes_participant_card_data(): void {
+		$schema = rytkoset_theme_get_tampere_2026_store_api_cart_schema();
+
+		$this->assertSame( 'array', $schema['participants']['type'] );
+		$this->assertSame( 'string', $schema['participants']['items']['properties']['type']['type'] );
+		$this->assertSame( 'string', $schema['participants']['items']['properties']['price']['type'] );
+	}
+
 	// --- participant counting ----------------------------------------------
 
 	public function test_participant_quantity_sums_registration_items_only(): void {

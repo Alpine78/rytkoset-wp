@@ -22,7 +22,7 @@ ARIA-merkinnät on tarkistettu erikseen.
 | Cart-blockin määrävalitsin (WC Block): konttirenkainen fokus `:focus-within`-tilassa | [`assets/css/shop.css:462`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ |
 | Tampere 2026 -osallistujakentät (nimi, ruokavalio, buffet) | [`inc/woocommerce-tampere-2026.php:659`](../wp-content/themes/rytkoset-theme/inc/woocommerce-tampere-2026.php) | ✅ Rekisteröity `woocommerce_register_additional_checkout_field`-API:lla → WC tuottaa labelit, `aria-required` ja virheilmoitukset itse |
 | Tampere 2026 -kassailmoitus | [`inc/woocommerce-tampere-2026.php:387`](../wp-content/themes/rytkoset-theme/inc/woocommerce-tampere-2026.php) | ✅ `role="note"` |
-| Jäsenmaksun kassailmoitus | [`inc/woocommerce-membership.php:302`](../wp-content/themes/rytkoset-theme/inc/woocommerce-membership.php) | ✅ `role="note"` |
+| Jäsenrivit (nimi, sähköposti) + Lisää/Poista jäsen -painikkeet | [`assets/js/membership-checkout-rows.js`](../wp-content/themes/rytkoset-theme/assets/js/membership-checkout-rows.js) | ✅ Rekisteröity `woocommerce_register_additional_checkout_field`-API:lla; rivikohtaiset `aria-label`-tekstit poistopainikkeilla, `aria-live`-ilmoitukset lisäyksestä/poistosta, fokus siirtyy uuden rivin ensimmäiseen kenttään ja poiston jälkeen järkevään kontrolliin (#520) |
 | WooCommerce-painikkeiden fokus | [`assets/css/shop.css:200`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ `:focus-visible` korvaa default-outlinen `box-shadow: var(--shop-focus-ring)`-renkaalla |
 | Tuotearkiston tuoteruudukko | WooCommerce default | ✅ Käyttää WC:n omia templateja, joissa h2-otsikot ja kuvien alt |
 
@@ -57,6 +57,9 @@ ilmoita uusista kentistä. Käyttäjä joutuu Tab-painamalla löytämään ne. T
 WC:n perustoiminnan rajaus, ei teeman vika.
 
 ### Jäsenmaksutuotteet
-Yksityishenkilö/perhe/ainaisjäsenmaksu — kassalla näytetään `role="note"`-ilmoitus,
-joka pyytää kirjaamaan jäsenten nimet `Lisätietoja`-kenttään. Tämä on WC:n oma
-`order_comments`-kenttä, jolla on natiivi label.
+Yksityishenkilö-/ainaisjäsenmaksulla näytetään aina yksi jäsenrivi (nimi +
+sähköposti); perhejäsenmaksulla kassa alkaa yhdestä pakollisesta rivistä ja
+**+ Lisää jäsen** -painike lisää rivejä palvelimen clampaamaan maksimiin
+(#520). Kenttien yläpuolelle injektoitu **Jäsentiedot**-osio-otsikko ja
+ohjeteksti (`assets/js/membership-checkout-rows.js`) selittää käytön —
+erillinen ylätiedote poistettiin, koska se toisti saman tiedon.

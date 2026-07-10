@@ -342,24 +342,6 @@ function rytkoset_theme_cart_has_membership_product() {
 }
 
 /**
- * Builds the checkout notice shown for membership payments.
- *
- * @return string
- */
-function rytkoset_theme_get_membership_checkout_notice_markup() {
-	$notice_text = html_entity_decode(
-		'<strong>J&auml;senmaksu:</strong> T&auml;yt&auml; j&auml;senen nimi ja s&auml;hk&ouml;postiosoite kassan kenttiin, jotta tiedot voidaan kirjata j&auml;senrekisteriin. Perhej&auml;senmaksussa voit lis&auml;t&auml; useamman perheenj&auml;senen &mdash; lis&auml;rivien s&auml;hk&ouml;postit ovat valinnaisia.',
-		ENT_QUOTES,
-		'UTF-8'
-	);
-
-	return sprintf(
-		'<div class="rytkoset-checkout-note" role="note"><p>%s</p></div>',
-		wp_kses_post( $notice_text )
-	);
-}
-
-/**
  * Returns membership products found on an order.
  *
  * @param WC_Order $order WooCommerce order object.
@@ -634,7 +616,14 @@ function rytkoset_theme_render_membership_order_metabox( $post_or_order_object )
  * @return int
  */
 function rytkoset_theme_get_membership_max_member_rows() {
-	return 6;
+	/**
+	 * Filters the maximum number of member rows available for a family membership (#520).
+	 *
+	 * @param int $max_rows Maximum member row count. Default 6.
+	 */
+	$max_rows = (int) apply_filters( 'rytkoset_theme_membership_max_member_rows', 6 );
+
+	return max( 1, $max_rows );
 }
 
 /**
@@ -653,19 +642,42 @@ function rytkoset_theme_get_membership_member_field_ids( $index ) {
 }
 
 /**
- * Returns the number of member rows the checkout should show for the current cart.
+ * Resolves the allowed member row range for the checkout (#520).
  *
- * Individual and lifetime memberships need one row; family memberships need several.
- * Membership products without the names-required flag do not add rows.
+ * Pure resolver: family memberships allow adding rows up to the configured
+ * maximum, other names-required memberships show exactly one row, and carts
+ * without a names-required membership product show none.
  *
- * @return int
+ * @param bool $requires_names Cart contains a names-required membership product.
+ * @param bool $is_family      Cart contains a names-required family membership product.
+ * @return array{min:int,max:int}
  */
-function rytkoset_theme_get_membership_member_row_count() {
-	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
-		return 0;
+function rytkoset_theme_resolve_membership_member_row_bounds( $requires_names, $is_family ) {
+	if ( ! $requires_names ) {
+		return array(
+			'min' => 0,
+			'max' => 0,
+		);
 	}
 
-	$rows = 0;
+	return array(
+		'min' => 1,
+		'max' => $is_family ? rytkoset_theme_get_membership_max_member_rows() : 1,
+	);
+}
+
+/**
+ * Returns the allowed member row range for the current cart (#520).
+ *
+ * @return array{min:int,max:int}
+ */
+function rytkoset_theme_get_membership_member_row_bounds() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return rytkoset_theme_resolve_membership_member_row_bounds( false, false );
+	}
+
+	$requires_names = false;
+	$is_family      = false;
 
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
@@ -678,14 +690,131 @@ function rytkoset_theme_get_membership_member_row_count() {
 			continue;
 		}
 
-		$needed = ( 'annual_family' === rytkoset_theme_get_membership_product_type( $product ) )
-			? rytkoset_theme_get_membership_max_member_rows()
-			: 1;
+		$requires_names = true;
 
-		$rows = max( $rows, $needed );
+		if ( 'annual_family' === rytkoset_theme_get_membership_product_type( $product ) ) {
+			$is_family = true;
+		}
 	}
 
-	return $rows;
+	return rytkoset_theme_resolve_membership_member_row_bounds( $requires_names, $is_family );
+}
+
+/**
+ * Clamps a requested member row count into the allowed range (#520).
+ *
+	 * @param int                      $requested Requested member row count.
+	 * @param array{min:int,max:int} $bounds  Allowed row range.
+ * @return int
+ */
+function rytkoset_theme_clamp_membership_member_rows( $requested, $bounds ) {
+	$min = isset( $bounds['min'] ) ? (int) $bounds['min'] : 0;
+	$max = isset( $bounds['max'] ) ? (int) $bounds['max'] : 0;
+
+	if ( $max < 1 ) {
+		return 0;
+	}
+
+	return min( $max, max( $min, absint( $requested ) ) );
+}
+
+/**
+ * Returns the WooCommerce session key for the requested member row count (#520).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_member_rows_session_key() {
+	return 'rytkoset_membership_member_rows';
+}
+
+/**
+ * Returns the member row count the buyer has requested in the checkout session (#520).
+ *
+ * Defaults to one row so the family checkout starts with member 1 only.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_requested_membership_member_rows() {
+	if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+		return 1;
+	}
+
+	$requested = absint( WC()->session->get( rytkoset_theme_get_membership_member_rows_session_key(), 1 ) );
+
+	return max( 1, $requested );
+}
+
+/**
+ * Stores the requested member row count in the WooCommerce session (#520).
+ *
+ * The stored value is clamped again on every read, so a stale or out-of-range
+ * request can never widen the row range beyond the cart contents.
+ *
+ * @param int $rows Requested member row count.
+ * @return void
+ */
+function rytkoset_theme_set_requested_membership_member_rows( $rows ) {
+	if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+		return;
+	}
+
+	WC()->session->set(
+		rytkoset_theme_get_membership_member_rows_session_key(),
+		max( 1, absint( $rows ) )
+	);
+}
+
+/**
+ * Handles the Store API extensionCartUpdate call for member rows (#520).
+ *
+ * The client JS posts the desired row count; the server stores it in the
+ * session and stays the source of truth via clamping on read.
+ *
+ * @param array<string, mixed> $data Extension data from the Store API request.
+ * @return void
+ */
+function rytkoset_theme_handle_membership_member_rows_update( $data ) {
+	if ( ! is_array( $data ) || ! isset( $data['member_rows'] ) ) {
+		return;
+	}
+
+	rytkoset_theme_set_requested_membership_member_rows( absint( $data['member_rows'] ) );
+}
+
+/**
+ * Clears the requested member row count when the cart is emptied (#520).
+ *
+ * Hooked to woocommerce_cart_emptied (fired by WC_Cart::empty_cart(), e.g.
+ * after a successful checkout) so the next family purchase starts from one
+ * row again. The checkout-order-processed hook is intentionally not used: it
+ * also fires when the payment step fails, and resetting there would wipe the
+ * buyer's extra rows from the retry attempt.
+ *
+ * @return void
+ */
+function rytkoset_theme_reset_requested_membership_member_rows() {
+	if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+		return;
+	}
+
+	WC()->session->set( rytkoset_theme_get_membership_member_rows_session_key(), null );
+}
+add_action( 'woocommerce_cart_emptied', 'rytkoset_theme_reset_requested_membership_member_rows' );
+
+/**
+ * Returns the number of member rows the checkout should show for the current cart.
+ *
+ * Individual and lifetime memberships show one row; family memberships show the
+ * buyer-requested count (1..max, dynamic add/remove #520). Membership products
+ * without the names-required flag do not add rows.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_membership_member_row_count() {
+	return rytkoset_theme_clamp_membership_member_rows(
+		rytkoset_theme_get_requested_membership_member_rows(),
+		rytkoset_theme_get_membership_member_row_bounds()
+	);
 }
 
 /**
@@ -712,8 +841,11 @@ function rytkoset_theme_get_membership_store_api_namespace() {
  * @return array<string, mixed>
  */
 function rytkoset_theme_get_membership_store_api_cart_data() {
+	$bounds = rytkoset_theme_get_membership_member_row_bounds();
+
 	return array(
 		'member_row_count' => rytkoset_theme_get_membership_member_row_count(),
+		'member_row_max'   => $bounds['max'],
 	);
 }
 
@@ -726,6 +858,12 @@ function rytkoset_theme_get_membership_store_api_cart_schema() {
 	return array(
 		'member_row_count' => array(
 			'description' => __( 'Jäsenmaksun jäsenrivien määrä ostoskorissa.', 'rytkoset-theme' ),
+			'type'        => 'integer',
+			'minimum'     => 0,
+			'readonly'    => true,
+		),
+		'member_row_max'   => array(
+			'description' => __( 'Jäsenrivien enimmäismäärä nykyiselle ostoskorille.', 'rytkoset-theme' ),
 			'type'        => 'integer',
 			'minimum'     => 0,
 			'readonly'    => true,
@@ -755,6 +893,15 @@ function rytkoset_theme_register_membership_store_api_cart_data() {
 			'schema_type'     => ARRAY_A,
 		)
 	);
+
+	if ( function_exists( 'woocommerce_store_api_register_update_callback' ) ) {
+		woocommerce_store_api_register_update_callback(
+			array(
+				'namespace' => rytkoset_theme_get_membership_store_api_namespace(),
+				'callback'  => 'rytkoset_theme_handle_membership_member_rows_update',
+			)
+		);
+	}
 }
 
 /**
@@ -1022,6 +1169,66 @@ function rytkoset_theme_enqueue_membership_checkout_prefill() {
 	);
 }
 add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_membership_checkout_prefill' );
+
+/**
+ * Enqueues the dynamic member row controls for the family membership checkout (#520).
+ *
+ * The script renders the "Jäsentiedot" section heading above the member rows
+ * and, for family memberships (more than one allowed row), the "+ Lisää
+ * jäsen" button and per-row remove buttons that post the desired row count to
+ * the Store API via extensionCartUpdate. Loaded whenever the cart shows
+ * member rows at all.
+ *
+ * @return void
+ */
+function rytkoset_theme_enqueue_membership_checkout_rows() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	$bounds = rytkoset_theme_get_membership_member_row_bounds();
+
+	if ( $bounds['max'] < 1 ) {
+		return;
+	}
+
+	$script_path = '/assets/js/membership-checkout-rows.js';
+
+	wp_enqueue_script(
+		'rytkoset-membership-checkout-rows',
+		get_template_directory_uri() . $script_path,
+		array( 'wp-data', 'wc-blocks-checkout' ),
+		rytkoset_theme_get_asset_version( get_template_directory() . $script_path ),
+		true
+	);
+
+	$config = array(
+		'namespace' => rytkoset_theme_get_membership_store_api_namespace(),
+		'i18n'      => array(
+			'add'         => __( 'Lisää jäsen', 'rytkoset-theme' ),
+			/* translators: %d: member row number. */
+			'remove'      => __( 'Poista jäsen %d', 'rytkoset-theme' ),
+			/* translators: 1: visible member row count, 2: maximum member row count. */
+			'count'       => __( '%1$d / %2$d jäsentä', 'rytkoset-theme' ),
+			'maxNote'     => __( 'Enimmäismäärä täynnä.', 'rytkoset-theme' ),
+			/* translators: %d: member row number. */
+			'added'       => __( 'Jäsen %d lisätty', 'rytkoset-theme' ),
+			/* translators: %d: member row number. */
+			'removed'     => __( 'Jäsen %d poistettu', 'rytkoset-theme' ),
+			'error'       => __( 'Jäsenrivin päivitys epäonnistui. Yritä uudelleen.', 'rytkoset-theme' ),
+			'heading'     => __( 'Jäsentiedot', 'rytkoset-theme' ),
+			'introFamily' => __( 'Kirjaa perheenjäsenet jäsenrekisteriä varten. Lisärivien sähköpostiosoitteet ovat valinnaisia.', 'rytkoset-theme' ),
+			'introSingle' => __( 'Kirjaa jäsenen nimi ja sähköpostiosoite jäsenrekisteriä varten.', 'rytkoset-theme' ),
+		),
+	);
+
+	wp_add_inline_script(
+		'rytkoset-membership-checkout-rows',
+		'window.rytkosetMembershipRows = ' . wp_json_encode( $config ) . ';',
+		'before'
+	);
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_membership_checkout_rows' );
 
 /**
  * Returns structured member rows saved on an order.

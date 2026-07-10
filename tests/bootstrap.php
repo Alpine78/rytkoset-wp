@@ -229,6 +229,10 @@ class WC_Product {
 		return (string) ( $this->meta['_price'] ?? '' );
 	}
 
+	public function get_attribute( string $name ): string {
+		return (string) ( $this->meta[ $name ] ?? '' );
+	}
+
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
 	}
@@ -1289,6 +1293,22 @@ function wc_add_notice( $message, $notice_type = 'success' ): void {
 function wc_print_notice( $message, $notice_type = 'success' ): void {
 	wc_add_notice( $message, $notice_type );
 	echo '<div class="woocommerce-' . esc_attr( $notice_type ) . '">' . esc_html( $message ) . '</div>';
+}
+
+function wc_clean( $value ) {
+	return sanitize_text_field( (string) $value );
+}
+
+function wc_get_price_including_tax( $product ) {
+	return $product instanceof WC_Product ? (float) $product->get_price() : 0.0;
+}
+
+function wc_price( $price ): string {
+	return number_format( (float) $price, 2, ',', ' ' ) . ' €';
+}
+
+function taxonomy_exists( $taxonomy ): bool {
+	return false;
 }
 
 function wc_get_account_endpoint_url( $endpoint ): string {
