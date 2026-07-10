@@ -46,6 +46,10 @@ services:
     volumes:
       - wp_core:/var/www/html
       - ./wp-content:/var/www/html/wp-content
+      # Same PHP limits as the wordpress container's Dockerfile (docker/uploads.ini) -
+      # the CLI image has no Dockerfile of its own, and WP-CLI bootstrapping
+      # WooCommerce blocks needs more than PHP's 128M default.
+      - ./docker/uploads.ini:/usr/local/etc/php/conf.d/zz-uploads.ini:ro
 
 volumes:
   db_data:
