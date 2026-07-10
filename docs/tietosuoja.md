@@ -46,7 +46,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 # Tietosuojaseloste
 
-Päivitetty: 2.7.2026
+Päivitetty: 10.7.2026
 
 ## Rekisterinpitäjä
 
@@ -102,6 +102,21 @@ Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -o
 Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Mollie. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
 
 Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Näitä tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
+
+Perhejäsenmaksulla annetut jäsenrivit tallennetaan lisäksi ostajan päätilin
+perhejäsenlistaan, jotta perhejäsenyys ja siihen kuuluvat sivuston jäsenedut
+voidaan yhdistää oikeisiin käyttäjätileihin. Lista sisältää jäsenen nimen,
+mahdollisen sähköpostiosoitteen, käyttäjätililinkityksen tilan ja tiedon
+lähdetilauksesta. Listaa säilytetään niin kauan kuin sitä tarvitaan jäsenyyden
+ja jäsenetujen hallintaan; virheellisen tai tarpeettoman perherivin korjaamista
+tai poistamista voi pyytää rekisterinpitäjältä.
+
+Jos perhejäsenelle ilmoitetulla sähköpostiosoitteella ei vielä ole
+käyttäjätiliä, osoitteeseen lähetetään kertaluonteinen viesti, jossa kerrotaan,
+että osoite on annettu perhejäsenmaksun yhteydessä, ja ohjataan luomaan tili
+samalla osoitteella. Viestissä ei kerrota ostajan henkilöllisyyttä tai muita
+tilaustietoja. Ilman sähköpostiosoitetta tallennettu perherivi jää vain
+jäsenrekisteritiedoksi, eikä siitä lähetetä viestiä.
 
 ### Uutiskirje
 

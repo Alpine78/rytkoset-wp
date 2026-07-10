@@ -122,9 +122,8 @@ esimerkiksi jäsenmaksutilauksen sovelluslogiikassa ja kuittausviestin
 ei-aktiivinen → aktiivinen -vertailussa, jotta peritty perhejäsenyys ei estä
 oman jäsenyyden kirjaamista tai kuittausviestiä.
 
-`#519` kytkee myöhemmin WooCommerce-tilauksen perhejäsenrivit tähän malliin.
-Tämä tiketti lisää perustietomallin, admin-muokkauksen ja effective membership
--tarkistuksen.
+WooCommerce-perhejäsenmaksun jäsenrivit kytketään tähän malliin automaattisesti
+tilauksen käsittelyssä (`#519`, tarkempi kuvaus alla).
 
 ## Kuittausviesti jäsenelle
 
@@ -243,15 +242,52 @@ Huomioita:
 - Turvallisuus: WordPressin rekisteröinti varmistaa sähköpostiosoitteen
   hallinnan salasanan asetuslinkillä, joten jäsenyys ei päädy väärälle
   henkilölle, vaikka joku rekisteröisi tilin toisen sähköpostilla.
-- Perhejäsenyyden jäsenrivien (jäsenet 2–6) kytkentä ei kuulu tähän — tämä
-  koskee vain ostajaa/laskutussähköpostia (jatko: `#519`; perustietomalli on
-  `#524`:ssä).
+- Ostajan/laskutussähköpostin lisäksi `#519`-polku etsii uuden käyttäjän
+  sähköpostia myös perhejäsenmaksun jäsenriveiltä ja linkittää odottavan
+  perherivin päätiliin.
+
+## Perhejäsenmaksun jäsenrivien automaattinen käsittely (#519)
+
+Kun `annual_family`-jäsenmaksutilaus saavuttaa tilan `processing` tai
+`completed`, jäsenrivit käsitellään ostajan päätilin alle. Päätili ratkaistaan
+samalla tavalla kuin ostajan jäsenyys (`#518`): ensisijaisesti tilauksen
+käyttäjästä ja vierastilauksella laskutussähköpostia vastaavasta tilistä.
+Jos päätiliä ei vielä ole, perherivejä ei tallenneta ennen kuin ostaja luo tilin
+samalla sähköpostilla.
+
+Ennen tallennusta sähköpostit normalisoidaan pieniksi kirjaimiksi ja
+deduplikoidaan. Ostajan laskutus-/tilisähköpostia vastaava jäsenrivi ohitetaan,
+jotta päätiliä ei linkitetä itseensä. Muut rivit käsitellään näin:
+
+- **Sähköpostilla on käyttäjätili:** rivi tallennetaan tilaan `active`, käyttäjä
+  asetetaan `linked_user_id`-arvoksi ja reverse meta päivitetään #524:n
+  `rytkoset_theme_update_family_members()`-helperillä.
+- **Sähköpostilla ei ole käyttäjätiliä:** rivi tallennetaan tilaan
+  `pending_account`. Osoitteeseen lähetetään kerran tilausta kohti viesti, joka
+  kertoo osoitteen tulleen perhejäsenmaksun yhteydessä ja ohjaa luomaan tilin
+  samalla osoitteella. Viesti ei paljasta ostajan henkilöllisyyttä tai muita
+  tilaustietoja.
+- **Sähköpostia ei ole:** nimi tallennetaan jäsenrekisteritiedoksi ilman
+  käyttäjälinkkiä ja sähköpostiviestiä.
+
+Perherivien onnistunut tallennus merkitään tilaukselle metalla
+`_rytkoset_family_members_processed`. Lähetetyt tilinluontiviestit merkitään
+sähköpostikohtaisesti order metaan `_rytkoset_family_account_notices_sent`.
+Näin `processing` → `completed` -siirtymä ei lisää rivejä tai lähetä viestejä
+uudelleen. Jokaisella tallennetulla rivillä on lisäksi `source_order_id`, joka
+kertoo viimeisimmän lähdetilauksen.
+
+Kun `pending_account`-rivillä oleva henkilö luo käyttäjätilin, `user_register`
+hakee hyväksytyissä tiloissa olevat perhejäsenmaksutilaukset, joiden jäsenriveillä
+on sama normalisoitu sähköposti. Rivi muutetaan `active`-tilaan ja linkitetään
+käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
+`family`-jäsenyydestä; perheenjäsenen omaa `rytkoset_membership_*`-metaa ei
+muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
+membership valitsee oman jäsenyyden.
 
 ## Rajaus
 
 Tämä toteutus ei kata:
 
 - jäsenyyden automaattista vanhenemista cronilla
-- WooCommerce-tilauksen perhejäsenrivien automaattista vientiä perhelistaan
-  (`#519`)
 - paperisen jäsenrekisterin massatuontia
