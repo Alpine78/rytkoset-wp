@@ -285,6 +285,30 @@ käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
 muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
 membership valitsee oman jäsenyyden.
 
+## Oma tili: Jäsenyys (#522, katselusiivu)
+
+WooCommercen **Oma tili** -alueella on endpoint
+`rytkoset_membership` (URL-slugi `jasenyys`) ja valikkokohta **Jäsenyys**.
+Näkymä käyttää suoraan tämän dokumentin jäsenyys- ja perherakenneapureita eikä
+tallenna rinnakkaista jäsenyystietoa.
+
+Näkymä näyttää:
+
+- jäsenyyden tyypin, kauden ja suomalaisessa muodossa olevan
+  voimassaolopäivän
+- aktiivisen, vanhentuneen, puutteellisen tai puuttuvan jäsenyyden tilan
+- ainaisjäsenyyden pysyvänä ilman päättymispäivää
+- linkitetylle perheenjäsenelle effective membership -tilan ja hänen
+  perhejäsenyytensä päätilin
+- päätilille aktiiviset ja käyttäjätiliä odottavat perheenjäsenrivit; historialliset
+  `removed`-rivit jätetään käyttäjän näkymästä pois.
+
+Linkitetty perheenjäsen ei näe päätilin koko perhejäsenlistaa. Tämän ensimmäisen
+siivun näkymä on vain luku -muotoinen; perheenjäsenten käyttäjämuokkaus lisätään
+#522:n seuraavassa siivussa saman `rytkoset_theme_update_family_members()`-apurin
+kautta, kun tarkempi UI on määritelty. Ylläpitäjä voi sillä välin muokata rivejä
+käyttäjäprofiilin Jäsenyys-osiossa.
+
 ## Rajaus
 
 Tämä toteutus ei kata:

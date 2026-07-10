@@ -107,6 +107,7 @@ if ( ! function_exists( 'rytkoset_theme_get_account_menu_item_icon' ) ) {
 			'orders'              => 'package',
 			'downloads'           => 'download',
 			'edit-address'        => 'map-pin',
+			'rytkoset_membership' => 'user',
 			'rytkoset_newsletter' => 'mail',
 			'edit-account'        => 'user',
 			'payment-methods'     => 'credit-card',
@@ -281,6 +282,386 @@ if ( ! function_exists( 'rytkoset_theme_render_account_username_note' ) ) {
 	}
 }
 add_action( 'woocommerce_edit_account_form_start', 'rytkoset_theme_render_account_username_note' );
+
+if ( ! function_exists( 'rytkoset_theme_get_account_membership_endpoint' ) ) {
+	/**
+	 * Returns the membership My Account endpoint key.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_membership_endpoint() {
+		return 'rytkoset_membership';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_account_membership_endpoint_slug' ) ) {
+	/**
+	 * Returns the membership My Account endpoint slug.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_membership_endpoint_slug() {
+		return 'jasenyys';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_register_account_membership_endpoint_query_var' ) ) {
+	/**
+	 * Registers the membership endpoint with WooCommerce.
+	 *
+	 * @param array<string, string> $vars WooCommerce endpoint query vars.
+	 * @return array<string, string>
+	 */
+	function rytkoset_theme_register_account_membership_endpoint_query_var( $vars ) {
+		$vars[ rytkoset_theme_get_account_membership_endpoint() ] = rytkoset_theme_get_account_membership_endpoint_slug();
+
+		return $vars;
+	}
+}
+add_filter( 'woocommerce_get_query_vars', 'rytkoset_theme_register_account_membership_endpoint_query_var' );
+
+if ( ! function_exists( 'rytkoset_theme_get_account_membership_endpoint_rewrite_version' ) ) {
+	/**
+	 * Returns the guarded rewrite version for the membership endpoint.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_account_membership_endpoint_rewrite_version() {
+		return rytkoset_theme_get_account_membership_endpoint() . ':' . rytkoset_theme_get_account_membership_endpoint_slug() . ':v1';
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_account_membership_endpoint_rewrite_rules_exist' ) ) {
+	/**
+	 * Checks whether stored rewrite rules contain the membership endpoint.
+	 *
+	 * @return bool
+	 */
+	function rytkoset_theme_account_membership_endpoint_rewrite_rules_exist() {
+		$rules = get_option( 'rewrite_rules', array() );
+
+		if ( ! is_array( $rules ) ) {
+			return false;
+		}
+
+		$endpoint_slug = rytkoset_theme_get_account_membership_endpoint_slug();
+
+		foreach ( array_keys( $rules ) as $regex ) {
+			if ( false !== strpos( (string) $regex, $endpoint_slug ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_maybe_flush_account_membership_endpoint' ) ) {
+	/**
+	 * Flushes rewrite rules once when the membership endpoint changes.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_maybe_flush_account_membership_endpoint() {
+		if (
+			rytkoset_theme_get_account_membership_endpoint_rewrite_version() === get_option( 'rytkoset_theme_account_membership_endpoint_flushed' )
+			&& rytkoset_theme_account_membership_endpoint_rewrite_rules_exist()
+		) {
+			return;
+		}
+
+		flush_rewrite_rules( false );
+		update_option( 'rytkoset_theme_account_membership_endpoint_flushed', rytkoset_theme_get_account_membership_endpoint_rewrite_version() );
+	}
+}
+add_action( 'init', 'rytkoset_theme_maybe_flush_account_membership_endpoint', 99 );
+
+if ( ! function_exists( 'rytkoset_theme_flush_account_membership_endpoint_on_activation' ) ) {
+	/**
+	 * Flushes membership endpoint rewrite rules when the theme is activated.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_flush_account_membership_endpoint_on_activation() {
+		delete_option( 'rytkoset_theme_account_membership_endpoint_flushed' );
+		flush_rewrite_rules( false );
+		update_option( 'rytkoset_theme_account_membership_endpoint_flushed', rytkoset_theme_get_account_membership_endpoint_rewrite_version() );
+	}
+}
+add_action( 'after_switch_theme', 'rytkoset_theme_flush_account_membership_endpoint_on_activation' );
+
+if ( ! function_exists( 'rytkoset_theme_add_account_membership_menu_item' ) ) {
+	/**
+	 * Adds Membership to My Account before account details.
+	 *
+	 * @param array<string, string> $items WooCommerce My Account menu items.
+	 * @return array<string, string>
+	 */
+	function rytkoset_theme_add_account_membership_menu_item( $items ) {
+		$endpoint = rytkoset_theme_get_account_membership_endpoint();
+		$label    = __( 'Jäsenyys', 'rytkoset-theme' );
+
+		unset( $items[ $endpoint ] );
+
+		$inserted = false;
+		$updated  = array();
+
+		foreach ( $items as $key => $item_label ) {
+			if ( ! $inserted && in_array( $key, array( 'edit-account', 'customer-logout' ), true ) ) {
+				$updated[ $endpoint ] = $label;
+				$inserted             = true;
+			}
+
+			$updated[ $key ] = $item_label;
+		}
+
+		if ( ! $inserted ) {
+			$updated[ $endpoint ] = $label;
+		}
+
+		return $updated;
+	}
+}
+add_filter( 'woocommerce_account_menu_items', 'rytkoset_theme_add_account_membership_menu_item' );
+
+if ( ! function_exists( 'rytkoset_theme_get_account_membership_status' ) ) {
+	/**
+	 * Builds the user-facing status presentation for membership details.
+	 *
+	 * @param array<string, string> $membership Membership details.
+	 * @return array{active:bool,label:string,description:string,variant:string}
+	 */
+	function rytkoset_theme_get_account_membership_status( $membership ) {
+		$type = isset( $membership['type'] ) ? rytkoset_theme_normalize_user_membership_type( (string) $membership['type'] ) : '';
+
+		if ( '' === $type ) {
+			return array(
+				'active'      => false,
+				'label'       => __( 'Ei jäsenyyttä', 'rytkoset-theme' ),
+				'description' => __( 'Sinulla ei ole tällä hetkellä voimassa olevaa jäsenyyttä.', 'rytkoset-theme' ),
+				'variant'     => 'neutral',
+			);
+		}
+
+		if ( 'lifetime' === $type ) {
+			return array(
+				'active'      => true,
+				'label'       => __( 'Pysyvä jäsenyys', 'rytkoset-theme' ),
+				'description' => __( 'Jäsenetusi ovat voimassa pysyvästi.', 'rytkoset-theme' ),
+				'variant'     => 'done',
+			);
+		}
+
+		$expires         = isset( $membership['expires'] ) ? (string) $membership['expires'] : '';
+		$expires_display = rytkoset_theme_get_user_membership_expires_display( $expires );
+
+		if ( rytkoset_theme_user_membership_is_active( $membership ) ) {
+			return array(
+				'active'      => true,
+				'label'       => __( 'Voimassa', 'rytkoset-theme' ),
+				'description' => '' !== $expires_display
+					? sprintf(
+						/* translators: %s: membership expiry date. */
+						__( 'Jäsenetusi ovat voimassa %s asti.', 'rytkoset-theme' ),
+						$expires_display
+					)
+					: __( 'Jäsenetusi ovat voimassa.', 'rytkoset-theme' ),
+				'variant'     => 'done',
+			);
+		}
+
+		if ( '' !== $expires_display && $expires < current_datetime()->format( 'Y-m-d' ) ) {
+			return array(
+				'active'      => false,
+				'label'       => __( 'Vanhentunut', 'rytkoset-theme' ),
+				'description' => sprintf(
+					/* translators: %s: membership expiry date. */
+					__( 'Jäsenyytesi päättyi %s.', 'rytkoset-theme' ),
+					$expires_display
+				),
+				'variant'     => 'cancelled',
+			);
+		}
+
+		return array(
+			'active'      => false,
+			'label'       => __( 'Ei voimassa', 'rytkoset-theme' ),
+			'description' => __( 'Jäsenyyden voimassaoloa ei ole vahvistettu.', 'rytkoset-theme' ),
+			'variant'     => 'cancelled',
+		);
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_account_family_member_status' ) ) {
+	/**
+	 * Builds the account-link status presentation for one family member row.
+	 *
+	 * @param array<string, mixed> $member Family member row.
+	 * @return array{label:string,variant:string}
+	 */
+	function rytkoset_theme_get_account_family_member_status( $member ) {
+		$is_linked = isset( $member['status'], $member['linked_user_id'] )
+			&& 'active' === $member['status']
+			&& absint( $member['linked_user_id'] ) > 0;
+
+		return $is_linked
+			? array(
+				'label'   => __( 'Linkitetty käyttäjätiliin', 'rytkoset-theme' ),
+				'variant' => 'done',
+			)
+			: array(
+				'label'   => __( 'Odottaa käyttäjätiliä', 'rytkoset-theme' ),
+				'variant' => 'pending',
+			);
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_account_membership_view_data' ) ) {
+	/**
+	 * Returns membership data limited to the requested user's own family relationship.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array<string, mixed>
+	 */
+	function rytkoset_theme_get_account_membership_view_data( $user_id ) {
+		$user_id              = absint( $user_id );
+		$own_membership       = rytkoset_theme_get_user_membership( $user_id );
+		$effective_membership = rytkoset_theme_get_effective_user_membership( $user_id );
+		$is_inherited         = 'family' === $effective_membership['source'];
+		$display_membership   = $is_inherited ? $effective_membership : $own_membership;
+		$family_members       = array();
+
+		if ( 'family' === $own_membership['type'] ) {
+			foreach ( rytkoset_theme_get_family_members( $user_id ) as $member ) {
+				if ( 'removed' !== $member['status'] ) {
+					$family_members[] = $member;
+				}
+			}
+		}
+
+		$primary_user = $is_inherited ? get_userdata( absint( $effective_membership['primary_user_id'] ) ) : false;
+
+		return array(
+			'own_membership'       => $own_membership,
+			'effective_membership' => $effective_membership,
+			'display_membership'   => $display_membership,
+			'status'               => rytkoset_theme_get_account_membership_status( $display_membership ),
+			'is_inherited'         => $is_inherited,
+			'primary_user'         => $primary_user instanceof WP_User ? $primary_user : null,
+			'family_members'       => $family_members,
+			'is_family_primary'    => 'family' === $own_membership['type'],
+		);
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_render_account_membership_endpoint' ) ) {
+	/**
+	 * Renders the read-only My Account membership view.
+	 *
+	 * @return void
+	 */
+	function rytkoset_theme_render_account_membership_endpoint() {
+		$user = wp_get_current_user();
+
+		echo '<h2 class="rytkoset-account-h2">' . esc_html__( 'Jäsenyys', 'rytkoset-theme' ) . '</h2>';
+		echo '<p class="rytkoset-account-lede">' . esc_html__( 'Näet tässä jäsenyytesi ja siihen liittyvät perheenjäsenet.', 'rytkoset-theme' ) . '</p>';
+
+		if ( ! $user instanceof WP_User || ! $user->exists() ) {
+			wc_print_notice( __( 'Kirjaudu sisään nähdäksesi jäsenyytesi.', 'rytkoset-theme' ), 'error' );
+			return;
+		}
+
+		$data                = rytkoset_theme_get_account_membership_view_data( $user->ID );
+		$membership          = $data['display_membership'];
+		$status              = $data['status'];
+		$type_label          = rytkoset_theme_get_user_membership_type_label( $membership['type'] );
+		$expires_display     = rytkoset_theme_get_user_membership_expires_display( $membership['expires'] );
+		$membership_page_url = home_url( '/sukuseura/jasenyys/' );
+		?>
+		<section class="rytkoset-account-membership" aria-labelledby="rytkoset-membership-summary-title">
+			<div class="rytkoset-account-membership__head">
+				<div>
+					<h3 id="rytkoset-membership-summary-title" class="rytkoset-account-membership__title"><?php echo esc_html( $type_label ); ?></h3>
+					<p class="rytkoset-account-membership__description"><?php echo esc_html( $status['description'] ); ?></p>
+				</div>
+				<span class="rytkoset-status-chip rytkoset-status-chip--<?php echo esc_attr( $status['variant'] ); ?>"><?php echo esc_html( $status['label'] ); ?></span>
+			</div>
+
+			<dl class="rytkoset-account-membership__details">
+				<div>
+					<dt><?php esc_html_e( 'Jäsenyyden tyyppi', 'rytkoset-theme' ); ?></dt>
+					<dd><?php echo esc_html( $type_label ); ?></dd>
+				</div>
+				<?php if ( '' !== $membership['period'] ) : ?>
+					<div>
+						<dt><?php esc_html_e( 'Jäsenkausi', 'rytkoset-theme' ); ?></dt>
+						<dd><?php echo esc_html( $membership['period'] ); ?></dd>
+					</div>
+				<?php endif; ?>
+				<?php if ( 'lifetime' === $membership['type'] ) : ?>
+					<div>
+						<dt><?php esc_html_e( 'Voimassaolo', 'rytkoset-theme' ); ?></dt>
+						<dd><?php esc_html_e( 'Pysyvä', 'rytkoset-theme' ); ?></dd>
+					</div>
+				<?php elseif ( '' !== $expires_display ) : ?>
+					<div>
+						<dt><?php esc_html_e( 'Voimassa asti', 'rytkoset-theme' ); ?></dt>
+						<dd><?php echo esc_html( $expires_display ); ?></dd>
+					</div>
+				<?php endif; ?>
+			</dl>
+
+			<?php if ( $data['is_inherited'] && $data['primary_user'] instanceof WP_User ) : ?>
+				<div class="rytkoset-account-membership__family-source" role="note">
+					<strong><?php esc_html_e( 'Jäsenedut perhejäsenyyden kautta', 'rytkoset-theme' ); ?></strong>
+					<?php
+					printf(
+						/* translators: 1: primary account name, 2: primary account email. */
+						esc_html__( 'Päätili: %1$s (%2$s). Vain päätilin käyttäjä voi hallita koko perhettä.', 'rytkoset-theme' ),
+						esc_html( $data['primary_user']->display_name ),
+						esc_html( $data['primary_user']->user_email )
+					);
+					?>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( ! $status['active'] ) : ?>
+				<a class="button rytkoset-account-membership__action" href="<?php echo esc_url( $membership_page_url ); ?>"><?php esc_html_e( 'Tutustu jäsenyyteen', 'rytkoset-theme' ); ?></a>
+			<?php endif; ?>
+		</section>
+
+		<?php if ( $data['is_family_primary'] ) : ?>
+			<section class="rytkoset-account-family" aria-labelledby="rytkoset-family-title">
+				<h3 id="rytkoset-family-title" class="rytkoset-account-family__title"><?php esc_html_e( 'Perheenjäsenet', 'rytkoset-theme' ); ?></h3>
+				<?php if ( empty( $data['family_members'] ) ) : ?>
+					<p class="rytkoset-account-family__empty"><?php esc_html_e( 'Perhejäsenyyteen ei ole vielä lisätty muita perheenjäseniä.', 'rytkoset-theme' ); ?></p>
+				<?php else : ?>
+					<table class="shop_table shop_table_responsive rytkoset-account-family__table" aria-labelledby="rytkoset-family-title">
+						<thead>
+							<tr>
+								<th scope="col"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Tilin tila', 'rytkoset-theme' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach ( $data['family_members'] as $member ) : ?>
+								<?php $member_status = rytkoset_theme_get_account_family_member_status( $member ); ?>
+								<tr>
+									<td data-title="<?php esc_attr_e( 'Nimi', 'rytkoset-theme' ); ?>"><?php echo esc_html( $member['name'] ); ?></td>
+									<td data-title="<?php esc_attr_e( 'Sähköposti', 'rytkoset-theme' ); ?>"><?php echo '' !== $member['email'] ? esc_html( $member['email'] ) : esc_html__( 'Ei sähköpostia', 'rytkoset-theme' ); ?></td>
+									<td data-title="<?php esc_attr_e( 'Tilin tila', 'rytkoset-theme' ); ?>"><span class="rytkoset-status-chip rytkoset-status-chip--<?php echo esc_attr( $member_status['variant'] ); ?>"><?php echo esc_html( $member_status['label'] ); ?></span></td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				<?php endif; ?>
+			</section>
+		<?php endif; ?>
+		<?php
+	}
+}
+add_action( 'woocommerce_account_rytkoset_membership_endpoint', 'rytkoset_theme_render_account_membership_endpoint' );
 
 if ( ! function_exists( 'rytkoset_theme_get_account_newsletter_endpoint' ) ) {
 	/**

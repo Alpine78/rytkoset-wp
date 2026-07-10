@@ -779,6 +779,108 @@ body.woocommerce-account .woocommerce-MyAccount-content #account_display_name_de
 }
 
 /* -----------------------------------------------------------------
+   Jäsenyyden yhteenveto ja perheenjäsenet
+   ----------------------------------------------------------------- */
+
+.rytkoset-account-membership {
+  max-width: 720px;
+  padding: 24px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.rytkoset-account-membership__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--acct-divider);
+}
+
+.rytkoset-account-membership__title,
+.rytkoset-account-family__title {
+  margin: 0;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.rytkoset-account-membership__description {
+  margin: 6px 0 0;
+  color: var(--color-text-mute);
+  font-size: 0.9375rem;
+}
+
+.rytkoset-account-membership__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin: 20px 0 0;
+}
+
+.rytkoset-account-membership__details div {
+  min-width: 0;
+}
+
+.rytkoset-account-membership__details dt {
+  color: var(--color-text-mute);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rytkoset-account-membership__details dd {
+  margin: 4px 0 0;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.rytkoset-account-membership__family-source {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius-m);
+  background: var(--acct-accent-soft);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.rytkoset-account-membership__family-source strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--acct-heading);
+}
+
+body.woocommerce-account .rytkoset-account-membership__action {
+  margin-top: 20px;
+}
+
+.rytkoset-account-family {
+  margin-top: 32px;
+}
+
+.rytkoset-account-family__title {
+  margin-bottom: 16px;
+}
+
+.rytkoset-account-family__empty {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  color: var(--color-text-mute);
+}
+
+body.woocommerce-account .woocommerce table.rytkoset-account-family__table {
+  margin-bottom: 0;
+}
+
+/* -----------------------------------------------------------------
    Uutiskirjeen hallinta
    ----------------------------------------------------------------- */
 
@@ -1004,6 +1106,16 @@ body.woocommerce-account .woocommerce-MyAccount-content .show-password-input {
   .rytkoset-account-newsletter-card {
     max-width: none;
     padding: 20px;
+  }
+
+  .rytkoset-account-membership {
+    max-width: none;
+    padding: 20px;
+  }
+
+  .rytkoset-account-membership__head {
+    flex-direction: column;
+    gap: 12px;
   }
 
   .rytkoset-account-newsletter-card__head {
