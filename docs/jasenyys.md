@@ -285,6 +285,66 @@ käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
 muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
 membership valitsee oman jäsenyyden.
 
+## Jäsenten aktivointityökalu (#525)
+
+**Käyttäjät → Jäsenten aktivointi** (oikeus `edit_users`, moduuli
+[`inc/user-membership-activation.php`](../wp-content/themes/rytkoset-theme/inc/user-membership-activation.php))
+on ylläpidon työkalu olemassa olevien jäsenten (paperinen jäsenrekisteri)
+jäsenetujen käyttöönottoon ilman WooCommerce-tilausta.
+
+Ylläpitäjä syöttää yhden tai useamman sähköpostiosoitteen (yksi per rivi,
+myös pilkku/puolipiste erottimena kelpaa) sekä jäsenyyden tyypin, kauden ja
+voimassaolopäivän. Osoitteet normalisoidaan pieniksi kirjaimiksi,
+deduplikoidaan ja epäkelvot rivit raportoidaan käsittelemättöminä. Vuosi- ja
+perhejäsenyys vaatii kelvollisen Voimassa asti -päivän ennen käsittelyä, koska
+ilman sitä jäsenyys ei aktivoituisi.
+
+Käsittely osoitetta kohti:
+
+- **Käyttäjätili löytyy:** jäsenyys päivitetään valituilla tiedoilla samalla
+  "ei koskaan lyhennetä" -säännöllä kuin tilauspolussa (`#302`): ainaisjäsenyyttä
+  tai pidempään voimassa olevaa aktiivista jäsenyyttä ei korvata lyhyemmällä.
+  Ei-aktiivinen → aktiivinen -siirtymästä lähtee `#390`-vahvistusviesti.
+- **Käyttäjätiliä ei löydy:** jäsenyystiedot tallennetaan odottavaksi
+  jäsenyydeksi (`rytkoset_pending_manual_memberships`-optio, avaimena
+  normalisoitu sähköposti) ja osoitteeseen lähetetään `#518`-mallinen
+  kutsuviesti: luo tili samalla sähköpostiosoitteella, niin jäsenyys aktivoituu
+  automaattisesti. Viesti kertoo, että osoite on peräisin sukuseuran
+  jäsenrekisteristä, kuka on rekisterinpitäjä ja mistä tietosuojaseloste löytyy
+  (WordPressin tietosuojasivu, jos asetettu).
+- **Rekisteröityminen:** `user_register`-hookissa odottava jäsenyys sovelletaan
+  uudelle tilille samalla apply-polulla (ei koskaan lyhennetä,
+  vahvistusviesti), ja odottava merkintä poistetaan. WordPressin rekisteröinti
+  varmistaa sähköpostin hallinnan salasanan asetuslinkillä.
+
+Uudelleenlähetyksen esto: jo kutsutun osoitteen uusi käsittely päivittää
+odottavat jäsenyystiedot mutta **ei** lähetä kutsua uudelleen, ellei
+ylläpitäjä valitse erillistä "Lähetä kutsuviesti uudelleen" -valintaa.
+Lomake käsitellään POST-redirect-GET-mallilla, joten sivun päivitys ei koskaan
+toista käsittelyä tai lähetä viestejä uudelleen. Epäonnistunut lähetys
+(`wp_mail` palauttaa false) jättää jäsenyyden odottamaan ilman
+lähetysmerkintää, jolloin uusi käsittely yrittää lähetystä uudelleen.
+
+Sivu näyttää myös:
+
+- **Tiliä odottavat jäsenyydet** -taulukon (osoite, jäsenyys, kutsun
+  lähetysaika, lisääjä) ja rivikohtaisen **Poista**-toiminnon, joka lopettaa
+  odottavan jäsenyyden (rekisteröityminen ei enää aktivoi sitä). Poistoa
+  käytetään myös, jos rekisteröity pyytää tietojensa poistoa.
+- **Viimeisimmät käsittelyt** -lokin (aika, osoite, tulos, käsittelijä;
+  optio `rytkoset_membership_activation_log`, uusin ensin, enintään 200
+  merkintää). Lokiin ei tallenneta viestien sisältöjä.
+
+GDPR-rajaus: työkalu käsittelee vain sähköpostiosoitteen ja valitut
+jäsenyystiedot. Käsittelyperuste on yhdistyksen jäsenyyden hoitaminen
+(sopimus/jäsenyyssuhde), ei markkinointisuostumus: työkalu ei tilaa
+uutiskirjettä eikä lisää osoitteita muuhun viestintään. Ks. tietosuojaselosteen
+pohja [tietosuoja.md](tietosuoja.md).
+
+Perhejäsenyyden perheenjäsenten linkitys ei kuulu tähän työkaluun: työkalu
+asettaa vain jäsenen oman jäsenyyden. Perherakenne hallitaan käyttäjäprofiilin
+Perhejäsenet-taulukolla (`#524`) tai perhejäsenmaksun tilauspolulla (`#519`).
+
 ## Oma tili: Jäsenyys (#522)
 
 WooCommercen **Oma tili** -alueella on endpoint
