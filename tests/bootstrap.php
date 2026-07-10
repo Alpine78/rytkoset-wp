@@ -1323,6 +1323,7 @@ function wc_get_account_endpoint_url( $endpoint ): string {
 		'lost-password'   => 'unohtunut-salasana',
 		'customer-logout' => 'kirjaudu-ulos',
 		'rytkoset_newsletter' => 'uutiskirje',
+		'rytkoset_membership' => 'jasenyys',
 	);
 
 	return home_url( '/tili/' . ( $slugs[ $endpoint ] ?? $endpoint ) . '/' );

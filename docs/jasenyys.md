@@ -285,7 +285,7 @@ käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
 muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
 membership valitsee oman jäsenyyden.
 
-## Oma tili: Jäsenyys (#522, katselusiivu)
+## Oma tili: Jäsenyys (#522)
 
 WooCommercen **Oma tili** -alueella on endpoint
 `rytkoset_membership` (URL-slugi `jasenyys`) ja valikkokohta **Jäsenyys**.
@@ -303,11 +303,58 @@ Näkymä näyttää:
 - päätilille aktiiviset ja käyttäjätiliä odottavat perheenjäsenrivit; historialliset
   `removed`-rivit jätetään käyttäjän näkymästä pois.
 
-Linkitetty perheenjäsen ei näe päätilin koko perhejäsenlistaa. Tämän ensimmäisen
-siivun näkymä on vain luku -muotoinen; perheenjäsenten käyttäjämuokkaus lisätään
-#522:n seuraavassa siivussa saman `rytkoset_theme_update_family_members()`-apurin
-kautta, kun tarkempi UI on määritelty. Ylläpitäjä voi sillä välin muokata rivejä
-käyttäjäprofiilin Jäsenyys-osiossa.
+Linkitetty perheenjäsen ei näe päätilin koko perhejäsenlistaa.
+
+### Perheenjäsenten itsepalvelumuokkaus (#522, toinen siivu)
+
+Perhejäsenyyden päätili voi lisätä, muokata ja poistaa perheenjäseniä suoraan
+Oma tili > Jäsenyys -näkymästä, saman `rytkoset_theme_update_family_members()`-
+apurin kautta kuin ylläpitäjän profiilimuokkaus (`inc/user-membership.php`) ja
+tilauspolut (#518/#519). Ylläpitäjä voi edelleen muokata rivejä
+käyttäjäprofiilin Jäsenyys-osiossa — molemmat reitit käyttävät samaa datamallia
+ja tallennushelperiä, joten ne eivät voi ajautua epäsynkkaan.
+
+Toteutus (`inc/woocommerce-my-account.php`):
+
+- **Lisää perheenjäsen** -lomake: nimi (pakollinen) + sähköposti (valinnainen).
+  Uusi rivi tallentuu aina `linked_user_id = 0` -tilassa — itsepalvelu ei voi
+  koskaan linkittää käyttäjätiliä suoraan; linkitys syntyy vain tilauspolun
+  (#519) tai ylläpitäjän profiilimuokkauksen kautta.
+- **Enimmäismäärä:** perheenjäseniä voi lisätä itsepalveluna enintään
+  `rytkoset_theme_get_account_family_member_max_rows()`-verran (oletus 5).
+  Tämä on sama raja kuin kassan perhejäsenmaksun rivimäärä
+  (`rytkoset_theme_get_membership_max_member_rows()`, suodatin
+  `rytkoset_theme_membership_max_member_rows`, oletus 6) miinus yksi — kassan
+  rivi 1 on ostajan oma nimi/sähköposti, joten tilinhallinnan lista (joka ei
+  sisällä päätiliä) saa yhden rivin vähemmän. Molemmat säädetään samasta
+  suodattimesta, joten ne eivät voi ajautua epäsynkkaan. `removed`-rivit eivät
+  laske rajaan mukaan. Kun raja on saavutettu, lisäyslomake korvautuu
+  ohjeviestillä ("poista ensin joku perheenjäsen"); palvelin torjuu myös
+  suoraan lähetetyn ylimääräisen lisäyksen samalla rajalla riippumatta siitä,
+  näkyykö lomake.
+- **Muokkaa** (kynäikoni): vaihtaa rivin näyttötilan JS:ttömäksi inline-
+  lomakkeeksi URL:n kyselyparametrilla `?rytkoset_edit_member=<indeksi>` (vain
+  näyttötilan valinta, ei tilamuutosta — turvallinen ilman noncea). Rivin
+  nimen ja sähköpostin voi tallentaa; `linked_user_id`/`status` eivät muutu.
+- **Poista** (roskakoriikoni): asettaa rivin tilaksi `removed` (pehmeä poisto,
+  ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
+  Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`
+  siivoaa linkitetyn käyttäjän reverse-metan samalla kutsulla, joten peritty
+  jäsenetu päättyy heti.
+- Rivin indeksi (ei erillistä rivitunnistetta) osoittaa suoraan kohtaan
+  päätilin tallennetussa listassa — sama konventio kuin ylläpitäjän
+  profiililomakkeella. Näkymä säilyttää alkuperäisen indeksin, vaikka
+  `removed`-rivejä suodatetaan pois listasta ennen renderöintiä.
+- Jokainen toiminto (`add`/`edit`/`remove`) on oma lomake, jolla on oma
+  nonce-toiminto (`rytkoset_account_family_<toiminto>`), ja käsittely tapahtuu
+  `template_redirect`-koukussa (`rytkoset_theme_handle_account_membership_family_submit()`).
+  Puhdas päätösfunktio `rytkoset_theme_apply_account_family_member_action()`
+  rakentaa kandidaattilistan ilman sivuvaikutuksia; lopullinen tallennus ja
+  validointi (duplikaattisähköposti/-käyttäjä, itselinkitys, jo-linkitetty-
+  toisaalle) tapahtuu aina `rytkoset_theme_update_family_members()`-kutsussa.
+- Toiminto sallitaan vain, jos kirjautuneen käyttäjän **oma** jäsenyystyyppi on
+  `family` (ei riitä, että käyttäjä saisi perhejäsenedut jonkun toisen
+  päätilin kautta).
 
 ## Rajaus
 
