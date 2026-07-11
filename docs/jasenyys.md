@@ -435,3 +435,17 @@ Tämä toteutus ei kata:
 
 - jäsenyyden automaattista vanhenemista cronilla
 - paperisen jäsenrekisterin massatuontia
+## Verkkojäsenyyksien koonti ylläpidossa
+
+`Käyttäjät → Verkkojäsenyydet` näyttää vain luku -muotoisen yhteenvedon sivuston jäsenyyksistä ja jäseneduista. Mukana ovat käyttäjän oma jäsenyys, linkitetyn käyttäjän perhejäsenyyden kautta saamat edut, Jäsenten aktivointi -työkalussa käyttäjätiliä odottavat jäsenyydet sekä käyttäjätiliä odottavat perhejäsenrivit.
+
+Näkymä ei ole virallinen tai täydellinen jäsenrekisteri. Henkilö ei näy siinä, jos hänellä ei ole käyttäjätiliä, odottavaa verkkojäsenyyttä eikä perhejäsenriviä. Koontia voivat käyttää vain ylläpitäjät, joilla on `edit_users`-oikeus.
+
+Koontia voi hakea nimellä tai sähköpostilla sekä suodattaa tilan ja jäsenyyden tyypin mukaan. Tila tarkoittaa:
+
+- **Aktiivinen:** jäsenyys tai päätilin perhejäsenyys on voimassa.
+- **Vanhentunut:** määräaikaisen jäsenyyden voimassaolopäivä on mennyt.
+- **Puutteellinen:** määräaikaiselta jäsenyydeltä puuttuu kelvollinen voimassaolopäivä tai perhelinkin päätilillä ei ole perhejäsenyyttä.
+- **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin luonnin jälkeen.
+
+Nimi- ja päätililinkit avaavat käyttäjäprofiilin. Jäsenten aktivointi -lähdelinkki avaa aktivointityökalun, jossa odottavaa jäsenyyttä voi käsitellä.
