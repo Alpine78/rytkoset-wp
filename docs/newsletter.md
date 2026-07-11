@@ -25,7 +25,7 @@ Jäsenviestintää varten käytetään omaa AcyMailing-listaa. Se ei ole yleinen
 uutiskirjesuostumukseen. Listaa saa käyttää vain jäsenyyssuhteen hoitamiseen,
 ei yleiseen markkinointiin.
 
-Ensimmäisessä toteutussiivussa:
+Toteutuksessa:
 
 - lista-ID asetetaan kohdassa **Ulkoasu → Mukauta → Uutiskirje → Jäsenviestinnän AcyMailing-listan ID**
 - yleisen footer-lomakkeen käyttämä lista-ID hylätään jäsenlista-asetuksesta
@@ -37,12 +37,33 @@ Ensimmäisessä toteutussiivussa:
 - manuaalinen listaperuutus (`status = 0`) ja tilaajan globaali esto (`active = 0`) säilytetään
 - jäsenyyden päättyessä poistetaan vain jäsenlistakytkentä; tilaajatietuetta tai muita listoja ei poisteta
 - synkronointi ei lähetä AcyMailingin vahvistus-, tervetulo- tai poistumisviestejä eikä laukaise AcyMailingin tilausautomaatioita
+- päivittäinen WP-Cron-täsmäytys käsittelee sekä WordPress-käyttäjät että jäsenlistan nykyiset aktiiviset kytkennät
+- oletuserä on 50 tietuetta ja seuraava erä ajastetaan minuutin päähän; eräkoko on rajattavissa suodattimella `rytkoset_theme_member_newsletter_batch_size` välille 1–200
+- käyttäjä- ja AcyMailing-vaiheet käyttävät kasvavaa numeerista ID-kursoria, joten keskeytynyt ajo voidaan jatkaa idempotentisti
+- myös poistetun käyttäjätilin jäsenlistalle jäänyt aktiivinen kytkentä poistuu AcyMailing-vaiheessa
+- viiden minuutin lukko estää päällekkäiset erät; lukittuna saapunut ajo varmistaa uuden jatkoerän
 
-Päivämäärän ylittyminen ei itsessään muuta user metaa. Siksi tämä ensimmäinen
-siivu ei vielä yksin poista kaikkia ajan myötä vanhentuvia jäsenyyksiä listalta.
-Päivittäinen erätäsmäytys ja ylläpidolle näkyvä ajotila toteutetaan tiketin
-seuraavassa siivussa. Jäsenlistaa ei pidä ottaa tuotantolähetyksiin ennen niiden
-valmistumista ja koko tiketin validointia.
+Päivämäärän ylittyminen ei itsessään muuta user metaa. Päivittäinen täsmäytys
+laskee siksi effective membership -tilan uudelleen ja poistaa vanhentuneen
+jäsenen listakytkennän viimeistään seuraavassa loppuun asti edenneessä
+päiväajossa. Ainaisjäsen pysyy mukana, ja usean oman tai perityn lähteen käyttäjä
+poistuu vasta, kun effective membership ei enää ole aktiivinen.
+
+Ajotila näkyy `wp-admin → Hallintapaneeli → Jäsenviestinnän synkronointi`:
+
+- asetettu lista-ID ja käytössäolo
+- onko ajo käynnissä, onnistunut, valmistunut virhein tai estynyt asetusvirheeseen
+- aloitus, viimeisin valmistuminen ja viimeisin täysin onnistunut ajo
+- käsiteltyjen, lisättyjen, poistettujen, ennallaan pysyneiden, suojattujen ja virheellisten tietueiden määrät
+- viimeisin lyhyt virhekoodi ja aika
+
+Koosteeseen ei tallenneta nimiä, sähköpostiosoitteita tai viestisisältöjä.
+Virheellinen tietue ei keskeytä muuta erää; seuraava päiväajo aloittaa uuden
+täsmäytyksen ja yrittää tilanteen uudelleen. Tietokantahaun tai asetusten
+laajuinen virhe päättää nykyisen ajon virhetilaan, jotta ylläpito näkee sen.
+
+WP-Cron käynnistyy sivustoliikenteestä. Jos viimeisin onnistunut ajo ei päivity
+päivittäin, tarkista ensin WordPressin cronin toiminta ja jäsenlista-asetus.
 
 ## Uutiskirjeen laatiminen ja lähettäminen
 
