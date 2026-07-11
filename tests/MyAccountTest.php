@@ -315,6 +315,13 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'rytkoset_family_member_name_required', $result->get_error_codes()[0] );
 	}
 
+	public function test_apply_family_member_action_add_rejects_invalid_email(): void {
+		$result = rytkoset_theme_apply_account_family_member_action( array(), 'add', 0, 'Uusi Jäsen', 'ei-sahkoposti', 5 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rytkoset_family_member_email_invalid', $result->get_error_codes()[0] );
+	}
+
 	public function test_apply_family_member_action_add_rejects_when_at_the_row_limit(): void {
 		$members = array(
 			array( 'name' => 'Jäsen 1', 'email' => '' ),
@@ -356,6 +363,51 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'uusi@example.test', $result[0]['email'] );
 		// The other row is untouched.
 		$this->assertSame( 'Toinen', $result[1]['name'] );
+	}
+
+	public function test_apply_family_member_action_email_change_unlinks_existing_account(): void {
+		$members = array(
+			array(
+				'name'           => 'Linkitetty jäsen',
+				'email'          => 'vanha@example.test',
+				'linked_user_id' => 20,
+				'status'         => 'active',
+			),
+		);
+
+		$result = rytkoset_theme_apply_account_family_member_action( $members, 'edit', 0, 'Uusi henkilö', 'uusi@example.test', 5 );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'uusi@example.test', $result[0]['email'] );
+		$this->assertSame( 0, $result[0]['linked_user_id'] );
+		$this->assertSame( 'pending_account', $result[0]['status'] );
+	}
+
+	public function test_apply_family_member_action_name_change_preserves_existing_link(): void {
+		$members = array(
+			array(
+				'name'           => 'Vanha nimi',
+				'email'          => 'jasen@example.test',
+				'linked_user_id' => 20,
+				'status'         => 'active',
+			),
+		);
+
+		$result = rytkoset_theme_apply_account_family_member_action( $members, 'edit', 0, 'Korjattu nimi', 'JASEN@example.test', 5 );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( 'jasen@example.test', $result[0]['email'] );
+		$this->assertSame( 20, $result[0]['linked_user_id'] );
+		$this->assertSame( 'active', $result[0]['status'] );
+	}
+
+	public function test_apply_family_member_action_edit_rejects_invalid_email(): void {
+		$members = array( array( 'name' => 'Vanha nimi', 'email' => 'vanha@example.test' ) );
+
+		$result = rytkoset_theme_apply_account_family_member_action( $members, 'edit', 0, 'Uusi nimi', 'rikki@', 5 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rytkoset_family_member_email_invalid', $result->get_error_codes()[0] );
 	}
 
 	public function test_apply_family_member_action_edit_requires_a_name(): void {
@@ -493,6 +545,73 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$members = rytkoset_theme_get_family_members( 10 );
 		$this->assertSame( 'Uusi Nimi', $members[0]['name'] );
 		$this->assertTrue( wc_has_notice( 'Perheenjäsenen tiedot päivitettiin.', 'success' ) );
+	}
+
+	public function test_family_submit_handler_email_change_revokes_old_inherited_membership(): void {
+		$this->set_up_family_primary( 10 );
+		rytkoset_test_register_user( 20, 'member@example.test', 'Perheen Jäsen' );
+		rytkoset_theme_update_family_members(
+			10,
+			array(
+				array(
+					'name'           => 'Perheen Jäsen',
+					'email'          => 'member@example.test',
+					'linked_user_id' => 20,
+					'status'         => 'active',
+				),
+			)
+		);
+
+		$_POST = array(
+			'rytkoset_account_family_action' => 'edit',
+			'_wpnonce'                       => 'rytkoset_account_family_edit',
+			'rytkoset_family_member_index'   => '0',
+			'rytkoset_family_member_name'    => 'Uusi henkilö',
+			'rytkoset_family_member_email'   => 'uusi@example.test',
+		);
+
+		try {
+			rytkoset_theme_handle_account_membership_family_submit();
+			$this->fail( 'Expected the submit handler to redirect after success.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+		}
+
+		$member = rytkoset_theme_get_family_members( 10 )[0];
+
+		$this->assertSame( 0, $member['linked_user_id'] );
+		$this->assertSame( 'pending_account', $member['status'] );
+		$this->assertSame( 0, rytkoset_theme_get_family_primary_user_id( 20 ) );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 20 ) );
+	}
+
+	public function test_family_submit_handler_rejects_invalid_email_with_visible_error(): void {
+		$this->set_up_family_primary( 10 );
+		rytkoset_theme_update_family_members(
+			10,
+			array( array( 'name' => 'Vanha nimi', 'email' => 'vanha@example.test' ) )
+		);
+
+		$_POST = array(
+			'rytkoset_account_family_action' => 'edit',
+			'_wpnonce'                       => 'rytkoset_account_family_edit',
+			'rytkoset_family_member_index'   => '0',
+			'rytkoset_family_member_name'    => 'Uusi nimi',
+			'rytkoset_family_member_email'   => 'rikki@',
+		);
+
+		try {
+			rytkoset_theme_handle_account_membership_family_submit();
+			$this->fail( 'Expected the submit handler to redirect after validation fails.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+		}
+
+		$member = rytkoset_theme_get_family_members( 10 )[0];
+
+		$this->assertSame( 'Vanha nimi', $member['name'] );
+		$this->assertSame( 'vanha@example.test', $member['email'] );
+		$this->assertTrue( wc_has_notice( 'Anna kelvollinen sähköpostiosoite.', 'error' ) );
 	}
 
 	public function test_family_submit_handler_removes_a_member_and_clears_linked_reverse_meta(): void {
