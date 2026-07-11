@@ -466,6 +466,7 @@ class Rytkoset_Test_WPDB {
 	/** @var array<int,mixed> */
 	public array $last_prepare_args = array();
 	public $get_var_result = null;
+	public $get_row_result = null;
 	/** @var array<int,array<string,mixed>> */
 	public array $updates = array();
 
@@ -473,6 +474,7 @@ class Rytkoset_Test_WPDB {
 		$this->last_query        = '';
 		$this->last_prepare_args = array();
 		$this->get_var_result    = null;
+		$this->get_row_result    = null;
 		$this->updates           = array();
 	}
 
@@ -497,6 +499,12 @@ class Rytkoset_Test_WPDB {
 		$this->last_query = $query;
 
 		return $this->get_var_result;
+	}
+
+	public function get_row( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_row_result;
 	}
 
 	/**
@@ -1394,6 +1402,7 @@ require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
 require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
+require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
 require_once $rytkoset_theme_inc . '/email.php';

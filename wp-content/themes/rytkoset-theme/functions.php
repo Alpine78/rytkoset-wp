@@ -41,6 +41,7 @@ require_once get_template_directory() . '/inc/structured-data.php';
 require_once get_template_directory() . '/inc/login.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/user-membership.php';
+require_once get_template_directory() . '/inc/member-newsletter.php';
 require_once get_template_directory() . '/inc/user-membership-activation.php';
 require_once get_template_directory() . '/inc/user-memberships-admin.php';
 require_once get_template_directory() . '/inc/members-only-pages.php';

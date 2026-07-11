@@ -18,6 +18,32 @@ Uudet yleiset uutiskirjetilaukset ohjataan olemassa olevalle AcyMailing-listalle
 
 Uutta listaa ei luoda tätä MVP:tä varten. AcyMailingissa voi näkyä myös muita listoja, kuten hallituksen lista tai oletuksena syntynyt `Newsletters`, mutta niitä ei käytetä footerin yleiseen uutiskirjetilaukseen.
 
+## Jäsenviestinnän erillinen lista (#535)
+
+Jäsenviestintää varten käytetään omaa AcyMailing-listaa. Se ei ole yleinen
+`Rytkoset.net GDPR` -uutiskirjelista, eikä listalle kuuluminen perustu
+uutiskirjesuostumukseen. Listaa saa käyttää vain jäsenyyssuhteen hoitamiseen,
+ei yleiseen markkinointiin.
+
+Ensimmäisessä toteutussiivussa:
+
+- lista-ID asetetaan kohdassa **Ulkoasu → Mukauta → Uutiskirje → Jäsenviestinnän AcyMailing-listan ID**
+- yleisen footer-lomakkeen käyttämä lista-ID hylätään jäsenlista-asetuksesta
+- vastaanottajaksi hyväksytään vain käyttäjätilillinen, kelvollisen sähköpostin omaava aktiivinen jäsen
+- aktiivinen oma vuosi-, perhe- tai ainaisjäsenyys hyväksytään
+- aktiiviseen perhejäsenyyteen linkitetty käyttäjä hyväksytään
+- #525:n tiliä odottavat jäsenyydet ja `pending_account`-perherivit eivät kuulu listalle
+- jäsenyysmetan tai perhelinkityksen muutos synkronoidaan tapahtumapohjaisesti
+- manuaalinen listaperuutus (`status = 0`) ja tilaajan globaali esto (`active = 0`) säilytetään
+- jäsenyyden päättyessä poistetaan vain jäsenlistakytkentä; tilaajatietuetta tai muita listoja ei poisteta
+- synkronointi ei lähetä AcyMailingin vahvistus-, tervetulo- tai poistumisviestejä eikä laukaise AcyMailingin tilausautomaatioita
+
+Päivämäärän ylittyminen ei itsessään muuta user metaa. Siksi tämä ensimmäinen
+siivu ei vielä yksin poista kaikkia ajan myötä vanhentuvia jäsenyyksiä listalta.
+Päivittäinen erätäsmäytys ja ylläpidolle näkyvä ajotila toteutetaan tiketin
+seuraavassa siivussa. Jäsenlistaa ei pidä ottaa tuotantolähetyksiin ennen niiden
+valmistumista ja koko tiketin validointia.
+
 ## Uutiskirjeen laatiminen ja lähettäminen
 
 Tee varsinainen uutiskirjelähetys aina tuotannon WordPressissä (`rytkoset.net`). Kehitysympäristöä (`dev.rytkoset.net`) voi käyttää ulkoasun kokeiluun, mutta siellä ei pidä aktivoida tuotannon automaattista lähetystä tai käyttää oikeaa vastaanottajalistaa.
