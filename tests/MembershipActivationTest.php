@@ -18,6 +18,27 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
+	private function activation_product(
+		int $id = 101,
+		string $type = 'annual_individual',
+		string $expires = '2029-12-31',
+		string $period = '2026-2029',
+		string $status = 'publish',
+		string $name = 'Jäsenmaksu 2026-2029'
+	): WC_Product {
+		return rytkoset_test_register_product(
+			$id,
+			$status,
+			$name,
+			array(
+				'_rytkoset_membership_product'     => 'yes',
+				'_rytkoset_membership_type'        => $type,
+				'_rytkoset_membership_period'      => $period,
+				'_rytkoset_membership_expiry_date' => $expires,
+			)
+		);
+	}
+
 	// -----------------------------------------------------------------
 	// Email list parsing
 	// -----------------------------------------------------------------
@@ -39,25 +60,38 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	// -----------------------------------------------------------------
-	// Membership details validation
+	// Membership product selection
 	// -----------------------------------------------------------------
 
-	public function test_sanitize_details_requires_type(): void {
-		$result = rytkoset_theme_membership_activation_sanitize_details( '', '2026-2029', '31.12.2029' );
+	public function test_resolve_product_requires_published_membership_product(): void {
+		$result = rytkoset_theme_membership_activation_resolve_product( 999 );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'rytkoset_invalid_membership_type', $result->get_error_codes()[0] );
+		$this->assertSame( 'rytkoset_invalid_membership_product', $result->get_error_codes()[0] );
 	}
 
-	public function test_sanitize_details_time_bound_requires_valid_expiry(): void {
-		$result = rytkoset_theme_membership_activation_sanitize_details( 'annual', '', '31.2.2029' );
+	public function test_resolve_product_rejects_draft_product(): void {
+		$this->activation_product( 101, 'annual_individual', '2029-12-31', '2026-2029', 'draft' );
+
+		$result = rytkoset_theme_membership_activation_resolve_product( 101 );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'rytkoset_missing_membership_expiry', $result->get_error_codes()[0] );
+		$this->assertSame( 'rytkoset_invalid_membership_product', $result->get_error_codes()[0] );
 	}
 
-	public function test_sanitize_details_normalizes_finnish_date_and_period(): void {
-		$result = rytkoset_theme_membership_activation_sanitize_details( 'family', '2026-2029', '31.12.2029' );
+	public function test_resolve_product_requires_complete_time_bound_details(): void {
+		$this->activation_product( 101, 'annual_individual', '', '' );
+
+		$result = rytkoset_theme_membership_activation_resolve_product( 101 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rytkoset_incomplete_membership_product', $result->get_error_codes()[0] );
+	}
+
+	public function test_resolve_product_returns_family_snapshot(): void {
+		$this->activation_product( 101, 'annual_family' );
+
+		$result = rytkoset_theme_membership_activation_resolve_product( 101 );
 
 		$this->assertSame(
 			array(
@@ -69,8 +103,10 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
-	public function test_sanitize_details_lifetime_ignores_period_and_expiry(): void {
-		$result = rytkoset_theme_membership_activation_sanitize_details( 'lifetime', '2026-2029', '31.12.2029' );
+	public function test_resolve_product_lifetime_ignores_period_and_expiry(): void {
+		$this->activation_product( 101, 'lifetime' );
+
+		$result = rytkoset_theme_membership_activation_resolve_product( 101 );
 
 		$this->assertSame(
 			array(
@@ -80,6 +116,33 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 			),
 			$result
 		);
+	}
+
+	public function test_product_options_include_published_and_private_memberships_only(): void {
+		$this->activation_product( 101, 'annual_individual', '2029-12-31', '2026-2029', 'publish', 'Ö-jäsenyys' );
+		$this->activation_product( 102, 'lifetime', '', '', 'private', 'Ainaisjäsenyys' );
+		$this->activation_product( 103, 'annual_family', '2029-12-31', '2026-2029', 'draft', 'Luonnos' );
+		rytkoset_test_register_product( 104, 'publish', 'Tavallinen tuote' );
+
+		$options = rytkoset_theme_get_membership_activation_products();
+
+		$this->assertSame( array( 102, 101 ), array_keys( $options ) );
+	}
+
+	public function test_product_label_contains_period_and_expiry(): void {
+		$product = $this->activation_product();
+		$label   = rytkoset_theme_get_membership_activation_product_label( $product );
+
+		$this->assertStringContainsString( 'Jäsenmaksu 2026-2029', $label );
+		$this->assertStringContainsString( '2026-2029', $label );
+		$this->assertStringContainsString( '31.12.2029', $label );
+	}
+
+	public function test_incomplete_product_label_names_missing_expiry(): void {
+		$product = $this->activation_product( 101, 'annual_individual', '' );
+		$label   = rytkoset_theme_get_membership_activation_product_label( $product );
+
+		$this->assertStringContainsString( 'voimassaolopäivä puuttuu', $label );
 	}
 
 	// -----------------------------------------------------------------
@@ -254,12 +317,10 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 	// Full submission processing
 	// -----------------------------------------------------------------
 
-	public function test_process_submission_rejects_invalid_details_before_sending(): void {
+	public function test_process_submission_rejects_invalid_product_before_sending(): void {
 		$response = rytkoset_theme_membership_activation_process_submission(
 			"uusi@example.com",
-			'annual',
-			'',
-			'',
+			999,
 			false,
 			3
 		);
@@ -273,12 +334,11 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 	public function test_process_submission_handles_mixed_existing_and_unknown(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
 		rytkoset_test_register_user( 5, 'matti@example.com', 'Matti' );
+		$this->activation_product();
 
 		$response = rytkoset_theme_membership_activation_process_submission(
 			"matti@example.com\nuusi@example.com\nroskaa",
-			'annual',
-			'2026-2029',
-			'31.12.2029',
+			101,
 			false,
 			3
 		);

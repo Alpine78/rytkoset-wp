@@ -1459,8 +1459,9 @@ function rytkoset_theme_get_user_membership_type_priority( $user_type ) {
 /**
  * Resolves the best membership to apply from a list of membership order items.
  *
- * When multiple membership products are present, lifetime beats time-bound types.
- * Among time-bound types the latest expiry date wins.
+ * When multiple membership products are present, lifetime beats time-bound types,
+ * family beats individual annual membership, and the latest expiry wins between
+ * items of the same membership type.
  *
  * @param array<int, array<string, mixed>> $membership_items Result of rytkoset_theme_get_membership_order_items().
  * @return array{type:string,period:string,expires:string}|array<never> Best membership, or empty array when nothing is applicable.

@@ -3,9 +3,9 @@
  * Manual membership activation tool for existing (paper-register) members (#525).
  *
  * Adds a Users > Jäsenten aktivointi admin screen where an administrator enters
- * one or more member email addresses together with the membership details to
- * apply. Addresses with an existing WordPress account get their membership
- * updated immediately (never shortening an existing longer/lifetime membership,
+ * one or more member email addresses and selects the membership product whose
+ * details are applied as a snapshot. Addresses with an existing WordPress account
+ * get their membership updated immediately (never shortening an existing longer/lifetime membership,
  * same rule as the WooCommerce order path in inc/woocommerce-membership.php) and
  * receive the shared #390 confirmation email on a non-active → active
  * transition. Addresses without an account are stored as pending manual
@@ -18,7 +18,7 @@
  * administrator and a timestamp, never message contents. Re-sending the invite
  * requires an explicit admin opt-in so a page refresh or repeated submission
  * cannot spam a recipient. The tool never subscribes anyone to the newsletter.
- * WooCommerce-independent.
+ * Requires WooCommerce membership products configured by inc/woocommerce-membership.php.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -98,26 +98,109 @@ if ( ! function_exists( 'rytkoset_theme_membership_activation_parse_emails' ) ) 
 	}
 }
 
-if ( ! function_exists( 'rytkoset_theme_membership_activation_sanitize_details' ) ) {
+if ( ! function_exists( 'rytkoset_theme_get_membership_activation_products' ) ) {
 	/**
-	 * Validates and normalizes the admin-chosen membership details.
+	 * Returns membership products offered by the manual activation tool.
 	 *
-	 * Time-bound types (annual/family) require a valid expiry date because a
-	 * time-bound membership without one is never treated as active. Lifetime
-	 * memberships ignore period and expiry.
+	 * Catalog-hidden products remain available because an administrator may need
+	 * to activate an older membership period. Draft and trashed products are not
+	 * activation sources.
 	 *
-	 * @param string $type    Raw membership type.
-	 * @param string $period  Raw membership period (e.g. 2026-2029).
-	 * @param string $expires Raw expiry date (pp.kk.vvvv or YYYY-MM-DD).
+	 * @return array<int, WC_Product> Products keyed by product ID.
+	 */
+	function rytkoset_theme_get_membership_activation_products() {
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			return array();
+		}
+
+		$products = wc_get_products(
+			array(
+				'status'  => array( 'publish', 'private' ),
+				'limit'   => -1,
+				'orderby' => 'name',
+				'order'   => 'ASC',
+			)
+		);
+		$options  = array();
+
+		foreach ( $products as $product ) {
+			if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_membership_product( $product ) ) {
+				continue;
+			}
+
+			$options[ $product->get_id() ] = $product;
+		}
+
+		return $options;
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_membership_activation_product_label' ) ) {
+	/**
+	 * Builds an informative option label for one membership product.
+	 *
+	 * @param WC_Product $product Membership product.
+	 * @return string
+	 */
+	function rytkoset_theme_get_membership_activation_product_label( $product ) {
+		$name    = $product instanceof WC_Product ? trim( (string) $product->get_name() ) : '';
+		$type    = rytkoset_theme_get_membership_product_type( $product );
+		$period  = rytkoset_theme_get_membership_product_period( $product );
+		$expires = rytkoset_theme_get_membership_product_expiry_date( $product );
+		$details = array();
+
+		if ( '' !== $type ) {
+			$details[] = rytkoset_theme_get_membership_type_label( $type );
+		}
+
+		if ( in_array( $type, array( 'annual_individual', 'annual_family' ), true ) ) {
+			$details[] = '' !== $period ? $period : __( 'jäsenkausi puuttuu', 'rytkoset-theme' );
+
+			$details[] = '' !== $expires
+				? sprintf(
+					/* translators: %s: membership expiry date. */
+					__( 'voimassa %s asti', 'rytkoset-theme' ),
+					rytkoset_theme_get_user_membership_expires_display( $expires )
+				)
+				: __( 'voimassaolopäivä puuttuu', 'rytkoset-theme' );
+		}
+
+		if ( empty( $details ) ) {
+			$details[] = __( 'puutteelliset jäsenyysasetukset', 'rytkoset-theme' );
+		}
+
+		return sprintf( '%1$s — %2$s', $name, implode( ', ', $details ) );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_membership_activation_resolve_product' ) ) {
+	/**
+	 * Resolves and validates a membership snapshot from a selected product.
+	 *
+	 * @param int $product_id Selected WooCommerce product ID.
 	 * @return array{type:string,period:string,expires:string}|WP_Error
 	 */
-	function rytkoset_theme_membership_activation_sanitize_details( $type, $period, $expires ) {
-		$type = rytkoset_theme_normalize_user_membership_type( (string) $type );
+	function rytkoset_theme_membership_activation_resolve_product( $product_id ) {
+		$product_id = absint( $product_id );
+		$product    = $product_id > 0 && function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : false;
+
+		if ( ! $product instanceof WC_Product
+			|| ! in_array( $product->get_status(), array( 'publish', 'private' ), true )
+			|| ! rytkoset_theme_is_membership_product( $product )
+		) {
+			return new WP_Error(
+				'rytkoset_invalid_membership_product',
+				__( 'Valitse julkaistu jäsenmaksutuote ennen käsittelyä.', 'rytkoset-theme' )
+			);
+		}
+
+		$product_type = rytkoset_theme_get_membership_product_type( $product );
+		$type         = rytkoset_theme_map_product_to_user_membership_type( $product_type );
 
 		if ( '' === $type ) {
 			return new WP_Error(
-				'rytkoset_invalid_membership_type',
-				__( 'Valitse jäsenyyden tyyppi ennen käsittelyä.', 'rytkoset-theme' )
+				'rytkoset_invalid_membership_product_type',
+				__( 'Valitulta tuotteelta puuttuu kelvollinen jäsenmaksun tyyppi.', 'rytkoset-theme' )
 			);
 		}
 
@@ -129,18 +212,19 @@ if ( ! function_exists( 'rytkoset_theme_membership_activation_sanitize_details' 
 			);
 		}
 
-		$expires = rytkoset_theme_sanitize_user_membership_expires( (string) $expires );
+		$period  = rytkoset_theme_get_membership_product_period( $product );
+		$expires = rytkoset_theme_get_membership_product_expiry_date( $product );
 
-		if ( '' === $expires ) {
+		if ( '' === $period || '' === $expires ) {
 			return new WP_Error(
-				'rytkoset_missing_membership_expiry',
-				__( 'Vuosi- ja perhejäsenyys vaatii kelvollisen Voimassa asti -päivän (pp.kk.vvvv), muuten jäsenyys ei aktivoidu.', 'rytkoset-theme' )
+				'rytkoset_incomplete_membership_product',
+				__( 'Valitulle vuosi- tai perhejäsenmaksutuotteelle pitää asettaa jäsenkausi ja Jäsenyys voimassa asti -päivä.', 'rytkoset-theme' )
 			);
 		}
 
 		return array(
 			'type'    => $type,
-			'period'  => rytkoset_theme_sanitize_user_membership_period( (string) $period ),
+			'period'  => rytkoset_theme_sanitize_user_membership_period( $period ),
 			'expires' => $expires,
 		);
 	}
@@ -506,24 +590,22 @@ if ( ! function_exists( 'rytkoset_theme_membership_activation_process_email' ) )
 
 if ( ! function_exists( 'rytkoset_theme_membership_activation_process_submission' ) ) {
 	/**
-	 * Processes a full admin submission: email list + membership details.
+	 * Processes a full admin submission: email list + membership product.
 	 *
 	 * @param string $raw_emails Raw multi-line email input.
-	 * @param string $type       Raw membership type.
-	 * @param string $period     Raw membership period.
-	 * @param string $expires    Raw expiry date.
+	 * @param int    $product_id Selected membership product ID.
 	 * @param bool   $resend     Whether re-sending already-sent invites is allowed.
 	 * @param int    $admin_id   Acting administrator user ID.
 	 * @return array{results: array<int, array{email:string,result:string}>, invalid: string[], error: string}
 	 */
-	function rytkoset_theme_membership_activation_process_submission( $raw_emails, $type, $period, $expires, $resend, $admin_id ) {
+	function rytkoset_theme_membership_activation_process_submission( $raw_emails, $product_id, $resend, $admin_id ) {
 		$response = array(
 			'results' => array(),
 			'invalid' => array(),
 			'error'   => '',
 		);
 
-		$membership = rytkoset_theme_membership_activation_sanitize_details( $type, $period, $expires );
+		$membership = rytkoset_theme_membership_activation_resolve_product( $product_id );
 
 		if ( is_wp_error( $membership ) ) {
 			$response['error'] = $membership->get_error_message();
@@ -690,9 +772,7 @@ if ( ! function_exists( 'rytkoset_theme_handle_membership_activation_submit' ) )
 		if ( 'process' === $action ) {
 			$notice = rytkoset_theme_membership_activation_process_submission(
 				isset( $_POST['rytkoset_activation_emails'] ) ? sanitize_textarea_field( wp_unslash( $_POST['rytkoset_activation_emails'] ) ) : '',
-				isset( $_POST['rytkoset_activation_type'] ) ? sanitize_key( wp_unslash( $_POST['rytkoset_activation_type'] ) ) : '',
-				isset( $_POST['rytkoset_activation_period'] ) ? sanitize_text_field( wp_unslash( $_POST['rytkoset_activation_period'] ) ) : '',
-				isset( $_POST['rytkoset_activation_expires'] ) ? sanitize_text_field( wp_unslash( $_POST['rytkoset_activation_expires'] ) ) : '',
+				isset( $_POST['rytkoset_activation_product_id'] ) ? absint( wp_unslash( $_POST['rytkoset_activation_product_id'] ) ) : 0,
 				! empty( $_POST['rytkoset_activation_resend'] ),
 				$admin_id
 			);
@@ -741,8 +821,9 @@ if ( ! function_exists( 'rytkoset_theme_render_membership_activation_admin_page'
 			delete_transient( $transient_key );
 		}
 
-		$pending = rytkoset_theme_get_pending_manual_memberships();
-		$log     = array_slice( rytkoset_theme_get_membership_activation_log(), 0, 20 );
+		$pending             = rytkoset_theme_get_pending_manual_memberships();
+		$log                 = array_slice( rytkoset_theme_get_membership_activation_log(), 0, 20 );
+		$membership_products = rytkoset_theme_get_membership_activation_products();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Jäsenten aktivointi', 'rytkoset-theme' ); ?></h1>
@@ -798,33 +879,22 @@ if ( ! function_exists( 'rytkoset_theme_render_membership_activation_admin_page'
 					</tr>
 					<tr>
 						<th scope="row">
-							<label for="rytkoset_activation_type"><?php esc_html_e( 'Jäsenyyden tyyppi', 'rytkoset-theme' ); ?></label>
+							<label for="rytkoset_activation_product_id"><?php esc_html_e( 'Jäsenyys', 'rytkoset-theme' ); ?></label>
 						</th>
 						<td>
-							<select name="rytkoset_activation_type" id="rytkoset_activation_type" required>
-								<option value=""><?php esc_html_e( 'Valitse', 'rytkoset-theme' ); ?></option>
-								<?php foreach ( rytkoset_theme_get_user_membership_type_options() as $option_value => $option_label ) : ?>
-									<option value="<?php echo esc_attr( $option_value ); ?>"><?php echo esc_html( $option_label ); ?></option>
+							<select name="rytkoset_activation_product_id" id="rytkoset_activation_product_id" required>
+								<option value=""><?php esc_html_e( '— Valitse jäsenmaksutuote —', 'rytkoset-theme' ); ?></option>
+								<?php foreach ( $membership_products as $product_id => $membership_product ) : ?>
+									<option value="<?php echo esc_attr( (string) $product_id ); ?>">
+										<?php echo esc_html( rytkoset_theme_get_membership_activation_product_label( $membership_product ) ); ?>
+									</option>
 								<?php endforeach; ?>
 							</select>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="rytkoset_activation_period"><?php esc_html_e( 'Jäsenkausi', 'rytkoset-theme' ); ?></label>
-						</th>
-						<td>
-							<input type="text" name="rytkoset_activation_period" id="rytkoset_activation_period" class="regular-text" placeholder="2026-2029" pattern="\d{4}-\d{4}" />
-							<p class="description"><?php esc_html_e( 'Vuosi- ja perhejäsenelle, muotoa 2026-2029. Vapaaehtoinen. Ainaisjäsenelle ei käytetä.', 'rytkoset-theme' ); ?></p>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="rytkoset_activation_expires"><?php esc_html_e( 'Voimassa asti', 'rytkoset-theme' ); ?></label>
-						</th>
-						<td>
-							<input type="text" name="rytkoset_activation_expires" id="rytkoset_activation_expires" class="regular-text" placeholder="pp.kk.vvvv" inputmode="numeric" autocomplete="off" />
-							<p class="description"><?php esc_html_e( 'Pakollinen vuosi- ja perhejäsenelle, esim. 31.12.2029. Ainaisjäsenelle ei käytetä.', 'rytkoset-theme' ); ?></p>
+							<?php if ( empty( $membership_products ) ) : ?>
+								<p class="description"><?php esc_html_e( 'Julkaistuja jäsenmaksutuotteita ei löytynyt. Määritä jäsenmaksutuote ennen aktivointia.', 'rytkoset-theme' ); ?></p>
+							<?php else : ?>
+								<p class="description"><?php esc_html_e( 'Jäsenyyden tyyppi, kausi ja voimassaolo luetaan tuotteelta ja tallennetaan jäsenelle kopiona. Perhejäsenmaksulla jokaisesta syötetystä osoitteesta tulee oma perhejäsenyyden päätili.', 'rytkoset-theme' ); ?></p>
+							<?php endif; ?>
 						</td>
 					</tr>
 					<tr>

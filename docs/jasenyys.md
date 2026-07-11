@@ -290,14 +290,27 @@ membership valitsee oman jäsenyyden.
 **Käyttäjät → Jäsenten aktivointi** (oikeus `edit_users`, moduuli
 [`inc/user-membership-activation.php`](../wp-content/themes/rytkoset-theme/inc/user-membership-activation.php))
 on ylläpidon työkalu olemassa olevien jäsenten (paperinen jäsenrekisteri)
-jäsenetujen käyttöönottoon ilman WooCommerce-tilausta.
+jäsenetujen käyttöönottoon ilman WooCommerce-tilausta. Työkalu käyttää
+WooCommerce-jäsenmaksutuotteita jäsenyystietojen lähteenä.
 
 Ylläpitäjä syöttää yhden tai useamman sähköpostiosoitteen (yksi per rivi,
-myös pilkku/puolipiste erottimena kelpaa) sekä jäsenyyden tyypin, kauden ja
-voimassaolopäivän. Osoitteet normalisoidaan pieniksi kirjaimiksi,
-deduplikoidaan ja epäkelvot rivit raportoidaan käsittelemättöminä. Vuosi- ja
-perhejäsenyys vaatii kelvollisen Voimassa asti -päivän ennen käsittelyä, koska
-ilman sitä jäsenyys ei aktivoituisi.
+myös pilkku/puolipiste erottimena kelpaa) ja valitsee julkaistun
+jäsenmaksutuotteen. Alasvetovalikko näyttää tuotteen nimen, jäsenyyden tyypin,
+kauden ja voimassaolopäivän. Myös kaupasta piilotetut julkaistut tuotteet ovat
+valittavissa vanhojen kausien korjaamista varten; luonnos- ja roskakorituotteita
+ei tarjota.
+
+Tyyppi, kausi ja voimassaolopäivä luetaan valitulta tuotteelta uudelleen
+palvelinpuolella ja tallennetaan käyttäjälle tai odottavaan merkintään kopiona.
+Tuotteen myöhempi muokkaus ei siis muuta jo käsiteltyä jäsenyyttä. Vuosi- ja
+perhejäsenmaksutuotteelta vaaditaan sekä jäsenkausi että kelvollinen
+**Jäsenyys voimassa asti** -päivä; puutteellinen tuote estää koko käsittelyn.
+Ainaisjäsenmaksulla kausi ja päättymispäivä ohitetaan.
+
+Osoitteet normalisoidaan pieniksi kirjaimiksi, deduplikoidaan ja epäkelvot
+rivit raportoidaan käsittelemättöminä. Jos valitaan perhejäsenmaksutuote,
+jokaisesta syötetystä sähköpostiosoitteesta tehdään oma perhejäsenyyden päätili;
+työkalu ei muodosta sähköpostiosoitteista yhtä perhettä.
 
 Käsittely osoitetta kohti:
 
@@ -335,7 +348,7 @@ Sivu näyttää myös:
   optio `rytkoset_membership_activation_log`, uusin ensin, enintään 200
   merkintää). Lokiin ei tallenneta viestien sisältöjä.
 
-GDPR-rajaus: työkalu käsittelee vain sähköpostiosoitteen ja valitut
+GDPR-rajaus: työkalu käsittelee vain sähköpostiosoitteen ja tuotteelta kopioidut
 jäsenyystiedot. Käsittelyperuste on yhdistyksen jäsenyyden hoitaminen
 (sopimus/jäsenyyssuhde), ei markkinointisuostumus: työkalu ei tilaa
 uutiskirjettä eikä lisää osoitteita muuhun viestintään. Ks. tietosuojaselosteen
