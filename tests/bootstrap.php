@@ -799,6 +799,42 @@ function get_user_by( $field, $value ) {
 	return false;
 }
 
+function get_users( $args = array() ): array {
+	$users = array_values( $GLOBALS['rytkoset_test_users'] );
+
+	if ( isset( $args['meta_key'] ) ) {
+		$meta_key     = (string) $args['meta_key'];
+		$meta_value   = isset( $args['meta_value'] ) ? (string) $args['meta_value'] : '';
+		$meta_compare = isset( $args['meta_compare'] ) ? strtoupper( (string) $args['meta_compare'] ) : '=';
+		$users        = array_values(
+			array_filter(
+				$users,
+				static function ( WP_User $user ) use ( $meta_key, $meta_value, $meta_compare ): bool {
+					$value = get_user_meta( $user->ID, $meta_key, true );
+
+					if ( 'LIKE' === $meta_compare ) {
+						return str_contains( serialize( $value ), $meta_value );
+					}
+
+					return (string) $value === $meta_value;
+				}
+			)
+		);
+	}
+
+	usort( $users, static fn( WP_User $a, WP_User $b ): int => $a->ID <=> $b->ID );
+
+	if ( isset( $args['number'] ) && (int) $args['number'] > 0 ) {
+		$users = array_slice( $users, 0, (int) $args['number'] );
+	}
+
+	if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+		return array_map( static fn( WP_User $user ): int => $user->ID, $users );
+	}
+
+	return $users;
+}
+
 function get_post( $post = null ) {
 	if ( $post instanceof WP_Post ) {
 		return $post;
@@ -1134,6 +1170,27 @@ function wc_get_orders( $args = array() ) {
 
 		if ( isset( $args['status'] ) && ! in_array( $order->get_status(), (array) $args['status'], true ) ) {
 			continue;
+		}
+
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
+			$meta_matches = true;
+
+			foreach ( $args['meta_query'] as $clause ) {
+				if ( ! is_array( $clause ) || empty( $clause['key'] ) ) {
+					continue;
+				}
+
+				$value = $order->get_meta( (string) $clause['key'], true );
+
+				if ( 'EXISTS' === strtoupper( (string) ( $clause['compare'] ?? '=' ) ) && '' === (string) $value ) {
+					$meta_matches = false;
+					break;
+				}
+			}
+
+			if ( ! $meta_matches ) {
+				continue;
+			}
 		}
 
 		$matches[] = $order;

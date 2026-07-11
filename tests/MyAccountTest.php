@@ -486,6 +486,31 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertTrue( wc_has_notice( 'Perheenjäsen lisättiin.', 'success' ) );
 	}
 
+	public function test_family_submit_handler_links_an_existing_account_by_email(): void {
+		$this->set_up_family_primary( 10 );
+		rytkoset_test_register_user( 20, 'uusi@example.test', 'Uusi Jäsen' );
+
+		$_POST = array(
+			'rytkoset_account_family_action' => 'add',
+			'_wpnonce'                       => 'rytkoset_account_family_add',
+			'rytkoset_family_member_name'    => 'Uusi Jäsen',
+			'rytkoset_family_member_email'   => 'UUSI@example.test',
+		);
+
+		try {
+			rytkoset_theme_handle_account_membership_family_submit();
+			$this->fail( 'Expected the submit handler to redirect after success.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+		}
+
+		$member = rytkoset_theme_get_family_members( 10 )[0];
+
+		$this->assertSame( 20, $member['linked_user_id'] );
+		$this->assertSame( 'active', $member['status'] );
+		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
+	}
+
 	public function test_family_submit_handler_rejects_add_at_the_shared_checkout_row_limit(): void {
 		$this->set_up_family_primary( 10 );
 

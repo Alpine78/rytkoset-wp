@@ -82,7 +82,9 @@ ilman koko käyttäjäkannan hakua.
 
 Kaikki muutokset pitää tehdä helperillä
 `rytkoset_theme_update_family_members( $primary_user_id, $members )`. Helper
-tallentaa päätilin listan ja reverse-metan yhdessä. Se myös estää:
+tallentaa päätilin listan ja reverse-metan yhdessä. Jos `pending_account`-rivillä
+on sähköposti, jolla on jo WordPress-käyttäjätili, helper linkittää tilin samalla
+tallennuksella ja vaihtaa rivin tilaan `active`. Se myös estää:
 
 - saman sähköpostiosoitteen tallentamisen kahdesti samalle päätilille,
 - saman `linked_user_id`-arvon tallentamisen kahdesti samalle päätilille,
@@ -278,12 +280,21 @@ uudelleen. Jokaisella tallennetulla rivillä on lisäksi `source_order_id`, joka
 kertoo viimeisimmän lähdetilauksen.
 
 Kun `pending_account`-rivillä oleva henkilö luo käyttäjätilin, `user_register`
-hakee hyväksytyissä tiloissa olevat perhejäsenmaksutilaukset, joiden jäsenriveillä
-on sama normalisoitu sähköposti. Rivi muutetaan `active`-tilaan ja linkitetään
+hakee saman normalisoidun sähköpostin ensin suoraan päätilien
+`rytkoset_family_members`-metasta. Meta-haku rajaa kandidaatit ja tallennetut
+rivit tarkistetaan vielä täsmällisesti ennen linkitystä. Kassalta syntyneiden
+rivien vanha tilauspolku säilyy varmistuksena, mutta sen `wc_get_orders()`-haku
+rajataan jo käsiteltyihin perhetilauksiin
+(`_rytkoset_family_members_processed`), joten rekisteröityminen ei lataa koko
+maksettujen tilausten historiaa. Rivi muutetaan `active`-tilaan ja linkitetään
 käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
 `family`-jäsenyydestä; perheenjäsenen omaa `rytkoset_membership_*`-metaa ei
 muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
 membership valitsee oman jäsenyyden.
+
+Jos sähköpostia vastaava käyttäjätili kuuluu jo toiseen perheeseen, yhteinen
+validaattori estää uuden linkityksen. Linkkiä ei siirretä automaattisesti, vaan
+vanha perhelinkitys pitää poistaa ensin.
 
 ## Jäsenten aktivointityökalu (#525)
 
@@ -392,9 +403,10 @@ Toteutus (`inc/woocommerce-my-account.php`):
 - **Lisää perheenjäsen** -lomake: nimi (pakollinen) + sähköposti (valinnainen).
   Ei-tyhjän sähköpostin pitää olla kelvollinen; palvelin palauttaa virheen eikä
   tallenna virheellistä arvoa tyhjänä.
-  Uusi rivi tallentuu aina `linked_user_id = 0` -tilassa — itsepalvelu ei voi
-  koskaan linkittää käyttäjätiliä suoraan; linkitys syntyy vain tilauspolun
-  (#519) tai ylläpitäjän profiilimuokkauksen kautta.
+  Puhdas lomaketoiminto rakentaa rivin aluksi ilman käyttäjä-ID:tä. Yhteinen
+  tallennushelperi linkittää sen kuitenkin heti, jos samalla normalisoidulla
+  sähköpostilla on jo käyttäjätili; muuten rivi jää `pending_account`-tilaan ja
+  linkittyy automaattisesti, kun tili myöhemmin rekisteröidään.
 - **Enimmäismäärä:** perheenjäseniä voi lisätä itsepalveluna enintään
   `rytkoset_theme_get_account_family_member_max_rows()`-verran (oletus 5).
   Tämä on sama raja kuin kassan perhejäsenmaksun rivimäärä
@@ -414,8 +426,9 @@ Toteutus (`inc/woocommerce-my-account.php`):
   kirjainkoon muutos säilyttää käyttäjätililinkin. Jos normalisoitu sähköposti
   vaihtuu tai poistetaan, vanha `linked_user_id` nollataan ja rivi siirtyy
   `pending_account`-tilaan; sama tallennus siivoaa vanhan käyttäjän reverse-metan,
-  joten peritty jäsenetu päättyy välittömästi. Uuden sähköpostin automaattinen
-  tililinkitys toteutetaan erikseen tiketissä `#542`.
+  joten vanha peritty jäsenetu päättyy välittömästi. Sama tallennus linkittää
+  uuden osoitteen tiliin heti, jos tili on olemassa; muuten rivi jää odottamaan
+  myöhempää rekisteröitymistä.
 - **Poista** (roskakoriikoni): asettaa rivin tilaksi `removed` (pehmeä poisto,
   ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
   Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`
