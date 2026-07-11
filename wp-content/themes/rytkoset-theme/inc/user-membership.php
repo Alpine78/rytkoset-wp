@@ -333,6 +333,39 @@ function rytkoset_theme_normalize_family_members( $members ) {
 }
 
 /**
+ * Resolves pending family rows to existing WordPress accounts by email (#542).
+ *
+ * This runs only on writes. Reading stored rows must remain side-effect free so a
+ * link is never exposed without its matching reverse meta being persisted.
+ *
+ * @param array<int, array<string, mixed>> $members Normalized family member rows.
+ * @return array<int, array<string, mixed>>
+ */
+function rytkoset_theme_resolve_family_member_accounts( $members ) {
+	foreach ( $members as $index => $member ) {
+		$email          = isset( $member['email'] ) ? (string) $member['email'] : '';
+		$linked_user_id = isset( $member['linked_user_id'] ) ? absint( $member['linked_user_id'] ) : 0;
+		$status         = isset( $member['status'] ) ? (string) $member['status'] : '';
+
+		if ( '' === $email || $linked_user_id > 0 || 'pending_account' !== $status ) {
+			continue;
+		}
+
+		$linked_user = get_user_by( 'email', $email );
+
+		if ( ! $linked_user instanceof WP_User ) {
+			continue;
+		}
+
+		$members[ $index ]['linked_user_id'] = absint( $linked_user->ID );
+		$members[ $index ]['status']         = 'active';
+		$members[ $index ]['updated_at']     = current_time( 'mysql' );
+	}
+
+	return $members;
+}
+
+/**
  * Returns the stored family member rows for a primary account.
  *
  * @param int $primary_user_id Primary account user ID.
@@ -473,6 +506,7 @@ function rytkoset_theme_validate_family_members( $primary_user_id, $members ) {
 function rytkoset_theme_update_family_members( $primary_user_id, $members ) {
 	$primary_user_id = absint( $primary_user_id );
 	$normalized      = rytkoset_theme_normalize_family_members( $members );
+	$normalized      = rytkoset_theme_resolve_family_member_accounts( $normalized );
 	$valid           = rytkoset_theme_validate_family_members( $primary_user_id, $normalized );
 
 	if ( is_wp_error( $valid ) ) {
@@ -503,6 +537,101 @@ function rytkoset_theme_update_family_members( $primary_user_id, $members ) {
 	}
 
 	return true;
+}
+
+/**
+ * Returns primary accounts with a pending family row matching an email (#542).
+ *
+ * The serialized-meta LIKE query narrows the candidate set. Stored rows are then
+ * checked exactly so partial matches or unrelated serialized values cannot link an
+ * account.
+ *
+ * @param string $email Family member email address.
+ * @return int[]
+ */
+function rytkoset_theme_get_pending_family_primary_user_ids_for_email( $email ) {
+	$email = rytkoset_theme_normalize_family_member_email( (string) $email );
+
+	if ( '' === $email || ! function_exists( 'get_users' ) ) {
+		return array();
+	}
+
+	$candidate_ids = get_users(
+		array(
+			'fields'       => 'ids',
+			'meta_key'     => rytkoset_theme_get_family_members_meta_key(),
+			'meta_value'   => '"' . $email . '"',
+			'meta_compare' => 'LIKE',
+			'number'       => -1,
+			'orderby'      => 'ID',
+			'order'        => 'ASC',
+		)
+	);
+
+	if ( ! is_array( $candidate_ids ) ) {
+		return array();
+	}
+
+	$primary_user_ids = array();
+
+	foreach ( $candidate_ids as $candidate_id ) {
+		$candidate_id = absint( $candidate_id );
+
+		foreach ( rytkoset_theme_get_family_members( $candidate_id ) as $member ) {
+			if ( $email === $member['email'] && 'pending_account' === $member['status'] ) {
+				$primary_user_ids[] = $candidate_id;
+				break;
+			}
+		}
+	}
+
+	return array_values( array_unique( $primary_user_ids ) );
+}
+
+/**
+ * Links a user account to a primary account's matching pending family row (#542).
+ *
+ * @param int $primary_user_id Primary account user ID.
+ * @param int $user_id         Family member user ID.
+ * @return true|false|WP_Error True when linked/already linked, false when not applicable.
+ */
+function rytkoset_theme_link_family_member_account_from_primary( $primary_user_id, $user_id ) {
+	$primary_user_id = absint( $primary_user_id );
+	$user            = get_userdata( absint( $user_id ) );
+
+	if ( $primary_user_id <= 0 || ! $user instanceof WP_User || absint( $user->ID ) === $primary_user_id ) {
+		return false;
+	}
+
+	$email = rytkoset_theme_normalize_family_member_email( (string) $user->user_email );
+
+	if ( '' === $email ) {
+		return false;
+	}
+
+	$members = rytkoset_theme_get_family_members( $primary_user_id );
+
+	foreach ( $members as $index => $member ) {
+		if ( $email !== $member['email'] || 'removed' === $member['status'] ) {
+			continue;
+		}
+
+		if ( absint( $member['linked_user_id'] ) === absint( $user->ID ) && 'active' === $member['status'] ) {
+			return true;
+		}
+
+		if ( 'pending_account' !== $member['status'] ) {
+			return false;
+		}
+
+		$members[ $index ]['linked_user_id'] = absint( $user->ID );
+		$members[ $index ]['status']         = 'active';
+		$members[ $index ]['updated_at']     = current_time( 'mysql' );
+
+		return rytkoset_theme_update_family_members( $primary_user_id, $members );
+	}
+
+	return false;
 }
 
 /**

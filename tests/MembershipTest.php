@@ -233,6 +233,50 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
 	}
 
+	public function test_update_family_members_links_existing_account_by_email(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+
+		$result = rytkoset_theme_update_family_members(
+			10,
+			array(
+				array(
+					'name'           => 'Lapsi',
+					'email'          => 'LAPSI@example.test',
+					'linked_user_id' => 0,
+					'status'         => 'pending_account',
+				),
+			)
+		);
+
+		$this->assertTrue( $result );
+		$this->assertSame( 20, rytkoset_theme_get_family_members( 10 )[0]['linked_user_id'] );
+		$this->assertSame( 'active', rytkoset_theme_get_family_members( 10 )[0]['status'] );
+		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
+	}
+
+	public function test_email_resolution_does_not_move_account_from_another_family(): void {
+		rytkoset_test_register_user( 10, 'eka@example.test', 'Eka päätili' );
+		rytkoset_test_register_user( 11, 'toka@example.test', 'Toka päätili' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				10,
+				array( array( 'email' => 'lapsi@example.test' ) )
+			)
+		);
+
+		$result = rytkoset_theme_update_family_members(
+			11,
+			array( array( 'email' => 'lapsi@example.test' ) )
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertContains( 'rytkoset_family_member_already_linked', $result->get_error_codes() );
+		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
+	}
+
 	public function test_update_family_members_rejects_duplicate_email(): void {
 		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
 

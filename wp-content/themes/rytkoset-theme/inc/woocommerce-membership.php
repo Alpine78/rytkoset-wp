@@ -2131,9 +2131,9 @@ function rytkoset_theme_process_family_members_from_order( $order ) {
  * Returns paid family membership orders containing a member email (#519).
  *
  * The query uses WooCommerce's storage-agnostic order API and limits candidates
- * to accepted statuses. Member-field meta queries are HPOS-only, so the small
- * candidate set is filtered through order objects to keep legacy storage
- * compatible without direct SQL.
+ * to accepted statuses that have already passed the theme's family-row processing.
+ * Member-field meta queries are HPOS-only, so the remaining candidate set is
+ * filtered through order objects to keep legacy storage compatible without direct SQL.
  *
  * @param string $email Family member email address.
  * @return WC_Order[]
@@ -2147,9 +2147,15 @@ function rytkoset_theme_get_family_membership_orders_for_email( $email ) {
 
 	$orders = wc_get_orders(
 		array(
-			'status' => array( 'processing', 'completed' ),
-			'limit'  => -1,
-			'return' => 'objects',
+			'status'     => array( 'processing', 'completed' ),
+			'limit'      => -1,
+			'return'     => 'objects',
+			'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Theme-owned marker prevents hydrating the full paid-order history.
+				array(
+					'key'     => rytkoset_theme_get_family_members_processed_meta_key(),
+					'compare' => 'EXISTS',
+				),
+			),
 		)
 	);
 
@@ -2520,6 +2526,10 @@ function rytkoset_theme_apply_membership_on_user_register( $user_id ) {
 	foreach ( rytkoset_theme_get_awaiting_membership_orders_for_email( (string) $user->user_email ) as $order ) {
 		rytkoset_theme_apply_membership_from_order( $order );
 		rytkoset_theme_process_family_members_from_order( $order );
+	}
+
+	foreach ( rytkoset_theme_get_pending_family_primary_user_ids_for_email( (string) $user->user_email ) as $primary_user_id ) {
+		rytkoset_theme_link_family_member_account_from_primary( $primary_user_id, (int) $user->ID );
 	}
 
 	foreach ( rytkoset_theme_get_family_membership_orders_for_email( (string) $user->user_email ) as $order ) {

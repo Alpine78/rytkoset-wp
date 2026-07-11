@@ -595,6 +595,37 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 1, rytkoset_theme_get_family_members( 120 ) );
 	}
 
+	public function test_registration_links_pending_self_service_family_member_without_order(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
+		rytkoset_test_register_user( 140, 'primary@example.test', 'Primary' );
+		update_user_meta( 140, rytkoset_theme_get_user_membership_type_meta_key(), 'family' );
+		update_user_meta( 140, rytkoset_theme_get_user_membership_period_meta_key(), '2026-2029' );
+		update_user_meta( 140, rytkoset_theme_get_user_membership_expires_meta_key(), '2029-12-31' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				140,
+				array(
+					array(
+						'name'  => 'Myöhemmin rekisteröityvä',
+						'email' => 'later@example.test',
+					),
+				)
+			)
+		);
+		$this->assertSame( 'pending_account', rytkoset_theme_get_family_members( 140 )[0]['status'] );
+
+		rytkoset_test_register_user( 141, 'later@example.test', 'Myöhemmin rekisteröityvä' );
+		rytkoset_theme_apply_membership_on_user_register( 141 );
+
+		$member = rytkoset_theme_get_family_members( 140 )[0];
+
+		$this->assertSame( 141, $member['linked_user_id'] );
+		$this->assertSame( 'active', $member['status'] );
+		$this->assertSame( 140, rytkoset_theme_get_family_primary_user_id( 141 ) );
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 141 ) );
+	}
+
 	public function test_guest_family_order_rows_are_processed_after_buyer_registers(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
 
@@ -630,27 +661,37 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$matching->id     = 530;
 		$matching->status = 'processing';
 		$this->set_member_row( $matching, 2, 'Match', 'match@example.test' );
+		$matching->update_meta_data( rytkoset_theme_get_family_members_processed_meta_key(), '2026-07-10 12:00:00' );
 
 		$wrong_email         = $this->membership_order( array( $this->membership_product( 'annual_family' ) ), 0 );
 		$wrong_email->id     = 531;
 		$wrong_email->status = 'completed';
 		$this->set_member_row( $wrong_email, 2, 'Other', 'other@example.test' );
+		$wrong_email->update_meta_data( rytkoset_theme_get_family_members_processed_meta_key(), '2026-07-10 12:00:00' );
 
 		$wrong_type         = $this->membership_order( array( $this->membership_product( 'annual_individual' ) ), 0 );
 		$wrong_type->id     = 532;
 		$wrong_type->status = 'processing';
 		$this->set_member_row( $wrong_type, 1, 'Match', 'match@example.test' );
+		$wrong_type->update_meta_data( rytkoset_theme_get_family_members_processed_meta_key(), '2026-07-10 12:00:00' );
 
 		$wrong_status         = $this->membership_order( array( $this->membership_product( 'annual_family' ) ), 0 );
 		$wrong_status->id     = 533;
 		$wrong_status->status = 'refunded';
 		$this->set_member_row( $wrong_status, 2, 'Match', 'match@example.test' );
+		$wrong_status->update_meta_data( rytkoset_theme_get_family_members_processed_meta_key(), '2026-07-10 12:00:00' );
+
+		$unprocessed         = $this->membership_order( array( $this->membership_product( 'annual_family' ) ), 0 );
+		$unprocessed->id     = 534;
+		$unprocessed->status = 'completed';
+		$this->set_member_row( $unprocessed, 2, 'Match', 'match@example.test' );
 
 		$GLOBALS['rytkoset_test_orders'] = array(
 			530 => $matching,
 			531 => $wrong_email,
 			532 => $wrong_type,
 			533 => $wrong_status,
+			534 => $unprocessed,
 		);
 
 		$this->assertSame( array( $matching ), rytkoset_theme_get_family_membership_orders_for_email( ' MATCH@example.test ' ) );

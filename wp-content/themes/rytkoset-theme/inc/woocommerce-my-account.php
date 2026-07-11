@@ -628,10 +628,10 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 	 * Pure decision function: builds the candidate list without touching user meta. The caller
 	 * still saves the result through rytkoset_theme_update_family_members(), which re-normalizes
 	 * and validates (duplicate email/user, self-link, already-linked-elsewhere) as the final
-	 * guard. Self-service can only ever add a row with linked_user_id = 0 — linking an account
-	 * happens only through order processing (#519) or admin profile editing. If an edit changes
-	 * the normalized email of a linked row, the old link is cleared so the shared save helper can
-	 * revoke inherited benefits immediately.
+	 * guard. The pure action creates an unlinked candidate row; the shared save helper resolves
+	 * its email to an existing account when possible (#542). If an edit changes the normalized
+	 * email of a linked row, the old link is cleared so the shared save helper can revoke inherited
+	 * benefits immediately and resolve the new address independently.
 	 *
 	 * @param array<int, array<string, mixed>> $members     Existing family member rows (all statuses).
 	 * @param string                           $action      One of 'add', 'edit', 'remove'.
@@ -717,8 +717,8 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 			$members[ $index ]['email'] = $email;
 
 			// Email identifies which account the row represents. If a linked row starts
-			// representing another address, revoke the old link immediately; #542 resolves
-			// the new address to an existing or later-created account in a separate slice.
+			// representing another address, revoke the old link before the shared save helper
+			// resolves the new address to an existing account (#542).
 			if ( $email !== $previous_email && absint( $members[ $index ]['linked_user_id'] ?? 0 ) > 0 ) {
 				$members[ $index ]['linked_user_id'] = 0;
 				$members[ $index ]['status']         = 'pending_account';
@@ -986,7 +986,7 @@ if ( ! function_exists( 'rytkoset_theme_render_account_membership_endpoint' ) ) 
 						<?php wp_nonce_field( rytkoset_theme_get_account_family_member_nonce_action( 'add' ) ); ?>
 						<input type="hidden" name="rytkoset_account_family_action" value="add" />
 						<h4 class="rytkoset-family-add__title"><?php esc_html_e( 'Lisää perheenjäsen', 'rytkoset-theme' ); ?></h4>
-						<p class="rytkoset-family-add__hint"><?php esc_html_e( 'Sähköposti on valinnainen — sillä perheenjäsen voi myöhemmin linkittää oman tilinsä.', 'rytkoset-theme' ); ?></p>
+						<p class="rytkoset-family-add__hint"><?php esc_html_e( 'Sähköposti on valinnainen — käyttäjätili linkittyy automaattisesti samalla sähköpostiosoitteella.', 'rytkoset-theme' ); ?></p>
 						<p class="form-row">
 							<label for="rytkoset_family_member_name_new"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></label>
 							<input type="text" class="input-text" id="rytkoset_family_member_name_new" name="rytkoset_family_member_name" required />
