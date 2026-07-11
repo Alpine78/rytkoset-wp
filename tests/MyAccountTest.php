@@ -511,6 +511,45 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
 	}
 
+	public function test_family_submit_handler_re_adds_a_previously_removed_member(): void {
+		$this->set_up_family_primary( 10 );
+		update_user_meta(
+			10,
+			rytkoset_theme_get_family_members_meta_key(),
+			array(
+				array(
+					'name'            => 'Liisa Vanha',
+					'email'           => 'liisa@example.test',
+					'linked_user_id'  => 0,
+					'status'          => 'removed',
+					'source_order_id' => 0,
+					'updated_at'      => '2026-01-01 00:00:00',
+				),
+			)
+		);
+
+		$_POST = array(
+			'rytkoset_account_family_action' => 'add',
+			'_wpnonce'                       => 'rytkoset_account_family_add',
+			'rytkoset_family_member_name'    => 'Liisa Uusi',
+			'rytkoset_family_member_email'   => 'liisa@example.test',
+		);
+
+		try {
+			rytkoset_theme_handle_account_membership_family_submit();
+			$this->fail( 'Expected the submit handler to redirect after success.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+		}
+
+		$members = rytkoset_theme_get_family_members( 10 );
+
+		$this->assertCount( 1, $members );
+		$this->assertSame( 'Liisa Uusi', $members[0]['name'] );
+		$this->assertSame( 'pending_account', $members[0]['status'] );
+		$this->assertTrue( wc_has_notice( 'Perheenjäsen lisättiin.', 'success' ) );
+	}
+
 	public function test_family_submit_handler_rejects_add_at_the_shared_checkout_row_limit(): void {
 		$this->set_up_family_primary( 10 );
 

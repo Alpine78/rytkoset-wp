@@ -99,6 +99,15 @@ Jos rivi poistetaan listasta tai sen tilaksi asetetaan `removed`, helper siivoaa
 linkitetyn käyttäjän reverse-metan. MVP-linjaus on selkeä esto, ei automaattinen
 siirto: jos käyttäjä kuuluu toiseen perheeseen, vanha linkitys poistetaan ensin.
 
+Poistetun rivin sähköposti ei estä saman henkilön uudelleenlisäystä (#541).
+Jos tallennettavassa listassa on ei-poistettu rivi samalla normalisoidulla
+sähköpostilla kuin historiallisella `removed`-rivillä, uusi rivi syrjäyttää
+poistetun: `removed`-rivi pudotetaan listasta ennen validointia
+(`rytkoset_theme_supersede_removed_family_member_rows()`), joten
+duplikaattisähköpostivirhettä ei synny eikä listaan jää kahta riviä samalla
+osoitteella. Jos sähköpostia ei käytetä uudelleen, `removed`-rivi säilyy
+historiatietona ennallaan.
+
 Rivin `status` normalisoidaan tallennuksessa ja luvussa: tuntematon arvo
 muuttuu `pending_account`-tilaksi (fail closed), joten vioittunut status ei voi
 muuttaa riviä jäsenetuja antavaksi. Tyhjä status saa oletuksen rivin mukaan
@@ -433,7 +442,10 @@ Toteutus (`inc/woocommerce-my-account.php`):
   ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
   Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`
   siivoaa linkitetyn käyttäjän reverse-metan samalla kutsulla, joten peritty
-  jäsenetu päättyy heti.
+  jäsenetu päättyy heti. Poistetun perheenjäsenen voi lisätä myöhemmin
+  uudelleen samalla sähköpostilla: uusi rivi syrjäyttää historiallisen
+  `removed`-rivin tallennuksessa (#541), joten uudelleenlisäys ei kaadu
+  duplikaattisähköpostivirheeseen.
 - Rivin indeksi (ei erillistä rivitunnistetta) osoittaa suoraan kohtaan
   päätilin tallennetussa listassa — sama konventio kuin ylläpitäjän
   profiililomakkeella. Näkymä säilyttää alkuperäisen indeksin, vaikka
