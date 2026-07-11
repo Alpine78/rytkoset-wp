@@ -972,6 +972,36 @@ function wc_get_product( $product_id ) {
 	return $GLOBALS['rytkoset_test_products'][ (int) $product_id ] ?? false;
 }
 
+/**
+ * Minimal wc_get_products(): supports status, limit and name ordering.
+ */
+function wc_get_products( $args = array() ) {
+	$products = array_values( $GLOBALS['rytkoset_test_products'] );
+	$statuses = isset( $args['status'] ) ? (array) $args['status'] : array();
+
+	if ( ! empty( $statuses ) ) {
+		$products = array_values(
+			array_filter(
+				$products,
+				static fn( WC_Product $product ): bool => in_array( $product->get_status(), $statuses, true )
+			)
+		);
+	}
+
+	if ( 'name' === ( $args['orderby'] ?? '' ) ) {
+		usort(
+			$products,
+			static fn( WC_Product $a, WC_Product $b ): int => strcmp( $a->get_name(), $b->get_name() )
+		);
+	}
+
+	if ( isset( $args['limit'] ) && (int) $args['limit'] > 0 ) {
+		$products = array_slice( $products, 0, (int) $args['limit'] );
+	}
+
+	return $products;
+}
+
 function wc_get_order( $order_id ) {
 	if ( $order_id instanceof WC_Order ) {
 		return $order_id;

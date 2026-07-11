@@ -65,6 +65,7 @@ Tämä tietosuojaseloste koskee Rytkösten sukuseuran verkkosivustoa. Sukututkim
 Henkilötietojen käsittely perustuu käyttötarkoituksesta riippuen seuraaviin oikeusperusteisiin:
 
 - **Käyttäjätilit**: käyttäjän pyytämän palvelun toteuttaminen ja yhdistyksen oikeutettu etu ylläpitää sivuston jäsen- ja käyttäjätoimintoja.
+- **Jäsenyyden hoitaminen ja jäsenetujen käyttöönotto**: yhdistyksen jäsenyyssuhteen hoitaminen. Yhdistys voi käsitellä jäsenrekisterissä olevan jäsenen sähköpostiosoitetta jäsenyyden kytkemiseksi käyttäjätiliin ja sivuston jäsenetujen käyttöönottamiseksi. Käsittely ei perustu markkinointisuostumukseen, eikä osoitetta käytetä uutiskirjeeseen tai markkinointiin.
 - **Tapahtumailmoittautumiset**: käyttäjän suostumus sekä yhdistyksen oikeutettu etu järjestää tapahtumia ja hoitaa niihin liittyvää viestintää.
 - **Verkkokaupan tilaukset ja maksut**: sopimuksen täytäntöönpano sekä lakisääteiset kirjanpito- ja raportointivelvoitteet.
 - **Uutiskirje**: käyttäjän suostumus.
@@ -75,6 +76,8 @@ Henkilötietojen käsittely perustuu käyttötarkoituksesta riippuen seuraaviin 
 ### Käyttäjätilit
 
 Kun rekisteröidyt sivustolle, tallennamme nimesi ja sähköpostiosoitteesi sekä mahdolliset profiilitiedot, jotka itse annat. Tietoja käytetään käyttäjätilin ylläpitoon, kirjautumiseen ja jäsenviestintään.
+
+Jos olet yhdistyksen jäsen, ylläpito voi jäsenrekisterin perusteella kytkeä jäsenyytesi käyttäjätiliisi, jotta saat sivuston jäsenedut käyttöösi. Jos sähköpostiosoitteellasi ei vielä ole käyttäjätiliä, osoitteeseen voidaan lähettää kertaluonteinen viesti, jossa kerrotaan tietojen olevan peräisin yhdistyksen jäsenrekisteristä ja ohjataan luomaan tili samalla osoitteella. Jäsenyyden kytkentää odottavat tiedot (sähköpostiosoite ja jäsenyyden tyyppi- ja voimassaolotiedot) säilytetään vain kytkentää varten, ja niiden poistoa voi pyytää rekisterinpitäjältä. Käsittelystä pidetään ylläpidon lokia (osoite, lopputulos, käsittelijä, aika).
 
 ### Tapahtumailmoittautumiset
 
