@@ -390,6 +390,8 @@ ja tallennushelperiä, joten ne eivät voi ajautua epäsynkkaan.
 Toteutus (`inc/woocommerce-my-account.php`):
 
 - **Lisää perheenjäsen** -lomake: nimi (pakollinen) + sähköposti (valinnainen).
+  Ei-tyhjän sähköpostin pitää olla kelvollinen; palvelin palauttaa virheen eikä
+  tallenna virheellistä arvoa tyhjänä.
   Uusi rivi tallentuu aina `linked_user_id = 0` -tilassa — itsepalvelu ei voi
   koskaan linkittää käyttäjätiliä suoraan; linkitys syntyy vain tilauspolun
   (#519) tai ylläpitäjän profiilimuokkauksen kautta.
@@ -408,7 +410,12 @@ Toteutus (`inc/woocommerce-my-account.php`):
 - **Muokkaa** (kynäikoni): vaihtaa rivin näyttötilan JS:ttömäksi inline-
   lomakkeeksi URL:n kyselyparametrilla `?rytkoset_edit_member=<indeksi>` (vain
   näyttötilan valinta, ei tilamuutosta — turvallinen ilman noncea). Rivin
-  nimen ja sähköpostin voi tallentaa; `linked_user_id`/`status` eivät muutu.
+  nimen ja sähköpostin voi tallentaa. Pelkkä nimen korjaus tai sähköpostin
+  kirjainkoon muutos säilyttää käyttäjätililinkin. Jos normalisoitu sähköposti
+  vaihtuu tai poistetaan, vanha `linked_user_id` nollataan ja rivi siirtyy
+  `pending_account`-tilaan; sama tallennus siivoaa vanhan käyttäjän reverse-metan,
+  joten peritty jäsenetu päättyy välittömästi. Uuden sähköpostin automaattinen
+  tililinkitys toteutetaan erikseen tiketissä `#542`.
 - **Poista** (roskakoriikoni): asettaa rivin tilaksi `removed` (pehmeä poisto,
   ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
   Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`

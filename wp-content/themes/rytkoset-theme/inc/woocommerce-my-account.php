@@ -629,7 +629,9 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 	 * still saves the result through rytkoset_theme_update_family_members(), which re-normalizes
 	 * and validates (duplicate email/user, self-link, already-linked-elsewhere) as the final
 	 * guard. Self-service can only ever add a row with linked_user_id = 0 — linking an account
-	 * happens only through order processing (#519) or admin profile editing.
+	 * happens only through order processing (#519) or admin profile editing. If an edit changes
+	 * the normalized email of a linked row, the old link is cleared so the shared save helper can
+	 * revoke inherited benefits immediately.
 	 *
 	 * @param array<int, array<string, mixed>> $members     Existing family member rows (all statuses).
 	 * @param string                           $action      One of 'add', 'edit', 'remove'.
@@ -652,6 +654,14 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 				return new WP_Error( 'rytkoset_family_member_name_required', __( 'Anna perheenjäsenen nimi.', 'rytkoset-theme' ) );
 			}
 
+			$email = trim( (string) $email );
+
+			if ( '' !== $email && ! is_email( $email ) ) {
+				return new WP_Error( 'rytkoset_family_member_email_invalid', __( 'Anna kelvollinen sähköpostiosoite.', 'rytkoset-theme' ) );
+			}
+
+			$email = rytkoset_theme_normalize_family_member_email( $email );
+
 			$active_count = 0;
 
 			foreach ( $members as $existing_member ) {
@@ -673,7 +683,7 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 
 			$members[] = array(
 				'name'  => $name,
-				'email' => sanitize_text_field( (string) $email ),
+				'email' => $email,
 			);
 
 			return $members;
@@ -694,8 +704,25 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 				return new WP_Error( 'rytkoset_family_member_name_required', __( 'Anna perheenjäsenen nimi.', 'rytkoset-theme' ) );
 			}
 
+			$email = trim( (string) $email );
+
+			if ( '' !== $email && ! is_email( $email ) ) {
+				return new WP_Error( 'rytkoset_family_member_email_invalid', __( 'Anna kelvollinen sähköpostiosoite.', 'rytkoset-theme' ) );
+			}
+
+			$email          = rytkoset_theme_normalize_family_member_email( $email );
+			$previous_email = rytkoset_theme_normalize_family_member_email( (string) ( $members[ $index ]['email'] ?? '' ) );
+
 			$members[ $index ]['name']  = $name;
-			$members[ $index ]['email'] = sanitize_text_field( (string) $email );
+			$members[ $index ]['email'] = $email;
+
+			// Email identifies which account the row represents. If a linked row starts
+			// representing another address, revoke the old link immediately; #542 resolves
+			// the new address to an existing or later-created account in a separate slice.
+			if ( $email !== $previous_email && absint( $members[ $index ]['linked_user_id'] ?? 0 ) > 0 ) {
+				$members[ $index ]['linked_user_id'] = 0;
+				$members[ $index ]['status']         = 'pending_account';
+			}
 
 			return $members;
 		}
