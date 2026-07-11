@@ -1378,6 +1378,7 @@ function wc_get_order_statuses(): array {
 $rytkoset_theme_inc = dirname( __DIR__ ) . '/wp-content/themes/rytkoset-theme/inc';
 
 require_once $rytkoset_theme_inc . '/user-membership.php';
+require_once $rytkoset_theme_inc . '/user-memberships-admin.php';
 require_once $rytkoset_theme_inc . '/woocommerce-membership.php';
 require_once $rytkoset_theme_inc . '/woocommerce-member-coupon.php';
 require_once $rytkoset_theme_inc . '/digital-magazines.php';
