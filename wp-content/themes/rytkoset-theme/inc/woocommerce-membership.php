@@ -131,8 +131,69 @@ function rytkoset_theme_get_membership_product_period( $product ) {
 		return '';
 	}
 
-	return sanitize_text_field(
+	return rytkoset_theme_sanitize_user_membership_period(
 		(string) $product->get_meta( rytkoset_theme_get_membership_period_meta_key(), true )
+	);
+}
+
+/**
+ * Returns validation errors for the activation settings of a membership product.
+ *
+ * Lifetime membership intentionally needs neither a period nor an expiry date. Annual
+ * individual and family memberships require both so a paid order can always activate a
+ * complete membership.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return array<string, string> Error code => Finnish error message.
+ */
+function rytkoset_theme_get_membership_product_validation_errors( $product ) {
+	if ( ! rytkoset_theme_is_membership_product( $product ) ) {
+		return array();
+	}
+
+	$errors = array();
+	$type   = rytkoset_theme_get_membership_product_type( $product );
+
+	if ( '' === $type ) {
+		$errors['type'] = __( 'Jäsenmaksun tyyppi puuttuu tai on virheellinen.', 'rytkoset-theme' );
+		return $errors;
+	}
+
+	if ( 'lifetime' === $type ) {
+		return $errors;
+	}
+
+	if ( '' === rytkoset_theme_get_membership_product_period( $product ) ) {
+		$errors['period'] = __( 'Jäsenkausi puuttuu tai ei ole muodossa VVVV-VVVV.', 'rytkoset-theme' );
+	}
+
+	if ( '' === rytkoset_theme_get_membership_product_expiry_date( $product ) ) {
+		$errors['expiry_date'] = __( 'Jäsenyys voimassa asti -päivä puuttuu tai on virheellinen.', 'rytkoset-theme' );
+	}
+
+	return $errors;
+}
+
+/**
+ * Returns the customer-facing error for an incomplete membership product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string Empty when the product is valid or is not a membership product.
+ */
+function rytkoset_theme_get_membership_product_purchase_block_message( $product ) {
+	$errors = rytkoset_theme_get_membership_product_validation_errors( $product );
+
+	if ( empty( $errors ) ) {
+		return '';
+	}
+
+	$product_name = $product instanceof WC_Product ? $product->get_name() : '';
+
+	return sprintf(
+		/* translators: 1: product name, 2: membership product validation errors. */
+		__( 'Jäsenmaksutuotetta ”%1$s” ei voi ostaa: %2$s Ota yhteyttä sivuston ylläpitoon.', 'rytkoset-theme' ),
+		$product_name,
+		implode( ' ', $errors )
 	);
 }
 
@@ -313,8 +374,76 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 
 	$product->update_meta_data( rytkoset_theme_get_membership_period_meta_key(), $period );
 	$product->update_meta_data( rytkoset_theme_get_membership_expiry_date_meta_key(), $expiry_date );
+
+	$validation_errors = rytkoset_theme_get_membership_product_validation_errors( $product );
+
+	if ( 'publish' === $product->get_status() && ! empty( $validation_errors ) ) {
+		$product->set_status( 'draft' );
+
+		if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+			WC_Admin_Meta_Boxes::add_error(
+				sprintf(
+					/* translators: %s: membership product validation errors. */
+					__( 'Jäsenmaksutuotetta ei julkaistu, koska asetukset ovat puutteelliset: %s', 'rytkoset-theme' ),
+					implode( ' ', $validation_errors )
+				)
+			);
+		}
+	}
 }
 add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_membership_product_fields' );
+
+/**
+ * Prevents adding an incomplete membership product to the cart.
+ *
+ * @param bool $passed     Whether add to cart should proceed.
+ * @param int  $product_id Product ID.
+ * @return bool
+ */
+function rytkoset_theme_validate_membership_product_add_to_cart( $passed, $product_id ) {
+	$product = function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : null;
+	$message = rytkoset_theme_get_membership_product_purchase_block_message( $product );
+
+	if ( '' === $message ) {
+		return $passed;
+	}
+
+	if ( function_exists( 'wc_add_notice' ) && ! wc_has_notice( $message, 'error' ) ) {
+		wc_add_notice( $message, 'error' );
+	}
+
+	return false;
+}
+add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_membership_product_add_to_cart', 10, 2 );
+
+/**
+ * Validates membership products already present in the cart and at checkout.
+ *
+ * @return void
+ */
+function rytkoset_theme_validate_membership_product_cart_items() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return;
+	}
+
+	$messages = array();
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+		$message = rytkoset_theme_get_membership_product_purchase_block_message( $product );
+
+		if ( '' !== $message ) {
+			$messages[ $message ] = true;
+		}
+	}
+
+	foreach ( array_keys( $messages ) as $message ) {
+		if ( function_exists( 'wc_add_notice' ) && ! wc_has_notice( $message, 'error' ) ) {
+			wc_add_notice( $message, 'error' );
+		}
+	}
+}
+add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_membership_product_cart_items' );
 
 /**
  * Returns true when the current cart contains a membership product.
@@ -1506,9 +1635,10 @@ function rytkoset_theme_resolve_order_membership( $membership_items ) {
 /**
  * Returns the order meta key used to mark a membership order as processed.
  *
- * Set only when the order could be matched to a WordPress user (whether or not
- * the membership was ultimately applied). A guest order without an account is
- * marked awaiting instead (#518) so a later registration can still apply it.
+ * Set only after a valid membership was applied or safely skipped by the
+ * never-shorten rule. Invalid product metadata intentionally leaves the order
+ * retryable. A guest order without an account is marked awaiting instead (#518)
+ * so a later registration can still apply it.
  *
  * @return string
  */
@@ -2193,14 +2323,35 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		return;
 	}
 
+	$validation_errors = array();
+
+	foreach ( $order->get_items() as $item ) {
+		$product = $item->get_product();
+
+		foreach ( rytkoset_theme_get_membership_product_validation_errors( $product ) as $code => $message ) {
+			$validation_errors[ $code ] = $message;
+		}
+	}
+
+	if ( ! empty( $validation_errors ) ) {
+		$order->add_order_note(
+			sprintf(
+				/* translators: %s: membership product validation errors. */
+				__( 'Jäsenyyttä ei aktivoitu: %s Korjaa jäsenmaksutuotteen asetukset ja käsittele tilaus uudelleen. Tilausta ei merkitty käsitellyksi.', 'rytkoset-theme' ),
+				implode( ' ', $validation_errors )
+			),
+			false
+		);
+		$order->save();
+		return;
+	}
+
 	$user_id = rytkoset_theme_get_membership_order_user_id( $order );
 
 	if ( ! $user_id ) {
 		rytkoset_theme_mark_membership_order_awaiting_account( $order );
 		return;
 	}
-
-	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
 
 	$membership = rytkoset_theme_resolve_order_membership( $membership_items );
 
@@ -2228,6 +2379,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 			);
 
 		if ( $current_covers_new ) {
+			$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
 			$order->add_order_note(
 				__( 'Jäsenyystilaa ei muutettu: käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys.', 'rytkoset-theme' ),
 				false
@@ -2282,12 +2434,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 
 	$is_now_active = rytkoset_theme_user_has_own_active_membership( $user_id );
 
-	// A time-bound membership that cannot be activated (the product has no expiry date set) is
-	// stored but flagged so an admin sets the expiry date manually.
-	if ( ! $is_now_active && 'lifetime' !== $membership['type'] ) {
-		$note_parts[] = __( 'Huom: jäsenyyttä ei voitu aktivoida automaattisesti, koska tuotteelle ei ole asetettu Jäsenyys voimassa asti -päivää. Aseta voimassaolopäivä käyttäjähallinnassa.', 'rytkoset-theme' );
-	}
-
+	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
 	$order->add_order_note( implode( ' ', $note_parts ), false );
 	$order->save();
 
