@@ -50,6 +50,8 @@ $GLOBALS['rytkoset_test_queried_id']   = 0;       // get_queried_object_id()
 $GLOBALS['rytkoset_test_has_excerpt']  = array(); // [post_id] => bool (has_excerpt())
 $GLOBALS['rytkoset_test_wc_notices']   = array(); // ["type:message"] => true (wc_has_notice())
 $GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
+$GLOBALS['rytkoset_test_cron_events']  = array(); // [hook] => timestamp
+$GLOBALS['rytkoset_test_dashboard_widgets'] = array(); // [id] => callback
 
 // The hook registry is populated once at module load below and must NOT be reset between tests,
 // otherwise add_filter()/add_action() registrations from the loaded modules would be lost.
@@ -87,6 +89,8 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_wc_notices']    = array();
 	$GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
 	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
+	$GLOBALS['rytkoset_test_cron_events']   = array();
+	$GLOBALS['rytkoset_test_dashboard_widgets'] = array();
 
 	if ( isset( $GLOBALS['wpdb'] ) && $GLOBALS['wpdb'] instanceof Rytkoset_Test_WPDB ) {
 		$GLOBALS['wpdb']->reset();
@@ -462,17 +466,26 @@ class WP_Role {
 
 class Rytkoset_Test_WPDB {
 	public string $prefix = 'wp_';
+	public string $users = 'wp_users';
 	public string $last_query = '';
+	public string $last_error = '';
 	/** @var array<int,mixed> */
 	public array $last_prepare_args = array();
 	public $get_var_result = null;
+	public $get_row_result = null;
+	public $get_col_result = array();
+	public $get_results_result = array();
 	/** @var array<int,array<string,mixed>> */
 	public array $updates = array();
 
 	public function reset(): void {
 		$this->last_query        = '';
+		$this->last_error        = '';
 		$this->last_prepare_args = array();
 		$this->get_var_result    = null;
+		$this->get_row_result    = null;
+		$this->get_col_result    = array();
+		$this->get_results_result = array();
 		$this->updates           = array();
 	}
 
@@ -497,6 +510,24 @@ class Rytkoset_Test_WPDB {
 		$this->last_query = $query;
 
 		return $this->get_var_result;
+	}
+
+	public function get_row( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_row_result;
+	}
+
+	public function get_col( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_col_result;
+	}
+
+	public function get_results( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_results_result;
 	}
 
 	/**
@@ -802,6 +833,40 @@ function delete_transient( $transient ): bool {
 	unset( $GLOBALS['rytkoset_test_transients'][ (string) $transient ] );
 
 	return true;
+}
+
+function wp_next_scheduled( $hook ) {
+	return $GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] ?? false;
+}
+
+function wp_schedule_event( $timestamp, $recurrence, $hook, $args = array(), $wp_error = false ) {
+	$GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] = (int) $timestamp;
+
+	return true;
+}
+
+function wp_schedule_single_event( $timestamp, $hook, $args = array(), $wp_error = false ) {
+	$GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] = (int) $timestamp;
+
+	return true;
+}
+
+function wp_clear_scheduled_hook( $hook, $args = array(), $wp_error = false ) {
+	unset( $GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] );
+
+	return 1;
+}
+
+function update_meta_cache( $meta_type, $object_ids ) {
+	return true;
+}
+
+function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_callback = null, $callback_args = null, $context = 'normal', $priority = 'core' ): void {
+	$GLOBALS['rytkoset_test_dashboard_widgets'][ (string) $widget_id ] = $callback;
+}
+
+function number_format_i18n( $number, $decimals = 0 ): string {
+	return number_format( (float) $number, (int) $decimals, ',', ' ' );
 }
 
 function wp_safe_redirect( $location, $status = 302, $x_redirect_by = 'WordPress' ) {
@@ -1144,7 +1209,7 @@ function get_option( $option, $default_value = false ) {
 	return $default_value;
 }
 
-function update_option( $option, $value ): bool {
+function update_option( $option, $value, $autoload = null ): bool {
 	$GLOBALS['rytkoset_test_options'][ $option ] = $value;
 
 	return true;
@@ -1394,6 +1459,7 @@ require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
 require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
+require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
 require_once $rytkoset_theme_inc . '/email.php';

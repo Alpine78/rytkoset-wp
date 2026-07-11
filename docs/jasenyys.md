@@ -449,3 +449,23 @@ Koontia voi hakea nimellä tai sähköpostilla sekä suodattaa tilan ja jäsenyy
 - **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin luonnin jälkeen.
 
 Nimi- ja päätililinkit avaavat käyttäjäprofiilin. Jäsenten aktivointi -lähdelinkki avaa aktivointityökalun, jossa odottavaa jäsenyyttä voi käsitellä.
+
+## Jäsenviestinnän AcyMailing-lista
+
+Jäsenviestinnän vastaanottajat määräytyvät samasta effective membership
+-tilasta kuin jäsenedut. Käyttäjätilillinen oma aktiivinen jäsen, ainaisjäsen
+ja aktiiviseen perhejäsenyyteen linkitetty käyttäjä kuuluvat erilliselle
+jäsenviestinnän listalle. Tiliä odottavat jäsenyydet ja linkittämättömät
+`pending_account`-perherivit eivät kuulu listalle.
+
+Jäsenyys- ja perhelinkkimuutokset synkronoidaan heti. Lisäksi päivittäinen,
+50 tietueen oletuserissä etenevä WP-Cron-täsmäytys laskee tilan uudelleen, jotta
+pelkän päivämäärän perusteella vanhentunut jäsenyys poistuu listalta. Täsmäytys
+käy myös jäsenlistan nykyiset aktiiviset kytkennät läpi, joten käyttäjätilin
+poiston jälkeen orvoksi jäänyt kytkentä siivotaan.
+
+Synkronointi ei muuta yleistä `Rytkoset.net GDPR` -uutiskirjelistaa, ei poista
+AcyMailingin tilaajatietuetta eikä yliaja listakohtaista peruutusta tai
+globaalia estoa. Ylläpito näkee henkilötiedottoman ajokoosteen WordPressin
+Hallintapaneelin **Jäsenviestinnän synkronointi** -widgetistä. Tarkempi
+käyttöönotto- ja vianmääritysohje on tiedostossa `docs/newsletter.md`.

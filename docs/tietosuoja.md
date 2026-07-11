@@ -125,6 +125,24 @@ jäsenrekisteritiedoksi, eikä siitä lähetetä viestiä.
 
 Jos tilaat yhdistyksen uutiskirjeen, tallennamme sähköpostiosoitteesi ja tilauksen aikaleiman AcyMailing-järjestelmään. Sähköpostiosoite on pakollinen uutiskirjeen lähettämistä varten. Voit milloin tahansa peruuttaa tilauksen jokaisen uutiskirjeen alalaidassa olevasta linkistä.
 
+### Jäsenviestintä
+
+Aktiivisen, käyttäjätiliin kytketyn jäsenyyden sähköpostiosoite voidaan liittää
+AcyMailingissa erilliselle jäsenviestinnän listalle jäsenyyssuhteen hoitamista
+varten. Jäsenlistaa ei käytetä yleiseen markkinointiin eikä yleisen
+`Rytkoset.net GDPR` -uutiskirjeen tilausta muuteta. Tiliä odottavia jäsenyyksiä
+ja linkittämättömiä perherivejä ei siirretä jäsenviestinnän listalle.
+
+Jäsenlistalta voi poistua viestin peruutuslinkillä tai pyytämällä ylläpitoa
+estämään lähetykset. Peruutusta tai globaalia estoa ei aktivoida uudelleen
+automaattisesti jäsenyyden uusiutuessa. Kun viimeinen aktiivinen oma tai
+peritty jäsenyys päättyy, jäsenlistakytkentä poistetaan. AcyMailingin
+tilaajatietue voidaan silti säilyttää, jos osoite kuuluu suostumuksella yleiseen
+uutiskirjelistaan tai peruutusmerkintää tarvitaan kiellon noudattamiseen.
+Peruutusmerkintää säilytetään vain niin kauan kuin se on tarpeen kiellon
+noudattamiseksi tai kunnes rekisteröity pyytää tilaajatietueen poistamista eikä
+muuta säilytysperustetta ole.
+
 ### Yhteydenotot sähköpostilla
 
 Jos otat yhteyttä yhdistykseen sähköpostilla, viesti tallentuu sähköpostipalvelimellemme normaaliin tapaan. Viestit säilytetään niin kauan kuin asian käsittely vaatii.
@@ -176,6 +194,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 - Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.
 - Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti 6 vuotta tilikauden päättymisestä.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
+- Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
 
 ## Mitä oikeuksia sinulla on tietoihisi
 
