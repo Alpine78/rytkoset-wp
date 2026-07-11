@@ -176,6 +176,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		rytkoset_theme_apply_membership_from_order( $order );
 
 		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 11 )['type'] );
+		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
 		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key() ), 'A matched guest order must not be marked awaiting an account.' );
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'], 'Only the membership confirmation email, no create-account notice.' );
 	}
@@ -379,7 +380,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( '2030-12-31', rytkoset_theme_get_user_membership( 15 )['expires'] );
 	}
 
-	public function test_apply_stores_but_flags_membership_without_product_expiry(): void {
+	public function test_apply_leaves_order_retryable_without_product_expiry(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
 		rytkoset_test_register_user( 16, 'noexp@rytkoset.test', 'NoExp' );
 
@@ -390,10 +391,69 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 
 		rytkoset_theme_apply_membership_from_order( $order );
 
-		$this->assertSame( 'annual', rytkoset_theme_get_user_membership( 16 )['type'] );
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 16 )['type'] );
 		$this->assertFalse( rytkoset_theme_user_is_active_member( 16 ) );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'], 'No confirmation email when membership cannot be activated.' );
 		$this->assertNotEmpty( $order->notes );
+	}
+
+	public function test_apply_leaves_order_retryable_without_product_period(): void {
+		rytkoset_test_register_user( 18, 'noperiod@rytkoset.test', 'NoPeriod' );
+		$order = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-12-31', '' ) ),
+			18
+		);
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 18 )['type'] );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
+		$this->assertStringContainsString( 'Jäsenkausi', $order->notes[0] );
+	}
+
+	public function test_apply_leaves_order_retryable_without_valid_product_type(): void {
+		rytkoset_test_register_user( 21, 'notype@rytkoset.test', 'NoType' );
+		$order = $this->membership_order(
+			array( $this->membership_product( '', '2029-12-31', '2026-2029' ) ),
+			21
+		);
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 21 )['type'] );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
+		$this->assertStringContainsString( 'tyyppi', $order->notes[0] );
+	}
+
+	public function test_apply_leaves_order_retryable_with_invalid_product_expiry(): void {
+		rytkoset_test_register_user( 19, 'invaliddate@rytkoset.test', 'InvalidDate' );
+		$order = $this->membership_order(
+			array( $this->membership_product( 'annual_individual', '2029-02-30', '2026-2029' ) ),
+			19
+		);
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 19 )['type'] );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
+		$this->assertStringContainsString( 'voimassa asti', $order->notes[0] );
+	}
+
+	public function test_apply_succeeds_after_invalid_product_is_corrected(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+		rytkoset_test_register_user( 20, 'retry@rytkoset.test', 'Retry' );
+		$product = $this->membership_product( 'annual_individual', '', '2026-2029' );
+		$order   = $this->membership_order( array( $product ), 20 );
+
+		rytkoset_theme_apply_membership_from_order( $order );
+		$product->update_meta_data( rytkoset_theme_get_membership_expiry_date_meta_key(), '2029-12-31' );
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( 'annual', rytkoset_theme_get_user_membership( 20 )['type'] );
+		$this->assertSame( '2029-12-31', rytkoset_theme_get_user_membership( 20 )['expires'] );
+		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key() ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
 	}
 
 	public function test_apply_ignores_order_without_membership_products(): void {

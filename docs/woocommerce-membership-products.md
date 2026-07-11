@@ -48,6 +48,20 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
 - Teema näyttää rakenteiset kentät silloin, kun korissa on nimet vaativa jäsenmaksutuote; kenttien käyttöä selittää niiden yläpuolelle injektoitu **Jäsentiedot**-osio-otsikko (ks. alla), ei erillinen ylätiedote — aiempi erillinen kassaohje-banneri poistettiin #520:n viimeistelyssä päällekkäisenä, kun otsikko lisättiin suoraan kenttien yhteyteen.
 - WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
 
+### Asetusten validointi ja oston esto
+
+Määräaikainen jäsenmaksutuote (`annual_individual` tai `annual_family`) tarvitsee aina:
+
+- sallitun jäsenmaksutyypin
+- jäsenkauden täsmälleen muodossa `VVVV-VVVV`
+- kelvollisen **Jäsenyys voimassa asti** -päivän
+
+Jos julkaistavalta tuotteelta puuttuu jokin näistä, WooCommerce palauttaa tuotteen luonnokseksi ja näyttää ylläpidolle virheen. Sama tarkistus tehdään palvelimella tuotetta ostoskoriin lisättäessä sekä uudelleen ostoskorissa ja kassalla. Näin osto estyy myös, jos julkaistun tuotteen metadata vioittuu tai sitä muutetaan muuta kautta.
+
+Ainaisjäsenyys (`lifetime`) ei tarvitse jäsenkautta eikä voimassaolopäivää.
+
+Maksetun tilauksen käsittely käyttää samoja sääntöjä. Puutteellisesta tuotteesta ei kirjoiteta käyttäjälle vajaata jäsenyyttä eikä tilaukselle aseteta `_rytkoset_membership_order_processed`-lukitusta. Ylläpidolle jää tilausmuistiinpano, joka nimeää puuttuvan tiedon. Kun tuotteen asetukset on korjattu, tilaus voidaan käsitellä turvallisesti uudelleen. Onnistunut käsittely ja nykyinen ”jäsenyyttä ei koskaan lyhennetä” -haara merkitään edelleen käsitellyiksi, joten statuskoukku ei tee niitä kahdesti.
+
 ### Rakenteiset jäsenkentät kassalla
 
 Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php`, `docs/woocommerce-tampere-2026-checkout-fields.md`):
@@ -125,6 +139,8 @@ Suositeltu toimintamalli:
 6. Päivitä jäsenyyssivun linkit uusiin tuotteisiin.
 7. Tee testitilaus ennen julkaisua.
 
+Tuotetta ei voi julkaista ennen kuin yllä olevat määräaikaisen jäsenmaksun pakolliset metat ovat kelvolliset. Testitilauksessa kannattaa lisäksi varmistaa, että ostajan WordPress-käyttäjälle syntyy aktiivinen jäsenyys ja tilaukselle käsittelymerkintä.
+
 ## Testattu nyt
 
 - Molemmat tuotteet ovat olemassa WooCommercessa oikeilla hinnoilla.
@@ -140,6 +156,9 @@ Suositeltu toimintamalli:
 - Jäsenmaksutuotteet tunnistetaan adminissa jäsenmaksumetadatan perusteella.
 - WooCommerce Orders -lista näyttää jäsenmaksutilauksille `Jäsenmaksu`-sarakkeen arvon.
 - Jäsenmaksutilauksen admin-näkymässä näkyy käsittelyyn tarkoitettu `Jäsenmaksu`-laatikko.
+- Puutteellinen määräaikainen jäsenmaksutuote jää luonnokseksi eikä sitä voi lisätä ostoskoriin tai ostaa.
+- Puutteelliseen tuotemetadataan pysähtynyt tilaus jää ilman käsittelylukitusta ja voidaan käsitellä asetusten korjaamisen jälkeen uudelleen.
+- Ainaisjäsenmaksu toimii ilman jäsenkautta ja voimassaolopäivää.
 
 ## Jätetään seuraaviin tiketteihin
 

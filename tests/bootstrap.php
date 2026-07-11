@@ -49,6 +49,7 @@ $GLOBALS['rytkoset_test_is_singular']  = false;   // is_singular()
 $GLOBALS['rytkoset_test_queried_id']   = 0;       // get_queried_object_id()
 $GLOBALS['rytkoset_test_has_excerpt']  = array(); // [post_id] => bool (has_excerpt())
 $GLOBALS['rytkoset_test_wc_notices']   = array(); // ["type:message"] => true (wc_has_notice())
+$GLOBALS['rytkoset_test_wc']           = null; // Minimal WC() container; cart is null by default.
 $GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 $GLOBALS['rytkoset_test_cron_events']  = array(); // [hook] => timestamp
 $GLOBALS['rytkoset_test_dashboard_widgets'] = array(); // [id] => callback
@@ -63,6 +64,7 @@ $GLOBALS['rytkoset_test_hooks'] = array(); // [tag] => array of array{0:int prio
  * @return void
  */
 function rytkoset_test_reset(): void {
+	$_POST = array();
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
@@ -87,6 +89,8 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_queried_id']    = 0;
 	$GLOBALS['rytkoset_test_has_excerpt']   = array();
 	$GLOBALS['rytkoset_test_wc_notices']    = array();
+	$GLOBALS['rytkoset_test_wc']            = new Rytkoset_Test_WC();
+	WC_Admin_Meta_Boxes::$errors             = array();
 	$GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
 	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 	$GLOBALS['rytkoset_test_cron_events']   = array();
@@ -221,6 +225,18 @@ class WC_Product {
 		return $this->status;
 	}
 
+	public function set_status( string $status ): void {
+		$this->status = $status;
+	}
+
+	public function update_meta_data( string $key, $value ): void {
+		$this->meta[ $key ] = $value;
+	}
+
+	public function delete_meta_data( string $key ): void {
+		unset( $this->meta[ $key ] );
+	}
+
 	public function get_name(): string {
 		return $this->name;
 	}
@@ -239,6 +255,29 @@ class WC_Product {
 
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
+	}
+}
+
+class Rytkoset_Test_Cart {
+	/** @var array<int,array<string,mixed>> */
+	public array $items = array();
+
+	/** @return array<int,array<string,mixed>> */
+	public function get_cart(): array {
+		return $this->items;
+	}
+}
+
+class Rytkoset_Test_WC {
+	public ?Rytkoset_Test_Cart $cart = null;
+}
+
+class WC_Admin_Meta_Boxes {
+	/** @var string[] */
+	public static array $errors = array();
+
+	public static function add_error( $text ): void {
+		self::$errors[] = (string) $text;
 	}
 }
 
@@ -1035,6 +1074,10 @@ function current_user_can( $capability, ...$args ) {
 
 function wc_get_product( $product_id ) {
 	return $GLOBALS['rytkoset_test_products'][ (int) $product_id ] ?? false;
+}
+
+function WC(): Rytkoset_Test_WC {
+	return $GLOBALS['rytkoset_test_wc'];
 }
 
 /**
