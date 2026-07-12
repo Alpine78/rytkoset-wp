@@ -301,7 +301,7 @@ if ( ! function_exists( 'rytkoset_theme_get_account_membership_endpoint_slug' ) 
 	 * @return string
 	 */
 	function rytkoset_theme_get_account_membership_endpoint_slug() {
-		return 'jasenyys';
+		return 'jasentiedot';
 	}
 }
 

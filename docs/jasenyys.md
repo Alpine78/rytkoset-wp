@@ -395,7 +395,10 @@ Perhejäsenet-taulukolla (`#524`) tai perhejäsenmaksun tilauspolulla (`#519`).
 ## Oma tili: Jäsenyys (#522)
 
 WooCommercen **Oma tili** -alueella on endpoint
-`rytkoset_membership` (URL-slugi `jasenyys`) ja valikkokohta **Jäsenyys**.
+`rytkoset_membership` (URL-slugi `jasentiedot`) ja valikkokohta **Jäsenyys**.
+Endpoint käyttää tarkoituksella eri slugia kuin julkinen jäsenyyssivu
+`/sukuseura/jasenyys/`, jotta WooCommercen endpoint-sääntö ei sieppaa julkista
+sivua ja muuta sitä 404-vastaukseksi.
 Näkymä käyttää suoraan tämän dokumentin jäsenyys- ja perherakenneapureita eikä
 tallenna rinnakkaista jäsenyystietoa.
 

@@ -100,7 +100,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 	public function test_membership_endpoint_query_var_uses_finnish_slug(): void {
 		$vars = rytkoset_theme_register_account_membership_endpoint_query_var( array() );
 
-		$this->assertSame( 'jasenyys', $vars['rytkoset_membership'] );
+		$this->assertSame( 'jasentiedot', $vars['rytkoset_membership'] );
 	}
 
 	public function test_membership_menu_item_inserted_before_account_details(): void {
@@ -275,7 +275,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_account_membership_url_uses_finnish_slug(): void {
-		$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', rytkoset_theme_get_account_membership_url() );
+		$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', rytkoset_theme_get_account_membership_url() );
 	}
 
 	public function test_family_member_nonce_action_is_scoped_per_action(): void {
@@ -477,7 +477,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$members = rytkoset_theme_get_family_members( 10 );
@@ -501,7 +501,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$member = rytkoset_theme_get_family_members( 10 )[0];
@@ -537,7 +537,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after the limit rejects the request.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$members = rytkoset_theme_get_family_members( 10 );
@@ -564,7 +564,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$members = rytkoset_theme_get_family_members( 10 );
@@ -599,7 +599,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$member = rytkoset_theme_get_family_members( 10 )[0];
@@ -629,7 +629,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after validation fails.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$member = rytkoset_theme_get_family_members( 10 )[0];
@@ -664,7 +664,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after success.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$this->assertSame( 0, rytkoset_theme_get_family_primary_user_id( 20 ) );
@@ -686,7 +686,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after the guard rejects the request.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$this->assertSame( array(), rytkoset_theme_get_family_members( 20 ) );
@@ -706,7 +706,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_handle_account_membership_family_submit();
 			$this->fail( 'Expected the submit handler to redirect after the nonce check fails.' );
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
-			$this->assertSame( 'https://rytkoset.test/tili/jasenyys/', $redirect->location );
+			$this->assertSame( 'https://rytkoset.test/tili/jasentiedot/', $redirect->location );
 		}
 
 		$this->assertSame( array(), rytkoset_theme_get_family_members( 10 ) );
@@ -822,7 +822,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		update_option(
 			'rewrite_rules',
 			array(
-				'^oma-tili/jasenyys/?$' => 'index.php?pagename=oma-tili&rytkoset_membership=1',
+				'^oma-tili/jasentiedot/?$' => 'index.php?pagename=oma-tili&rytkoset_membership=1',
 			)
 		);
 
