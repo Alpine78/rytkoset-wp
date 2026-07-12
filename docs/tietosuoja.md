@@ -46,7 +46,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 # Tietosuojaseloste
 
-Päivitetty: 2.7.2026
+Päivitetty: 10.7.2026
 
 ## Rekisterinpitäjä
 
@@ -65,6 +65,7 @@ Tämä tietosuojaseloste koskee Rytkösten sukuseuran verkkosivustoa. Sukututkim
 Henkilötietojen käsittely perustuu käyttötarkoituksesta riippuen seuraaviin oikeusperusteisiin:
 
 - **Käyttäjätilit**: käyttäjän pyytämän palvelun toteuttaminen ja yhdistyksen oikeutettu etu ylläpitää sivuston jäsen- ja käyttäjätoimintoja.
+- **Jäsenyyden hoitaminen ja jäsenetujen käyttöönotto**: yhdistyksen jäsenyyssuhteen hoitaminen. Yhdistys voi käsitellä jäsenrekisterissä olevan jäsenen sähköpostiosoitetta jäsenyyden kytkemiseksi käyttäjätiliin ja sivuston jäsenetujen käyttöönottamiseksi. Käsittely ei perustu markkinointisuostumukseen, eikä osoitetta käytetä uutiskirjeeseen tai markkinointiin.
 - **Tapahtumailmoittautumiset**: käyttäjän suostumus sekä yhdistyksen oikeutettu etu järjestää tapahtumia ja hoitaa niihin liittyvää viestintää.
 - **Verkkokaupan tilaukset ja maksut**: sopimuksen täytäntöönpano sekä lakisääteiset kirjanpito- ja raportointivelvoitteet.
 - **Uutiskirje**: käyttäjän suostumus.
@@ -75,6 +76,8 @@ Henkilötietojen käsittely perustuu käyttötarkoituksesta riippuen seuraaviin 
 ### Käyttäjätilit
 
 Kun rekisteröidyt sivustolle, tallennamme nimesi ja sähköpostiosoitteesi sekä mahdolliset profiilitiedot, jotka itse annat. Tietoja käytetään käyttäjätilin ylläpitoon, kirjautumiseen ja jäsenviestintään.
+
+Jos olet yhdistyksen jäsen, ylläpito voi jäsenrekisterin perusteella kytkeä jäsenyytesi käyttäjätiliisi, jotta saat sivuston jäsenedut käyttöösi. Jos sähköpostiosoitteellasi ei vielä ole käyttäjätiliä, osoitteeseen voidaan lähettää kertaluonteinen viesti, jossa kerrotaan tietojen olevan peräisin yhdistyksen jäsenrekisteristä ja ohjataan luomaan tili samalla osoitteella. Jäsenyyden kytkentää odottavat tiedot (sähköpostiosoite ja jäsenyyden tyyppi- ja voimassaolotiedot) säilytetään vain kytkentää varten, ja niiden poistoa voi pyytää rekisterinpitäjältä. Käsittelystä pidetään ylläpidon lokia (osoite, lopputulos, käsittelijä, aika).
 
 ### Tapahtumailmoittautumiset
 
@@ -103,9 +106,42 @@ Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta
 
 Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Näitä tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
 
+Perhejäsenmaksulla annetut jäsenrivit tallennetaan lisäksi ostajan päätilin
+perhejäsenlistaan, jotta perhejäsenyys ja siihen kuuluvat sivuston jäsenedut
+voidaan yhdistää oikeisiin käyttäjätileihin. Lista sisältää jäsenen nimen,
+mahdollisen sähköpostiosoitteen, käyttäjätililinkityksen tilan ja tiedon
+lähdetilauksesta. Listaa säilytetään niin kauan kuin sitä tarvitaan jäsenyyden
+ja jäsenetujen hallintaan; virheellisen tai tarpeettoman perherivin korjaamista
+tai poistamista voi pyytää rekisterinpitäjältä.
+
+Jos perhejäsenelle ilmoitetulla sähköpostiosoitteella ei vielä ole
+käyttäjätiliä, osoitteeseen lähetetään kertaluonteinen viesti, jossa kerrotaan,
+että osoite on annettu perhejäsenmaksun yhteydessä, ja ohjataan luomaan tili
+samalla osoitteella. Viestissä ei kerrota ostajan henkilöllisyyttä tai muita
+tilaustietoja. Ilman sähköpostiosoitetta tallennettu perherivi jää vain
+jäsenrekisteritiedoksi, eikä siitä lähetetä viestiä.
+
 ### Uutiskirje
 
 Jos tilaat yhdistyksen uutiskirjeen, tallennamme sähköpostiosoitteesi ja tilauksen aikaleiman AcyMailing-järjestelmään. Sähköpostiosoite on pakollinen uutiskirjeen lähettämistä varten. Voit milloin tahansa peruuttaa tilauksen jokaisen uutiskirjeen alalaidassa olevasta linkistä.
+
+### Jäsenviestintä
+
+Aktiivisen, käyttäjätiliin kytketyn jäsenyyden sähköpostiosoite voidaan liittää
+AcyMailingissa erilliselle jäsenviestinnän listalle jäsenyyssuhteen hoitamista
+varten. Jäsenlistaa ei käytetä yleiseen markkinointiin eikä yleisen
+`Rytkoset.net GDPR` -uutiskirjeen tilausta muuteta. Tiliä odottavia jäsenyyksiä
+ja linkittämättömiä perherivejä ei siirretä jäsenviestinnän listalle.
+
+Jäsenlistalta voi poistua viestin peruutuslinkillä tai pyytämällä ylläpitoa
+estämään lähetykset. Peruutusta tai globaalia estoa ei aktivoida uudelleen
+automaattisesti jäsenyyden uusiutuessa. Kun viimeinen aktiivinen oma tai
+peritty jäsenyys päättyy, jäsenlistakytkentä poistetaan. AcyMailingin
+tilaajatietue voidaan silti säilyttää, jos osoite kuuluu suostumuksella yleiseen
+uutiskirjelistaan tai peruutusmerkintää tarvitaan kiellon noudattamiseen.
+Peruutusmerkintää säilytetään vain niin kauan kuin se on tarpeen kiellon
+noudattamiseksi tai kunnes rekisteröity pyytää tilaajatietueen poistamista eikä
+muuta säilytysperustetta ole.
 
 ### Yhteydenotot sähköpostilla
 
@@ -158,6 +194,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 - Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.
 - Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti 6 vuotta tilikauden päättymisestä.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
+- Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
 
 ## Mitä oikeuksia sinulla on tietoihisi
 

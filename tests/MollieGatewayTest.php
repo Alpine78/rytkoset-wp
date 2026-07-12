@@ -65,4 +65,11 @@ final class MollieGatewayTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_mollie_gateway_title( 'Pay by bank', 'mollie_wc_gateway_paybybank' )
 		);
 	}
+
+	public function test_components_placeholder_uses_readable_muted_color(): void {
+		$this->assertSame(
+			'#5b6577',
+			rytkoset_theme_get_mollie_components_placeholder_color()
+		);
+	}
 }

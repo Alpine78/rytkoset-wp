@@ -695,8 +695,11 @@ if ( ! function_exists( 'rytkoset_theme_register_checkout_newsletter_opt_in' ) )
 		woocommerce_register_additional_checkout_field(
 			array(
 				'id'                => 'rytkoset/newsletter_opt_in',
-				'label'             => __( 'Tilaa uutiskirje', 'rytkoset-theme' ),
-				'location'          => 'order',
+				'label'             => __( 'Tilaa sukuseuran uutiskirje tähän osoitteeseen', 'rytkoset-theme' ),
+				// Contact location renders the checkbox right under the email
+				// field (#520 design); the value is still stored in the same
+				// _wc_other/ order meta group as before.
+				'location'          => 'contact',
 				'type'              => 'checkbox',
 				'required'          => false,
 				'sanitize_callback' => 'rest_sanitize_boolean',

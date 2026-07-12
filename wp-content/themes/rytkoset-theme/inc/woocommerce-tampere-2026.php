@@ -500,6 +500,58 @@ function rytkoset_theme_get_tampere_2026_store_api_namespace() {
 }
 
 /**
+ * Builds Tampere 2026 participant lines (type + unit price) from cart items (#520).
+ *
+ * One line per participant in the same order the participant checkout fields
+ * are indexed (cart item order, quantity expanded), so line N describes
+ * participant N. Used by the checkout participant card UI.
+ *
+ * @param array<int|string, array<string, mixed>> $cart_items WooCommerce cart items.
+ * @return array<int, array<string, string>>
+ */
+function rytkoset_theme_build_tampere_2026_cart_participant_lines( $cart_items ) {
+	$lines = array();
+
+	foreach ( $cart_items as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+
+		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+			continue;
+		}
+
+		$type_label = rytkoset_theme_get_tampere_2026_participant_type_label( $product );
+		$price      = html_entity_decode(
+			wp_strip_all_tags( wc_price( wc_get_price_including_tax( $product ) ) ),
+			ENT_QUOTES,
+			'UTF-8'
+		);
+		$quantity   = isset( $cart_item['quantity'] ) ? (int) $cart_item['quantity'] : 0;
+
+		for ( $i = 0; $i < $quantity; $i++ ) {
+			$lines[] = array(
+				'type'  => $type_label,
+				'price' => $price,
+			);
+		}
+	}
+
+	return $lines;
+}
+
+/**
+ * Returns Tampere 2026 participant lines for the current cart (#520).
+ *
+ * @return array<int, array<string, string>>
+ */
+function rytkoset_theme_get_tampere_2026_cart_participant_lines() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return array();
+	}
+
+	return rytkoset_theme_build_tampere_2026_cart_participant_lines( WC()->cart->get_cart() );
+}
+
+/**
  * Returns Tampere 2026 cart data for the WooCommerce Store API.
  *
  * @return array<string, mixed>
@@ -507,6 +559,7 @@ function rytkoset_theme_get_tampere_2026_store_api_namespace() {
 function rytkoset_theme_get_tampere_2026_store_api_cart_data() {
 	return array(
 		'participant_count' => rytkoset_theme_get_tampere_2026_participant_count(),
+		'participants'      => rytkoset_theme_get_tampere_2026_cart_participant_lines(),
 	);
 }
 
@@ -522,6 +575,18 @@ function rytkoset_theme_get_tampere_2026_store_api_cart_schema() {
 			'type'        => 'integer',
 			'minimum'     => 0,
 			'readonly'    => true,
+		),
+		'participants'      => array(
+			'description' => __( 'Tampere 2026 -osallistujarivit (osallistujatyyppi ja hinta) ostoskorissa.', 'rytkoset-theme' ),
+			'type'        => 'array',
+			'readonly'    => true,
+			'items'       => array(
+				'type'       => 'object',
+				'properties' => array(
+					'type'  => array( 'type' => 'string' ),
+					'price' => array( 'type' => 'string' ),
+				),
+			),
 		),
 	);
 }
@@ -558,6 +623,52 @@ if ( did_action( 'woocommerce_blocks_loaded' ) ) {
 } else {
 	add_action( 'woocommerce_blocks_loaded', 'rytkoset_theme_register_tampere_2026_store_api_cart_data' );
 }
+
+/**
+ * Enqueues the participant card header UI for the Tampere 2026 checkout (#520).
+ *
+ * Injects a numbered header with the participant type and unit price above
+ * each participant's field group, using the participant lines published in
+ * the Store API cart extension.
+ *
+ * @return void
+ */
+function rytkoset_theme_enqueue_tampere_2026_checkout_participants() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	if ( ! rytkoset_theme_cart_has_tampere_2026_registration() ) {
+		return;
+	}
+
+	$script_path = '/assets/js/tampere-checkout-participants.js';
+
+	wp_enqueue_script(
+		'rytkoset-tampere-checkout-participants',
+		get_template_directory_uri() . $script_path,
+		array( 'wp-data' ),
+		rytkoset_theme_get_asset_version( get_template_directory() . $script_path ),
+		true
+	);
+
+	$config = array(
+		'namespace' => rytkoset_theme_get_tampere_2026_store_api_namespace(),
+		'i18n'      => array(
+			/* translators: %d: participant number. */
+			'title'   => __( 'Osallistuja %d', 'rytkoset-theme' ),
+			'heading' => __( 'Osallistujat — Tampere 2026', 'rytkoset-theme' ),
+			'intro'   => __( 'Täytä jokaiselle osallistujalle nimi, mahdolliset ruokarajoitteet tai allergiat sekä perjantain buffet-illallisen valinta.', 'rytkoset-theme' ),
+		),
+	);
+
+	wp_add_inline_script(
+		'rytkoset-tampere-checkout-participants',
+		'window.rytkosetTampereParticipants = ' . wp_json_encode( $config ) . ';',
+		'before'
+	);
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_tampere_2026_checkout_participants' );
 
 /**
  * Returns a JSON Schema fragment that matches an active participant field.

@@ -779,6 +779,264 @@ body.woocommerce-account .woocommerce-MyAccount-content #account_display_name_de
 }
 
 /* -----------------------------------------------------------------
+   Jäsenyyden yhteenveto ja perheenjäsenet
+   ----------------------------------------------------------------- */
+
+.rytkoset-account-membership {
+  max-width: 720px;
+  padding: 24px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.rytkoset-account-membership__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--acct-divider);
+}
+
+.rytkoset-account-membership__title,
+.rytkoset-account-family__title {
+  margin: 0;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.rytkoset-account-membership__description {
+  margin: 6px 0 0;
+  color: var(--color-text-mute);
+  font-size: 0.9375rem;
+}
+
+.rytkoset-account-membership__details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin: 20px 0 0;
+}
+
+.rytkoset-account-membership__details div {
+  min-width: 0;
+}
+
+.rytkoset-account-membership__details dt {
+  color: var(--color-text-mute);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rytkoset-account-membership__details dd {
+  margin: 4px 0 0;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.rytkoset-account-membership__family-source {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius-m);
+  background: var(--acct-accent-soft);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.rytkoset-account-membership__family-source strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--acct-heading);
+}
+
+body.woocommerce-account .rytkoset-account-membership__action {
+  margin-top: 20px;
+}
+
+.rytkoset-account-family {
+  margin-top: 32px;
+}
+
+.rytkoset-account-family__title {
+  margin-bottom: 16px;
+}
+
+.rytkoset-account-family__empty {
+  margin: 0 0 24px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  color: var(--color-text-mute);
+}
+
+/* ---- Perheenjäsenrivit (#522, itsepalvelumuokkaus) ---- */
+
+.rytkoset-family-rows {
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.rytkoset-family-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--acct-divider);
+}
+
+.rytkoset-family-rows > :last-child {
+  border-bottom: 0;
+}
+
+.rytkoset-family-row__avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--acct-surface-alt);
+  color: var(--color-text-mute);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.rytkoset-family-row__avatar--linked {
+  background: var(--acct-accent-soft);
+  color: var(--acct-link);
+}
+
+.rytkoset-family-row__id {
+  min-width: 0;
+}
+
+.rytkoset-family-row__name {
+  margin: 0 0 1px;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.rytkoset-family-row__email {
+  margin: 0;
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.rytkoset-family-row__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.rytkoset-family-row__actions form {
+  margin: 0;
+}
+
+.rytkoset-icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-pill);
+  background: var(--acct-surface);
+  color: var(--color-text-mute);
+  cursor: pointer;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.rytkoset-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.rytkoset-icon-button:hover,
+.rytkoset-icon-button:focus-visible {
+  color: var(--acct-link);
+  border-color: var(--acct-link);
+}
+
+.rytkoset-icon-button--danger:hover,
+.rytkoset-icon-button--danger:focus-visible {
+  color: var(--acct-danger);
+  border-color: var(--acct-danger);
+  background: var(--acct-danger-bg);
+}
+
+.rytkoset-icon-button:focus-visible {
+  outline: var(--nav-focus-outline);
+  outline-offset: 2px;
+}
+
+/* Rivin muokkaustila korvaa näyttötilan samassa gridissä */
+.rytkoset-family-row--editing {
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  background: var(--acct-surface-alt);
+}
+
+.rytkoset-family-row__edit-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 16px;
+}
+
+.rytkoset-family-row__edit-fields .form-row {
+  margin: 0 0 10px;
+}
+
+.rytkoset-family-row__edit-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* ---- Perheenjäsenen lisäyslomake ---- */
+
+.rytkoset-family-add {
+  max-width: 480px;
+  padding: 20px;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--acct-surface-alt);
+}
+
+.rytkoset-family-add__title {
+  margin: 0 0 4px;
+  color: var(--acct-heading);
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.rytkoset-family-add__hint {
+  margin: 0 0 16px;
+  color: var(--color-text-mute);
+  font-size: 0.85rem;
+}
+
+.rytkoset-family-add .form-row:last-of-type {
+  margin-bottom: 16px;
+}
+
+/* -----------------------------------------------------------------
    Uutiskirjeen hallinta
    ----------------------------------------------------------------- */
 
@@ -1004,6 +1262,58 @@ body.woocommerce-account .woocommerce-MyAccount-content .show-password-input {
   .rytkoset-account-newsletter-card {
     max-width: none;
     padding: 20px;
+  }
+
+  .rytkoset-account-membership {
+    max-width: none;
+    padding: 20px;
+  }
+
+  .rytkoset-account-membership__head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rytkoset-family-row {
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-areas:
+      "avatar id"
+      "chip   chip"
+      "actions actions";
+    row-gap: 10px;
+  }
+
+  .rytkoset-family-row__avatar {
+    grid-area: avatar;
+    width: 32px;
+    height: 32px;
+  }
+
+  .rytkoset-family-row__id {
+    grid-area: id;
+  }
+
+  .rytkoset-family-row .rytkoset-status-chip {
+    grid-area: chip;
+    justify-self: start;
+  }
+
+  .rytkoset-family-row__actions {
+    grid-area: actions;
+  }
+
+  .rytkoset-family-row--editing {
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-areas: none;
+  }
+
+  .rytkoset-family-row__edit-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .rytkoset-family-add {
+    max-width: none;
+    padding: 16px;
   }
 
   .rytkoset-account-newsletter-card__head {

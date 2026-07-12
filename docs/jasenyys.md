@@ -6,6 +6,7 @@ tilan käsin. Toteutus on tiketissä `#301` (EPIC 10, `#395`) ja koodi moduuliss
 
 Tämä on perusta jäsenille rajatuille sisällöille, digilehtien käyttöoikeuksille
 (EPIC 9, ks. [digilehdet.md](digilehdet.md)) ja mahdollisille jäsenhinnoille.
+Perhejäsenyyden perusrakenne lisättiin tiketissä `#524`.
 
 ## Tausta
 
@@ -58,6 +59,97 @@ Jäsenyyden vanheneminen ei tapahdu automaattisesti taustalla — voimassaolopä
 mentyä jäsenyys lakkaa olemasta aktiivinen, mutta tieto säilyy käyttäjällä,
 kunnes ylläpitäjä päivittää sen.
 
+## Perhejäsenyyden perherakenne (#524)
+
+Perhejäsenyyden **päätili** on tavallinen WordPress-käyttäjä, jonka oma
+jäsenyyden tyyppi on **Perhejäsen** ja jonka voimassaolopäivä on edelleen
+voimassa. Päätilin profiilin Jäsenyys-osiossa on lisäksi **Perhejäsenet**
+-taulukko.
+
+Perhejäsenrivi sisältää:
+
+- `name` — perheenjäsenen nimi
+- `email` — normalisoitu sähköpostiosoite, jos annettu
+- `linked_user_id` — linkitetyn WordPress-käyttäjän ID, jos tili on olemassa
+- `status` — `active`, `pending_account` tai `removed`
+- `source_order_id` — tilaus, josta rivi on peräisin, jos tiedossa
+- `updated_at` — viimeisin päivitysaika
+
+Rivit tallennetaan päätilin user metaan `rytkoset_family_members`.
+Linkitetylle perheenjäsenelle tallennetaan kevyt reverse meta
+`rytkoset_family_primary_user_id`, jotta jäsenetujen tarkistus löytää päätilin
+ilman koko käyttäjäkannan hakua.
+
+Kaikki muutokset pitää tehdä helperillä
+`rytkoset_theme_update_family_members( $primary_user_id, $members )`. Helper
+tallentaa päätilin listan ja reverse-metan yhdessä. Jos `pending_account`-rivillä
+on sähköposti, jolla on jo WordPress-käyttäjätili, helper linkittää tilin samalla
+tallennuksella ja vaihtaa rivin tilaan `active`. Se myös estää:
+
+- saman sähköpostiosoitteen tallentamisen kahdesti samalle päätilille,
+- saman `linked_user_id`-arvon tallentamisen kahdesti samalle päätilille,
+- päätilin linkittämisen itseensä,
+- käyttäjätilin linkittämisen uuteen päätiliin, jos sillä on jo toinen
+  `rytkoset_family_primary_user_id`. Tarkistus koskee vain rivejä, jotka voivat
+  antaa jäsenetuja: historiallinen `removed`-rivi ei estä listan tallennusta,
+  vaikka käyttäjä olisi sittemmin linkitetty toiseen päätiliin — mutta saman
+  rivin palauttaminen aktiiviseksi estyy, kunnes toinen linkitys on poistettu.
+
+Jos rivi poistetaan listasta tai sen tilaksi asetetaan `removed`, helper siivoaa
+linkitetyn käyttäjän reverse-metan. MVP-linjaus on selkeä esto, ei automaattinen
+siirto: jos käyttäjä kuuluu toiseen perheeseen, vanha linkitys poistetaan ensin.
+
+Rivin `status` normalisoidaan tallennuksessa ja luvussa: tuntematon arvo
+muuttuu `pending_account`-tilaksi (fail closed), joten vioittunut status ei voi
+muuttaa riviä jäsenetuja antavaksi. Tyhjä status saa oletuksen rivin mukaan
+(`active` linkitetylle käyttäjälle, muuten `pending_account`).
+
+### Käyttäjätilin poisto (#544)
+
+Kun WordPress-käyttäjä poistetaan (ylläpito tai tietosuojapyyntö),
+`delete_user`-hookki siivoaa perherakenteen ennen kuin WordPress poistaa
+käyttäjärivin ja user metan:
+
+- **Päätilin poisto:** jokaiselta listan linkitetyltä käyttäjältä poistetaan
+  reverse meta, jos se osoittaa poistettavaan päätiliin. Näin vanhentunut
+  viittaus ei jää estämään käyttäjän linkittämistä uuteen perhejäsenyyteen.
+  Perhelista itsessään poistuu päätilin oman user metan mukana.
+- **Linkitetyn perheenjäsenen poisto:** päätilin vastaava rivi irrotetaan
+  yhteisen tallennusapurin kautta: `linked_user_id` nollataan ja tila vaihtuu
+  `pending_account`-tilaksi (historiallinen `removed`-rivi säilyttää tilansa).
+  Rivin nimi ja sähköposti säilyvät, joten samalla sähköpostilla myöhemmin
+  luotava tili linkittyy riviin normaalisti (#542). Tallennusapurin valinnainen
+  kolmas parametri estää sähköpostilinkityksen poistettavaan tiliin, koska
+  hookin ajohetkellä tili on vielä olemassa.
+
+Validaattorissa on lisäksi fail-safe vanhoille tapauksille: jos käyttäjän
+reverse meta osoittaa päätiliin, jota ei enää ole, viittaus tulkitaan
+vanhentuneeksi eikä se estä käyttäjän linkittämistä uuteen perhejäsenyyteen.
+Uusi tallennus korvaa vanhentuneen viittauksen.
+
+### Perityt jäsenedut
+
+`rytkoset_theme_user_is_active_member( $user_id )` on nyt effective membership
+-portti. Se palauttaa `true`, jos käyttäjällä on:
+
+1. oma aktiivinen jäsenyys, tai
+2. aktiivinen perhejäsenrivi päätilillä, jonka oma jäsenyys on aktiivinen
+   `family`.
+
+Peritty jäsenetu ei kopioi voimassaoloa perheenjäsenen omaan
+`rytkoset_membership_*`-metaan. Jos päätilin perhejäsenyys vanhenee, puuttuu tai
+ei ole tyyppiä `family`, linkitetty perheenjäsen ei saa jäsenetuja päätilin
+kautta.
+
+Kun koodin pitää tarkistaa vain käyttäjän omaa jäsenyyttä, käytetään
+`rytkoset_theme_user_has_own_active_membership( $user_id )`. Tätä käytetään
+esimerkiksi jäsenmaksutilauksen sovelluslogiikassa ja kuittausviestin
+ei-aktiivinen → aktiivinen -vertailussa, jotta peritty perhejäsenyys ei estä
+oman jäsenyyden kirjaamista tai kuittausviestiä.
+
+WooCommerce-perhejäsenmaksun jäsenrivit kytketään tähän malliin automaattisesti
+tilauksen käsittelyssä (`#519`, tarkempi kuvaus alla).
+
 ## Kuittausviesti jäsenelle
 
 Kun käyttäjän jäsenyys muuttuu **ei-aktiivisesta aktiiviseksi**, jäsenelle
@@ -78,6 +170,8 @@ Viesti lähtee teeman oletuslähettäjältä (`Rytkösten sukuseura ry`, ks.
 - **Ei** lähde uudelleen, jos jo aktiivinen profiili tallennetaan uudelleen
   (esim. voimassaolopäivän jatkaminen ei laukaise uutta viestiä).
 - Ei lähde, jos käyttäjältä puuttuu kelvollinen sähköpostiosoite.
+- Peritty perhejäsenyys ei estä oman jäsenyyden kuittausviestiä: vertailu tehdään
+  käyttäjän omaan jäsenyyteen.
 
 Sama lähetyslogiikka on käytössä myös automaattipäivityksessä
 WooCommerce-jäsenmaksutilauksesta (`#302`), joten viesti on identtinen
@@ -99,8 +193,15 @@ if ( rytkoset_theme_user_is_active_member( $user_id ) ) {
 ```
 
 Ilman `$user_id`-argumenttia helper tarkistaa kirjautuneen käyttäjän.
-`rytkoset_theme_get_user_membership( $user_id )` palauttaa rakenteisen taulukon
-(`type`, `period`, `expires`).
+`rytkoset_theme_user_is_active_member()` huomioi myös perhejäsenyyden kautta
+perityn effective membership -tilan.
+`rytkoset_theme_get_user_membership( $user_id )` palauttaa käyttäjän oman
+rakenteisen jäsenyystaulukon (`type`, `period`, `expires`), ja
+`rytkoset_theme_get_effective_user_membership( $user_id )` palauttaa lisäksi
+`source`- ja `primary_user_id`-tiedot.
+
+Jos kutsupaikka saa katsoa vain käyttäjän omaa user metaan tallennettua
+jäsenyyttä, käytä `rytkoset_theme_user_has_own_active_membership( $user_id )`.
 
 Kuittausviestin lähettää jaettu helper
 `rytkoset_theme_send_membership_confirmation_email( $user_id )`. Se rakentaa ja
@@ -115,6 +216,9 @@ Käyttäjämeta-avaimet (ilman alaviivaa, erotuksena WooCommerce-jäsenmaksutuot
 - `rytkoset_membership_type` — `''` | `annual` | `family` | `lifetime`
 - `rytkoset_membership_period` — esim. `2026-2029`
 - `rytkoset_membership_expires` — tallennetaan ISO-muodossa `2029-12-31` (ylläpidossa syötetään ja näytetään suomalaisena `pp.kk.vvvv`)
+- `rytkoset_family_members` — päätilin normalisoitu perhejäsenlista
+- `rytkoset_family_primary_user_id` — linkitetyn perheenjäsenen viittaus
+  päätiliin
 
 ## Automaattinen päivitys WooCommerce-tilauksesta (#302)
 
@@ -134,18 +238,280 @@ ylläpitonäkymä. Logiikka on moduulissa
 
 **Erityistilanteet:**
 
-- **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Tilaukselle kirjataan aikaleima `_rytkoset_membership_order_processed`.
-- **Ei käyttäjää:** vierasostokset tai tilaukset, joita ei voida yhdistää WordPress-käyttäjään, saavat tilausmuistiinpanon ylläpitäjälle manuaalista vientiä varten.
+- **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Käyttäjään yhdistetty tilaus saa aikaleiman `_rytkoset_membership_order_processed`; ilman tiliä jäänyt tilaus merkitään sen sijaan odottamaan tilikytkentää (ks. seuraava kohta).
+- **Ei käyttäjää (#518):** vierasostos, jonka laskutussähköpostilla ei ole tiliä, jää odottamaan tilikytkentää (order meta `_rytkoset_membership_awaiting_account`, `processed`-metaa ei aseteta). Ostajalle lähetetään laskutussähköpostiin suomenkielinen "luo tili" -viesti (kertaalleen per tilaus, merkintä `_rytkoset_membership_account_notice_sent`): jäsenmaksu on vastaanotettu, jäsenedut vaativat tilin ja tili kannattaa luoda samalla sähköpostiosoitteella, jolloin jäsenyys aktivoituu automaattisesti. Tilaukseen kirjataan aina myös muistiinpano ylläpitäjälle; jos laskutussähköposti puuttuu tai on epäkelpo, viestiä ei lähetetä ja jäljelle jää vain muistiinpano.
 - **Jäsenyyttä ei lyhennetä:** jos käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys (ainaisjäsen, tai aktiivinen määräaikainen jäsenyys jonka voimassaolopäivä on sama tai myöhäisempi), ostoa ei sovelleta ja tilaukseen kirjataan muistiinpano. Tämä estää vahingossa ostetun lyhyemmän jäsenyyden lyhentämästä voimassa olevaa jäsenyyttä.
+- **Peritty perhejäsenyys ei estä omaa ostoa:** jos perheenjäsen ostaa oman
+  jäsenyyden, tilauspolku vertaa vain käyttäjän omaa jäsenyyttä. Peritty active
+  member -tila ei estä oman jäsenyyden tallennusta eikä kuittausviestiä.
 - **Puuttuva tyyppi:** jos jäsenmaksutuotteelta puuttuu jäsenmaksun tyyppi, jäsenyyttä ei voida määrittää ja tilaukseen kirjataan muistiinpano ylläpitäjälle.
 - **Puuttuva voimassaolopäivä:** jos vuosi-/perhejäsentuotteelta puuttuu **Jäsenyys voimassa asti** -päivä, jäsenyyttä ei voida aktivoida. Tyyppi tallennetaan, mutta jäsenyys ei aktivoidu (fail closed) eikä kuittaussähköpostia lähetetä; tilaukseen kirjataan muistiinpano, jossa pyydetään asettamaan voimassaolopäivä käyttäjähallinnassa.
 
 Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
+
+## Automaattinen kytkentä tilin luonnin yhteydessä (#518)
+
+Kun uusi käyttäjätili luodaan (`user_register`-hook), teema etsii käyttäjän
+sähköpostilla maksetut (`processing`/`completed`) jäsenmaksutilaukset, jotka
+odottavat tilikytkentää, ja ajaa niille saman jäsenyyden sovelluslogiikan kuin
+tilaussiirtymissä. Käytännössä: vierasostaja, joka sai "luo tili" -viestin ja
+rekisteröityy samalla sähköpostiosoitteella, saa jäsenyyden automaattisesti —
+vahvistusviesti (`#390`) lähtee ja tilaukseen kirjataan muistiinpano.
+
+Huomioita:
+
+- Vain odottavassa tilassa olevat tilaukset käsitellään (`awaiting`-meta
+  asetettu, `processed`-meta tyhjä). Jo sovellettuja tai ennen tätä ominaisuutta
+  käsiteltyjä tilauksia ei käsitellä uudelleen.
+- "Jäsenyyttä ei koskaan lyhennetä" -sääntö pätee myös tätä kautta.
+- Turvallisuus: WordPressin rekisteröinti varmistaa sähköpostiosoitteen
+  hallinnan salasanan asetuslinkillä, joten jäsenyys ei päädy väärälle
+  henkilölle, vaikka joku rekisteröisi tilin toisen sähköpostilla.
+- Ostajan/laskutussähköpostin lisäksi `#519`-polku etsii uuden käyttäjän
+  sähköpostia myös perhejäsenmaksun jäsenriveiltä ja linkittää odottavan
+  perherivin päätiliin.
+
+## Perhejäsenmaksun jäsenrivien automaattinen käsittely (#519)
+
+Kun `annual_family`-jäsenmaksutilaus saavuttaa tilan `processing` tai
+`completed`, jäsenrivit käsitellään ostajan päätilin alle. Päätili ratkaistaan
+samalla tavalla kuin ostajan jäsenyys (`#518`): ensisijaisesti tilauksen
+käyttäjästä ja vierastilauksella laskutussähköpostia vastaavasta tilistä.
+Jos päätiliä ei vielä ole, perherivejä ei tallenneta ennen kuin ostaja luo tilin
+samalla sähköpostilla.
+
+Ennen tallennusta sähköpostit normalisoidaan pieniksi kirjaimiksi ja
+deduplikoidaan. Ostajan laskutus-/tilisähköpostia vastaava jäsenrivi ohitetaan,
+jotta päätiliä ei linkitetä itseensä. Muut rivit käsitellään näin:
+
+- **Sähköpostilla on käyttäjätili:** rivi tallennetaan tilaan `active`, käyttäjä
+  asetetaan `linked_user_id`-arvoksi ja reverse meta päivitetään #524:n
+  `rytkoset_theme_update_family_members()`-helperillä.
+- **Sähköpostilla ei ole käyttäjätiliä:** rivi tallennetaan tilaan
+  `pending_account`. Osoitteeseen lähetetään kerran tilausta kohti viesti, joka
+  kertoo osoitteen tulleen perhejäsenmaksun yhteydessä ja ohjaa luomaan tilin
+  samalla osoitteella. Viesti ei paljasta ostajan henkilöllisyyttä tai muita
+  tilaustietoja.
+- **Sähköpostia ei ole:** nimi tallennetaan jäsenrekisteritiedoksi ilman
+  käyttäjälinkkiä ja sähköpostiviestiä.
+
+Perherivien onnistunut tallennus merkitään tilaukselle metalla
+`_rytkoset_family_members_processed`. Lähetetyt tilinluontiviestit merkitään
+sähköpostikohtaisesti order metaan `_rytkoset_family_account_notices_sent`.
+Näin `processing` → `completed` -siirtymä ei lisää rivejä tai lähetä viestejä
+uudelleen. Jokaisella tallennetulla rivillä on lisäksi `source_order_id`, joka
+kertoo viimeisimmän lähdetilauksen.
+
+Kun `pending_account`-rivillä oleva henkilö luo käyttäjätilin, `user_register`
+hakee saman normalisoidun sähköpostin ensin suoraan päätilien
+`rytkoset_family_members`-metasta. Meta-haku rajaa kandidaatit ja tallennetut
+rivit tarkistetaan vielä täsmällisesti ennen linkitystä. Kassalta syntyneiden
+rivien vanha tilauspolku säilyy varmistuksena, mutta sen `wc_get_orders()`-haku
+rajataan jo käsiteltyihin perhetilauksiin
+(`_rytkoset_family_members_processed`), joten rekisteröityminen ei lataa koko
+maksettujen tilausten historiaa. Rivi muutetaan `active`-tilaan ja linkitetään
+käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
+`family`-jäsenyydestä; perheenjäsenen omaa `rytkoset_membership_*`-metaa ei
+muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
+membership valitsee oman jäsenyyden.
+
+Jos sähköpostia vastaava käyttäjätili kuuluu jo toiseen perheeseen, yhteinen
+validaattori estää uuden linkityksen. Linkkiä ei siirretä automaattisesti, vaan
+vanha perhelinkitys pitää poistaa ensin.
+
+## Jäsenten aktivointityökalu (#525)
+
+**Käyttäjät → Jäsenten aktivointi** (oikeus `edit_users`, moduuli
+[`inc/user-membership-activation.php`](../wp-content/themes/rytkoset-theme/inc/user-membership-activation.php))
+on ylläpidon työkalu olemassa olevien jäsenten (paperinen jäsenrekisteri)
+jäsenetujen käyttöönottoon ilman WooCommerce-tilausta. Työkalu käyttää
+WooCommerce-jäsenmaksutuotteita jäsenyystietojen lähteenä.
+
+Ylläpitäjä syöttää yhden tai useamman sähköpostiosoitteen (yksi per rivi,
+myös pilkku/puolipiste erottimena kelpaa) ja valitsee julkaistun
+jäsenmaksutuotteen. Alasvetovalikko näyttää tuotteen nimen, jäsenyyden tyypin,
+kauden ja voimassaolopäivän. Myös kaupasta piilotetut julkaistut tuotteet ovat
+valittavissa vanhojen kausien korjaamista varten; luonnos- ja roskakorituotteita
+ei tarjota.
+
+Tyyppi, kausi ja voimassaolopäivä luetaan valitulta tuotteelta uudelleen
+palvelinpuolella ja tallennetaan käyttäjälle tai odottavaan merkintään kopiona.
+Tuotteen myöhempi muokkaus ei siis muuta jo käsiteltyä jäsenyyttä. Vuosi- ja
+perhejäsenmaksutuotteelta vaaditaan sekä jäsenkausi että kelvollinen
+**Jäsenyys voimassa asti** -päivä; puutteellinen tuote estää koko käsittelyn.
+Ainaisjäsenmaksulla kausi ja päättymispäivä ohitetaan.
+
+Osoitteet normalisoidaan pieniksi kirjaimiksi, deduplikoidaan ja epäkelvot
+rivit raportoidaan käsittelemättöminä. Jos valitaan perhejäsenmaksutuote,
+jokaisesta syötetystä sähköpostiosoitteesta tehdään oma perhejäsenyyden päätili;
+työkalu ei muodosta sähköpostiosoitteista yhtä perhettä.
+
+Käsittely osoitetta kohti:
+
+- **Käyttäjätili löytyy:** jäsenyys päivitetään valituilla tiedoilla samalla
+  "ei koskaan lyhennetä" -säännöllä kuin tilauspolussa (`#302`): ainaisjäsenyyttä
+  tai pidempään voimassa olevaa aktiivista jäsenyyttä ei korvata lyhyemmällä.
+  Ei-aktiivinen → aktiivinen -siirtymästä lähtee `#390`-vahvistusviesti.
+- **Käyttäjätiliä ei löydy:** jäsenyystiedot tallennetaan odottavaksi
+  jäsenyydeksi (`rytkoset_pending_manual_memberships`-optio, avaimena
+  normalisoitu sähköposti) ja osoitteeseen lähetetään `#518`-mallinen
+  kutsuviesti: luo tili samalla sähköpostiosoitteella, niin jäsenyys aktivoituu
+  automaattisesti. Viesti kertoo, että osoite on peräisin sukuseuran
+  jäsenrekisteristä, kuka on rekisterinpitäjä ja mistä tietosuojaseloste löytyy
+  (WordPressin tietosuojasivu, jos asetettu).
+- **Rekisteröityminen:** `user_register`-hookissa odottava jäsenyys sovelletaan
+  uudelle tilille samalla apply-polulla (ei koskaan lyhennetä,
+  vahvistusviesti), ja odottava merkintä poistetaan. WordPressin rekisteröinti
+  varmistaa sähköpostin hallinnan salasanan asetuslinkillä.
+
+Uudelleenlähetyksen esto: jo kutsutun osoitteen uusi käsittely päivittää
+odottavat jäsenyystiedot mutta **ei** lähetä kutsua uudelleen, ellei
+ylläpitäjä valitse erillistä "Lähetä kutsuviesti uudelleen" -valintaa.
+Lomake käsitellään POST-redirect-GET-mallilla, joten sivun päivitys ei koskaan
+toista käsittelyä tai lähetä viestejä uudelleen. Epäonnistunut lähetys
+(`wp_mail` palauttaa false) jättää jäsenyyden odottamaan ilman
+lähetysmerkintää, jolloin uusi käsittely yrittää lähetystä uudelleen.
+
+Sivu näyttää myös:
+
+- **Tiliä odottavat jäsenyydet** -taulukon (osoite, jäsenyys, kutsun
+  lähetysaika, lisääjä) ja rivikohtaisen **Poista**-toiminnon, joka lopettaa
+  odottavan jäsenyyden (rekisteröityminen ei enää aktivoi sitä). Poistoa
+  käytetään myös, jos rekisteröity pyytää tietojensa poistoa.
+- **Viimeisimmät käsittelyt** -lokin (aika, osoite, tulos, käsittelijä;
+  optio `rytkoset_membership_activation_log`, uusin ensin, enintään 200
+  merkintää). Lokiin ei tallenneta viestien sisältöjä.
+
+GDPR-rajaus: työkalu käsittelee vain sähköpostiosoitteen ja tuotteelta kopioidut
+jäsenyystiedot. Käsittelyperuste on yhdistyksen jäsenyyden hoitaminen
+(sopimus/jäsenyyssuhde), ei markkinointisuostumus: työkalu ei tilaa
+uutiskirjettä eikä lisää osoitteita muuhun viestintään. Ks. tietosuojaselosteen
+pohja [tietosuoja.md](tietosuoja.md).
+
+Perhejäsenyyden perheenjäsenten linkitys ei kuulu tähän työkaluun: työkalu
+asettaa vain jäsenen oman jäsenyyden. Perherakenne hallitaan käyttäjäprofiilin
+Perhejäsenet-taulukolla (`#524`) tai perhejäsenmaksun tilauspolulla (`#519`).
+
+## Oma tili: Jäsenyys (#522)
+
+WooCommercen **Oma tili** -alueella on endpoint
+`rytkoset_membership` (URL-slugi `jasentiedot`) ja valikkokohta **Jäsenyys**.
+Endpoint käyttää tarkoituksella eri slugia kuin julkinen jäsenyyssivu
+`/sukuseura/jasenyys/`, jotta WooCommercen endpoint-sääntö ei sieppaa julkista
+sivua ja muuta sitä 404-vastaukseksi.
+Näkymä käyttää suoraan tämän dokumentin jäsenyys- ja perherakenneapureita eikä
+tallenna rinnakkaista jäsenyystietoa.
+
+Näkymä näyttää:
+
+- jäsenyyden tyypin, kauden ja suomalaisessa muodossa olevan
+  voimassaolopäivän
+- aktiivisen, vanhentuneen, puutteellisen tai puuttuvan jäsenyyden tilan
+- ainaisjäsenyyden pysyvänä ilman päättymispäivää
+- linkitetylle perheenjäsenelle effective membership -tilan ja hänen
+  perhejäsenyytensä päätilin
+- päätilille aktiiviset ja käyttäjätiliä odottavat perheenjäsenrivit; historialliset
+  `removed`-rivit jätetään käyttäjän näkymästä pois.
+
+Linkitetty perheenjäsen ei näe päätilin koko perhejäsenlistaa.
+
+### Perheenjäsenten itsepalvelumuokkaus (#522, toinen siivu)
+
+Perhejäsenyyden päätili voi lisätä, muokata ja poistaa perheenjäseniä suoraan
+Oma tili > Jäsenyys -näkymästä, saman `rytkoset_theme_update_family_members()`-
+apurin kautta kuin ylläpitäjän profiilimuokkaus (`inc/user-membership.php`) ja
+tilauspolut (#518/#519). Ylläpitäjä voi edelleen muokata rivejä
+käyttäjäprofiilin Jäsenyys-osiossa — molemmat reitit käyttävät samaa datamallia
+ja tallennushelperiä, joten ne eivät voi ajautua epäsynkkaan.
+
+Toteutus (`inc/woocommerce-my-account.php`):
+
+- **Lisää perheenjäsen** -lomake: nimi (pakollinen) + sähköposti (valinnainen).
+  Ei-tyhjän sähköpostin pitää olla kelvollinen; palvelin palauttaa virheen eikä
+  tallenna virheellistä arvoa tyhjänä.
+  Puhdas lomaketoiminto rakentaa rivin aluksi ilman käyttäjä-ID:tä. Yhteinen
+  tallennushelperi linkittää sen kuitenkin heti, jos samalla normalisoidulla
+  sähköpostilla on jo käyttäjätili; muuten rivi jää `pending_account`-tilaan ja
+  linkittyy automaattisesti, kun tili myöhemmin rekisteröidään.
+- **Enimmäismäärä:** perheenjäseniä voi lisätä itsepalveluna enintään
+  `rytkoset_theme_get_account_family_member_max_rows()`-verran (oletus 5).
+  Tämä on sama raja kuin kassan perhejäsenmaksun rivimäärä
+  (`rytkoset_theme_get_membership_max_member_rows()`, suodatin
+  `rytkoset_theme_membership_max_member_rows`, oletus 6) miinus yksi — kassan
+  rivi 1 on ostajan oma nimi/sähköposti, joten tilinhallinnan lista (joka ei
+  sisällä päätiliä) saa yhden rivin vähemmän. Molemmat säädetään samasta
+  suodattimesta, joten ne eivät voi ajautua epäsynkkaan. `removed`-rivit eivät
+  laske rajaan mukaan. Kun raja on saavutettu, lisäyslomake korvautuu
+  ohjeviestillä ("poista ensin joku perheenjäsen"); palvelin torjuu myös
+  suoraan lähetetyn ylimääräisen lisäyksen samalla rajalla riippumatta siitä,
+  näkyykö lomake.
+- **Muokkaa** (kynäikoni): vaihtaa rivin näyttötilan JS:ttömäksi inline-
+  lomakkeeksi URL:n kyselyparametrilla `?rytkoset_edit_member=<indeksi>` (vain
+  näyttötilan valinta, ei tilamuutosta — turvallinen ilman noncea). Rivin
+  nimen ja sähköpostin voi tallentaa. Pelkkä nimen korjaus tai sähköpostin
+  kirjainkoon muutos säilyttää käyttäjätililinkin. Jos normalisoitu sähköposti
+  vaihtuu tai poistetaan, vanha `linked_user_id` nollataan ja rivi siirtyy
+  `pending_account`-tilaan; sama tallennus siivoaa vanhan käyttäjän reverse-metan,
+  joten vanha peritty jäsenetu päättyy välittömästi. Sama tallennus linkittää
+  uuden osoitteen tiliin heti, jos tili on olemassa; muuten rivi jää odottamaan
+  myöhempää rekisteröitymistä.
+- **Poista** (roskakoriikoni): asettaa rivin tilaksi `removed` (pehmeä poisto,
+  ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
+  Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`
+  siivoaa linkitetyn käyttäjän reverse-metan samalla kutsulla, joten peritty
+  jäsenetu päättyy heti.
+- Rivin indeksi (ei erillistä rivitunnistetta) osoittaa suoraan kohtaan
+  päätilin tallennetussa listassa — sama konventio kuin ylläpitäjän
+  profiililomakkeella. Näkymä säilyttää alkuperäisen indeksin, vaikka
+  `removed`-rivejä suodatetaan pois listasta ennen renderöintiä.
+- Jokainen toiminto (`add`/`edit`/`remove`) on oma lomake, jolla on oma
+  nonce-toiminto (`rytkoset_account_family_<toiminto>`), ja käsittely tapahtuu
+  `template_redirect`-koukussa (`rytkoset_theme_handle_account_membership_family_submit()`).
+  Puhdas päätösfunktio `rytkoset_theme_apply_account_family_member_action()`
+  rakentaa kandidaattilistan ilman sivuvaikutuksia; lopullinen tallennus ja
+  validointi (duplikaattisähköposti/-käyttäjä, itselinkitys, jo-linkitetty-
+  toisaalle) tapahtuu aina `rytkoset_theme_update_family_members()`-kutsussa.
+- Toiminto sallitaan vain, jos kirjautuneen käyttäjän **oma** jäsenyystyyppi on
+  `family` (ei riitä, että käyttäjä saisi perhejäsenedut jonkun toisen
+  päätilin kautta).
 
 ## Rajaus
 
 Tämä toteutus ei kata:
 
 - jäsenyyden automaattista vanhenemista cronilla
-- jäsenille rajattuja sisältöjä tai jäsenhinnoittelua (EPIC 9 / EPIC 10 jatkot)
 - paperisen jäsenrekisterin massatuontia
+## Verkkojäsenyyksien koonti ylläpidossa
+
+`Käyttäjät → Verkkojäsenyydet` näyttää vain luku -muotoisen yhteenvedon sivuston jäsenyyksistä ja jäseneduista. Mukana ovat käyttäjän oma jäsenyys, linkitetyn käyttäjän perhejäsenyyden kautta saamat edut, Jäsenten aktivointi -työkalussa käyttäjätiliä odottavat jäsenyydet sekä käyttäjätiliä odottavat perhejäsenrivit.
+
+Näkymä ei ole virallinen tai täydellinen jäsenrekisteri. Henkilö ei näy siinä, jos hänellä ei ole käyttäjätiliä, odottavaa verkkojäsenyyttä eikä perhejäsenriviä. Koontia voivat käyttää vain ylläpitäjät, joilla on `edit_users`-oikeus.
+
+Koontia voi hakea nimellä tai sähköpostilla sekä suodattaa tilan ja jäsenyyden tyypin mukaan. Tila tarkoittaa:
+
+- **Aktiivinen:** jäsenyys tai päätilin perhejäsenyys on voimassa.
+- **Vanhentunut:** määräaikaisen jäsenyyden voimassaolopäivä on mennyt.
+- **Puutteellinen:** määräaikaiselta jäsenyydeltä puuttuu kelvollinen voimassaolopäivä tai perhelinkin päätilillä ei ole perhejäsenyyttä.
+- **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin luonnin jälkeen.
+
+Nimi- ja päätililinkit avaavat käyttäjäprofiilin. Jäsenten aktivointi -lähdelinkki avaa aktivointityökalun, jossa odottavaa jäsenyyttä voi käsitellä.
+
+## Jäsenviestinnän AcyMailing-lista
+
+Jäsenviestinnän vastaanottajat määräytyvät samasta effective membership
+-tilasta kuin jäsenedut. Käyttäjätilillinen oma aktiivinen jäsen, ainaisjäsen
+ja aktiiviseen perhejäsenyyteen linkitetty käyttäjä kuuluvat erilliselle
+jäsenviestinnän listalle. Tiliä odottavat jäsenyydet ja linkittämättömät
+`pending_account`-perherivit eivät kuulu listalle.
+
+Jäsenyys- ja perhelinkkimuutokset synkronoidaan heti. Lisäksi päivittäinen,
+50 tietueen oletuserissä etenevä WP-Cron-täsmäytys laskee tilan uudelleen, jotta
+pelkän päivämäärän perusteella vanhentunut jäsenyys poistuu listalta. Täsmäytys
+käy myös jäsenlistan nykyiset aktiiviset kytkennät läpi, joten käyttäjätilin
+poiston jälkeen orvoksi jäänyt kytkentä siivotaan.
+
+Synkronointi ei muuta yleistä `Rytkoset.net GDPR` -uutiskirjelistaa, ei poista
+AcyMailingin tilaajatietuetta eikä yliaja listakohtaista peruutusta tai
+globaalia estoa. Ylläpito näkee henkilötiedottoman ajokoosteen WordPressin
+Hallintapaneelin **Jäsenviestinnän synkronointi** -widgetistä. Tarkempi
+käyttöönotto- ja vianmääritysohje on tiedostossa `docs/newsletter.md`.

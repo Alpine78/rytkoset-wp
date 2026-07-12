@@ -41,6 +41,9 @@ require_once get_template_directory() . '/inc/structured-data.php';
 require_once get_template_directory() . '/inc/login.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/user-membership.php';
+require_once get_template_directory() . '/inc/member-newsletter.php';
+require_once get_template_directory() . '/inc/user-membership-activation.php';
+require_once get_template_directory() . '/inc/user-memberships-admin.php';
 require_once get_template_directory() . '/inc/members-only-pages.php';
 require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
@@ -648,9 +651,6 @@ function rytkoset_theme_scripts() {
 					'checkoutNotes' => array_values(
 						array_filter(
 							array(
-								function_exists( 'rytkoset_theme_cart_requires_member_names' ) && rytkoset_theme_cart_requires_member_names()
-										? rytkoset_theme_get_membership_checkout_notice_markup()
-										: '',
 								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()
 										? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
 										: '',
