@@ -449,6 +449,192 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'removed', rytkoset_theme_get_family_members( 10 )[0]['status'] );
 	}
 
+	// --- User account deletion cleanup (#544) ---------------------------------
+
+	public function test_primary_delete_clears_only_reverse_meta_pointing_at_it(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 11, 'toinen@example.test', 'Toinen päätili' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+		rytkoset_test_register_user( 30, 'serkku@example.test', 'Serkku' );
+
+		update_user_meta(
+			10,
+			rytkoset_theme_get_family_members_meta_key(),
+			array(
+				array(
+					'name'           => 'Lapsi',
+					'email'          => 'lapsi@example.test',
+					'linked_user_id' => 20,
+					'status'         => 'active',
+				),
+				// Drifted row: the account is actually linked to another primary.
+				array(
+					'name'           => 'Serkku',
+					'email'          => 'serkku@example.test',
+					'linked_user_id' => 30,
+					'status'         => 'active',
+				),
+			)
+		);
+		update_user_meta( 20, rytkoset_theme_get_family_primary_user_meta_key(), 10 );
+		update_user_meta( 30, rytkoset_theme_get_family_primary_user_meta_key(), 11 );
+
+		// Simulate wp_delete_user(): the hook runs while the primary and its meta still exist,
+		// WordPress removes the user row and meta afterwards.
+		rytkoset_theme_cleanup_family_links_on_user_delete( 10 );
+		unset( $GLOBALS['rytkoset_test_users'][10], $GLOBALS['rytkoset_test_user_meta'][10] );
+
+		$this->assertSame( 0, rytkoset_theme_get_family_primary_user_id( 20 ) );
+		$this->assertSame( 11, rytkoset_theme_get_family_primary_user_id( 30 ) );
+	}
+
+	public function test_member_can_join_new_family_after_primary_delete(): void {
+		rytkoset_test_register_user( 10, 'vanha@example.test', 'Vanha päätili' );
+		rytkoset_test_register_user( 11, 'uusi@example.test', 'Uusi päätili' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				10,
+				array(
+					array(
+						'name'           => 'Lapsi',
+						'linked_user_id' => 20,
+						'status'         => 'active',
+					),
+				)
+			)
+		);
+
+		rytkoset_theme_cleanup_family_links_on_user_delete( 10 );
+		unset( $GLOBALS['rytkoset_test_users'][10], $GLOBALS['rytkoset_test_user_meta'][10] );
+
+		$result = rytkoset_theme_update_family_members(
+			11,
+			array(
+				array(
+					'name'           => 'Lapsi',
+					'linked_user_id' => 20,
+					'status'         => 'active',
+				),
+			)
+		);
+
+		$this->assertTrue( $result );
+		$this->assertSame( 11, rytkoset_theme_get_family_primary_user_id( 20 ) );
+	}
+
+	public function test_validator_ignores_stale_reverse_meta_to_deleted_primary(): void {
+		// Legacy state: the old primary account was deleted before the cleanup hook existed.
+		rytkoset_test_register_user( 11, 'uusi@example.test', 'Uusi päätili' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+		update_user_meta( 20, rytkoset_theme_get_family_primary_user_meta_key(), 99 );
+
+		$result = rytkoset_theme_update_family_members(
+			11,
+			array(
+				array(
+					'name'           => 'Lapsi',
+					'linked_user_id' => 20,
+					'status'         => 'active',
+				),
+			)
+		);
+
+		$this->assertTrue( $result );
+		$this->assertSame( 11, rytkoset_theme_get_family_primary_user_id( 20 ) );
+	}
+
+	public function test_linked_member_delete_detaches_primary_row(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				10,
+				array(
+					array(
+						'name'           => 'Lapsi',
+						'email'          => 'lapsi@example.test',
+						'linked_user_id' => 20,
+						'status'         => 'active',
+					),
+				)
+			)
+		);
+
+		// The hook runs while the member account still exists; email resolution must not
+		// re-link the detached row to the account being deleted.
+		rytkoset_theme_cleanup_family_links_on_user_delete( 20 );
+		unset( $GLOBALS['rytkoset_test_users'][20], $GLOBALS['rytkoset_test_user_meta'][20] );
+
+		$members = rytkoset_theme_get_family_members( 10 );
+		$this->assertCount( 1, $members );
+		$this->assertSame( 0, $members[0]['linked_user_id'] );
+		$this->assertSame( 'pending_account', $members[0]['status'] );
+		$this->assertSame( 'lapsi@example.test', $members[0]['email'] );
+	}
+
+	public function test_linked_member_delete_keeps_removed_row_removed(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+
+		// Drifted state: the stored row is removed but the reverse meta still points here.
+		update_user_meta(
+			10,
+			rytkoset_theme_get_family_members_meta_key(),
+			array(
+				array(
+					'name'           => 'Lapsi',
+					'email'          => 'lapsi@example.test',
+					'linked_user_id' => 20,
+					'status'         => 'removed',
+				),
+			)
+		);
+		update_user_meta( 20, rytkoset_theme_get_family_primary_user_meta_key(), 10 );
+
+		rytkoset_theme_cleanup_family_links_on_user_delete( 20 );
+		unset( $GLOBALS['rytkoset_test_users'][20], $GLOBALS['rytkoset_test_user_meta'][20] );
+
+		$members = rytkoset_theme_get_family_members( 10 );
+		$this->assertSame( 'removed', $members[0]['status'] );
+		$this->assertSame( 0, $members[0]['linked_user_id'] );
+	}
+
+	public function test_detached_row_relinks_when_new_account_registers_with_same_email(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				10,
+				array(
+					array(
+						'name'           => 'Lapsi',
+						'email'          => 'lapsi@example.test',
+						'linked_user_id' => 20,
+						'status'         => 'active',
+					),
+				)
+			)
+		);
+
+		rytkoset_theme_cleanup_family_links_on_user_delete( 20 );
+		unset( $GLOBALS['rytkoset_test_users'][20], $GLOBALS['rytkoset_test_user_meta'][20] );
+
+		// A new account registers with the same email address; any later save of the family
+		// list resolves the pending row to it (#542).
+		rytkoset_test_register_user( 21, 'lapsi@example.test', 'Lapsi (uusi tili)' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members( 10, rytkoset_theme_get_family_members( 10 ) )
+		);
+		$this->assertSame( 21, rytkoset_theme_get_family_members( 10 )[0]['linked_user_id'] );
+		$this->assertSame( 'active', rytkoset_theme_get_family_members( 10 )[0]['status'] );
+		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 21 ) );
+	}
+
 	public function test_effective_membership_inherits_active_family_primary(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
 		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );

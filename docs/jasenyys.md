@@ -104,6 +104,29 @@ muuttuu `pending_account`-tilaksi (fail closed), joten vioittunut status ei voi
 muuttaa riviä jäsenetuja antavaksi. Tyhjä status saa oletuksen rivin mukaan
 (`active` linkitetylle käyttäjälle, muuten `pending_account`).
 
+### Käyttäjätilin poisto (#544)
+
+Kun WordPress-käyttäjä poistetaan (ylläpito tai tietosuojapyyntö),
+`delete_user`-hookki siivoaa perherakenteen ennen kuin WordPress poistaa
+käyttäjärivin ja user metan:
+
+- **Päätilin poisto:** jokaiselta listan linkitetyltä käyttäjältä poistetaan
+  reverse meta, jos se osoittaa poistettavaan päätiliin. Näin vanhentunut
+  viittaus ei jää estämään käyttäjän linkittämistä uuteen perhejäsenyyteen.
+  Perhelista itsessään poistuu päätilin oman user metan mukana.
+- **Linkitetyn perheenjäsenen poisto:** päätilin vastaava rivi irrotetaan
+  yhteisen tallennusapurin kautta: `linked_user_id` nollataan ja tila vaihtuu
+  `pending_account`-tilaksi (historiallinen `removed`-rivi säilyttää tilansa).
+  Rivin nimi ja sähköposti säilyvät, joten samalla sähköpostilla myöhemmin
+  luotava tili linkittyy riviin normaalisti (#542). Tallennusapurin valinnainen
+  kolmas parametri estää sähköpostilinkityksen poistettavaan tiliin, koska
+  hookin ajohetkellä tili on vielä olemassa.
+
+Validaattorissa on lisäksi fail-safe vanhoille tapauksille: jos käyttäjän
+reverse meta osoittaa päätiliin, jota ei enää ole, viittaus tulkitaan
+vanhentuneeksi eikä se estä käyttäjän linkittämistä uuteen perhejäsenyyteen.
+Uusi tallennus korvaa vanhentuneen viittauksen.
+
 ### Perityt jäsenedut
 
 `rytkoset_theme_user_is_active_member( $user_id )` on nyt effective membership
