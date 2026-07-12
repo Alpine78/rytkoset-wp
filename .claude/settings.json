@@ -3,5 +3,17 @@
     "kuluttajaoikeus@claude-for-legal-finland": true,
     "tekoalysaantely@claude-for-legal-finland": true,
     "tietosuoja@claude-for-legal-finland": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh project field-list *)",
+      "Bash(php -l *)",
+      "Bash(gh project item-list *)",
+      "Bash(gh label list*)",
+      "Bash(gh project list*)",
+      "Bash(docker compose ps*)",
+      "Bash(composer run lint)",
+      "Bash(composer run test)"
+    ]
   }
 }

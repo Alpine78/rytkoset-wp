@@ -338,10 +338,15 @@ function rytkoset_theme_normalize_family_members( $members ) {
  * This runs only on writes. Reading stored rows must remain side-effect free so a
  * link is never exposed without its matching reverse meta being persisted.
  *
- * @param array<int, array<string, mixed>> $members Normalized family member rows.
+ * @param array<int, array<string, mixed>> $members          Normalized family member rows.
+ * @param int                              $excluded_user_id Optional. Account that must not be
+ *                                                           email-linked because it is being
+ *                                                           deleted (#544). Default 0.
  * @return array<int, array<string, mixed>>
  */
-function rytkoset_theme_resolve_family_member_accounts( $members ) {
+function rytkoset_theme_resolve_family_member_accounts( $members, $excluded_user_id = 0 ) {
+	$excluded_user_id = absint( $excluded_user_id );
+
 	foreach ( $members as $index => $member ) {
 		$email          = isset( $member['email'] ) ? (string) $member['email'] : '';
 		$linked_user_id = isset( $member['linked_user_id'] ) ? absint( $member['linked_user_id'] ) : 0;
@@ -354,6 +359,10 @@ function rytkoset_theme_resolve_family_member_accounts( $members ) {
 		$linked_user = get_user_by( 'email', $email );
 
 		if ( ! $linked_user instanceof WP_User ) {
+			continue;
+		}
+
+		if ( $excluded_user_id > 0 && absint( $linked_user->ID ) === $excluded_user_id ) {
 			continue;
 		}
 
@@ -476,10 +485,17 @@ function rytkoset_theme_validate_family_members( $primary_user_id, $members ) {
 
 		// A historical `removed` row must not block saving this list when the user has since
 		// been linked to another primary account; only rows that could grant benefits conflict.
+		// Reverse meta pointing at a primary account that no longer exists is stale (the
+		// primary was deleted before #544's cleanup hook existed) and must not block a new
+		// link; saving this list overwrites the stale pointer with the new primary.
 		if ( 'removed' !== $status ) {
 			$existing_primary = rytkoset_theme_get_family_primary_user_id( $linked_user_id );
 
-			if ( $existing_primary > 0 && $existing_primary !== $primary_user_id ) {
+			if (
+				$existing_primary > 0
+				&& $existing_primary !== $primary_user_id
+				&& get_userdata( $existing_primary ) instanceof WP_User
+			) {
 				return new WP_Error(
 					'rytkoset_family_member_already_linked',
 					__( 'Käyttäjätili kuuluu jo toiseen perhejäsenyyteen. Poista vanha linkitys ennen uuden lisäämistä.', 'rytkoset-theme' )
@@ -499,14 +515,17 @@ function rytkoset_theme_validate_family_members( $primary_user_id, $members ) {
  * All code paths that mutate the family list must use this helper so the forward list and
  * `rytkoset_family_primary_user_id` reverse meta do not drift apart.
  *
- * @param int                              $primary_user_id Primary account user ID.
- * @param array<int|string, array<string, mixed>> $members  Raw or normalized member rows.
+ * @param int                              $primary_user_id  Primary account user ID.
+ * @param array<int|string, array<string, mixed>> $members   Raw or normalized member rows.
+ * @param int                              $excluded_user_id Optional. Account that must not be
+ *                                                           email-linked because it is being
+ *                                                           deleted (#544). Default 0.
  * @return true|WP_Error
  */
-function rytkoset_theme_update_family_members( $primary_user_id, $members ) {
+function rytkoset_theme_update_family_members( $primary_user_id, $members, $excluded_user_id = 0 ) {
 	$primary_user_id = absint( $primary_user_id );
 	$normalized      = rytkoset_theme_normalize_family_members( $members );
-	$normalized      = rytkoset_theme_resolve_family_member_accounts( $normalized );
+	$normalized      = rytkoset_theme_resolve_family_member_accounts( $normalized, $excluded_user_id );
 	$valid           = rytkoset_theme_validate_family_members( $primary_user_id, $normalized );
 
 	if ( is_wp_error( $valid ) ) {
@@ -661,6 +680,73 @@ function rytkoset_theme_family_primary_has_active_linked_user( $user_id, $primar
 
 	return false;
 }
+
+/**
+ * Cleans up family membership links when a user account is deleted (#544).
+ *
+ * Runs on `delete_user`, before WordPress removes the user row and user meta, so both the
+ * primary's family list and a linked member's reverse meta are still readable:
+ *
+ * - Deleted primary account: linked members' reverse meta pointing at the primary is removed,
+ *   so the stale pointer cannot later block linking those users to a new family membership.
+ *   The forward list itself is deleted with the primary's own user meta.
+ * - Deleted linked member: the primary's matching row is detached (`linked_user_id` 0, status
+ *   `pending_account`) through the shared save helper, so the admin view does not show a link
+ *   to a nonexistent account and a future account with the same email can be re-linked. The
+ *   account being deleted is excluded from email resolution, which would otherwise re-link
+ *   the row to it while it still exists during this hook.
+ *
+ * @param int $user_id User ID being deleted.
+ * @return void
+ */
+function rytkoset_theme_cleanup_family_links_on_user_delete( $user_id ) {
+	$user_id = absint( $user_id );
+
+	if ( $user_id <= 0 ) {
+		return;
+	}
+
+	$primary_meta_key = rytkoset_theme_get_family_primary_user_meta_key();
+
+	foreach ( rytkoset_theme_get_family_members( $user_id ) as $member ) {
+		$linked_user_id = absint( $member['linked_user_id'] );
+
+		if ( $linked_user_id > 0 && rytkoset_theme_get_family_primary_user_id( $linked_user_id ) === $user_id ) {
+			delete_user_meta( $linked_user_id, $primary_meta_key );
+		}
+	}
+
+	$primary_user_id = rytkoset_theme_get_family_primary_user_id( $user_id );
+
+	if ( $primary_user_id <= 0 ) {
+		return;
+	}
+
+	$members = rytkoset_theme_get_family_members( $primary_user_id );
+	$changed = false;
+
+	foreach ( $members as $index => $member ) {
+		if ( absint( $member['linked_user_id'] ) !== $user_id ) {
+			continue;
+		}
+
+		$members[ $index ]['linked_user_id'] = 0;
+		$members[ $index ]['updated_at']     = current_time( 'mysql' );
+
+		// A historical removed row keeps its status; a row that granted benefits waits for a
+		// possible future account with the same email.
+		if ( 'removed' !== $member['status'] ) {
+			$members[ $index ]['status'] = 'pending_account';
+		}
+
+		$changed = true;
+	}
+
+	if ( $changed ) {
+		rytkoset_theme_update_family_members( $primary_user_id, $members, $user_id );
+	}
+}
+add_action( 'delete_user', 'rytkoset_theme_cleanup_family_links_on_user_delete' );
 
 /**
  * Returns effective membership details for the user.
