@@ -121,8 +121,32 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
-	public function test_prefix_rules_cover_forum_hallitus_and_shop_fallback(): void {
+	public function test_exact_map_covers_recent_legacy_page_paths(): void {
+		$map = rytkoset_theme_get_legacy_redirect_exact_map();
+
+		$this->assertSame( 'https://rytkoset.test/albumit/', $map['valokuvat&format=feed&Itemid=175&type=rss'] );
+		$this->assertSame( 'https://rytkoset.test/tapahtumat/', $map['sukuseura/tapahtumat.html'] );
+		$this->assertSame( 'https://rytkoset.test/sukuseura/jasenyys/', $map['sukuseura/jaesenyys'] );
+		$this->assertSame( 'https://rytkoset.test/sukuseura/jasenyys/', $map['sukuseura/jasenyys.html'] );
+		$this->assertSame( 'https://rytkoset.test/sukuseura/sukuseuran-hallitus/', $map['sukuseura/hallitus.html'] );
+		$this->assertSame( 'https://rytkoset.test/sukuseura/toimintakertomus/', $map['sukuseura/toimintakertomus.html'] );
+	}
+
+	public function test_exact_map_covers_recent_legacy_product_paths(): void {
+		$map = rytkoset_theme_get_legacy_redirect_exact_map();
+
+		$this->assertSame( 'https://rytkoset.test/kauppa/sukulehdet/rytkosten-sukulainen-nro-2/', $map['sukuseura/tuotteet/rytkosten_sukulainen_nro_2.html'] );
+		$this->assertSame( 'https://rytkoset.test/kauppa/sukulehdet/rytkosten-sukulainen-nro-4/', $map['tuotteet/rytkosten_sukulainen_nro_4.html'] );
+		$this->assertSame( 'https://rytkoset.test/kauppa/sukulehdet/rytkosten-sukulainen-nro-5/', $map['tuotteet/rytkosten_sukulainen_nro_5.html'] );
+		$this->assertSame( 'https://rytkoset.test/kauppa/muut-tuotteet-2/rytkosten-sukuseuran-isannanviiri/', $map['tuotteet/rytkosten_isannanviiri.html'] );
+		$this->assertSame( 'https://rytkoset.test/kauppa/sukukirjat/rytkosia-sukupolvesta-toiseen/', $map['sukuseura/tuotteet/sukukirja_pohjois-savon_rytkoset.html'] );
+	}
+
+	public function test_prefix_rules_cover_gallery_forum_hallitus_and_shop_fallback(): void {
 		$rules = rytkoset_theme_get_legacy_redirect_prefix_rules();
+
+		$gallery_target = rytkoset_theme_resolve_legacy_redirect_target( 'valokuvat/sukujuhlat/sukujuhlat-2019', array(), $rules );
+		$this->assertSame( 'https://rytkoset.test/albumit/', $gallery_target );
 
 		$forum_target = rytkoset_theme_resolve_legacy_redirect_target( 'foorumi/testiviestit', array(), $rules );
 		$this->assertSame( 'https://rytkoset.test/foorumi/', $forum_target );
