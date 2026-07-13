@@ -49,7 +49,10 @@ $GLOBALS['rytkoset_test_is_singular']  = false;   // is_singular()
 $GLOBALS['rytkoset_test_queried_id']   = 0;       // get_queried_object_id()
 $GLOBALS['rytkoset_test_has_excerpt']  = array(); // [post_id] => bool (has_excerpt())
 $GLOBALS['rytkoset_test_wc_notices']   = array(); // ["type:message"] => true (wc_has_notice())
+$GLOBALS['rytkoset_test_wc']           = null; // Minimal WC() container; cart is null by default.
 $GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
+$GLOBALS['rytkoset_test_cron_events']  = array(); // [hook] => timestamp
+$GLOBALS['rytkoset_test_dashboard_widgets'] = array(); // [id] => callback
 
 // The hook registry is populated once at module load below and must NOT be reset between tests,
 // otherwise add_filter()/add_action() registrations from the loaded modules would be lost.
@@ -61,6 +64,7 @@ $GLOBALS['rytkoset_test_hooks'] = array(); // [tag] => array of array{0:int prio
  * @return void
  */
 function rytkoset_test_reset(): void {
+	$_POST = array();
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
@@ -85,8 +89,12 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_queried_id']    = 0;
 	$GLOBALS['rytkoset_test_has_excerpt']   = array();
 	$GLOBALS['rytkoset_test_wc_notices']    = array();
+	$GLOBALS['rytkoset_test_wc']            = new Rytkoset_Test_WC();
+	WC_Admin_Meta_Boxes::$errors             = array();
 	$GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
 	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
+	$GLOBALS['rytkoset_test_cron_events']   = array();
+	$GLOBALS['rytkoset_test_dashboard_widgets'] = array();
 
 	if ( isset( $GLOBALS['wpdb'] ) && $GLOBALS['wpdb'] instanceof Rytkoset_Test_WPDB ) {
 		$GLOBALS['wpdb']->reset();
@@ -217,6 +225,18 @@ class WC_Product {
 		return $this->status;
 	}
 
+	public function set_status( string $status ): void {
+		$this->status = $status;
+	}
+
+	public function update_meta_data( string $key, $value ): void {
+		$this->meta[ $key ] = $value;
+	}
+
+	public function delete_meta_data( string $key ): void {
+		unset( $this->meta[ $key ] );
+	}
+
 	public function get_name(): string {
 		return $this->name;
 	}
@@ -229,8 +249,35 @@ class WC_Product {
 		return (string) ( $this->meta['_price'] ?? '' );
 	}
 
+	public function get_attribute( string $name ): string {
+		return (string) ( $this->meta[ $name ] ?? '' );
+	}
+
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
+	}
+}
+
+class Rytkoset_Test_Cart {
+	/** @var array<int,array<string,mixed>> */
+	public array $items = array();
+
+	/** @return array<int,array<string,mixed>> */
+	public function get_cart(): array {
+		return $this->items;
+	}
+}
+
+class Rytkoset_Test_WC {
+	public ?Rytkoset_Test_Cart $cart = null;
+}
+
+class WC_Admin_Meta_Boxes {
+	/** @var string[] */
+	public static array $errors = array();
+
+	public static function add_error( $text ): void {
+		self::$errors[] = (string) $text;
 	}
 }
 
@@ -458,17 +505,26 @@ class WP_Role {
 
 class Rytkoset_Test_WPDB {
 	public string $prefix = 'wp_';
+	public string $users = 'wp_users';
 	public string $last_query = '';
+	public string $last_error = '';
 	/** @var array<int,mixed> */
 	public array $last_prepare_args = array();
 	public $get_var_result = null;
+	public $get_row_result = null;
+	public $get_col_result = array();
+	public $get_results_result = array();
 	/** @var array<int,array<string,mixed>> */
 	public array $updates = array();
 
 	public function reset(): void {
 		$this->last_query        = '';
+		$this->last_error        = '';
 		$this->last_prepare_args = array();
 		$this->get_var_result    = null;
+		$this->get_row_result    = null;
+		$this->get_col_result    = array();
+		$this->get_results_result = array();
 		$this->updates           = array();
 	}
 
@@ -493,6 +549,24 @@ class Rytkoset_Test_WPDB {
 		$this->last_query = $query;
 
 		return $this->get_var_result;
+	}
+
+	public function get_row( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_row_result;
+	}
+
+	public function get_col( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_col_result;
+	}
+
+	public function get_results( string $query = '' ) {
+		$this->last_query = $query;
+
+		return $this->get_results_result;
 	}
 
 	/**
@@ -725,6 +799,42 @@ function get_user_by( $field, $value ) {
 	return false;
 }
 
+function get_users( $args = array() ): array {
+	$users = array_values( $GLOBALS['rytkoset_test_users'] );
+
+	if ( isset( $args['meta_key'] ) ) {
+		$meta_key     = (string) $args['meta_key'];
+		$meta_value   = isset( $args['meta_value'] ) ? (string) $args['meta_value'] : '';
+		$meta_compare = isset( $args['meta_compare'] ) ? strtoupper( (string) $args['meta_compare'] ) : '=';
+		$users        = array_values(
+			array_filter(
+				$users,
+				static function ( WP_User $user ) use ( $meta_key, $meta_value, $meta_compare ): bool {
+					$value = get_user_meta( $user->ID, $meta_key, true );
+
+					if ( 'LIKE' === $meta_compare ) {
+						return str_contains( serialize( $value ), $meta_value );
+					}
+
+					return (string) $value === $meta_value;
+				}
+			)
+		);
+	}
+
+	usort( $users, static fn( WP_User $a, WP_User $b ): int => $a->ID <=> $b->ID );
+
+	if ( isset( $args['number'] ) && (int) $args['number'] > 0 ) {
+		$users = array_slice( $users, 0, (int) $args['number'] );
+	}
+
+	if ( 'ids' === ( $args['fields'] ?? '' ) ) {
+		return array_map( static fn( WP_User $user ): int => $user->ID, $users );
+	}
+
+	return $users;
+}
+
 function get_post( $post = null ) {
 	if ( $post instanceof WP_Post ) {
 		return $post;
@@ -798,6 +908,40 @@ function delete_transient( $transient ): bool {
 	unset( $GLOBALS['rytkoset_test_transients'][ (string) $transient ] );
 
 	return true;
+}
+
+function wp_next_scheduled( $hook ) {
+	return $GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] ?? false;
+}
+
+function wp_schedule_event( $timestamp, $recurrence, $hook, $args = array(), $wp_error = false ) {
+	$GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] = (int) $timestamp;
+
+	return true;
+}
+
+function wp_schedule_single_event( $timestamp, $hook, $args = array(), $wp_error = false ) {
+	$GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] = (int) $timestamp;
+
+	return true;
+}
+
+function wp_clear_scheduled_hook( $hook, $args = array(), $wp_error = false ) {
+	unset( $GLOBALS['rytkoset_test_cron_events'][ (string) $hook ] );
+
+	return 1;
+}
+
+function update_meta_cache( $meta_type, $object_ids ) {
+	return true;
+}
+
+function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_callback = null, $callback_args = null, $context = 'normal', $priority = 'core' ): void {
+	$GLOBALS['rytkoset_test_dashboard_widgets'][ (string) $widget_id ] = $callback;
+}
+
+function number_format_i18n( $number, $decimals = 0 ): string {
+	return number_format( (float) $number, (int) $decimals, ',', ' ' );
 }
 
 function wp_safe_redirect( $location, $status = 302, $x_redirect_by = 'WordPress' ) {
@@ -968,12 +1112,95 @@ function wc_get_product( $product_id ) {
 	return $GLOBALS['rytkoset_test_products'][ (int) $product_id ] ?? false;
 }
 
+function WC(): Rytkoset_Test_WC {
+	return $GLOBALS['rytkoset_test_wc'];
+}
+
+/**
+ * Minimal wc_get_products(): supports status, limit and name ordering.
+ */
+function wc_get_products( $args = array() ) {
+	$products = array_values( $GLOBALS['rytkoset_test_products'] );
+	$statuses = isset( $args['status'] ) ? (array) $args['status'] : array();
+
+	if ( ! empty( $statuses ) ) {
+		$products = array_values(
+			array_filter(
+				$products,
+				static fn( WC_Product $product ): bool => in_array( $product->get_status(), $statuses, true )
+			)
+		);
+	}
+
+	if ( 'name' === ( $args['orderby'] ?? '' ) ) {
+		usort(
+			$products,
+			static fn( WC_Product $a, WC_Product $b ): int => strcmp( $a->get_name(), $b->get_name() )
+		);
+	}
+
+	if ( isset( $args['limit'] ) && (int) $args['limit'] > 0 ) {
+		$products = array_slice( $products, 0, (int) $args['limit'] );
+	}
+
+	return $products;
+}
+
 function wc_get_order( $order_id ) {
 	if ( $order_id instanceof WC_Order ) {
 		return $order_id;
 	}
 
 	return $GLOBALS['rytkoset_test_orders'][ (int) $order_id ] ?? false;
+}
+
+/**
+ * Minimal wc_get_orders(): supports billing_email (case-insensitive), status and limit
+ * against the rytkoset_test_orders registry. Enough for the #518 registration-time
+ * membership order lookup.
+ */
+function wc_get_orders( $args = array() ) {
+	$matches = array();
+
+	foreach ( $GLOBALS['rytkoset_test_orders'] as $order ) {
+		if ( isset( $args['billing_email'] )
+			&& 0 !== strcasecmp( $order->get_billing_email(), (string) $args['billing_email'] ) ) {
+			continue;
+		}
+
+		if ( isset( $args['status'] ) && ! in_array( $order->get_status(), (array) $args['status'], true ) ) {
+			continue;
+		}
+
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
+			$meta_matches = true;
+
+			foreach ( $args['meta_query'] as $clause ) {
+				if ( ! is_array( $clause ) || empty( $clause['key'] ) ) {
+					continue;
+				}
+
+				$value = $order->get_meta( (string) $clause['key'], true );
+
+				if ( 'EXISTS' === strtoupper( (string) ( $clause['compare'] ?? '=' ) ) && '' === (string) $value ) {
+					$meta_matches = false;
+					break;
+				}
+			}
+
+			if ( ! $meta_matches ) {
+				continue;
+			}
+		}
+
+		$matches[] = $order;
+	}
+
+	if ( isset( $args['limit'] ) && (int) $args['limit'] > 0 ) {
+		$matches = array_slice( $matches, 0, (int) $args['limit'] );
+	}
+
+	return $matches;
 }
 
 function wc_customer_bought_product( $email, $user_id, $product_id ): bool {
@@ -1082,7 +1309,7 @@ function get_option( $option, $default_value = false ) {
 	return $default_value;
 }
 
-function update_option( $option, $value ): bool {
+function update_option( $option, $value, $autoload = null ): bool {
 	$GLOBALS['rytkoset_test_options'][ $option ] = $value;
 
 	return true;
@@ -1263,6 +1490,22 @@ function wc_print_notice( $message, $notice_type = 'success' ): void {
 	echo '<div class="woocommerce-' . esc_attr( $notice_type ) . '">' . esc_html( $message ) . '</div>';
 }
 
+function wc_clean( $value ) {
+	return sanitize_text_field( (string) $value );
+}
+
+function wc_get_price_including_tax( $product ) {
+	return $product instanceof WC_Product ? (float) $product->get_price() : 0.0;
+}
+
+function wc_price( $price ): string {
+	return number_format( (float) $price, 2, ',', ' ' ) . ' €';
+}
+
+function taxonomy_exists( $taxonomy ): bool {
+	return false;
+}
+
 function wc_get_account_endpoint_url( $endpoint ): string {
 	$endpoint = trim( (string) $endpoint, '/' );
 	$slugs    = array(
@@ -1275,6 +1518,7 @@ function wc_get_account_endpoint_url( $endpoint ): string {
 		'lost-password'   => 'unohtunut-salasana',
 		'customer-logout' => 'kirjaudu-ulos',
 		'rytkoset_newsletter' => 'uutiskirje',
+		'rytkoset_membership' => 'jasentiedot',
 	);
 
 	return home_url( '/tili/' . ( $slugs[ $endpoint ] ?? $endpoint ) . '/' );
@@ -1299,6 +1543,7 @@ function wc_get_order_statuses(): array {
 $rytkoset_theme_inc = dirname( __DIR__ ) . '/wp-content/themes/rytkoset-theme/inc';
 
 require_once $rytkoset_theme_inc . '/user-membership.php';
+require_once $rytkoset_theme_inc . '/user-memberships-admin.php';
 require_once $rytkoset_theme_inc . '/woocommerce-membership.php';
 require_once $rytkoset_theme_inc . '/woocommerce-member-coupon.php';
 require_once $rytkoset_theme_inc . '/digital-magazines.php';
@@ -1314,6 +1559,7 @@ require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
 require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
+require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
 require_once $rytkoset_theme_inc . '/email.php';

@@ -131,8 +131,69 @@ function rytkoset_theme_get_membership_product_period( $product ) {
 		return '';
 	}
 
-	return sanitize_text_field(
+	return rytkoset_theme_sanitize_user_membership_period(
 		(string) $product->get_meta( rytkoset_theme_get_membership_period_meta_key(), true )
+	);
+}
+
+/**
+ * Returns validation errors for the activation settings of a membership product.
+ *
+ * Lifetime membership intentionally needs neither a period nor an expiry date. Annual
+ * individual and family memberships require both so a paid order can always activate a
+ * complete membership.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return array<string, string> Error code => Finnish error message.
+ */
+function rytkoset_theme_get_membership_product_validation_errors( $product ) {
+	if ( ! rytkoset_theme_is_membership_product( $product ) ) {
+		return array();
+	}
+
+	$errors = array();
+	$type   = rytkoset_theme_get_membership_product_type( $product );
+
+	if ( '' === $type ) {
+		$errors['type'] = __( 'Jäsenmaksun tyyppi puuttuu tai on virheellinen.', 'rytkoset-theme' );
+		return $errors;
+	}
+
+	if ( 'lifetime' === $type ) {
+		return $errors;
+	}
+
+	if ( '' === rytkoset_theme_get_membership_product_period( $product ) ) {
+		$errors['period'] = __( 'Jäsenkausi puuttuu tai ei ole muodossa VVVV-VVVV.', 'rytkoset-theme' );
+	}
+
+	if ( '' === rytkoset_theme_get_membership_product_expiry_date( $product ) ) {
+		$errors['expiry_date'] = __( 'Jäsenyys voimassa asti -päivä puuttuu tai on virheellinen.', 'rytkoset-theme' );
+	}
+
+	return $errors;
+}
+
+/**
+ * Returns the customer-facing error for an incomplete membership product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return string Empty when the product is valid or is not a membership product.
+ */
+function rytkoset_theme_get_membership_product_purchase_block_message( $product ) {
+	$errors = rytkoset_theme_get_membership_product_validation_errors( $product );
+
+	if ( empty( $errors ) ) {
+		return '';
+	}
+
+	$product_name = $product instanceof WC_Product ? $product->get_name() : '';
+
+	return sprintf(
+		/* translators: 1: product name, 2: membership product validation errors. */
+		__( 'Jäsenmaksutuotetta ”%1$s” ei voi ostaa: %2$s Ota yhteyttä sivuston ylläpitoon.', 'rytkoset-theme' ),
+		$product_name,
+		implode( ' ', $errors )
 	);
 }
 
@@ -313,8 +374,76 @@ function rytkoset_theme_save_membership_product_fields( $product ) {
 
 	$product->update_meta_data( rytkoset_theme_get_membership_period_meta_key(), $period );
 	$product->update_meta_data( rytkoset_theme_get_membership_expiry_date_meta_key(), $expiry_date );
+
+	$validation_errors = rytkoset_theme_get_membership_product_validation_errors( $product );
+
+	if ( 'publish' === $product->get_status() && ! empty( $validation_errors ) ) {
+		$product->set_status( 'draft' );
+
+		if ( class_exists( 'WC_Admin_Meta_Boxes' ) ) {
+			WC_Admin_Meta_Boxes::add_error(
+				sprintf(
+					/* translators: %s: membership product validation errors. */
+					__( 'Jäsenmaksutuotetta ei julkaistu, koska asetukset ovat puutteelliset: %s', 'rytkoset-theme' ),
+					implode( ' ', $validation_errors )
+				)
+			);
+		}
+	}
 }
 add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_membership_product_fields' );
+
+/**
+ * Prevents adding an incomplete membership product to the cart.
+ *
+ * @param bool $passed     Whether add to cart should proceed.
+ * @param int  $product_id Product ID.
+ * @return bool
+ */
+function rytkoset_theme_validate_membership_product_add_to_cart( $passed, $product_id ) {
+	$product = function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : null;
+	$message = rytkoset_theme_get_membership_product_purchase_block_message( $product );
+
+	if ( '' === $message ) {
+		return $passed;
+	}
+
+	if ( function_exists( 'wc_add_notice' ) && ! wc_has_notice( $message, 'error' ) ) {
+		wc_add_notice( $message, 'error' );
+	}
+
+	return false;
+}
+add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_membership_product_add_to_cart', 10, 2 );
+
+/**
+ * Validates membership products already present in the cart and at checkout.
+ *
+ * @return void
+ */
+function rytkoset_theme_validate_membership_product_cart_items() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return;
+	}
+
+	$messages = array();
+
+	foreach ( WC()->cart->get_cart() as $cart_item ) {
+		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+		$message = rytkoset_theme_get_membership_product_purchase_block_message( $product );
+
+		if ( '' !== $message ) {
+			$messages[ $message ] = true;
+		}
+	}
+
+	foreach ( array_keys( $messages ) as $message ) {
+		if ( function_exists( 'wc_add_notice' ) && ! wc_has_notice( $message, 'error' ) ) {
+			wc_add_notice( $message, 'error' );
+		}
+	}
+}
+add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_membership_product_cart_items' );
 
 /**
  * Returns true when the current cart contains a membership product.
@@ -339,24 +468,6 @@ function rytkoset_theme_cart_has_membership_product() {
 	}
 
 	return false;
-}
-
-/**
- * Builds the checkout notice shown for membership payments.
- *
- * @return string
- */
-function rytkoset_theme_get_membership_checkout_notice_markup() {
-	$notice_text = html_entity_decode(
-		'<strong>J&auml;senmaksu:</strong> T&auml;yt&auml; j&auml;senen nimi ja s&auml;hk&ouml;postiosoite kassan kenttiin, jotta tiedot voidaan kirjata j&auml;senrekisteriin. Perhej&auml;senmaksussa voit lis&auml;t&auml; useamman perheenj&auml;senen &mdash; lis&auml;rivien s&auml;hk&ouml;postit ovat valinnaisia.',
-		ENT_QUOTES,
-		'UTF-8'
-	);
-
-	return sprintf(
-		'<div class="rytkoset-checkout-note" role="note"><p>%s</p></div>',
-		wp_kses_post( $notice_text )
-	);
 }
 
 /**
@@ -634,7 +745,14 @@ function rytkoset_theme_render_membership_order_metabox( $post_or_order_object )
  * @return int
  */
 function rytkoset_theme_get_membership_max_member_rows() {
-	return 6;
+	/**
+	 * Filters the maximum number of member rows available for a family membership (#520).
+	 *
+	 * @param int $max_rows Maximum member row count. Default 6.
+	 */
+	$max_rows = (int) apply_filters( 'rytkoset_theme_membership_max_member_rows', 6 );
+
+	return max( 1, $max_rows );
 }
 
 /**
@@ -653,19 +771,42 @@ function rytkoset_theme_get_membership_member_field_ids( $index ) {
 }
 
 /**
- * Returns the number of member rows the checkout should show for the current cart.
+ * Resolves the allowed member row range for the checkout (#520).
  *
- * Individual and lifetime memberships need one row; family memberships need several.
- * Membership products without the names-required flag do not add rows.
+ * Pure resolver: family memberships allow adding rows up to the configured
+ * maximum, other names-required memberships show exactly one row, and carts
+ * without a names-required membership product show none.
  *
- * @return int
+ * @param bool $requires_names Cart contains a names-required membership product.
+ * @param bool $is_family      Cart contains a names-required family membership product.
+ * @return array{min:int,max:int}
  */
-function rytkoset_theme_get_membership_member_row_count() {
-	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
-		return 0;
+function rytkoset_theme_resolve_membership_member_row_bounds( $requires_names, $is_family ) {
+	if ( ! $requires_names ) {
+		return array(
+			'min' => 0,
+			'max' => 0,
+		);
 	}
 
-	$rows = 0;
+	return array(
+		'min' => 1,
+		'max' => $is_family ? rytkoset_theme_get_membership_max_member_rows() : 1,
+	);
+}
+
+/**
+ * Returns the allowed member row range for the current cart (#520).
+ *
+ * @return array{min:int,max:int}
+ */
+function rytkoset_theme_get_membership_member_row_bounds() {
+	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		return rytkoset_theme_resolve_membership_member_row_bounds( false, false );
+	}
+
+	$requires_names = false;
+	$is_family      = false;
 
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
@@ -678,14 +819,131 @@ function rytkoset_theme_get_membership_member_row_count() {
 			continue;
 		}
 
-		$needed = ( 'annual_family' === rytkoset_theme_get_membership_product_type( $product ) )
-			? rytkoset_theme_get_membership_max_member_rows()
-			: 1;
+		$requires_names = true;
 
-		$rows = max( $rows, $needed );
+		if ( 'annual_family' === rytkoset_theme_get_membership_product_type( $product ) ) {
+			$is_family = true;
+		}
 	}
 
-	return $rows;
+	return rytkoset_theme_resolve_membership_member_row_bounds( $requires_names, $is_family );
+}
+
+/**
+ * Clamps a requested member row count into the allowed range (#520).
+ *
+	 * @param int                      $requested Requested member row count.
+	 * @param array{min:int,max:int} $bounds  Allowed row range.
+ * @return int
+ */
+function rytkoset_theme_clamp_membership_member_rows( $requested, $bounds ) {
+	$min = isset( $bounds['min'] ) ? (int) $bounds['min'] : 0;
+	$max = isset( $bounds['max'] ) ? (int) $bounds['max'] : 0;
+
+	if ( $max < 1 ) {
+		return 0;
+	}
+
+	return min( $max, max( $min, absint( $requested ) ) );
+}
+
+/**
+ * Returns the WooCommerce session key for the requested member row count (#520).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_member_rows_session_key() {
+	return 'rytkoset_membership_member_rows';
+}
+
+/**
+ * Returns the member row count the buyer has requested in the checkout session (#520).
+ *
+ * Defaults to one row so the family checkout starts with member 1 only.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_requested_membership_member_rows() {
+	if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+		return 1;
+	}
+
+	$requested = absint( WC()->session->get( rytkoset_theme_get_membership_member_rows_session_key(), 1 ) );
+
+	return max( 1, $requested );
+}
+
+/**
+ * Stores the requested member row count in the WooCommerce session (#520).
+ *
+ * The stored value is clamped again on every read, so a stale or out-of-range
+ * request can never widen the row range beyond the cart contents.
+ *
+ * @param int $rows Requested member row count.
+ * @return void
+ */
+function rytkoset_theme_set_requested_membership_member_rows( $rows ) {
+	if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+		return;
+	}
+
+	WC()->session->set(
+		rytkoset_theme_get_membership_member_rows_session_key(),
+		max( 1, absint( $rows ) )
+	);
+}
+
+/**
+ * Handles the Store API extensionCartUpdate call for member rows (#520).
+ *
+ * The client JS posts the desired row count; the server stores it in the
+ * session and stays the source of truth via clamping on read.
+ *
+ * @param array<string, mixed> $data Extension data from the Store API request.
+ * @return void
+ */
+function rytkoset_theme_handle_membership_member_rows_update( $data ) {
+	if ( ! is_array( $data ) || ! isset( $data['member_rows'] ) ) {
+		return;
+	}
+
+	rytkoset_theme_set_requested_membership_member_rows( absint( $data['member_rows'] ) );
+}
+
+/**
+ * Clears the requested member row count when the cart is emptied (#520).
+ *
+ * Hooked to woocommerce_cart_emptied (fired by WC_Cart::empty_cart(), e.g.
+ * after a successful checkout) so the next family purchase starts from one
+ * row again. The checkout-order-processed hook is intentionally not used: it
+ * also fires when the payment step fails, and resetting there would wipe the
+ * buyer's extra rows from the retry attempt.
+ *
+ * @return void
+ */
+function rytkoset_theme_reset_requested_membership_member_rows() {
+	if ( ! function_exists( 'WC' ) || ! WC()->session ) {
+		return;
+	}
+
+	WC()->session->set( rytkoset_theme_get_membership_member_rows_session_key(), null );
+}
+add_action( 'woocommerce_cart_emptied', 'rytkoset_theme_reset_requested_membership_member_rows' );
+
+/**
+ * Returns the number of member rows the checkout should show for the current cart.
+ *
+ * Individual and lifetime memberships show one row; family memberships show the
+ * buyer-requested count (1..max, dynamic add/remove #520). Membership products
+ * without the names-required flag do not add rows.
+ *
+ * @return int
+ */
+function rytkoset_theme_get_membership_member_row_count() {
+	return rytkoset_theme_clamp_membership_member_rows(
+		rytkoset_theme_get_requested_membership_member_rows(),
+		rytkoset_theme_get_membership_member_row_bounds()
+	);
 }
 
 /**
@@ -712,8 +970,11 @@ function rytkoset_theme_get_membership_store_api_namespace() {
  * @return array<string, mixed>
  */
 function rytkoset_theme_get_membership_store_api_cart_data() {
+	$bounds = rytkoset_theme_get_membership_member_row_bounds();
+
 	return array(
 		'member_row_count' => rytkoset_theme_get_membership_member_row_count(),
+		'member_row_max'   => $bounds['max'],
 	);
 }
 
@@ -726,6 +987,12 @@ function rytkoset_theme_get_membership_store_api_cart_schema() {
 	return array(
 		'member_row_count' => array(
 			'description' => __( 'Jäsenmaksun jäsenrivien määrä ostoskorissa.', 'rytkoset-theme' ),
+			'type'        => 'integer',
+			'minimum'     => 0,
+			'readonly'    => true,
+		),
+		'member_row_max'   => array(
+			'description' => __( 'Jäsenrivien enimmäismäärä nykyiselle ostoskorille.', 'rytkoset-theme' ),
 			'type'        => 'integer',
 			'minimum'     => 0,
 			'readonly'    => true,
@@ -755,6 +1022,15 @@ function rytkoset_theme_register_membership_store_api_cart_data() {
 			'schema_type'     => ARRAY_A,
 		)
 	);
+
+	if ( function_exists( 'woocommerce_store_api_register_update_callback' ) ) {
+		woocommerce_store_api_register_update_callback(
+			array(
+				'namespace' => rytkoset_theme_get_membership_store_api_namespace(),
+				'callback'  => 'rytkoset_theme_handle_membership_member_rows_update',
+			)
+		);
+	}
 }
 
 /**
@@ -906,6 +1182,182 @@ function rytkoset_theme_register_membership_checkout_fields() {
 	}
 }
 add_action( 'woocommerce_init', 'rytkoset_theme_register_membership_checkout_fields' );
+
+/**
+ * Returns the prefill name for member row 1 from a user's profile.
+ *
+ * Prefers the profile first and last name; falls back to the display name.
+ *
+ * @param WP_User|null $user User object.
+ * @return string Prefill name, or an empty string when none is available.
+ */
+function rytkoset_theme_get_membership_member_prefill_name( $user ) {
+	if ( ! $user instanceof WP_User || ! $user->exists() ) {
+		return '';
+	}
+
+	$first_name = trim( (string) get_user_meta( $user->ID, 'first_name', true ) );
+	$last_name  = trim( (string) get_user_meta( $user->ID, 'last_name', true ) );
+	$name       = trim( $first_name . ' ' . $last_name );
+
+	if ( '' === $name ) {
+		$name = trim( (string) $user->display_name );
+	}
+
+	return $name;
+}
+
+/**
+ * Returns the prefill email for member row 1 from a user's account email.
+ *
+ * @param WP_User|null $user User object.
+ * @return string Prefill email, or an empty string when none is available.
+ */
+function rytkoset_theme_get_membership_member_prefill_email( $user ) {
+	if ( ! $user instanceof WP_User || ! $user->exists() ) {
+		return '';
+	}
+
+	$email = trim( (string) $user->user_email );
+
+	return is_email( $email ) ? $email : '';
+}
+
+/**
+ * Returns true when member row 1 may be prefilled in the current request.
+ *
+ * @return bool
+ */
+function rytkoset_theme_membership_member_prefill_is_available() {
+	if ( is_admin() || ! is_user_logged_in() ) {
+		return false;
+	}
+
+	return rytkoset_theme_cart_requires_member_names();
+}
+
+/**
+ * Returns the member row 1 prefill values for a user, or an empty array when
+ * there is nothing to prefill.
+ *
+ * @param WP_User|null $user User object.
+ * @return array<string, string> Field ID => prefill value.
+ */
+function rytkoset_theme_get_membership_member_prefill_values( $user ) {
+	$values = array(
+		'rytkoset/member_1_name'  => rytkoset_theme_get_membership_member_prefill_name( $user ),
+		'rytkoset/member_1_email' => rytkoset_theme_get_membership_member_prefill_email( $user ),
+	);
+
+	return array_filter( $values, 'strlen' );
+}
+
+/**
+ * Enqueues the checkout script that suggests the logged-in buyer's own details
+ * for member row 1.
+ *
+ * WooCommerce's server-side additional-field default filter
+ * (woocommerce_get_default_value_for_*) proved unreliable in Block Checkout
+ * hydration: on the first checkout visit the client store ignores the default,
+ * and the customer-object read overrides values already saved on the draft
+ * order. The script instead fills only still-empty member 1 fields once via
+ * the checkout data store, so user-edited or draft-persisted values are never
+ * overwritten.
+ *
+ * @return void
+ */
+function rytkoset_theme_enqueue_membership_checkout_prefill() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	if ( ! rytkoset_theme_membership_member_prefill_is_available() ) {
+		return;
+	}
+
+	$values = rytkoset_theme_get_membership_member_prefill_values( wp_get_current_user() );
+
+	if ( empty( $values ) ) {
+		return;
+	}
+
+	$script_path = '/assets/js/membership-checkout-prefill.js';
+
+	wp_enqueue_script(
+		'rytkoset-membership-checkout-prefill',
+		get_template_directory_uri() . $script_path,
+		array( 'wp-data' ),
+		rytkoset_theme_get_asset_version( get_template_directory() . $script_path ),
+		true
+	);
+
+	wp_add_inline_script(
+		'rytkoset-membership-checkout-prefill',
+		'window.rytkosetMembershipPrefill = ' . wp_json_encode( $values ) . ';',
+		'before'
+	);
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_membership_checkout_prefill' );
+
+/**
+ * Enqueues the dynamic member row controls for the family membership checkout (#520).
+ *
+ * The script renders the "Jäsentiedot" section heading above the member rows
+ * and, for family memberships (more than one allowed row), the "+ Lisää
+ * jäsen" button and per-row remove buttons that post the desired row count to
+ * the Store API via extensionCartUpdate. Loaded whenever the cart shows
+ * member rows at all.
+ *
+ * @return void
+ */
+function rytkoset_theme_enqueue_membership_checkout_rows() {
+	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+		return;
+	}
+
+	$bounds = rytkoset_theme_get_membership_member_row_bounds();
+
+	if ( $bounds['max'] < 1 ) {
+		return;
+	}
+
+	$script_path = '/assets/js/membership-checkout-rows.js';
+
+	wp_enqueue_script(
+		'rytkoset-membership-checkout-rows',
+		get_template_directory_uri() . $script_path,
+		array( 'wp-data', 'wc-blocks-checkout' ),
+		rytkoset_theme_get_asset_version( get_template_directory() . $script_path ),
+		true
+	);
+
+	$config = array(
+		'namespace' => rytkoset_theme_get_membership_store_api_namespace(),
+		'i18n'      => array(
+			'add'         => __( 'Lisää jäsen', 'rytkoset-theme' ),
+			/* translators: %d: member row number. */
+			'remove'      => __( 'Poista jäsen %d', 'rytkoset-theme' ),
+			/* translators: 1: visible member row count, 2: maximum member row count. */
+			'count'       => __( '%1$d / %2$d jäsentä', 'rytkoset-theme' ),
+			'maxNote'     => __( 'Enimmäismäärä täynnä.', 'rytkoset-theme' ),
+			/* translators: %d: member row number. */
+			'added'       => __( 'Jäsen %d lisätty', 'rytkoset-theme' ),
+			/* translators: %d: member row number. */
+			'removed'     => __( 'Jäsen %d poistettu', 'rytkoset-theme' ),
+			'error'       => __( 'Jäsenrivin päivitys epäonnistui. Yritä uudelleen.', 'rytkoset-theme' ),
+			'heading'     => __( 'Jäsentiedot', 'rytkoset-theme' ),
+			'introFamily' => __( 'Kirjaa perheenjäsenet jäsenrekisteriä varten. Lisärivien sähköpostiosoitteet ovat valinnaisia.', 'rytkoset-theme' ),
+			'introSingle' => __( 'Kirjaa jäsenen nimi ja sähköpostiosoite jäsenrekisteriä varten.', 'rytkoset-theme' ),
+		),
+	);
+
+	wp_add_inline_script(
+		'rytkoset-membership-checkout-rows',
+		'window.rytkosetMembershipRows = ' . wp_json_encode( $config ) . ';',
+		'before'
+	);
+}
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_membership_checkout_rows' );
 
 /**
  * Returns structured member rows saved on an order.
@@ -1136,8 +1588,9 @@ function rytkoset_theme_get_user_membership_type_priority( $user_type ) {
 /**
  * Resolves the best membership to apply from a list of membership order items.
  *
- * When multiple membership products are present, lifetime beats time-bound types.
- * Among time-bound types the latest expiry date wins.
+ * When multiple membership products are present, lifetime beats time-bound types,
+ * family beats individual annual membership, and the latest expiry wins between
+ * items of the same membership type.
  *
  * @param array<int, array<string, mixed>> $membership_items Result of rytkoset_theme_get_membership_order_items().
  * @return array{type:string,period:string,expires:string}|array<never> Best membership, or empty array when nothing is applicable.
@@ -1182,6 +1635,11 @@ function rytkoset_theme_resolve_order_membership( $membership_items ) {
 /**
  * Returns the order meta key used to mark a membership order as processed.
  *
+ * Set only after a valid membership was applied or safely skipped by the
+ * never-shorten rule. Invalid product metadata intentionally leaves the order
+ * retryable. A guest order without an account is marked awaiting instead (#518)
+ * so a later registration can still apply it.
+ *
  * @return string
  */
 function rytkoset_theme_get_membership_order_processed_meta_key() {
@@ -1189,10 +1647,667 @@ function rytkoset_theme_get_membership_order_processed_meta_key() {
 }
 
 /**
+ * Returns the order meta key marking family member rows as persisted (#519).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_family_members_processed_meta_key() {
+	return '_rytkoset_family_members_processed';
+}
+
+/**
+ * Returns the order meta key storing family-member account notices sent (#519).
+ *
+ * The value is an associative array keyed by normalized email address. Keeping
+ * the marker per recipient prevents duplicate messages when an order moves from
+ * processing to completed.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_family_account_notices_sent_meta_key() {
+	return '_rytkoset_family_account_notices_sent';
+}
+
+/**
+ * Returns the order meta key marking a guest membership order as awaiting a site account (#518).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_awaiting_account_meta_key() {
+	return '_rytkoset_membership_awaiting_account';
+}
+
+/**
+ * Returns the order meta key marking that the "create an account" notice email was sent (#518).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_account_notice_sent_meta_key() {
+	return '_rytkoset_membership_account_notice_sent';
+}
+
+/**
+ * Returns true when a membership order is still awaiting a site account (#518).
+ *
+ * Awaiting = the guest path marked the order, and no user-matched processing has
+ * locked it via the processed meta.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return bool
+ */
+function rytkoset_theme_order_membership_is_awaiting_account( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	return '' !== (string) $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key(), true )
+		&& '' === (string) $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key(), true );
+}
+
+/**
+ * Returns true when an order contains a family membership product (#519).
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return bool
+ */
+function rytkoset_theme_order_has_family_membership( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	foreach ( rytkoset_theme_get_membership_order_items( $order ) as $item ) {
+		if ( 'annual_family' === (string) $item['type'] ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Resolves the WordPress user associated with a membership order.
+ *
+ * The linked order user wins. Guest orders fall back to an existing account
+ * whose email matches the billing email, following the #518 membership path.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return int User ID, or 0 when no account can be resolved.
+ */
+function rytkoset_theme_get_membership_order_user_id( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return 0;
+	}
+
+	$user_id = absint( $order->get_user_id() );
+
+	if ( $user_id > 0 && get_userdata( $user_id ) instanceof WP_User ) {
+		return $user_id;
+	}
+
+	$email = rytkoset_theme_normalize_family_member_email( (string) $order->get_billing_email() );
+
+	if ( '' === $email ) {
+		return 0;
+	}
+
+	$user = get_user_by( 'email', $email );
+
+	return $user instanceof WP_User ? absint( $user->ID ) : 0;
+}
+
+/**
+ * Normalizes and deduplicates checkout member rows before family-list storage.
+ *
+ * Rows whose email belongs to the buyer are omitted to prevent self-linking.
+ * Other duplicate emails keep their first occurrence. Rows without an email
+ * remain separate name/register rows.
+ *
+ * @param array<int, array<string, mixed>> $members         Raw checkout member rows.
+ * @param string[]                         $excluded_emails Buyer/primary email addresses.
+ * @return array<int, array{name:string,email:string}>
+ */
+function rytkoset_theme_prepare_family_order_members( $members, $excluded_emails = array() ) {
+	$excluded = array();
+
+	foreach ( $excluded_emails as $excluded_email ) {
+		$email = rytkoset_theme_normalize_family_member_email( (string) $excluded_email );
+
+		if ( '' !== $email ) {
+			$excluded[ $email ] = true;
+		}
+	}
+
+	$prepared   = array();
+	$seen_email = array();
+
+	foreach ( is_array( $members ) ? $members : array() as $member ) {
+		if ( ! is_array( $member ) ) {
+			continue;
+		}
+
+		$name  = sanitize_text_field( (string) ( $member['name'] ?? '' ) );
+		$email = rytkoset_theme_normalize_family_member_email( (string) ( $member['email'] ?? '' ) );
+
+		if ( '' !== $email && ( isset( $excluded[ $email ] ) || isset( $seen_email[ $email ] ) ) ) {
+			continue;
+		}
+
+		if ( '' === $name && '' === $email ) {
+			continue;
+		}
+
+		if ( '' !== $email ) {
+			$seen_email[ $email ] = true;
+		}
+
+		$prepared[] = array(
+			'name'  => $name,
+			'email' => $email,
+		);
+	}
+
+	return $prepared;
+}
+
+/**
+ * Upserts one normalized family row into a family member list.
+ *
+ * Email is the primary identity; a linked user ID is the fallback. Rows with
+ * neither remain append-only and rely on the order-level processed marker for
+ * idempotency.
+ *
+ * @param array<int, array<string, mixed>> $members Existing family member rows.
+ * @param array<string, mixed>             $incoming Incoming normalized row.
+ * @return array<int, array<string, mixed>>
+ */
+function rytkoset_theme_upsert_family_order_member( $members, $incoming ) {
+	$email          = isset( $incoming['email'] ) ? (string) $incoming['email'] : '';
+	$linked_user_id = isset( $incoming['linked_user_id'] ) ? absint( $incoming['linked_user_id'] ) : 0;
+
+	foreach ( $members as $index => $member ) {
+		$member_email   = isset( $member['email'] ) ? (string) $member['email'] : '';
+		$member_user_id = isset( $member['linked_user_id'] ) ? absint( $member['linked_user_id'] ) : 0;
+		$email_matches  = '' !== $email && $member_email === $email;
+		$user_matches   = $linked_user_id > 0 && $member_user_id === $linked_user_id;
+
+		if ( ! $email_matches && ! $user_matches ) {
+			continue;
+		}
+
+		$members[ $index ] = array_merge( $member, $incoming );
+
+		return array_values( $members );
+	}
+
+	$members[] = $incoming;
+
+	return array_values( $members );
+}
+
+/**
+ * Returns true when checkout member rows include a normalized email address.
+ *
+ * @param array<int, array<string, mixed>> $members Checkout member rows.
+ * @param string                           $email   Email to find.
+ * @return bool
+ */
+function rytkoset_theme_family_order_members_include_email( $members, $email ) {
+	$email = rytkoset_theme_normalize_family_member_email( (string) $email );
+
+	if ( '' === $email ) {
+		return false;
+	}
+
+	foreach ( is_array( $members ) ? $members : array() as $member ) {
+		if (
+			is_array( $member )
+			&& rytkoset_theme_normalize_family_member_email( (string) ( $member['email'] ?? '' ) ) === $email
+		) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Sends the "create an account" notice to a guest membership buyer (#518).
+ *
+ * Plain-text Finnish email to the billing address: the membership fee was
+ * received, member benefits need a site account, and registering with this
+ * same email address activates the membership automatically. Sender comes
+ * from the inc/email.php wp_mail filters.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return bool True when the email was sent.
+ */
+function rytkoset_theme_send_membership_account_notice_email( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	$email = trim( (string) $order->get_billing_email() );
+
+	if ( ! is_email( $email ) ) {
+		return false;
+	}
+
+	$subject = __( 'Jäsenmaksusi on vastaanotettu – luo tili jäsenetuja varten', 'rytkoset-theme' );
+
+	$lines = array(
+		__( 'Hei,', 'rytkoset-theme' ),
+		'',
+		__( 'kiitos! Jäsenmaksusi Rytkösten sukuseura ry:lle on vastaanotettu.', 'rytkoset-theme' ),
+		'',
+		__( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat käyttäjätilin. Jäsenyytesi automaattinen aktivointi odottaa, että sinulla on tili sivustolla.', 'rytkoset-theme' ),
+		'',
+		sprintf(
+			/* translators: %s: buyer's billing email address. */
+			__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin jäsenyytesi aktivoituu automaattisesti:', 'rytkoset-theme' ),
+			$email
+		),
+		wp_registration_url(),
+	);
+
+	$contact_email = rytkoset_theme_get_contact_email();
+
+	$lines[] = '';
+
+	if ( is_email( $contact_email ) ) {
+		$lines[] = sprintf(
+			/* translators: %s: association contact email address. */
+			__( 'Kysymyksissä voit olla yhteydessä: %s', 'rytkoset-theme' ),
+			$contact_email
+		);
+		$lines[] = '';
+	}
+
+	$lines[] = __( 'Terveisin', 'rytkoset-theme' );
+	$lines[] = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+	return wp_mail(
+		$email,
+		$subject,
+		implode( "\n", $lines ),
+		array( 'Content-Type: text/plain; charset=UTF-8' )
+	);
+}
+
+/**
+ * Sends an account notice to a family member entered at checkout (#519).
+ *
+ * The message states where the address came from and avoids disclosing order
+ * details or the buyer's identity.
+ *
+ * @param string $email Family member email address.
+ * @return bool True when the email was sent.
+ */
+function rytkoset_theme_send_family_member_account_notice_email( $email ) {
+	$email = rytkoset_theme_normalize_family_member_email( (string) $email );
+
+	if ( '' === $email ) {
+		return false;
+	}
+
+	$subject = __( 'Perhejäsenyytesi odottaa käyttäjätiliä', 'rytkoset-theme' );
+	$lines   = array(
+		__( 'Hei,', 'rytkoset-theme' ),
+		'',
+		__( 'Sähköpostiosoitteesi on ilmoitettu Rytkösten sukuseura ry:n perhejäsenmaksun yhteydessä.', 'rytkoset-theme' ),
+		'',
+		__( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat henkilökohtaisen käyttäjätilin.', 'rytkoset-theme' ),
+		'',
+		sprintf(
+			/* translators: %s: family member email address. */
+			__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin perhejäsenyys linkittyy tiliisi automaattisesti:', 'rytkoset-theme' ),
+			$email
+		),
+		wp_registration_url(),
+	);
+
+	$contact_email = rytkoset_theme_get_contact_email();
+
+	$lines[] = '';
+
+	if ( is_email( $contact_email ) ) {
+		$lines[] = sprintf(
+			/* translators: %s: association contact email address. */
+			__( 'Jos osoite on ilmoitettu virheellisesti tai sinulla on kysyttävää, ota yhteyttä: %s', 'rytkoset-theme' ),
+			$contact_email
+		);
+		$lines[] = '';
+	}
+
+	$lines[] = __( 'Terveisin', 'rytkoset-theme' );
+	$lines[] = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+
+	return wp_mail(
+		$email,
+		$subject,
+		implode( "\n", $lines ),
+		array( 'Content-Type: text/plain; charset=UTF-8' )
+	);
+}
+
+/**
+ * Persists family checkout rows under the order's primary account (#519).
+ *
+ * Existing accounts are linked immediately. Unknown emails become
+ * `pending_account` rows and receive one account notice per order. Rows without
+ * an email are retained as register-only data. The family list write is atomic;
+ * the processed marker is set only after the #524 helper accepts the full list.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return true|false|WP_Error True when handled, false when not applicable or awaiting a primary account.
+ */
+function rytkoset_theme_process_family_members_from_order( $order ) {
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_order_has_family_membership( $order ) ) {
+		return false;
+	}
+
+	$primary_user_id = rytkoset_theme_get_membership_order_user_id( $order );
+
+	if ( $primary_user_id <= 0 ) {
+		return false;
+	}
+
+	$primary_user   = get_userdata( $primary_user_id );
+	$excluded_email = array( (string) $order->get_billing_email() );
+
+	if ( $primary_user instanceof WP_User ) {
+		$excluded_email[] = (string) $primary_user->user_email;
+	}
+
+	$order_user = get_userdata( absint( $order->get_user_id() ) );
+
+	if ( $order_user instanceof WP_User ) {
+		$excluded_email[] = (string) $order_user->user_email;
+	}
+
+	$incoming      = rytkoset_theme_prepare_family_order_members(
+		rytkoset_theme_get_membership_order_members( $order ),
+		$excluded_email
+	);
+	$processed_key = rytkoset_theme_get_family_members_processed_meta_key();
+	$is_processed  = '' !== (string) $order->get_meta( $processed_key, true );
+	$order_changed = false;
+
+	if ( ! $is_processed ) {
+		$members         = rytkoset_theme_get_family_members( $primary_user_id );
+		$source_order_id = absint( $order->get_id() );
+
+		foreach ( $incoming as $member ) {
+			$linked_user_id = 0;
+
+			if ( '' !== $member['email'] ) {
+				$linked_user = get_user_by( 'email', $member['email'] );
+
+				if ( $linked_user instanceof WP_User ) {
+					$linked_user_id = absint( $linked_user->ID );
+				}
+			}
+
+			$members = rytkoset_theme_upsert_family_order_member(
+				$members,
+				array(
+					'name'            => $member['name'],
+					'email'           => $member['email'],
+					'linked_user_id'  => $linked_user_id,
+					'status'          => $linked_user_id > 0 ? 'active' : 'pending_account',
+					'source_order_id' => $source_order_id,
+					'updated_at'      => current_time( 'mysql' ),
+				)
+			);
+		}
+
+		$updated = rytkoset_theme_update_family_members( $primary_user_id, $members );
+
+		if ( is_wp_error( $updated ) ) {
+			$order->add_order_note(
+				sprintf(
+					/* translators: %s: family-list validation error. */
+					__( 'Perhejäsenrivejä ei voitu tallentaa päätilille: %s', 'rytkoset-theme' ),
+					$updated->get_error_message()
+				),
+				false
+			);
+			$order->save();
+
+			return $updated;
+		}
+
+		$order->update_meta_data( $processed_key, current_time( 'mysql' ) );
+		$order->add_order_note(
+			sprintf(
+				/* translators: %d: number of stored family member rows from the order. */
+				__( 'Perhejäsenmaksun jäsenrivejä käsiteltiin %d ja ne tallennettiin päätilin perhejäsenlistaan.', 'rytkoset-theme' ),
+				count( $incoming )
+			),
+			false
+		);
+		$order_changed = true;
+	}
+
+	$stored_members = rytkoset_theme_get_family_members( $primary_user_id );
+	$sent_key       = rytkoset_theme_get_family_account_notices_sent_meta_key();
+	$sent_notices   = $order->get_meta( $sent_key, true );
+	$sent_notices   = is_array( $sent_notices ) ? $sent_notices : array();
+
+	foreach ( $incoming as $member ) {
+		$email = $member['email'];
+
+		if ( '' === $email || isset( $sent_notices[ $email ] ) ) {
+			continue;
+		}
+
+		$is_pending = false;
+
+		foreach ( $stored_members as $stored_member ) {
+			if ( $email === $stored_member['email'] && 'pending_account' === $stored_member['status'] ) {
+				$is_pending = true;
+				break;
+			}
+		}
+
+		if ( ! $is_pending ) {
+			continue;
+		}
+
+		if ( rytkoset_theme_send_family_member_account_notice_email( $email ) ) {
+			$sent_notices[ $email ] = current_time( 'mysql' );
+			$order->update_meta_data( $sent_key, $sent_notices );
+			$order_changed = true;
+		}
+	}
+
+	if ( $order_changed ) {
+		$order->save();
+	}
+
+	return true;
+}
+
+/**
+ * Returns paid family membership orders containing a member email (#519).
+ *
+ * The query uses WooCommerce's storage-agnostic order API and limits candidates
+ * to accepted statuses that have already passed the theme's family-row processing.
+ * Member-field meta queries are HPOS-only, so the remaining candidate set is
+ * filtered through order objects to keep legacy storage compatible without direct SQL.
+ *
+ * @param string $email Family member email address.
+ * @return WC_Order[]
+ */
+function rytkoset_theme_get_family_membership_orders_for_email( $email ) {
+	$email = rytkoset_theme_normalize_family_member_email( (string) $email );
+
+	if ( '' === $email || ! function_exists( 'wc_get_orders' ) ) {
+		return array();
+	}
+
+	$orders = wc_get_orders(
+		array(
+			'status'     => array( 'processing', 'completed' ),
+			'limit'      => -1,
+			'return'     => 'objects',
+			'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Theme-owned marker prevents hydrating the full paid-order history.
+				array(
+					'key'     => rytkoset_theme_get_family_members_processed_meta_key(),
+					'compare' => 'EXISTS',
+				),
+			),
+		)
+	);
+
+	if ( ! is_array( $orders ) ) {
+		return array();
+	}
+
+	return array_values(
+		array_filter(
+			$orders,
+			static function ( $order ) use ( $email ) {
+				return $order instanceof WC_Order
+					&& rytkoset_theme_order_has_family_membership( $order )
+					&& rytkoset_theme_family_order_members_include_email(
+						rytkoset_theme_get_membership_order_members( $order ),
+						$email
+					);
+			}
+		)
+	);
+}
+
+/**
+ * Links a newly registered user to their pending family member row (#519).
+ *
+ * @param WC_Order $order   Family membership order containing the member email.
+ * @param int      $user_id Newly registered user ID.
+ * @return true|false|WP_Error True when linked/already linked, false when not applicable.
+ */
+function rytkoset_theme_link_family_member_account_from_order( $order, $user_id ) {
+	$user = get_userdata( absint( $user_id ) );
+
+	if ( ! $order instanceof WC_Order || ! $user instanceof WP_User ) {
+		return false;
+	}
+
+	$email = rytkoset_theme_normalize_family_member_email( (string) $user->user_email );
+
+	if (
+		'' === $email
+		|| ! rytkoset_theme_order_has_family_membership( $order )
+		|| ! rytkoset_theme_family_order_members_include_email(
+			rytkoset_theme_get_membership_order_members( $order ),
+			$email
+		)
+	) {
+		return false;
+	}
+
+	$primary_user_id = rytkoset_theme_get_membership_order_user_id( $order );
+
+	if ( 0 >= $primary_user_id || absint( $user->ID ) === $primary_user_id ) {
+		return false;
+	}
+
+	$processed = rytkoset_theme_process_family_members_from_order( $order );
+
+	if ( is_wp_error( $processed ) ) {
+		return $processed;
+	}
+
+	$members = rytkoset_theme_get_family_members( $primary_user_id );
+
+	foreach ( $members as $index => $member ) {
+		if ( $email !== $member['email'] ) {
+			continue;
+		}
+
+		if ( absint( $member['linked_user_id'] ) === absint( $user->ID ) && 'active' === $member['status'] ) {
+			return true;
+		}
+
+		$members[ $index ]['linked_user_id'] = absint( $user->ID );
+		$members[ $index ]['status']         = 'active';
+		$members[ $index ]['updated_at']     = current_time( 'mysql' );
+		$updated                             = rytkoset_theme_update_family_members( $primary_user_id, $members );
+
+		if ( is_wp_error( $updated ) ) {
+			$order->add_order_note(
+				sprintf(
+					/* translators: %s: family-account linking validation error. */
+					__( 'Perheenjäsenen käyttäjätiliä ei voitu linkittää: %s', 'rytkoset-theme' ),
+					$updated->get_error_message()
+				),
+				false
+			);
+			$order->save();
+
+			return $updated;
+		}
+
+		$order->add_order_note(
+			sprintf(
+				/* translators: %s: linked family member email address. */
+				__( 'Perheenjäsenen käyttäjätili linkitettiin automaattisesti sähköpostilla %s.', 'rytkoset-theme' ),
+				$email
+			),
+			false
+		);
+		$order->save();
+
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Marks a guest membership order as awaiting a site account (#518).
+ *
+ * The processed meta is intentionally not set, so a later registration with the
+ * same billing email can still apply the membership. Runs once per order:
+ * repeated processing/completed transitions return without a new note or email.
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_mark_membership_order_awaiting_account( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return;
+	}
+
+	if ( '' !== (string) $order->get_meta( rytkoset_theme_get_membership_awaiting_account_meta_key(), true ) ) {
+		return;
+	}
+
+	$order->update_meta_data( rytkoset_theme_get_membership_awaiting_account_meta_key(), current_time( 'mysql' ) );
+
+	if ( rytkoset_theme_send_membership_account_notice_email( $order ) ) {
+		$order->update_meta_data( rytkoset_theme_get_membership_account_notice_sent_meta_key(), current_time( 'mysql' ) );
+		$order->add_order_note(
+			__( 'Jäsenmaksutilausta ei voitu yhdistää WordPress-käyttäjään. Ostajalle lähetettiin laskutussähköpostiin ohje luoda tili: jäsenyys kytkeytyy automaattisesti, kun tili luodaan samalla sähköpostiosoitteella. Tarvittaessa jäsenyyden voi asettaa manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			false
+		);
+	} else {
+		$order->add_order_note(
+			__( 'Jäsenmaksutilausta ei voitu yhdistää WordPress-käyttäjään, eikä ostajalle voitu lähettää ohjetta tilin luontiin, koska laskutussähköposti puuttuu tai on epäkelpo. Tarkista ja aseta jäsenyystiedot manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			false
+		);
+	}
+
+	$order->save();
+}
+
+/**
  * Applies membership from a WooCommerce order to the associated WordPress user.
  *
  * Idempotent: a processed order is marked with order meta so status transitions
  * (e.g. on-hold → processing → completed) do not apply the membership twice.
+ * A guest order without a matching account is marked awaiting instead of
+ * processed (#518), so a later registration with the same billing email can
+ * still run this function successfully.
  *
  * @param WC_Order $order WooCommerce order object.
  * @return void
@@ -1214,28 +2329,33 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		return;
 	}
 
-	$user_id = (int) $order->get_user_id();
+	$validation_errors = array();
 
-	if ( ! $user_id ) {
-		$email = trim( (string) $order->get_billing_email() );
+	foreach ( $order->get_items() as $item ) {
+		$product = $item->get_product();
 
-		if ( is_email( $email ) ) {
-			$existing_user = get_user_by( 'email', $email );
-
-			if ( $existing_user instanceof WP_User ) {
-				$user_id = $existing_user->ID;
-			}
+		foreach ( rytkoset_theme_get_membership_product_validation_errors( $product ) as $code => $message ) {
+			$validation_errors[ $code ] = $message;
 		}
 	}
 
-	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
-
-	if ( ! $user_id ) {
+	if ( ! empty( $validation_errors ) ) {
 		$order->add_order_note(
-			__( 'Jäsenmaksun automaattinen jäsenyystilan päivitys ohitettiin: tilausta ei voitu yhdistää WordPress-käyttäjään. Tarkista ja aseta jäsenyystiedot manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			sprintf(
+				/* translators: %s: membership product validation errors. */
+				__( 'Jäsenyyttä ei aktivoitu: %s Korjaa jäsenmaksutuotteen asetukset ja käsittele tilaus uudelleen. Tilausta ei merkitty käsitellyksi.', 'rytkoset-theme' ),
+				implode( ' ', $validation_errors )
+			),
 			false
 		);
 		$order->save();
+		return;
+	}
+
+	$user_id = rytkoset_theme_get_membership_order_user_id( $order );
+
+	if ( ! $user_id ) {
+		rytkoset_theme_mark_membership_order_awaiting_account( $order );
 		return;
 	}
 
@@ -1258,13 +2378,14 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 	if ( 'lifetime' !== $membership['type'] ) {
 		$current_covers_new = 'lifetime' === $current['type']
 			|| (
-				rytkoset_theme_user_is_active_member( $user_id )
+				rytkoset_theme_user_has_own_active_membership( $user_id )
 				&& '' !== $current['expires']
 				&& '' !== $membership['expires']
 				&& $current['expires'] >= $membership['expires']
 			);
 
 		if ( $current_covers_new ) {
+			$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
 			$order->add_order_note(
 				__( 'Jäsenyystilaa ei muutettu: käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys.', 'rytkoset-theme' ),
 				false
@@ -1274,7 +2395,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		}
 	}
 
-	$was_active  = rytkoset_theme_user_is_active_member( $user_id );
+	$was_active  = rytkoset_theme_user_has_own_active_membership( $user_id );
 	$type_key    = rytkoset_theme_get_user_membership_type_meta_key();
 	$period_key  = rytkoset_theme_get_user_membership_period_meta_key();
 	$expires_key = rytkoset_theme_get_user_membership_expires_meta_key();
@@ -1317,14 +2438,9 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 		);
 	}
 
-	$is_now_active = rytkoset_theme_user_is_active_member( $user_id );
+	$is_now_active = rytkoset_theme_user_has_own_active_membership( $user_id );
 
-	// A time-bound membership that cannot be activated (the product has no expiry date set) is
-	// stored but flagged so an admin sets the expiry date manually.
-	if ( ! $is_now_active && 'lifetime' !== $membership['type'] ) {
-		$note_parts[] = __( 'Huom: jäsenyyttä ei voitu aktivoida automaattisesti, koska tuotteelle ei ole asetettu Jäsenyys voimassa asti -päivää. Aseta voimassaolopäivä käyttäjähallinnassa.', 'rytkoset-theme' );
-	}
-
+	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
 	$order->add_order_note( implode( ' ', $note_parts ), false );
 	$order->save();
 
@@ -1350,6 +2466,74 @@ function rytkoset_theme_maybe_apply_membership_from_order( $order_id, $order ) {
 	}
 
 	rytkoset_theme_apply_membership_from_order( $order );
+	rytkoset_theme_process_family_members_from_order( $order );
 }
 add_action( 'woocommerce_order_status_processing', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
 add_action( 'woocommerce_order_status_completed', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
+
+// ---------------------------------------------------------------------------
+// Membership linking on account registration (#518, #519)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns paid membership orders awaiting an account for a billing email (#518).
+ *
+ * @param string $email Billing email address.
+ * @return WC_Order[]
+ */
+function rytkoset_theme_get_awaiting_membership_orders_for_email( $email ) {
+	$email = trim( (string) $email );
+
+	if ( ! is_email( $email ) || ! function_exists( 'wc_get_orders' ) ) {
+		return array();
+	}
+
+	$orders = wc_get_orders(
+		array(
+			'billing_email' => $email,
+			'status'        => array( 'processing', 'completed' ),
+			'limit'         => -1,
+			'return'        => 'objects',
+		)
+	);
+
+	if ( ! is_array( $orders ) ) {
+		return array();
+	}
+
+	return array_values( array_filter( $orders, 'rytkoset_theme_order_membership_is_awaiting_account' ) );
+}
+
+/**
+ * Applies awaiting guest membership orders when a new account is registered (#518).
+ *
+ * WordPress registration verifies control of the email address via the password
+ * set link, so the membership cannot be used by the wrong person. Each awaiting
+ * order goes through the same apply path (never-shorten rule, confirmation
+ * email, order note) as a normal status transition; the apply resolves the new
+ * user by billing email.
+ *
+ * @param int $user_id Newly registered user ID.
+ * @return void
+ */
+function rytkoset_theme_apply_membership_on_user_register( $user_id ) {
+	$user = get_userdata( (int) $user_id );
+
+	if ( ! $user instanceof WP_User ) {
+		return;
+	}
+
+	foreach ( rytkoset_theme_get_awaiting_membership_orders_for_email( (string) $user->user_email ) as $order ) {
+		rytkoset_theme_apply_membership_from_order( $order );
+		rytkoset_theme_process_family_members_from_order( $order );
+	}
+
+	foreach ( rytkoset_theme_get_pending_family_primary_user_ids_for_email( (string) $user->user_email ) as $primary_user_id ) {
+		rytkoset_theme_link_family_member_account_from_primary( $primary_user_id, (int) $user->ID );
+	}
+
+	foreach ( rytkoset_theme_get_family_membership_orders_for_email( (string) $user->user_email ) as $order ) {
+		rytkoset_theme_link_family_member_account_from_order( $order, (int) $user->ID );
+	}
+}
+add_action( 'user_register', 'rytkoset_theme_apply_membership_on_user_register' );
