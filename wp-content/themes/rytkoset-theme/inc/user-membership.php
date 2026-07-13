@@ -333,6 +333,48 @@ function rytkoset_theme_normalize_family_members( $members ) {
 }
 
 /**
+ * Drops removed rows whose email is reused by a non-removed row (#541).
+ *
+ * Removal is a soft delete, so a re-added family member would otherwise fail
+ * duplicate-email validation against their own historical `removed` row. A
+ * removed row whose email is not reused stays untouched as history.
+ *
+ * @param array<int, array<string, mixed>> $members Normalized family member rows.
+ * @return array<int, array<string, mixed>>
+ */
+function rytkoset_theme_supersede_removed_family_member_rows( $members ) {
+	$reused_emails = array();
+
+	foreach ( $members as $member ) {
+		$email  = isset( $member['email'] ) ? (string) $member['email'] : '';
+		$status = isset( $member['status'] ) ? (string) $member['status'] : '';
+
+		if ( '' !== $email && 'removed' !== $status ) {
+			$reused_emails[ $email ] = true;
+		}
+	}
+
+	if ( empty( $reused_emails ) ) {
+		return $members;
+	}
+
+	$kept = array();
+
+	foreach ( $members as $member ) {
+		$email  = isset( $member['email'] ) ? (string) $member['email'] : '';
+		$status = isset( $member['status'] ) ? (string) $member['status'] : '';
+
+		if ( 'removed' === $status && '' !== $email && isset( $reused_emails[ $email ] ) ) {
+			continue;
+		}
+
+		$kept[] = $member;
+	}
+
+	return array_values( $kept );
+}
+
+/**
  * Resolves pending family rows to existing WordPress accounts by email (#542).
  *
  * This runs only on writes. Reading stored rows must remain side-effect free so a
@@ -525,6 +567,7 @@ function rytkoset_theme_validate_family_members( $primary_user_id, $members ) {
 function rytkoset_theme_update_family_members( $primary_user_id, $members, $excluded_user_id = 0 ) {
 	$primary_user_id = absint( $primary_user_id );
 	$normalized      = rytkoset_theme_normalize_family_members( $members );
+	$normalized      = rytkoset_theme_supersede_removed_family_member_rows( $normalized );
 	$normalized      = rytkoset_theme_resolve_family_member_accounts( $normalized, $excluded_user_id );
 	$valid           = rytkoset_theme_validate_family_members( $primary_user_id, $normalized );
 
@@ -1073,10 +1116,10 @@ function rytkoset_theme_validate_user_membership_profile_fields( $errors, $updat
 	$family_members = rytkoset_theme_sanitize_family_members_profile_input(
 		wp_unslash( $_POST['rytkoset_family_members'] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Rows are sanitized field-by-field in the profile input helper.
 	);
-	$result         = rytkoset_theme_validate_family_members(
-		$user_id,
-		rytkoset_theme_normalize_family_members( $family_members )
-	);
+	$family_members = rytkoset_theme_normalize_family_members( $family_members );
+	$family_members = rytkoset_theme_supersede_removed_family_member_rows( $family_members );
+	$family_members = rytkoset_theme_resolve_family_member_accounts( $family_members );
+	$result         = rytkoset_theme_validate_family_members( $user_id, $family_members );
 
 	if ( ! is_wp_error( $result ) ) {
 		return;
