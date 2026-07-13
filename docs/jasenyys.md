@@ -459,7 +459,10 @@ Toteutus (`inc/woocommerce-my-account.php`):
   ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
   Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`
   siivoaa linkitetyn käyttäjän reverse-metan samalla kutsulla, joten peritty
-  jäsenetu päättyy heti.
+  jäsenetu päättyy heti. Poistetun perheenjäsenen voi lisätä myöhemmin uudelleen
+  samalla sähköpostilla: uusi rivi syrjäyttää historiallisen `removed`-rivin
+  tallennuksessa, joten uudelleenlisäys ei kaadu duplikaattisähköpostivirheeseen
+  (#541). Muut käyttämättömät `removed`-rivit säilyvät historiatietona.
 - Rivin indeksi (ei erillistä rivitunnistetta) osoittaa suoraan kohtaan
   päätilin tallennetussa listassa — sama konventio kuin ylläpitäjän
   profiililomakkeella. Näkymä säilyttää alkuperäisen indeksin, vaikka

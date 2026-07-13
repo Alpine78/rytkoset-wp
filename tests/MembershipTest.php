@@ -277,6 +277,127 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
 	}
 
+	public function test_update_family_members_supersedes_removed_row_on_email_reuse(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		update_user_meta(
+			10,
+			rytkoset_theme_get_family_members_meta_key(),
+			array(
+				array(
+					'name'            => 'Liisa Vanha',
+					'email'           => 'liisa@example.test',
+					'linked_user_id'  => 0,
+					'status'          => 'removed',
+					'source_order_id' => 530,
+					'updated_at'      => '2026-01-01 00:00:00',
+				),
+			)
+		);
+
+		$members   = rytkoset_theme_get_family_members( 10 );
+		$members[] = array(
+			'name'  => 'Liisa Uusi',
+			'email' => 'LIISA@example.test',
+		);
+
+		$this->assertTrue( rytkoset_theme_update_family_members( 10, $members ) );
+
+		$stored = rytkoset_theme_get_family_members( 10 );
+
+		$this->assertCount( 1, $stored );
+		$this->assertSame( 'Liisa Uusi', $stored[0]['name'] );
+		$this->assertSame( 'liisa@example.test', $stored[0]['email'] );
+		$this->assertSame( 'pending_account', $stored[0]['status'] );
+	}
+
+	public function test_update_family_members_keeps_removed_row_when_email_is_not_reused(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				10,
+				array(
+					array(
+						'name'   => 'Liisa',
+						'email'  => 'liisa@example.test',
+						'status' => 'removed',
+					),
+					array(
+						'name'  => 'Matti',
+						'email' => 'matti@example.test',
+					),
+				)
+			)
+		);
+
+		$stored   = rytkoset_theme_get_family_members( 10 );
+		$statuses = array_column( $stored, 'status', 'email' );
+
+		$this->assertCount( 2, $stored );
+		$this->assertSame( 'removed', $statuses['liisa@example.test'] );
+		$this->assertSame( 'pending_account', $statuses['matti@example.test'] );
+	}
+
+	public function test_re_added_email_of_removed_row_links_existing_account(): void {
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 20, 'liisa@example.test', 'Liisa' );
+		update_user_meta(
+			10,
+			rytkoset_theme_get_family_members_meta_key(),
+			array(
+				array(
+					'name'           => 'Liisa',
+					'email'          => 'liisa@example.test',
+					'linked_user_id' => 0,
+					'status'         => 'removed',
+					'updated_at'     => '2026-01-01 00:00:00',
+				),
+			)
+		);
+
+		$members   = rytkoset_theme_get_family_members( 10 );
+		$members[] = array(
+			'name'  => 'Liisa',
+			'email' => 'liisa@example.test',
+		);
+
+		$this->assertTrue( rytkoset_theme_update_family_members( 10, $members ) );
+
+		$stored = rytkoset_theme_get_family_members( 10 );
+
+		$this->assertCount( 1, $stored );
+		$this->assertSame( 20, $stored[0]['linked_user_id'] );
+		$this->assertSame( 'active', $stored[0]['status'] );
+		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 20 ) );
+	}
+
+	public function test_profile_validation_allows_readding_removed_member_email(): void {
+		$user = rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+
+		$GLOBALS['rytkoset_test_caps']['edit_users'] = true;
+		$GLOBALS['rytkoset_test_caps']['edit_user']  = true;
+		$_POST = array(
+			'rytkoset_user_membership_nonce' => rytkoset_theme_get_user_membership_nonce_action( 10 ),
+			'rytkoset_family_members'         => array(
+				array(
+					'name'   => 'Liisa Vanha',
+					'email'  => 'liisa@example.test',
+					'status' => 'removed',
+				),
+				array(
+					'name'   => 'Liisa Uusi',
+					'email'  => 'LIISA@example.test',
+					'status' => 'pending_account',
+				),
+			),
+		);
+		$errors = new WP_Error();
+
+		rytkoset_theme_validate_user_membership_profile_fields( $errors, true, $user );
+
+		$this->assertSame( array(), $errors->get_error_codes() );
+	}
+
 	public function test_update_family_members_rejects_duplicate_email(): void {
 		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
 
