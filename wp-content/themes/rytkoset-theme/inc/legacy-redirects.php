@@ -82,7 +82,7 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 	 * @return array<string, string>
 	 */
 	function rytkoset_theme_get_legacy_redirect_exact_map() {
-		return array(
+		$exact_map = array(
 			// Kirjautuminen ja käyttäjätili (Joomla com_users).
 			'kirjaudu'                                 => wp_login_url(),
 			'en/component/users/login'                 => wp_login_url(),
@@ -105,6 +105,11 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			'sukuseura/sukukokous'                     => home_url( '/tapahtumat/' ),
 			'sukuseura/sukukokous.html'                => home_url( '/tapahtumat/' ),
 			'sukuseura/tapahtumat'                     => home_url( '/tapahtumat/' ),
+			'sukuseura/tapahtumat.html'                => home_url( '/tapahtumat/' ),
+			'sukuseura/jaesenyys'                      => home_url( '/sukuseura/jasenyys/' ),
+			'sukuseura/jasenyys.html'                  => home_url( '/sukuseura/jasenyys/' ),
+			'sukuseura/hallitus.html'                  => home_url( '/sukuseura/sukuseuran-hallitus/' ),
+			'sukuseura/toimintakertomus.html'          => home_url( '/sukuseura/toimintakertomus/' ),
 			'sukuseura/sukuseuran-saannot'             => home_url( '/sukuseura/saannot/' ),
 			'sukuseura/content/5-sukututkimus'         => home_url( '/sukuseura/sukututkimus/' ),
 			'sukuseura/perhetietolomake'               => home_url( '/sukuseura/jasenyys/' ),
@@ -135,12 +140,17 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			'kauppa/sukulehdet/rytkösten-sukulainen-nro-9-detail/recommend' => home_url( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-9/' ),
 			// Vanha litteä (ei kategoriapolkua) osoitemuoto samalle lehdelle.
 			'kauppa/rytkösten-sukulainen-nro-5-detail' => home_url( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-5/' ),
+			// Earlier flat product URLs from the Joomla shop.
+			'sukuseura/tuotteet/rytkosten_sukulainen_nro_2.html' => home_url( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-2/' ),
+			'tuotteet/rytkosten_sukulainen_nro_4.html' => home_url( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-4/' ),
+			'tuotteet/rytkosten_sukulainen_nro_5.html' => home_url( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-5/' ),
 
 			// Muut tuotteet.
 			'kauppa/muut-tuotteet/rytkösten-sukuseuran-isännänviiri-detail' => home_url( '/kauppa/muut-tuotteet-2/rytkosten-sukuseuran-isannanviiri/' ),
 			'kauppa/muut-tuotteet/t-paita-rytkösten-sukuseuran-logolla-detail' => home_url( '/kauppa/vaatteet/t-paita-rytkosten-sukuseuran-logolla/' ),
 			'kauppa/muut-tuotteet/t-paita-rytkösten-sukuseuran-logolla-xl-detail' => home_url( '/kauppa/vaatteet/t-paita-rytkosten-sukuseuran-logolla/' ),
 			'kauppa/muut-tuotteet/t-paita-rytkösten-sukuseuran-logolla-xxl-detail' => home_url( '/kauppa/vaatteet/t-paita-rytkosten-sukuseuran-logolla/' ),
+			'tuotteet/rytkosten_isannanviiri.html'     => home_url( '/kauppa/muut-tuotteet-2/rytkosten-sukuseuran-isannanviiri/' ),
 
 			// Tuotekategoriat.
 			'kauppa/sukukirjat'                        => home_url( '/tuote-osasto/sukukirjat/' ),
@@ -150,6 +160,14 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			// Vanhan VirtueMart-kaupan juuri.
 			'component/virtuemart'                     => home_url( '/kauppa/' ),
 		);
+
+		// Malformed legacy gallery feed URL with query arguments in the path.
+		$exact_map['valokuvat&format=feed&Itemid=175&type=rss'] = home_url( '/albumit/' );
+
+		// Flat legacy URL for the current family book product.
+		$exact_map['sukuseura/tuotteet/sukukirja_pohjois-savon_rytkoset.html'] = home_url( '/kauppa/sukukirjat/rytkosia-sukupolvesta-toiseen/' );
+
+		return $exact_map;
 	}
 }
 
@@ -163,6 +181,11 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_prefix_rules' ) ) {
 	 */
 	function rytkoset_theme_get_legacy_redirect_prefix_rules() {
 		return array(
+			// Entire legacy gallery section: albums, tags, authors and feeds.
+			array(
+				'prefixes' => array( 'valokuvat' ),
+				'target'   => home_url( '/albumit/' ),
+			),
 			array(
 				'prefixes' => array( 'foorumi', 'en/forum', 'fi/foorumi' ),
 				'target'   => home_url( '/foorumi/' ),

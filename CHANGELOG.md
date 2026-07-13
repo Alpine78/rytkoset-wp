@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Fixed
+- `inc/legacy-redirects.php` / `tests/LegacyRedirectsTest.php` / `CLAUDE.md`: laajennettu vanhojen Joomla-osoitteiden 301-ohjauksia Rank Mathin 10.–13.7.2026 404-seurannan perusteella. Kaikki vanhan `valokuvat`-osion 404-polut ohjataan albumiarkistoon, ja varmennetut jäsenyys-, tapahtuma-, hallitus-, toimintakertomus- sekä vanhat lehti-, viiri- ja sukukirjaosoitteet ohjataan nykyisiin vastineisiinsa. Yksittäiset `/null`-osoitteet, JavaScript-paikkamerkit ja tunnustelupyynnöt jätetään tarkoituksella 404-vastauksiksi.
 - `inc/woocommerce-my-account.php` / `tests/MyAccountTest.php` / `docs/jasenyys.md` / `CLAUDE.md`: korjattu EPIC 12:n Oma tili -jäsenyysendpointin reitityskonflikti. Endpointin URL-slugi `jasenyys` sieppasi WordPressin yleisellä page-endpoint-säännöllä myös julkisen `/sukuseura/jasenyys/`-sivun ja muutti sen 404-vastaukseksi. Oma tili -endpoint käyttää nyt yksiselitteistä `jasentiedot`-slugia (`/oma-tili/jasentiedot/`); valikkoteksti säilyy **Jäsenyys**-muodossa ja versionoitu rewrite-vartija päivittää säännöt automaattisesti.
 
 ### Added
