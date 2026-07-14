@@ -92,7 +92,7 @@ Regressiotestit:
 - Digitaalinen ladattava tuote ei saa toimitusvalintaa.
 - Jäsenmaksutuotteet eivät saa toimitusvalintaa.
 - Tampere 2026 -virtuaalituote ei saa toimitusvalintaa.
-- Mollie-maksutapojen näkyvyys ei muutu tämän mallin takia.
+- Maksutapojen näkyvyys ei muutu tämän mallin takia.
 
 ## Paikallisen testin tulos
 

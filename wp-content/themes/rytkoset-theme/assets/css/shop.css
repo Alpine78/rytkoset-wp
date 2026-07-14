@@ -1705,6 +1705,22 @@ body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block
   background: transparent;
 }
 
+/* Paytrail forces the saved-card action links to inline-block with !important,
+   overriding the theme's flex button alignment. Restore flex alignment for the
+   add-card action and neutralize the plugin's floated, negatively offset icon
+   so the icon and label are centered as one group. */
+.woocommerce-checkout .paytrail-for-woocommerce-tokenized-payment-method-links.add-card-button.button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.woocommerce-checkout span.paytrail-for-woocommerce-tokenized-payment-add-card-button.dashicons.dashicons-plus {
+  float: none;
+  margin: 0;
+}
+
 /* The box-shadow above never shows on the TOP edge: every option has its own
    generated ::after divider bar (top: 0, height: 1px, a positioned child) —
    and a child's own box always paints after/above its parent's own inset

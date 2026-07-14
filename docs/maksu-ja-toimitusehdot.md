@@ -85,8 +85,29 @@ kassalla ennen maksamista.
 
 ## Maksutavat
 
-Maksut välittää Mollie. Käytettävissä olevat maksutavat näkyvät kassalla.
+Maksut välittää Paytrail. Käytettävissä olevat maksutavat näkyvät kassalla.
 Tilaus käsitellään, kun maksu on vastaanotettu tai vahvistettu.
+
+## Maksupalvelutarjoaja
+
+Maksunvälityspalvelun toteuttajana ja maksupalveluntarjoajana toimii Paytrail
+Oyj (2122839-7) yhteistyössä suomalaisten pankkien ja luottolaitosten kanssa.
+Paytrail Oyj näkyy maksun saajana tiliotteella tai korttilaskulla ja välittää
+maksun kauppiaalle. Paytrail Oyj:llä on maksulaitoksen toimilupa.
+Reklamaatiotapauksissa pyydämme ottamaan ensisijaisesti yhteyttä tuotteen
+toimittajaan.
+
+Paytrail Oyj, y-tunnus: 2122839-7
+
+Innova 2
+
+Lutakonaukio 7
+
+40100 Jyväskylä
+
+Puhelin: 0207 181830
+
+[paytrail.com/kuluttaja/tietoa-maksamisesta](https://www.paytrail.com/kuluttaja/tietoa-maksamisesta)
 
 ## Toimitus
 
@@ -132,6 +153,8 @@ Fyysisillä tuotteilla on kuluttajansuojalain mukainen palautusoikeus.
 Palautettavan tuotteen tulee olla käyttämätön ja myyntikuntoinen. Asiakas
 vastaa palautuksen järjestämisestä, ellei palautus johdu virheestä
 tuotteessa tai toimituksessa.
+
+Hyvitys palautetaan aina alkuperäiselle maksutavalle.
 
 Jäsenmaksujen peruutusoikeus voi olla rajoitettu, jos jäsenyyteen liittyvä
 palvelu on jo alkanut; tämä arvioidaan tapauskohtaisesti peruutuspyynnön

@@ -54,6 +54,7 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - Mollie-maksutapojen paikallinen testikäyttöönotto on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-payments.md`.
 - Mollien dev-live käyttöönotto ja hyväksymistestaus on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-go-live.md`.
 - Mollie MobilePay -käyttöönotto ja mahdolliset tilikohtaiset blockerit on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-mobilepay.md`.
+- Paytrailin kokeilujakson käyttöönotto, hyväksymistestaus ja Mollieen palaamisen turvarajat on dokumentoitu tiedostossa `docs/woocommerce-paytrail.md`.
 - Fyysisten tuotteiden perustuki on dokumentoitu erikseen tiedostossa `docs/woocommerce-physical-products.md`.
 - `Rytkösten sukulainen nro 9` -tuote on dokumentoitu erikseen tiedostossa `docs/woocommerce-rytkosten-sukulainen-product.md`.
 - Kaupan, tapahtumien, albumien ja ostoskorin valikkorakenne on dokumentoitu erikseen tiedostossa `docs/menu-structure.md`.
@@ -106,4 +107,12 @@ Lisäksi teema rekisteröi oman Oma tili -endpointin uutiskirjeen hallintaan:
 
 ## Huomio
 
-`Tilisiirto` on käytössä paikallisessa ympäristössä fallback-maksutapana. Mollie on dokumentoitu erillisenä testikäyttöönottona, mutta ennen tuotantokäyttöä asetukset, maksutavat, webhookit ja pankkitiedot on vielä tarkistettava dev- ja tuotantoympäristöissä erikseen.
+Paytrail on nykyinen kokeilujakson maksunvälittäjä (#530). Dev-kassalla on
+14.7.2026 varmennettu näkyviksi Paytrailin maksutaparyhmät sekä erillinen
+`Pankkisiirto, SEPA-maksu` -vaihtoehto. Maksujen, paluu-URL:ien, sähköpostien,
+tilasiirtymien ja tuotannon asetusten hyväksymistestaus tehdään
+[`woocommerce-paytrail.md`](woocommerce-paytrail.md)-ohjeen mukaan.
+
+Mollien kolme käyttöönotto-ohjetta ovat lepääviä palautusohjeita. Mollie-koodia
+ei poisteta, eikä lisäosaa deaktivoida ennen kuin avoimet Mollie-maksut ja
+niiden webhook-päivitysten tarve on tarkistettu.

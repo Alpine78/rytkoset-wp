@@ -2,7 +2,7 @@
 
 Tämä dokumentti kuvaa, miten teeman WooCommerce-toiminnot toteuttavat
 WCAG 2.1 AA -tasoa, ja mitkä rajat tulevat kolmansilta osapuolilta
-(WooCommerce, Mollie). Tämä on **kehittäjäohje**, ei käyttäjäohje.
+(WooCommerce, Paytrail). Tämä on **kehittäjäohje**, ei käyttäjäohje.
 
 ## Lähtökohta
 
@@ -38,13 +38,13 @@ korvaava ilmaisin on näkyvä ja kontrastiltaan riittävä (≥3:1).
 | Komponentti | Vastuu | Huomio |
 | --- | --- | --- |
 | WC Checkout Block (etunimi, sukunimi, osoite, jne.) | WooCommerce | Labelit ja virheviestit hoidetaan blockin sisällä |
-| Mollie-maksusivu (Verkkomaksut) | Mollie | Käyttäjä siirtyy Mollien hostatulle sivulle — saavutettavuus on Mollien vastuulla |
-| Mollie Bank Transfer -tilausohjeet (thank-you-sivu) | Mollie + theme | Theme käyttää output bufferingia muotoiluun, mutta sisältö tulee Mollielta |
+| Paytrailin maksutapavalitsin ja maksupalvelu | Paytrail | Lisäosa renderöi maksutaparyhmät kassalle; maksupalveluun siirtyvän osuuden saavutettavuus on Paytrailin vastuulla |
+| Paytrailin tallennetun kortin **Lisää uusi kortti** -painike | Paytrail + theme | Teema palauttaa lisäosan ohittaman flex-keskityksen; fokus tulee WooCommerce-painikkeiden yhteisestä `:focus-visible`-säännöstä (#530) |
 | AcyMailing-opt-in checkbox kassalla | Theme | Toteutettu samalla pattern-pohjalla kuin tapahtumailmoittautumisen opt-in |
 
 ## Testauksen rajoitteet
 
-- Mollien hostattua maksusivua ei testata teeman puolella (suljettu kolmas osapuoli).
+- Paytrailin suljettua maksupalveluosuutta ei testata teeman puolella; kassan lisäosan renderöimä valitsin testataan devissä.
 - WC Checkout Blockin saavutettavuus testataan WooCommerce-päässä eikä sitä uudelleenarvioida täällä; jos havaitaan ongelma, se raportoidaan WooCommerce-issuejen kautta.
 
 ## Tuotekohtaiset huomiot
