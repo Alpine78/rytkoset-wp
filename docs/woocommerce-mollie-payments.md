@@ -1,5 +1,11 @@
 # WooCommerce: Mollie-maksutavat
 
+> **Lepäävä palautusohje (14.7.2026).** Paytrail on käytössä kokeilujakson ajan
+> (#530). Tätä ohjetta ei käytetä nykyisen maksupalvelun konfigurointiin, mutta
+> se säilytetään, jotta Mollieen voidaan tarvittaessa palata hallitusti.
+> Mollie-lisäosaa ei deaktivoida ennen avoimien `pending`/`on-hold`-maksujen ja
+> niiden webhook-päivitysten tarkistamista.
+
 Tämä dokumentti kuvaa #145-tiketin paikallisen Mollie-käyttöönoton ja testimallin.
 
 Varsinainen dev-live käyttöönotto ja oikeiden hyväksymistestien malli on dokumentoitu erikseen tiedostossa `docs/woocommerce-mollie-go-live.md`.

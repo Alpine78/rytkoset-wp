@@ -171,7 +171,7 @@ käyttäjätiliin ja lukuoikeus voidaan tarkistaa myöhemmin luotettavasti.
 
 **Päätös: lukuoikeus avautuu vain `processing`- ja `completed`-tilauksista.**
 
-Ei `on-hold`-tilasta. Mollie-tilisiirto voi olla `on-hold`-tilassa päiviä ennen
+Ei `on-hold`-tilasta. Vanha Mollie-tilisiirto voi olla `on-hold`-tilassa päiviä ennen
 maksun kirjautumista, eikä sisältöä luovuteta ennen maksun varmistumista.
 (Vertaa: tapahtumien järjestäjäilmoitukset lähetetään jo `on-hold`-tilasta, mutta
 siinä ei luovuteta maksullista sisältöä.)

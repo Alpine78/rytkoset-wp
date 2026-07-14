@@ -8,7 +8,7 @@ Tämä dokumentti kuvaa tiketin `#450` toimintamallin: bussikyydin (esim. Savo�
 
 - Kerätä bussikyytiin lähtijät (nimi, sähköposti, **lähtöpaikka**, matkustajamäärä) **ilman maksua**.
 - Hallitus näkee yhdellä silmäyksellä lähtijämäärän ja lähtöpaikkajakauman → voi todeta täyttyykö vähimmäismäärä (esim. 20).
-- Kun matka varmistuu, maksu peritään **manuaalisilla WooCommerce-tilauksilla** (Mollie-maksulinkki).
+- Kun matka varmistuu, maksu peritään **manuaalisilla WooCommerce-tilauksilla** (WooCommercen maksulinkki, nykyinen maksunvälittäjä Paytrail).
 
 ## Vaihe 1 — Bussikyytitapahtuman luonti (ylläpito)
 
@@ -57,7 +57,7 @@ Kun lähtijöitä on riittävästi ja matka toteutuu:
 2. **Peri maksu WooCommercella.** Luo kullekin ilmoittautuneelle (tai perheelle matkustajamäärän mukaan) WooCommerce-tilaus:
    - **WooCommerce → Tilaukset → Lisää tilaus.**
    - Lisää asiakas ja **bussipaikka-tuote** rivituotteena (matkustajamäärä = kappalemäärä), jätä tila **Odottaa maksua**.
-   - Lähetä asiakkaalle tilauksen maksulinkki (*Lähetä tilaustiedot asiakkaalle* / Customer invoice). Maksu hoituu Molliella tavalliseen tapaan.
+   - Lähetä asiakkaalle tilauksen maksulinkki (*Lähetä tilaustiedot asiakkaalle* / Customer invoice). Asiakas jatkaa maksua nykyisellä Paytrail-maksutavalla.
 3. Jos matka **ei** toteudu, ilmoita lähtijöille eikä maksuja peritä (yhtään tilausta ei ole vielä luotu).
 
 > Tätä varten kannattaa pitää yksi yksinkertainen **bussipaikka-tuote** WooCommercessa (yksi hinta, ei variaatioita — lähtöpaikka tulee ilmoittautumisesta). Tuote voidaan **piilottaa kaupasta** (Catalog visibility), koska sitä ei myydä suoraan vaan käytetään vain manuaalisten tilausten rivituotteena.

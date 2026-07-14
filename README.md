@@ -246,9 +246,10 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/woocommerce-tampere-2026-management.md` - Tampere 2026 -hallinta
 - `docs/woocommerce-tampere-2026-notifications.md` - maksullisten tapahtumien järjestäjäilmoitukset
 - `docs/woocommerce-tampere-2026-bussikyyti.md` - bussikyydin ilmoittautuminen ja maksu jälkikäteen
-- `docs/woocommerce-mollie-payments.md` - Mollie-maksut
-- `docs/woocommerce-mollie-go-live.md` - Mollie dev→live-käyttöönotto ja hyväksymistestaus
-- `docs/woocommerce-mollie-mobilepay.md` - Mollie MobilePay-käyttöönotto
+- `docs/woocommerce-mollie-payments.md` - lepäävä Mollie-maksujen palautusohje
+- `docs/woocommerce-mollie-go-live.md` - lepäävä Mollie dev→live -palautusohje
+- `docs/woocommerce-mollie-mobilepay.md` - lepäävä Mollie MobilePay -palautusohje
+- `docs/woocommerce-paytrail.md` - Paytrail-kokeilujakson käyttöönotto ja hyväksymistestaus
 - `docs/woocommerce-peruutus.md` - tilauksen itsepalveluperuutus
 - `docs/woocommerce-saavutettavuus.md` - WooCommerce-saavutettavuus
 - `docs/saavutettavuus-analyysi.md` - koko sivuston WCAG 2.1 AA -analyysi
