@@ -46,7 +46,7 @@ Lähetetään etusivun pyynnöille (`send_headers`); wp-admin ohitetaan. Muokatt
 | `Referrer-Policy`        | `strict-origin-when-cross-origin`          | Rajoittaa referrer-tiedon vuotamista    |
 | `Permissions-Policy`     | `geolocation=(), microphone=(), camera=()` | Estää käyttämättömät selainominaisuudet |
 
-> **HSTS** (`Strict-Transport-Security`) ja **Content-Security-Policy** on jätetty tarkoituksella pois teemasta. HSTS kuuluu HTTPS-/palvelintasolle, ja tiukka CSP rikkoisi helposti wp-adminin, WooCommercen ja Mollien hostatun maksu-iframen. Nämä hoidetaan palvelintasolla, ks. alla.
+> **HSTS** (`Strict-Transport-Security`) ja **Content-Security-Policy** on jätetty tarkoituksella pois teemasta. HSTS kuuluu HTTPS-/palvelintasolle, ja tiukka CSP rikkoisi helposti wp-adminin, WooCommercen ja kolmansien osapuolten maksukomponentit. Nämä hoidetaan palvelintasolla, ks. alla.
 
 ### Roskarekisteröitymisten esto
 
@@ -132,7 +132,7 @@ Login-URL:n vaihtaminen on "security through obscurity" — vähentää bottilii
 
 - [ ] **HTTPS pakotettuna.**
 - [ ] **HSTS** (`Strict-Transport-Security`) — vain HTTPS:n yli.
-- [ ] **Content-Security-Policy** — vaatii huolellisen määrittelyn wp-adminin, WooCommercen ja Mollie-iframen vuoksi; rakennetaan asteittain (report-only ensin).
+- [ ] **Content-Security-Policy** — vaatii huolellisen määrittelyn wp-adminin, WooCommercen ja käytössä olevan maksupalvelun komponenttien vuoksi; rakennetaan asteittain (report-only ensin).
 - [ ] **PHP-tiedostojen suoritus estetty** `wp-content/uploads/`-kansiossa.
 
 ### wp-config.php

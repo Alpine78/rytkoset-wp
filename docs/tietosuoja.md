@@ -38,7 +38,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 ## Suomenkielinen pohja (kopioitavaksi)
 
-> Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Mollie-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika **on tarkistettava** ennen julkaisua.
+> Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Paytrail-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika **on tarkistettava** ennen julkaisua.
 
 > Sukututkimusrekisteri käsitellään erillisessä rekisteriselosteessa: `/sukuseura/rekisteriseloste/`.
 
@@ -46,7 +46,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 # Tietosuojaseloste
 
-Päivitetty: 10.7.2026
+Päivitetty: 14.7.2026
 
 ## Rekisterinpitäjä
 
@@ -102,7 +102,7 @@ Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -o
 - maksutapahtuman viitetiedot
 - jäsenyyteen liittyvät tiedot
 
-Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Mollie. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
+Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
 
 Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Näitä tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
 
@@ -181,7 +181,7 @@ Sivustolla ei käytetä analytiikka- tai markkinointievästeitä. Voit estää e
 Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointitarkoituksiin. Käytämme seuraavia palveluntarjoajia tietojen käsittelyyn:
 
 - **Hosting**: Domainhotelli (palvelinlokit, varmuuskopiot)
-- **Maksunvälitys**: Mollie B.V. (Hollanti) — verkkokaupan maksujen käsittely
+- **Maksunvälitys**: Paytrail Oyj (Suomi) — verkkokaupan maksujen käsittely
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
 - **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
 - **Tekoälyavusteinen tukichatti**: Mistral AI SAS (Ranska/EU) — chattiin kirjoitettujen viestien käsittely vastausten tuottamiseksi
@@ -216,7 +216,7 @@ Sinulla on myös oikeus tehdä valitus tietosuojavaltuutetun toimistolle (tietos
 
 ## Mihin lähetämme tietosi
 
-Sivuston palvelin sijaitsee Suomessa. Mollien maksunvälityspalvelu käsittelee tietoja EU-alueella. Myös tukichatin käsittelijä Mistral AI toimii EU-alueella.
+Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välittämiseksi tarvittavia tietoja. Tukichatin käsittelijä Mistral AI toimii EU-alueella.
 
 Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.
 

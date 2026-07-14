@@ -89,7 +89,7 @@ Huom: chatti näkyy sivustolla vain kun **molemmat** ehdot täyttyvät — API-a
 FAQ-teksti täydentää pysyvää sivustokontekstia ja automaattista tapahtuma-/tuotelohkoa. Malli ei hae tietoa internetistä eikä selaa sivustoa itse chat-pyynnön aikana. Kirjoitusohjeet:
 
 - **Rakenne:** otsikot ISOLLA omilla riveillään, faktat luettelomerkkeinä (`- `). Selkeä rakenne auttaa mallia poimimaan oikean kohdan.
-- **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen ja Mollie-erityistapaukset (ulkomaanmaksun hyväksyntä, RF-viitteen väliviivat Mollien sähköpostissa), maksun jatkaminen vain ehdollisesti ("jos tilauksella näkyy Maksa / yritä uudelleen -painike"), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot.
+- **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen nykyisellä Paytrail-maksutavalla, maksun jatkaminen vain ehdollisesti ("jos tilauksella näkyy Maksa / yritä uudelleen -painike"), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot. Poista Mollien ulkomaanmaksu- ja RF-viiteohjeet Customizerin FAQ:sta kokeilujakson ajaksi.
 - **Pituus:** teksti lähetetään Mistralille **jokaisen viestin mukana**, joten pidä se tiiviinä (nyrkkisääntö: alle ~5 000 merkkiä). Pitkä teksti kasvattaa kuluja ja heikentää vastausten tarkkuutta.
 - **Ajantasaisuus:** kun hinnat, päivämäärät tai käytännöt muuttuvat sivustolla, päivitä myös FAQ — chatti ei huomaa sivuston muutoksia itse. Nopeasti muuttuvien tietojen (esim. yksittäisen tapahtuman aikataulu) osalta parempi tapa on viitata tapahtumasivuun kuin kopioida yksityiskohdat FAQ:hun.
 - **Rajaukset:** älä laita FAQ:hun henkilötietoja äläkä mitään, mikä ei saa näkyä julkisesti — FAQ:n sisältö voi päätyä chatin vastauksiin kenelle tahansa kävijälle.
@@ -150,11 +150,11 @@ Chatin tietopohja laajenee promptin lähteiden yli **function calling** -työkal
 **Pois kytkeminen:** suodatin `rytkoset_theme_chat_page_tool_enabled` (`false` → API-payload, sivustokartta ja system-prompt ovat täsmälleen entisellään, ei `tools`-kenttää). Mallihuomio: dev ja tuotanto käyttävät `mistral-medium-latest`-mallia (`RYTKOSET_CHAT_API_MODEL`; koodin oletusfallback on `mistral-small-latest`). Mistralin dokumentaation mukaan vahvin function calling -tuki on `mistral-large-latest`-mallilla — jos käytössä oleva malli käyttää työkalua huonosti (turhia kutsuja tai ei kutsu lainkaan), mallin voi vaihtaa ympäristökohtaisesti samalla vakiolla.
 
 Maksuohjeissa ei pidä luvata, että kaikki epäonnistuneet tai keskeneräiset
-Mollie-tilaukset voi aina vaihtaa itse toiseen maksutapaan. Käytä muotoa:
+tilaukset voi aina vaihtaa itse toiseen maksutapaan. Käytä muotoa:
 "Avaa Oma tili -> Tilaukset. Jos tilauksen kohdalla näkyy Maksa / yritä
 uudelleen -painike, voit jatkaa maksua ja valita kassalla toisen maksutavan.
 Jos painiketta ei näy, ota yhteyttä sähköpostitse." Toteutus ja tarkempi
-rajaus on dokumentoitu tiedostossa `docs/woocommerce-mollie-payments.md`.
+rajaus on dokumentoitu tiedostossa `docs/woocommerce-paytrail.md`.
 
 ## Käyttötilastot ylläpitäjälle (#472)
 

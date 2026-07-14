@@ -237,7 +237,7 @@ tikettikohtaisesti.
   (`:focus-within`), ei nappikohtainen outline
 - [x] Kassailmoitukset käyttävät `role="note"`
 - [x] Kehittäjäohje [docs/woocommerce-saavutettavuus.md](woocommerce-saavutettavuus.md)
-  dokumentoi nykytilan ja kolmansien osapuolten rajat (Mollie, WC Block)
+  dokumentoi nykytilan ja kolmansien osapuolten rajat (Paytrail, WC Block)
 
 ### #89 Saavutettavuustestaus
 - [ ] Perustason testausmenetelmät dokumentoitu ja ajettu (ks. luku 5)

@@ -1,5 +1,9 @@
 # WooCommerce: Mollie MobilePay -käyttöönotto
 
+> **Lepäävä palautusohje (14.7.2026).** Paytrail on käytössä kokeilujakson ajan
+> (#530). Mollien MobilePay-ohje säilytetään mahdollista Mollieen palaamista
+> varten, mutta se ei kuvaa nykyistä maksupalvelua.
+
 Tämä dokumentti kuvaa `#156`-tiketin MobilePay-käyttöönottomallin.
 
 MobilePay otetaan käyttöön vain virallisen `Mollie Payments for WooCommerce` -lisäosan kautta. Oma MobilePay-integraatio, erillinen API-toteutus tai WooPaymentsin käyttöönotto eivät kuulu tähän ratkaisuun.
