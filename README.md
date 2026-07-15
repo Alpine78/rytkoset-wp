@@ -253,6 +253,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/woocommerce-saavutettavuus.md` - WooCommerce-saavutettavuus
 - `docs/saavutettavuus-analyysi.md` - koko sivuston WCAG 2.1 AA -analyysi
 - `docs/tietosuoja.md` - tietosuojamuistiinpanot
+- `docs/tietosuoja-kasittelytoimet.md` - sisäinen seloste verkkosivuston käsittelytoimista
 - `docs/tietoturva.md` - tietoturvakovennukset
 - `docs/maksu-ja-toimitusehdot.md` - kaupan maksu- ja toimitusehdot (versionoitu sivukopio)
 - `docs/rekisteriseloste.md` - sukututkimusrekisterin rekisteriseloste (versionoitu sivukopio)

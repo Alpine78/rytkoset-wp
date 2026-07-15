@@ -32,6 +32,7 @@ $GLOBALS['rytkoset_test_mails']        = array(); // recorded wp_mail() calls
 $GLOBALS['rytkoset_test_now']          = 'now';   // string accepted by DateTimeImmutable
 $GLOBALS['rytkoset_test_current_user'] = 0;       // get_current_user_id()
 $GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
+$GLOBALS['rytkoset_test_privacy_url']   = 'https://rytkoset.test/tietosuoja/';
 $GLOBALS['rytkoset_test_post_meta']    = array(); // [post_id][key] => value
 $GLOBALS['rytkoset_test_products']     = array(); // [product_id] => WC_Product
 $GLOBALS['rytkoset_test_orders']       = array(); // [order_id] => WC_Order (wc_get_order)
@@ -72,6 +73,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_mails']         = array();
 	$GLOBALS['rytkoset_test_now']           = 'now';
 	$GLOBALS['rytkoset_test_current_user']  = 0;
+	$GLOBALS['rytkoset_test_privacy_url']   = 'https://rytkoset.test/tietosuoja/';
 	$GLOBALS['rytkoset_test_post_meta']     = array();
 	$GLOBALS['rytkoset_test_products']      = array();
 	$GLOBALS['rytkoset_test_orders']        = array();
@@ -1457,6 +1459,10 @@ function wp_login_url( $redirect = '' ): string {
 
 function wp_registration_url(): string {
 	return home_url( '/wp-login.php?action=register' );
+}
+
+function get_privacy_policy_url(): string {
+	return (string) $GLOBALS['rytkoset_test_privacy_url'];
 }
 
 function wp_lostpassword_url( $redirect = '' ): string {

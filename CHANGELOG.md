@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Documentation
+- Tietosuoja- ja AI Act -katselmuksen repo-osuus (#470): julkisen tietosuojaselosteen pohjaan lisättiin perhejäsentietojen tietolähde ja alle 13-vuotiaan suostumustilanteen rajaus, ja perhejäsenelle lähetettävä tietolähdeviesti ohjaa nyt tietosuojaselosteeseen. `docs/tietosuoja.md` sisältää myös sisäisen DPIA-tarvearvion, uusi `docs/tietosuoja-kasittelytoimet.md` kokoaa verkkosivuston 30 artiklan käsittelytoimet tarkistettavaksi luonnokseksi, ja `docs/chat.md` dokumentoi tukichatin rajoitetun riskin AI Act -luokittelun, avoimen tarjoaja-/käyttöönottajaroolin sekä ylläpitäjän vähimmäisperehdytyksen. Tuotannon sopimukset, palvelintason tila ja hyväksynnät rajataan jatkotikettiin #564.
+
 ### Fixed
 - WooCommercen jäsenmaksutuotteet / `docs/woocommerce-membership-products.md`: määräaikaisten tuotteiden nimet täsmennetty toimintakauden mukaisiksi (`Jäsenmaksu toimintakaudelle 2026–2029 – henkilö` ja `– perhe`) vuosijäsenmaksun sijaan (#554). Samalla paikallisten tuotteiden lyhyet ja pitkät kuvaukset yhdenmukaistettiin uuden terminologian ja kassan rakenteisen **Jäsentiedot**-osion kanssa. SKU:t, slugit, hinnat, jäsenmaksumetat ja tilaushistoria säilyvät ennallaan. Dokumentaation vanhentuneet kausi- ja kategoriatiedot korjattu nykytilaan.
 - `inc/event-registrations.php` / `front-page.php` / tapahtuma- ja kommentointiohjeet: tuotannon sisältökatselmoinnin korjaukset (#554). Maksuttoman tapahtuman GDPR-ilmoitus mainitsee ruokarajoitteet vain, kun tapahtuman ruokavaliokenttä on käytössä; etusivun Tampere 2026 -teksti ohjaa julkaistuun ohjelmaan ja jäsenyysnoste ei enää lupaa dokumentoimatonta julkaisujen kotiintoimitusta. Tuotearvioinnit suljetaan ympäristökohtaisesti WooCommercen omasta asetuksesta ilman päällekkäistä teemasuojaa. Kaksi kohdennettua testiä kattavat GDPR-tekstin molemmat asetukset.
