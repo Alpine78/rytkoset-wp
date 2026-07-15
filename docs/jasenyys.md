@@ -5,7 +5,7 @@ tilan käsin. Toteutus on tiketissä `#301` (EPIC 10, `#395`) ja koodi moduuliss
 [`inc/user-membership.php`](../wp-content/themes/rytkoset-theme/inc/user-membership.php).
 
 Tämä on perusta jäsenille rajatuille sisällöille, digilehtien käyttöoikeuksille
-(EPIC 9, ks. [digilehdet.md](digilehdet.md)) ja mahdollisille jäsenhinnoille.
+(EPIC 9, ks. [digital-magazines.md](digital-magazines.md)) ja mahdollisille jäsenhinnoille.
 Perhejäsenyyden perusrakenne lisättiin tiketissä `#524`.
 
 ## Tausta

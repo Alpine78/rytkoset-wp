@@ -227,8 +227,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/event-participants-messaging.md` - tapahtumaviestien lähetysjono
 - `docs/media-saavutettavuus.md` - median ja gallerioiden saavutettavuus
 - `docs/media-library-ordering.md` - mediakirjaston ja albumien kuvajärjestys
-- `docs/digital-magazines.md` - digilehtien sisältömalli ja julkinen näkymä
-- `docs/digilehdet.md` - digilehtien käyttöoikeus- ja hinnoittelumalli
+- `docs/digital-magazines.md` - digilehtien sisältö-, käyttöoikeus- ja hinnoittelumalli
 - `docs/jasenyys.md` - käyttäjän jäsenyystilan asettaminen
 - `docs/jasenille-rajatut-sivut.md` - vain jäsenille näkyvät sisältösivut
 - `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio

@@ -157,8 +157,8 @@ function rytkoset_theme_digital_magazine_is_restricted( $post_id ) {
 /**
  * Returns true when the user has bought access to the digital magazine.
  *
- * Product links and purchase checks are implemented in #201. Until then this
- * helper intentionally returns false, while exposing a filter for that follow-up.
+ * Product purchases and manual access grants attach their callbacks to this
+ * shared filter, so the access sources combine with OR logic.
  *
  * @param int      $magazine_id Parent magazine post ID.
  * @param int|null $user_id     User ID. Defaults to the current user.
