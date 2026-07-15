@@ -144,10 +144,18 @@ Jos jäsenstatusta ei voida varmistaa (kirjautumaton), ohjataan normaalihintaan.
 - Lukuoikeus avautuu, kun ostajan tilauksessa on lehteen linkitetty tuote ja
   tilaus on **valmis** (`processing`/`completed`). `on-hold`-tilisiirto ei vielä
   avaa sisältöä.
-- Pääsy on tilikohtainen. Osto pitää tehdä WordPress-käyttäjätilille;
-  vierastilauksesta ei synny lukuoikeutta eikä lukuoikeussähköpostia. Varmista
-  ennen myynnin avaamista, ettei digilehteä voi ostaa vieraskassalla (seuranta
-  tiketissä #558).
+- Pääsy on tilikohtainen. Kun korissa on lehteen linkitetty tuote, kassa vaatii
+  kirjautumisen tai luo ostajalle käyttäjätilin automaattisesti. Kassan alussa
+  näytetään tästä suomenkielinen ohje. Tavallisten tuotteiden vieraskassa seuraa
+  edelleen WooCommercen omaa asetusta.
+- Tilipakko toteutetaan WooCommercen
+  `woocommerce_checkout_registration_enabled`- ja
+  `woocommerce_checkout_registration_required`-suodattimilla vain
+  digilehtikorille. WooCommerce luo asiakkaan ennen klassisen kassan tilausta ja
+  Checkout Blockissa ennen maksua. Lisäksi
+  `woocommerce_checkout_validate_order_before_payment` estää Store API:ssa
+  digilehtitilauksen maksamisen, jos tilaukselta silti puuttuu käyttäjä-ID
+  esimerkiksi muokatun suoran API-pyynnön vuoksi (#558).
 - Ostaja saa lukuoikeudesta saman sähköposti-ilmoituksen kuin manuaalisesta
   myönnöstä (#420), kerran tilausta ja lehteä kohti.
 
@@ -196,7 +204,10 @@ Todennettu paikallisesti selaimella (Playwright, Block Checkout): kenttä näkyy
 ja on pakollinen, kun korissa on digilehtituote (tyhjänä lähetys pysäytyy
 WooCommerce Blocksin omalla "Valitse tämä ruutu jatkaaksesi eteen päin"
 -virheellä); kenttä puuttuu kokonaan, kun korissa ei ole digilehteä; rastittu
-arvo tallentuu tilaukselle ja on luettavissa takaisin.
+arvo tallentuu tilaukselle ja on luettavissa takaisin. #558:n varmennuksessa
+kirjautumaton digilehtiostos loi käyttäjätilin ja tilaus sai saman käyttäjä-ID:n,
+kun taas tavallinen tuote säilyi vieraskassana. Tilivaatimuksen ohje näkyi myös
+390 px leveässä näkymässä ilman vaakavieritystä.
 
 **Vuotokorjaus muihin tilauksiin (#491):** WooCommerce Blocks tallentaa
 piilotetun, rastittamattoman lisäkentän arvoksi `false` **jokaiselle**
