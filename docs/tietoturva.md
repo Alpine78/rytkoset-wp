@@ -111,6 +111,7 @@ Teema viedään dev- ja tuotantoympäristöön GitHub Actions -työnkuluilla ([`
 ## Palvelintason checklist (ylläpito)
 
 Nämä eivät ole teemakoodia. Tee ja ylläpidä palvelimella / WordPress-adminissa.
+Tuotannon tila todennetaan ja tarkistuspäivä kirjataan jatkotiketissä [#564](https://github.com/Alpine78/rytkoset-wp/issues/564); rastit jätetään avoimiksi, kunnes kukin kohta on käytännössä tarkistettu.
 
 ### Kirjautumissuojaus (tärkein)
 

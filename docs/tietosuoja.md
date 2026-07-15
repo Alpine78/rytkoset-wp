@@ -36,6 +36,24 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 4. Varmista, että myös sukututkimusrekisterin *Rekisteriseloste* on löydettävissä joko footerista tai tietosuojaselosteen sisäisestä linkistä.
 5. Tallenna.
 
+## Vaikutustenarvioinnin tarpeen arviointi (sisäinen)
+
+Arvioitu 15.7.2026 tiketin #470 yhteydessä. Tämä on tietosuoja-asetuksen 35 artiklan mukaisen vaikutustenarvioinnin (DPIA) **tarvearvio**, ei varsinainen vaikutustenarviointi.
+
+Nykyisen, reposta todennettavan käsittelyn perusteella täysimittaista vaikutustenarviointia ei arvioida tarvittavan:
+
+- sivusto ei profiloi käyttäjiä eikä tee automaattisia päätöksiä, joilla olisi oikeusvaikutuksia tai vastaavia merkittäviä vaikutuksia
+- sivusto ei käsittele biometrisiä tietoja eikä seuraa henkilöitä järjestelmällisesti yleisellä alueella
+- tapahtumien vapaaehtoisissa ruokarajoite- ja lisätietokentissä voi olla terveydentilaa tai vakaumusta välillisesti kuvaavia tietoja, mutta käsittely ei ole reposta todettuna laajamittaista
+- lapset voivat olla perhejäsenyyden tai tapahtuman yhteydessä rekisteröityjä, mutta sivuston toimintoja ei ole suunnattu nimenomaisesti lasten järjestelmälliseen arviointiin tai seurantaan
+- AI-tukichatti käyttää uutta teknologiaa, mutta se ei tee henkilöpäätöksiä, profiloi käyttäjiä tai tallenna keskusteluja palvelimelle; henkilötietojen syöttäminen chattiin kielletään käyttöliittymässä.
+
+Arvio on tehtävä uudelleen ennen muutosta, joka lisää esimerkiksi laajamittaista erityisten henkilötietoryhmien käsittelyä, lapsille kohdennettua palvelua, profilointia, automaattisia henkilöpäätöksiä, järjestelmällistä seurantaa, uusia tietolähteiden yhdistelyjä tai uuden tekoälytoiminnon. Samalla tarkistetaan Tietosuojavaltuutetun toimiston ajantasainen luettelo käsittelytoimista, jotka edellyttävät vaikutustenarviointia.
+
+Arvion pohjana ovat [tietosuoja-asetuksen 35 artikla](https://eur-lex.europa.eu/legal-content/FI/TXT/?uri=CELEX:32016R0679) ja Euroopan tietosuojaneuvoston [vaikutustenarviointiohje](https://www.edpb.europa.eu/endorsed-wp29-guidelines_en). Johtopäätös on tarkistettava, jos tuotannon todellinen käsittely poikkeaa dokumentoidusta.
+
+Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelytoimet.md`](tietosuoja-kasittelytoimet.md). Se ei korvaa käyttäjille julkaistavaa alla olevaa tietosuojaselostetta.
+
 ## Suomenkielinen pohja (kopioitavaksi)
 
 > Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Paytrail-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika **on tarkistettava** ennen julkaisua.
@@ -46,7 +64,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 # Tietosuojaseloste
 
-Päivitetty: 14.7.2026
+Päivitetty: 15.7.2026
 
 ## Rekisterinpitäjä
 
@@ -70,6 +88,16 @@ Henkilötietojen käsittely perustuu käyttötarkoituksesta riippuen seuraaviin 
 - **Verkkokaupan tilaukset ja maksut**: sopimuksen täytäntöönpano sekä lakisääteiset kirjanpito- ja raportointivelvoitteet.
 - **Uutiskirje**: käyttäjän suostumus.
 - **Sähköpostiyhteydenotot**: yhdistyksen oikeutettu etu käsitellä ja vastata yhteydenottoihin.
+
+## Mistä saamme henkilötiedot
+
+Saamme tiedot tavallisesti sinulta itseltäsi, kun rekisteröidyt, ilmoittaudut tapahtumaan, teet tilauksen, tilaat uutiskirjeen, käytät tukichattia tai otat yhteyttä.
+
+Jäsenyyteen liittyviä tietoja voidaan saada myös yhdistyksen jäsenrekisteristä. Perhejäsenen nimi ja mahdollinen sähköpostiosoite saadaan jäsenmaksun maksajalta tai perhejäsenyyden päätilin haltijalta, jos hän ilmoittaa toisen henkilön perhejäseneksi. Sähköpostiosoitteen ilmoittaneelle perhejäsenelle lähetetään kertaluonteinen viesti, jossa kerrotaan tietojen lähde ja käyttötarkoitus. Ilman sähköpostiosoitetta tallennetusta perhejäsenestä ei voida lähettää tällaista viestiä, mutta hän tai hänen huoltajansa voi pyytää tiedot rekisterinpitäjältä.
+
+## Alaikäisen suostumus
+
+Jos olet alle 13-vuotias, et voi itse antaa tietosuojalain (1050/2018) 5 §:ssä tarkoitettua suostumusta suoraan lapselle tarjottavaan tietoyhteiskunnan palveluun. Pyydä tällöin huoltajaa tekemään tai hyväksymään sellainen sivuston toiminto, jossa henkilötietojen käsittely perustuu suostumukseen, kuten uutiskirjeen tilaaminen. Ikäraja ei sellaisenaan muuta muun oikeusperusteen, kuten sopimuksen tai lakisääteisen velvoitteen, perusteella tehtävää käsittelyä.
 
 ## Mitä henkilötietoja keräämme ja miksi
 
@@ -104,7 +132,7 @@ Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -o
 
 Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
 
-Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Näitä tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
+Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Perhejäsenen tiedot saadaan jäsenmaksun maksajalta, eivät välttämättä perhejäseneltä itseltään. Tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
 
 Perhejäsenmaksulla annetut jäsenrivit tallennetaan lisäksi ostajan päätilin
 perhejäsenlistaan, jotta perhejäsenyys ja siihen kuuluvat sivuston jäsenedut
@@ -116,10 +144,11 @@ tai poistamista voi pyytää rekisterinpitäjältä.
 
 Jos perhejäsenelle ilmoitetulla sähköpostiosoitteella ei vielä ole
 käyttäjätiliä, osoitteeseen lähetetään kertaluonteinen viesti, jossa kerrotaan,
-että osoite on annettu perhejäsenmaksun yhteydessä, ja ohjataan luomaan tili
-samalla osoitteella. Viestissä ei kerrota ostajan henkilöllisyyttä tai muita
-tilaustietoja. Ilman sähköpostiosoitetta tallennettu perherivi jää vain
-jäsenrekisteritiedoksi, eikä siitä lähetetä viestiä.
+että osoite on annettu perhejäsenmaksun yhteydessä, ohjataan tähän
+tietosuojaselosteeseen ja neuvotaan luomaan tili samalla osoitteella. Viestissä
+ei kerrota ostajan henkilöllisyyttä tai muita tilaustietoja. Ilman
+sähköpostiosoitetta tallennettu perherivi jää vain jäsenrekisteritiedoksi, eikä
+siitä lähetetä viestiä.
 
 ### Uutiskirje
 
