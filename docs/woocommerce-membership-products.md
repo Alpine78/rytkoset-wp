@@ -1,12 +1,12 @@
 # WooCommerce: jäsenmaksutuotteet
 
-Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ympäristössä.
+Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan WooCommercessa.
 
 ## Tehty nyt
 
 - Luotu kaksi WooCommerce-tuotetta:
-  - `Vuosijäsenmaksu - Yksityishenkilö`, 30 EUR
-  - `Vuosijäsenmaksu - Perhe`, 35 EUR
+  - `Jäsenmaksu toimintakaudelle 2026–2029 – henkilö`, 30 EUR
+  - `Jäsenmaksu toimintakaudelle 2026–2029 – perhe`, 35 EUR
 - Luotu yksi erillinen WooCommerce-tuote:
   - `Ainaisjäsenmaksu`, 100 EUR
 - Molemmat tuotteet on toteutettu:
@@ -17,13 +17,12 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
   - `Simple product`
   - `Virtual`
   - `Sold individually`
-- Molemmat tuotteet on sijoitettu kategoriaan `Muut tuotteet`.
-- Myös `Ainaisjäsenmaksu` on sijoitettu kategoriaan `Muut tuotteet`.
+- Kaikki kolme jäsenmaksutuotetta on sijoitettu kategoriaan `Jäsenyys`.
 - Tuotteille on lisätty selkeät nimet, hinnat ja kuvaukset.
-- Vuosijäsenmaksujen tuotekuvauksissa kerrotaan:
-  - jäsenyys on voimassa sukukokousten välisen ajan
-  - nykyinen kausi on `2023 - 2026`
-  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet syötetään kassan rakenteisiin kenttiin
+- Toimintakauden jäsenmaksujen tuotekuvauksissa kerrotaan:
+  - jäsenyys on voimassa sukukokousten välisen toimintakauden ajan
+  - toimintakausi on `2026–2029`
+  - jäsenen tai jäsenten nimet ja sähköpostiosoitteet syötetään kassan rakenteiseen **Jäsentiedot**-osioon
 - Kassalle näytetään rakenteiset kentät jäsenten nimille ja sähköposteille, kun korissa on nimet vaativa jäsenmaksutuote (`_rytkoset_member_names_required = yes`):
   - yksityis- ja ainaisjäsenmaksu: yksi nimi + sähköposti (molemmat pakollisia)
   - perhejäsenmaksu (`annual_family`): useampi nimi + sähköposti -rivi; ensimmäinen rivi pakollinen, lisärivien sähköpostit valinnaisia
@@ -37,8 +36,8 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan paikallisessa Docker-ymp
   - `_rytkoset_membership_type = annual_individual`
   - `_rytkoset_membership_type = annual_family`
   - `_rytkoset_membership_type = lifetime`
-- Vuosijäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
-  - `_rytkoset_membership_period = 2023-2026`
+- Toimintakauden jäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
+  - `_rytkoset_membership_period = 2026-2029`
 - Vuosi-/perhejäsenmaksun voimassaolopäivä tallennetaan tuotemetadataan ISO-muodossa:
   - `_rytkoset_membership_expiry_date = 2029-08-30` nykyisillä kauden 2026–2029 tuotteilla
   - Asetetaan tuotteen **Jäsenyys voimassa asti** -kentästä. Automaattinen jäsenyyspäivitys (#302) käyttää tätä päivää käyttäjän jäsenyyden voimassaoloksi.
@@ -118,14 +117,16 @@ Jäsenet poimitaan suoraan rakenteisista jäsenkentistä manuaalista jäsenrekis
 
 ## Uuden jäsenkauden käyttöönotto
 
-Sukukokouksen jälkeen uusi jäsenkausi, esimerkiksi `2026-2029`, tehdään uusina WooCommerce-tuotteina.
+Kun uusi toimintakausi otetaan käyttöön, sen jäsenmaksut tehdään uusina WooCommerce-tuotteina.
 
 Vanhoja `2023-2026` tuotteita ei muokata uuteen kauteen, koska niitä tarvitaan tilaushistoriaa varten.
 
 Suositeltu toimintamalli:
 
-1. Kloonaa vanhat vuosijäsenmaksutuotteet.
-2. Vaihda tuotteiden nimet ja kuvaukset uudelle kaudelle.
+1. Kloonaa vanhat toimintakauden jäsenmaksutuotteet.
+2. Vaihda tuotteiden nimet ja kuvaukset uudelle kaudelle muodossa
+   `Jäsenmaksu toimintakaudelle VVVV–VVVV – henkilö` ja
+   `Jäsenmaksu toimintakaudelle VVVV–VVVV – perhe`.
 3. Anna uusille tuotteille uudet SKU:t:
    - `JASEN-2026-2029-YKSITYINEN`
    - `JASEN-2026-2029-PERHE`
