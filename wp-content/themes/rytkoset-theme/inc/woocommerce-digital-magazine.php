@@ -10,7 +10,9 @@
  * valinnainen jäsenhintatuote (`member_and_regular`). Ostotunnistus tehdään live-haulla
  * (`wc_customer_bought_product`) erillisenä callbackina samaan suodattimeen kuin #420:n
  * manuaaliset myönnöt — tulokset yhdistyvät OR-logiikalla. Ostosta lähtevä lukuoikeusilmoitus
- * kutsuu #420:n jaettua helperiä `rytkoset_theme_send_digital_magazine_access_email()`.
+ * kutsuu #420:n jaettua helperiä `rytkoset_theme_send_digital_magazine_access_email()`. Digilehden
+ * sisältävä kassa vaatii käyttäjätilin, jotta maksu ei voi jäädä vierastilaukseen ilman tilille
+ * linkittyvää käyttöoikeutta (#558).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -379,6 +381,115 @@ function rytkoset_theme_cart_has_digital_magazine_product() {
 
 	return false;
 }
+
+/**
+ * Returns the checkout guidance shown when a digital magazine requires a customer account.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_digital_magazine_account_required_message() {
+	return __( 'Digilehden lukuoikeus liitetään käyttäjätiliin. Kirjaudu sisään tai jatka kassalla, jolloin sinulle luodaan tili automaattisesti.', 'rytkoset-theme' );
+}
+
+/**
+ * Returns true when the current guest checkout must create a customer account.
+ *
+ * @return bool
+ */
+function rytkoset_theme_digital_magazine_checkout_requires_account() {
+	return ! is_user_logged_in() && rytkoset_theme_cart_has_digital_magazine_product();
+}
+
+/**
+ * Enables account creation at checkout for carts containing a digital magazine.
+ *
+ * Other carts retain the WooCommerce setting supplied in `$enabled`.
+ *
+ * @param bool $enabled Whether account creation is enabled at checkout.
+ * @return bool
+ */
+function rytkoset_theme_enable_digital_magazine_checkout_registration( $enabled ) {
+	return rytkoset_theme_cart_has_digital_magazine_product() ? true : $enabled;
+}
+add_filter( 'woocommerce_checkout_registration_enabled', 'rytkoset_theme_enable_digital_magazine_checkout_registration', 20 );
+
+/**
+ * Requires an account at checkout for carts containing a digital magazine.
+ *
+ * WooCommerce creates the customer before the order in the classic checkout and before payment
+ * in the Store API checkout. Other carts retain the guest-checkout setting supplied in
+ * `$required`.
+ *
+ * @param bool $required Whether registration is required at checkout.
+ * @return bool
+ */
+function rytkoset_theme_require_digital_magazine_checkout_registration( $required ) {
+	return rytkoset_theme_cart_has_digital_magazine_product() ? true : $required;
+}
+add_filter( 'woocommerce_checkout_registration_required', 'rytkoset_theme_require_digital_magazine_checkout_registration', 20 );
+
+/**
+ * Renders the account requirement guidance above the classic checkout form.
+ *
+ * @return void
+ */
+function rytkoset_theme_render_digital_magazine_checkout_account_notice() {
+	if ( ! rytkoset_theme_digital_magazine_checkout_requires_account() ) {
+		return;
+	}
+
+	echo '<div class="woocommerce-info rytkoset-digital-magazine-account-notice" role="status">'
+		. esc_html( rytkoset_theme_get_digital_magazine_account_required_message() )
+		. '</div>';
+}
+add_action( 'woocommerce_before_checkout_form', 'rytkoset_theme_render_digital_magazine_checkout_account_notice', 8 );
+
+/**
+ * Prepends the account requirement guidance to the Checkout Block for guest buyers.
+ *
+ * @param string               $block_content Rendered Checkout block markup.
+ * @param array<string, mixed> $block         Parsed block data.
+ * @return string
+ */
+function rytkoset_theme_prepend_digital_magazine_checkout_block_account_notice( $block_content, $block ) {
+	if ( ! rytkoset_theme_digital_magazine_checkout_requires_account() ) {
+		return $block_content;
+	}
+
+	$notice = '<div class="woocommerce-info rytkoset-digital-magazine-account-notice" role="status">'
+		. esc_html( rytkoset_theme_get_digital_magazine_account_required_message() )
+		. '</div>';
+
+	return $notice . $block_content;
+}
+add_filter( 'render_block_woocommerce/checkout', 'rytkoset_theme_prepend_digital_magazine_checkout_block_account_notice', 10, 2 );
+
+/**
+ * Prevents Store API payment when a digital magazine order is not linked to a customer account.
+ *
+ * The registration filters above create the account during the normal Checkout Block flow. This
+ * final server-side guard also covers direct or modified Store API requests and order-pay flows.
+ *
+ * @param WC_Order $order  Order being validated before payment.
+ * @param WP_Error $errors Validation errors.
+ * @return void
+ */
+function rytkoset_theme_validate_digital_magazine_checkout_order_account( $order, $errors ) {
+	if (
+		! $order instanceof WC_Order
+		|| ! $errors instanceof WP_Error
+		|| $order->get_user_id() > 0
+		|| ! rytkoset_theme_order_has_digital_magazine_product( $order )
+	) {
+		return;
+	}
+
+	$errors->add(
+		'rytkoset_digital_magazine_account_required',
+		rytkoset_theme_get_digital_magazine_account_required_message()
+	);
+}
+add_action( 'woocommerce_checkout_validate_order_before_payment', 'rytkoset_theme_validate_digital_magazine_checkout_order_account', 10, 2 );
 
 /**
  * Returns the Store API extension namespace for digital magazine cart data.
