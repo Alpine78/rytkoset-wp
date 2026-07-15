@@ -74,7 +74,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Ilmoittautumisen määräpäivä | `_rytkoset_event_registration_deadline` | `YYYY-MM-DD` | Maksuttoman tapahtuman lomakkeen sulkeminen |
 | Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
 | Järjestäjäilmoitusten vastaanottajat | `_rytkoset_event_organizer_notification_recipients` | sähköpostiosoitteet, yksi per rivi | Maksullisen tapahtuman tilausilmoitusten vastaanottajat |
-| Kysy ruokavalio | `_rytkoset_event_collect_diet` | puuttuva tai `no` | Puuttuva näyttää ruokavaliokentän; `no` piilottaa sen maksuttomalta lomakkeelta |
+| Kysy ruokavalio | `_rytkoset_event_collect_diet` | puuttuva tai `no` | Puuttuva näyttää ruokavaliokentän ja mainitsee ruokarajoitteet GDPR-ilmoituksessa; `no` piilottaa kentän ja jättää ruokarajoitteet pois ilmoituksesta |
 | Lisävalinta käytössä | `_rytkoset_event_choice_enabled` | `yes` tai puuttuva | Näyttää maksuttomalla lomakkeella pakollisen valintalistan |
 | Lisävalinnan otsikko | `_rytkoset_event_choice_field_label` | vapaa teksti | Valintalistan otsikko, oletus `Lähtöpaikka` |
 | Lisävalinnan vaihtoehdot | `_rytkoset_event_choice_options` | yksi vaihtoehto per rivi | Valintalistan sallitut arvot |
