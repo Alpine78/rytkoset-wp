@@ -130,7 +130,7 @@ function rytkoset_theme_get_user_membership( $user_id = null ) {
  * Lifetime memberships are always active. Time-bound memberships (annual/family) are active
  * only when an expiry date is stored and has not passed in the site timezone. Any uncertain
  * state — no membership type, or a time-bound membership without a valid future expiry — is
- * treated as "not a member" (fail closed), per docs/digilehdet.md.
+ * treated as "not a member" (fail closed), per docs/digital-magazines.md.
  *
  * @param array<string, string> $membership Stored membership details.
  * @return bool

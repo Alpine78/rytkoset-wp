@@ -29,7 +29,8 @@ kuva ei lataudu.
 Galleriakuville teema käyttää tämän fallback-järjestyksen
 ([`rytkoset_theme_get_gallery_image_alt()`](../wp-content/themes/rytkoset-theme/functions.php)):
 
-1. ACF-gallerian alt-kenttä, jos täytetty
+1. Kutsuvan näkymän eksplisiittinen alt-arvo, jos sellainen annetaan (vanhan
+   ACF-gallerian kuvarivi)
 2. Mediakirjaston `_wp_attachment_image_alt` -kenttä
 3. Kuvan **kuvateksti** (caption), jos täytetty
 4. Muutoin tyhjä → koristekuva

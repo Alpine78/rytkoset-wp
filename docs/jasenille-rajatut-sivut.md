@@ -18,7 +18,7 @@ lisäosia eikä erillisiä tietokantatauluja.
 
 Tämä tiketti kattaa **vain tavalliset sivut** (`page`). Digilehtien
 käyttöoikeudet ovat oma kokonaisuutensa (EPIC 9, ks.
-[digilehdet.md](digilehdet.md)), mutta käyttävät samaa jäsenstatuksen helperiä.
+[digital-magazines.md](digital-magazines.md)), mutta käyttävät samaa jäsenstatuksen helperiä.
 
 ## Sivun merkitseminen jäsenille rajatuksi
 

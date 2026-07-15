@@ -962,7 +962,8 @@ function rytkoset_theme_get_event_quantity_field_label( $event_id ) {
 /**
  * Resolves a submitted choice value to the canonical configured spelling.
  *
- * Accepts the configured options and (when enabled) the free-choice "other".
+ * Accepts only the configured options, including an explicitly configured
+ * "Muu" option when the event uses one.
  *
  * @param int    $event_id Event post ID.
  * @param string $value    Submitted choice value.
