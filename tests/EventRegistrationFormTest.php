@@ -63,6 +63,26 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 600, rytkoset_theme_get_event_registration_rate_limit_window() );
 	}
 
+	// --- registration privacy notice ---------------------------------------
+
+	public function test_privacy_notice_lists_diet_when_field_is_enabled(): void {
+		$this->event( 10 );
+
+		$notice = rytkoset_theme_get_event_registration_privacy_notice( 10 );
+
+		$this->assertStringContainsString( 'ruokarajoitteet', $notice );
+	}
+
+	public function test_privacy_notice_omits_diet_when_field_is_disabled(): void {
+		$this->event( 10 );
+		update_post_meta( 10, rytkoset_theme_get_event_collect_diet_meta_key(), 'no' );
+
+		$notice = rytkoset_theme_get_event_registration_privacy_notice( 10 );
+
+		$this->assertStringNotContainsString( 'ruokarajoitteet', $notice );
+		$this->assertStringContainsString( 'nimi, sähköpostiosoite ja lisätiedot', $notice );
+	}
+
 	// --- event_can_show_free_registration_form ------------------------------
 
 	public function test_form_shown_for_free_event_without_deadline(): void {

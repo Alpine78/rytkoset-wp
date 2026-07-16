@@ -7,6 +7,7 @@ Sivustolla käytetään WordPressin omaa kommenttijärjestelmää blogikirjoituk
 - Blogikirjoitukset näyttävät kommentit ja kommenttilomakkeen yksittäisen artikkelin sivulla.
 - Albumit tukevat kommentointia ja näyttävät kommentit albumin yksittäisellä sivulla.
 - Kommentointi voidaan sulkea yksittäiseltä blogikirjoitukselta tai albumilta WordPress-editorin Keskustelu/Discussion-asetuksista.
+- WooCommerce-tuotearviot pidetään pois käytöstä ympäristökohtaisella asetuksella **WooCommerce > Asetukset > Tuotteet > Arviot > Ota käyttöön tuotearvioinnit**. Asetus poistetaan käytöstä erikseen paikallisessa, dev- ja tuotantoympäristössä; teemassa ei ole päällekkäistä kommenttisuodatinta.
 
 ## Moderointi
 
@@ -32,6 +33,7 @@ Perustestissä varmista:
 
 - blogikirjoitus näyttää kommenttilomakkeen
 - albumi näyttää kommenttilomakkeen
+- WooCommerce-tuote ei näytä arviointilomaketta, kun tuotearvioinnit on poistettu käytöstä WooCommercen asetuksista
 - testikommentti jää moderoitavaksi
 - hyväksytty kommentti näkyy julkisella sivulla
 - suljetun kommentoinnin kohde ei näytä kommenttilomaketta

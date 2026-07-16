@@ -32,6 +32,12 @@ Näkymässä voi suodattaa osallistujia statuksen perusteella:
 
 Suodattimien yläpuolella näkyy osallistujamäärä eriteltynä lähteen mukaan: kuinka moni on ilmoittautunut lomakkeella ja kuinka moni WooCommercen kautta.
 
+Kun valitulla tapahtumalla on tapahtumakohtainen lisävalinta, näkymä näyttää
+lisäksi valinnan otsikolla nimetyn yhteenvedon. Peruutetut ilmoittautumiset
+ohitetaan. Jos määräkenttä on käytössä, yhteenveto laskee tallennetut määrät;
+muuten se laskee ilmoittautumiset. Yhteenvedossa näkyy kokonaismäärä ja erittely
+valinnan mukaan.
+
 ### Taulukko
 
 Jokaiselta osallistujalta näkyy:
@@ -39,18 +45,20 @@ Jokaiselta osallistujalta näkyy:
 | Sarake | Selite |
 | --- | --- |
 | Nimi | Osallistujan nimi |
+| Tapahtumakohtainen lisävalinta | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty lisävalinta; otsikkona käytetään tapahtuman kenttäotsikkoa |
+| Tapahtumakohtainen määrä | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty määräkenttä; otsikkona käytetään tapahtuman kenttäotsikkoa |
 | Osallistujatyyppi | Tampere 2026 -variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
 | Perjantain buffet | Osallistuuko henkilö perjantain buffet-illalliselle |
 | Sähköposti | Osallistujan sähköposti (ilmaisessa) tai yhteyshenkilön sähköposti (maksullisessa) |
 | Puhelin | Puhelinnumero |
-| Ruokavalio | Ruokarajoitteet tai allergiat |
+| Ruokavalio / huomiot | Ruokarajoitteet, allergiat ja lisätiedot |
 | Status | Osallistumisen tila |
 | Lähde | `Maksuton` tai `Maksullinen` |
 | Tapahtuma | Tapahtuman nimi linkkinä (vain "Kaikki tapahtumat" -näkymässä) |
-| Pvm | Ilmoittautumisen tai tilauksen luontipäivä |
-| Muokkaa | Linkki osallistumisen muokkaamiseen (`event_registration`-postille tai WooCommerce-tilaukselle) |
+| Ilmoittautunut | Ilmoittautumisen tai tilauksen luontipäivä |
+| Toiminnot | Linkki osallistumisen muokkaamiseen (`event_registration`-postille tai WooCommerce-tilaukselle) |
 
-Jos tapahtumalla ei ole yhtään osallistujaa valituilla suodattimilla, taulukko näyttää "Ei osallistujia tällä suodatuksella".
+Jos tapahtumalla ei ole yhtään osallistujaa valituilla suodattimilla, taulukko näyttää "Ei osallistujia valitulla suodatuksella".
 
 ### CSV-vienti
 
@@ -75,6 +83,11 @@ Sarakkeet:
 | Yhteyshenkilö | Tilaajan nimi (maksullisissa) |
 | Yhteyshenkilön sähköposti | Tilaajan sähköposti (maksullisissa) |
 | Tilausnumero | WooCommerce-tilausnumero (maksullisissa) |
+
+Kun vienti on rajattu yksittäiseen tapahtumaan, CSV:n loppuun lisätään
+tapahtuman asetusten mukaan lisävalinta- ja/tai määräsarake samoilla otsikoilla
+kuin admin-taulukossa. `Kaikki tapahtumat` -viennissä näitä dynaamisia
+sarakkeita ei lisätä, koska tapahtumien kenttäotsikot voivat poiketa toisistaan.
 
 ### GDPR-anonymisointi
 
@@ -103,6 +116,8 @@ Lähde: WooCommerce-tilaukset, joissa on tapahtuman meta-avaimeen `_rytkoset_eve
 
 ```
 name          – osallistujan nimi
+choice        – maksuttoman ilmoittautumisen tapahtumakohtainen lisävalinta
+quantity      – maksuttoman ilmoittautumisen tapahtumakohtainen määrä
 participant_type – Tampere 2026 -osallistujatyyppi
 friday_buffet – true/false perjantain buffet-illalliselle
 email         – sähköposti

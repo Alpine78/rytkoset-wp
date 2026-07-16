@@ -980,6 +980,24 @@ function rytkoset_theme_get_event_registration_error_field( $error_code ) {
 }
 
 /**
+ * Returns the privacy notice shown on the free event registration form.
+ *
+ * The listed data follows the event-specific diet field configuration so the
+ * notice never claims that diet information is collected when the field is
+ * disabled.
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_registration_privacy_notice( $event_id ) {
+	if ( rytkoset_theme_event_collects_diet( $event_id ) ) {
+		return __( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' );
+	}
+
+	return __( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' );
+}
+
+/**
  * Returns frontend registration feedback based on query parameters.
  *
  * @return array
@@ -1108,6 +1126,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 	$choice_options   = $has_choice ? rytkoset_theme_get_event_choice_options( $event_id ) : array();
 	$choice_label     = rytkoset_theme_get_event_choice_field_label( $event_id );
 	$collect_quantity = rytkoset_theme_event_collects_quantity( $event_id );
+	$collect_diet     = rytkoset_theme_event_collects_diet( $event_id );
 	$quantity_label   = rytkoset_theme_get_event_quantity_field_label( $event_id );
 	$max_quantity     = rytkoset_theme_get_event_registration_max_quantity();
 	?>
@@ -1172,7 +1191,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 				</div>
 			<?php endif; ?>
 
-			<?php if ( rytkoset_theme_event_collects_diet( $event_id ) ) : ?>
+			<?php if ( $collect_diet ) : ?>
 				<div class="event-registration__field">
 					<label for="<?php echo esc_attr( $form_id . '-diet' ); ?>">
 						<?php esc_html_e( 'Ruokarajoitteet tai allergiat', 'rytkoset-theme' ); ?>
@@ -1190,7 +1209,7 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 
 			<div class="event-registration__gdpr">
 				<p class="event-registration__gdpr-notice">
-					<?php esc_html_e( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' ); ?>
+					<?php echo esc_html( rytkoset_theme_get_event_registration_privacy_notice( $event_id ) ); ?>
 					<?php
 					$privacy_url = get_privacy_policy_url();
 					if ( $privacy_url ) {

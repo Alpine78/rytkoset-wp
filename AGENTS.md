@@ -411,11 +411,13 @@ Avoid:
 ## 📝 Documentation Updates
 
 When implementing any feature or fix:
+- For every code change, review the documentation impact before considering the task complete
 - Update `docs/` if the change affects WooCommerce features or user-facing workflows
 - Update `CLAUDE.md` if the change affects theme architecture, file structure, CPTs, workflows, or other agent-relevant project knowledge
 - Update `README.md` if the change affects anything it documents: add/remove a `docs/*.md` file → update the Dokumentaatio list; add/remove/rename a Docker Compose service → update the Kontit list; add, remove, or change a CI gate or `composer.json` script → update Validointi; change branch/deploy behavior → update Branchit ja deployt. README is the public-facing summary, so keep it *consistent* with the fuller detail in `CLAUDE.md`/`docs/` rather than duplicating it — short bullet, not a rewrite of the source.
 - Update `AGENTS.md` only when project-level working rules, priorities, or AI collaboration guidance change
-- Update `CHANGELOG.md` for every merged change
+- Update `CHANGELOG.md` on the working branch for every change intended to be merged
+- In the final report and PR description, list the documentation updated or state explicitly why no documentation change was needed
 
 ---
 

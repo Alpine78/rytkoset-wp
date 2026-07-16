@@ -528,9 +528,15 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 101 )['type'], "A linked user's own lifetime membership must not be changed." );
 		$this->assertSame( 'own', rytkoset_theme_get_effective_user_membership( 101 )['source'] );
 		$this->assertNotSame( '', $order->get_meta( rytkoset_theme_get_family_members_processed_meta_key() ) );
-		$this->assertCount( 2, $GLOBALS['rytkoset_test_mails'], 'Primary confirmation plus one pending-family notice.' );
-		$this->assertSame( 'puoliso@example.test', $GLOBALS['rytkoset_test_mails'][1]['to'] );
-		$this->assertStringContainsString( 'ilmoitettu Rytkösten sukuseura ry:n perhejäsenmaksun yhteydessä', $GLOBALS['rytkoset_test_mails'][1]['message'] );
+		$this->assertCount( 3, $GLOBALS['rytkoset_test_mails'], 'Primary confirmation plus active- and pending-family notices.' );
+		$this->assertSame( 'lapsi@example.test', $GLOBALS['rytkoset_test_mails'][1]['to'] );
+		$this->assertStringContainsString( 'linkitetty tällä sähköpostiosoitteella olevaan käyttäjätiliisi', $GLOBALS['rytkoset_test_mails'][1]['message'] );
+		$this->assertStringNotContainsString( 'Luo tili', $GLOBALS['rytkoset_test_mails'][1]['message'] );
+		$this->assertStringContainsString( 'https://rytkoset.test/tietosuoja/', $GLOBALS['rytkoset_test_mails'][1]['message'] );
+		$this->assertSame( 'puoliso@example.test', $GLOBALS['rytkoset_test_mails'][2]['to'] );
+		$this->assertStringContainsString( 'ilmoitettu Rytkösten sukuseura ry:n perhejäsenmaksun yhteydessä', $GLOBALS['rytkoset_test_mails'][2]['message'] );
+		$this->assertStringContainsString( 'Luo tili', $GLOBALS['rytkoset_test_mails'][2]['message'] );
+		$this->assertStringContainsString( 'https://rytkoset.test/tietosuoja/', $GLOBALS['rytkoset_test_mails'][2]['message'] );
 	}
 
 	public function test_family_order_processing_is_idempotent_for_rows_links_and_notices(): void {

@@ -56,7 +56,7 @@
 	</div>
 	<p class="home-feature__lead">
 	Suvun väki kokoontuu Tampereelle loppukesästä. Luvassa juhlaohjelmaa, sukukokous ja
-	yhteistä aikaa. Tarkempi ohjelma julkaistaan pian. Ilmoittaudu mukaan ja varmista paikkasi vuoden 2026 sukujuhlissa!
+	yhteistä aikaa. Katso ohjelma ja ilmoittaudu mukaan vuoden 2026 sukujuhliin!
 	</p>
 	<?php
 	// Hae osallistumismaksutuotteen osoite dynaamisesti SKU:lla, jottei se
@@ -123,7 +123,7 @@
 	<p class="home-block__eyebrow">Liity mukaan</p>
 	<h2 class="home-block__title">Varsinaiseksi jäseneksi</h2>
 	<p class="home-block__text">
-	Haluatko tukea tärkeää sukututkimusta ja tarinoidemme tallentamista? Jäsenenä saat kotiisi sukuseuran julkaisut ja olet lämpimästi tervetullut kaikkiin tapahtumiimme. Toimintamme on avointa kaikille Rytkösten suvusta kiinnostuneille.
+	Haluatko tukea tärkeää sukututkimusta ja tarinoidemme tallentamista? Liittymällä jäseneksi tuet sukuseuran toimintaa. Toimintamme ja tapahtumamme ovat avoimia kaikille Rytkösten suvusta kiinnostuneille.
 	</p>
 	<a href="<?php echo esc_url( home_url( '/sukuseura/jasenyys' ) ); ?>" class="home-block__link">
 	Liity jäseneksi <span class="home-block__link-arrow" aria-hidden="true">&rarr;</span>

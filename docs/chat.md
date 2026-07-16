@@ -4,6 +4,34 @@ AI-tukichatti tarvitsee palvelinpuolen välityskerroksen, jotta Mistralin API-av
 
 Toteutus: `inc/chat.php`. Teeman koodia, ei ulkoisia kirjastoja. Tämä on teeman **ensimmäinen REST-päätepiste**.
 
+## EU:n tekoälyasetuksen luokittelu ja tekoälylukutaito (#470)
+
+Arvioitu 15.7.2026 asetuksen (EU) 2024/1689 perusteella:
+
+- **Riskiluokka:** rajoitettu riski, korkea varmuus. Chatti keskustelee luonnollisten henkilöiden kanssa ja tuottaa tekstiä, mutta se ei kuulu liitteen III korkean riskin käyttötarkoituksiin. Se ei käytä biometriaa, profiloi käyttäjiä, tunnista tunteita tai tee henkilöitä koskevia päätöksiä.
+- **Rooli:** yhdistys on vähintään tekoälyjärjestelmän käyttöönottaja, koska se käyttää järjestelmää omassa toiminnassaan. Oman WordPress-välityskerroksen ja widgetin vuoksi on erikseen vahvistettava, katsotaanko yhdistys myös koko chat-järjestelmän tarjoajaksi. Dokumentaatiossa ja käyttöliittymässä noudatetaan varovaisesti myös tarjoajaa koskevaa näkyvää läpinäkyvyyttä.
+- **50 artiklan 1 kohta:** käyttäjälle kerrotaan ennen viestin lähettämistä, että kyseessä on tekoälyavustaja. Paneelissa näkyy teksti: "Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse."
+- **50 artiklan 2 kohta:** koneellisesti luettavan AI-merkinnän soveltuminen ja tekninen toteutustapa on vahvistettava, jos yhdistys katsotaan järjestelmän tarjoajaksi. Pelkkää CSS-luokkaa tai omaa `data-*`-attribuuttia ei kirjata vaatimuksen täyttäväksi ilman hyväksyttyä teknistä perustetta.
+- **50 artiklan 4 kohta:** chatti vastaa yksittäisen käyttäjän kysymykseen eikä julkaise vastauksia yleisölle yleistä etua koskevana sisältönä. Jos chatin tekstiä myöhemmin julkaistaan verkkosivun sisältönä, ihmisen toimituksellinen tarkistus ja tarvittava AI-merkintä arvioidaan erikseen.
+- **Aikataulu:** 50 artiklan velvoitteita sovelletaan 2.8.2026 alkaen. Tekoälylukutaitoa koskevaa 4 artiklaa on sovellettu 2.2.2025 alkaen.
+
+### Ylläpitäjän vähimmäisperehdytys
+
+Jokaisen chatin asetuksia, tietopohjaa, mallia tai tuotantokäyttöä hoitavan on ennen tehtävää:
+
+1. luettava tämä dokumentti ja [`docs/tietosuoja.md`](tietosuoja.md)
+2. ymmärrettävä, että kielimalli voi antaa väärän tai keksityn vastauksen myös silloin, kun vastaus vaikuttaa varmalta
+3. pidettävä FAQ:ssa ja testikysymyksissä vain julkista tietoa, ei henkilötietoja tai jäsenille rajattua sisältöä
+4. testattava olennaiset sisältö-, malli- ja promptimuutokset dev-ympäristössä alla olevilla savutesteillä
+5. seurattava Dashboard-widgetin virhe- ja käyttötilastoja sekä kytkettävä chatti pois päältä, jos se vuotaa rajattua tietoa tai antaa toistuvasti haitallisia vastauksia
+6. ohjattava henkilökohtaiset, maksamiseen liittyvät ja muut merkittävät asiat ihmisen käsiteltäväksi.
+
+Perehdytyksen suorittajat, päivämäärä, käytetty materiaali ja vastuuhenkilön hyväksyntä kirjataan yhdistyksen sisäiseen koulutusmuistioon; henkilönimiä ei tallenneta julkiseen repoon. Aiempi tehtävään soveltuva työkokemus, koulutus ja sertifioinnit voidaan ottaa huomioon osaamisnäyttönä. Niitä täydennetään vain tämän chatin toimintaa, henkilötietoja, rajoituksia ja ihmisen valvontaa koskevilla puuttuvilla tiedoilla. Pelkkä tämän ohjeen olemassaolo ei osoita, että riittävä osaaminen on arvioitu.
+
+Lähde: [asetus (EU) 2024/1689, erityisesti 3, 4 ja 50 artikla](https://eur-lex.europa.eu/legal-content/FI/TXT/?uri=CELEX:32024R1689). Luokittelu ja rooliarvio ovat tarkistettavia ensiarvioita, eivät sitova oikeudellinen kannanotto.
+
+Tuotantoroolin, mahdollisen 50 artiklan 2 kohdan toteutuksen ja perehdytyksen todentaminen tehdään jatkotiketissä [#564](https://github.com/Alpine78/rytkoset-wp/issues/564).
+
 ## Päätepiste
 
 ```

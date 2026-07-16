@@ -227,8 +227,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/event-participants-messaging.md` - tapahtumaviestien lähetysjono
 - `docs/media-saavutettavuus.md` - median ja gallerioiden saavutettavuus
 - `docs/media-library-ordering.md` - mediakirjaston ja albumien kuvajärjestys
-- `docs/digital-magazines.md` - digilehtien sisältömalli ja julkinen näkymä
-- `docs/digilehdet.md` - digilehtien käyttöoikeus- ja hinnoittelumalli
+- `docs/digital-magazines.md` - digilehtien sisältö-, käyttöoikeus- ja hinnoittelumalli
 - `docs/jasenyys.md` - käyttäjän jäsenyystilan asettaminen
 - `docs/jasenille-rajatut-sivut.md` - vain jäsenille näkyvät sisältösivut
 - `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
@@ -254,6 +253,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/woocommerce-saavutettavuus.md` - WooCommerce-saavutettavuus
 - `docs/saavutettavuus-analyysi.md` - koko sivuston WCAG 2.1 AA -analyysi
 - `docs/tietosuoja.md` - tietosuojamuistiinpanot
+- `docs/tietosuoja-kasittelytoimet.md` - sisäinen seloste verkkosivuston käsittelytoimista
 - `docs/tietoturva.md` - tietoturvakovennukset
 - `docs/maksu-ja-toimitusehdot.md` - kaupan maksu- ja toimitusehdot (versionoitu sivukopio)
 - `docs/rekisteriseloste.md` - sukututkimusrekisterin rekisteriseloste (versionoitu sivukopio)

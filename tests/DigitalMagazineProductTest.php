@@ -170,6 +170,74 @@ final class DigitalMagazineProductTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_product_is_magazine_member_product( 0 ) );
 	}
 
+	// --- checkout account requirement (#558) -------------------------------
+
+	private function cart_with_products( WC_Product ...$products ): void {
+		WC()->cart = new Rytkoset_Test_Cart();
+
+		foreach ( $products as $product ) {
+			WC()->cart->items[] = array( 'data' => $product );
+		}
+	}
+
+	public function test_magazine_cart_requires_checkout_registration(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$this->cart_with_products( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+
+		$this->assertTrue( rytkoset_theme_cart_has_digital_magazine_product() );
+		$this->assertTrue( rytkoset_theme_enable_digital_magazine_checkout_registration( false ) );
+		$this->assertTrue( rytkoset_theme_require_digital_magazine_checkout_registration( false ) );
+	}
+
+	public function test_regular_product_cart_keeps_guest_checkout_settings(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$this->cart_with_products( new WC_Product( array(), 99, 'publish', 'Tavallinen tuote' ) );
+
+		$this->assertFalse( rytkoset_theme_cart_has_digital_magazine_product() );
+		$this->assertFalse( rytkoset_theme_enable_digital_magazine_checkout_registration( false ) );
+		$this->assertFalse( rytkoset_theme_require_digital_magazine_checkout_registration( false ) );
+	}
+
+	public function test_logged_in_magazine_buyer_does_not_get_guest_guidance(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$this->cart_with_products( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+		$GLOBALS['rytkoset_test_current_user'] = 1;
+
+		$this->assertFalse( rytkoset_theme_digital_magazine_checkout_requires_account() );
+	}
+
+	public function test_store_api_validation_blocks_guest_magazine_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order  = $this->order_with_items( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+		$errors = new WP_Error();
+
+		rytkoset_theme_validate_digital_magazine_checkout_order_account( $order, $errors );
+
+		$this->assertSame( array( 'rytkoset_digital_magazine_account_required' ), $errors->get_error_codes() );
+		$this->assertStringContainsString( 'luodaan tili automaattisesti', $errors->get_error_message() );
+	}
+
+	public function test_store_api_validation_allows_account_linked_magazine_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order          = $this->order_with_items( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+		$order->user_id = 1;
+		$errors         = new WP_Error();
+
+		rytkoset_theme_validate_digital_magazine_checkout_order_account( $order, $errors );
+
+		$this->assertSame( array(), $errors->get_error_codes() );
+	}
+
+	public function test_store_api_validation_allows_regular_guest_order(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$order  = $this->order_with_items( new WC_Product( array(), 99, 'publish', 'Tavallinen tuote' ) );
+		$errors = new WP_Error();
+
+		rytkoset_theme_validate_digital_magazine_checkout_order_account( $order, $errors );
+
+		$this->assertSame( array(), $errors->get_error_codes() );
+	}
+
 	// --- add-to-cart validation --------------------------------------------
 
 	public function test_add_to_cart_unaffected_for_non_member_product(): void {

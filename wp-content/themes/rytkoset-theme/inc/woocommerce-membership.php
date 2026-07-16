@@ -1934,36 +1934,57 @@ function rytkoset_theme_send_membership_account_notice_email( $order ) {
 }
 
 /**
- * Sends an account notice to a family member entered at checkout (#519).
+ * Sends a data-source notice to a family member entered at checkout (#519).
  *
  * The message states where the address came from and avoids disclosing order
- * details or the buyer's identity.
+ * details or the buyer's identity. Unknown addresses also receive account
+ * registration instructions.
  *
- * @param string $email Family member email address.
+ * @param string $email         Family member email address.
+ * @param bool   $needs_account Whether the address still needs a user account.
  * @return bool True when the email was sent.
  */
-function rytkoset_theme_send_family_member_account_notice_email( $email ) {
+function rytkoset_theme_send_family_member_account_notice_email( $email, $needs_account = true ) {
 	$email = rytkoset_theme_normalize_family_member_email( (string) $email );
 
 	if ( '' === $email ) {
 		return false;
 	}
 
-	$subject = __( 'Perhejäsenyytesi odottaa käyttäjätiliä', 'rytkoset-theme' );
+	$subject = $needs_account
+		? __( 'Perhejäsenyytesi odottaa käyttäjätiliä', 'rytkoset-theme' )
+		: __( 'Sinut on ilmoitettu perhejäseneksi', 'rytkoset-theme' );
 	$lines   = array(
 		__( 'Hei,', 'rytkoset-theme' ),
 		'',
 		__( 'Sähköpostiosoitteesi on ilmoitettu Rytkösten sukuseura ry:n perhejäsenmaksun yhteydessä.', 'rytkoset-theme' ),
-		'',
-		__( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat henkilökohtaisen käyttäjätilin.', 'rytkoset-theme' ),
-		'',
-		sprintf(
+	);
+
+	if ( $needs_account ) {
+		$lines[] = '';
+		$lines[] = __( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat henkilökohtaisen käyttäjätilin.', 'rytkoset-theme' );
+		$lines[] = '';
+		$lines[] = sprintf(
 			/* translators: %s: family member email address. */
 			__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin perhejäsenyys linkittyy tiliisi automaattisesti:', 'rytkoset-theme' ),
 			$email
-		),
-		wp_registration_url(),
-	);
+		);
+		$lines[] = wp_registration_url();
+	} else {
+		$lines[] = '';
+		$lines[] = __( 'Perhejäsenyys on linkitetty tällä sähköpostiosoitteella olevaan käyttäjätiliisi.', 'rytkoset-theme' );
+	}
+
+	$privacy_url = function_exists( 'get_privacy_policy_url' ) ? get_privacy_policy_url() : '';
+
+	if ( '' !== $privacy_url ) {
+		$lines[] = '';
+		$lines[] = sprintf(
+			/* translators: %s: privacy statement URL. */
+			__( 'Tietosuojaselosteessa kerrotaan tarkemmin tietojen käsittelystä ja oikeuksistasi: %s', 'rytkoset-theme' ),
+			$privacy_url
+		);
+	}
 
 	$contact_email = rytkoset_theme_get_contact_email();
 
@@ -1993,9 +2014,11 @@ function rytkoset_theme_send_family_member_account_notice_email( $email ) {
  * Persists family checkout rows under the order's primary account (#519).
  *
  * Existing accounts are linked immediately. Unknown emails become
- * `pending_account` rows and receive one account notice per order. Rows without
- * an email are retained as register-only data. The family list write is atomic;
- * the processed marker is set only after the #524 helper accepts the full list.
+ * `pending_account` rows. Every non-primary address receives one data-source
+ * notice per order; unknown addresses also receive account instructions. Rows
+ * without an email are retained as register-only data. The family list write is
+ * atomic; the processed marker is set only after the #524 helper accepts the
+ * full list.
  *
  * @param WC_Order $order WooCommerce order object.
  * @return true|false|WP_Error True when handled, false when not applicable or awaiting a primary account.
@@ -2100,20 +2123,20 @@ function rytkoset_theme_process_family_members_from_order( $order ) {
 			continue;
 		}
 
-		$is_pending = false;
+		$stored_status = '';
 
 		foreach ( $stored_members as $stored_member ) {
-			if ( $email === $stored_member['email'] && 'pending_account' === $stored_member['status'] ) {
-				$is_pending = true;
+			if ( $email === $stored_member['email'] ) {
+				$stored_status = $stored_member['status'];
 				break;
 			}
 		}
 
-		if ( ! $is_pending ) {
+		if ( '' === $stored_status ) {
 			continue;
 		}
 
-		if ( rytkoset_theme_send_family_member_account_notice_email( $email ) ) {
+		if ( rytkoset_theme_send_family_member_account_notice_email( $email, 'pending_account' === $stored_status ) ) {
 			$sent_notices[ $email ] = current_time( 'mysql' );
 			$order->update_meta_data( $sent_key, $sent_notices );
 			$order_changed = true;

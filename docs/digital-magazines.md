@@ -2,7 +2,42 @@
 
 Digilehdet ovat WordPressissä HTML-sisältöä. Niitä ei julkaista PDF-tiedostoina.
 
-Käyttöoikeus- ja hinnoittelumalli (kaikille ilmainen / vain jäsenille / jäsenhinta + normaalihinta / kaikille maksullinen) on kuvattu erillisessä dokumentissa [digilehdet.md](digilehdet.md). Tämä dokumentti kuvaa pelkän sisältömallin ja ylläpidon.
+Tämä dokumentti kuvaa digilehtien sisältömallin, käyttöoikeudet, hinnoittelun
+ja ylläpidon. Sisältö pysyy `digital_magazine`-sisältötyypissä; jäsenyys,
+hinnat ja ostaminen ratkaistaan käyttäjämetan ja WooCommercen kautta ilman
+erillisiä tietokantatauluja.
+
+## Käyttöoikeusmallit
+
+Käyttöoikeus asetetaan lehden yläkohteelle. Kaikki saman lehden jutut perivät
+sen, eikä jutuille aseteta erillistä käyttöoikeusmallia.
+
+| Malli | Tunniste | Käyttäytyminen |
+| --- | --- | --- |
+| Kaikille ilmainen | `free` | Kuka tahansa lukee ilman kirjautumista tai ostoa. |
+| Vain jäsenille | `members_only` | Aktiivinen jäsen lukee ilmaiseksi; muille näytetään jäsenyys- tai kirjautumiskehote. Ei erillistä ostomahdollisuutta. |
+| Jäsenhinta + normaalihinta | `member_and_regular` | Kaikki ostavat; aktiiviselle jäsenelle tarjotaan jäsenhintatuote ja muille normaalihintatuote. |
+| Kaikille maksullinen | `paid` | Kaikki ostavat saman normaalihintatuotteen. |
+
+Puuttuva käyttöoikeusmeta tulkitaan `free`-malliksi, jotta vanhat lehdet eivät
+lukitu päivityksessä. Tuntematon arvo normalisoidaan turvallisesti
+`members_only`-malliksi, joten virheellinen meta ei avaa sisältöä julkiseksi.
+
+Jäsenstatus tulee käyttäjän metatiedosta ja yhteisestä
+`rytkoset_theme_user_is_active_member()`-helperistä, ei WordPress-roolista.
+Epävarma jäsenstatus käsitellään ei-jäsenenä: rajattu sisältö ei avaudu ja
+`member_and_regular`-mallissa käyttäjälle tarjotaan normaalihintatuote.
+
+| Malli | Kirjautumaton | Kirjautunut ei-jäsen | Aktiivinen jäsen |
+| --- | --- | --- | --- |
+| `free` | Lukee | Lukee | Lukee |
+| `members_only` | Kehote | Kehote | Lukee |
+| `member_and_regular` | Normaalihintainen ostokehote | Normaalihintainen ostokehote | Jäsenhintainen ostokehote |
+| `paid` | Ostokehote | Ostokehote | Ostokehote |
+
+Maksullisen lehden aiempi hyväksytty osto avaa lehden riippumatta käyttäjän
+myöhemmästä jäsenstatuksesta. Jäsenstatus vaikuttaa tarjottavaan tuotteeseen
+ostovaiheessa, ei jo ostetun lukuoikeuden säilymiseen.
 
 ## Sisältömalli
 
@@ -108,8 +143,19 @@ Jos jäsenstatusta ei voida varmistaa (kirjautumaton), ohjataan normaalihintaan.
   kassalla eteneminen estyy ilman aktiivista jäsenyyttä.
 - Lukuoikeus avautuu, kun ostajan tilauksessa on lehteen linkitetty tuote ja
   tilaus on **valmis** (`processing`/`completed`). `on-hold`-tilisiirto ei vielä
-  avaa sisältöä. Pääsy on tilikohtainen — osto pitää tehdä kirjautuneena tai
-  samalla laskutussähköpostilla.
+  avaa sisältöä.
+- Pääsy on tilikohtainen. Kun korissa on lehteen linkitetty tuote, kassa vaatii
+  kirjautumisen tai luo ostajalle käyttäjätilin automaattisesti. Kassan alussa
+  näytetään tästä suomenkielinen ohje. Tavallisten tuotteiden vieraskassa seuraa
+  edelleen WooCommercen omaa asetusta.
+- Tilipakko toteutetaan WooCommercen
+  `woocommerce_checkout_registration_enabled`- ja
+  `woocommerce_checkout_registration_required`-suodattimilla vain
+  digilehtikorille. WooCommerce luo asiakkaan ennen klassisen kassan tilausta ja
+  Checkout Blockissa ennen maksua. Lisäksi
+  `woocommerce_checkout_validate_order_before_payment` estää Store API:ssa
+  digilehtitilauksen maksamisen, jos tilaukselta silti puuttuu käyttäjä-ID
+  esimerkiksi muokatun suoran API-pyynnön vuoksi (#558).
 - Ostaja saa lukuoikeudesta saman sähköposti-ilmoituksen kuin manuaalisesta
   myönnöstä (#420), kerran tilausta ja lehteä kohti.
 
@@ -158,7 +204,10 @@ Todennettu paikallisesti selaimella (Playwright, Block Checkout): kenttä näkyy
 ja on pakollinen, kun korissa on digilehtituote (tyhjänä lähetys pysäytyy
 WooCommerce Blocksin omalla "Valitse tämä ruutu jatkaaksesi eteen päin"
 -virheellä); kenttä puuttuu kokonaan, kun korissa ei ole digilehteä; rastittu
-arvo tallentuu tilaukselle ja on luettavissa takaisin.
+arvo tallentuu tilaukselle ja on luettavissa takaisin. #558:n varmennuksessa
+kirjautumaton digilehtiostos loi käyttäjätilin ja tilaus sai saman käyttäjä-ID:n,
+kun taas tavallinen tuote säilyi vieraskassana. Tilivaatimuksen ohje näkyi myös
+390 px leveässä näkymässä ilman vaakavieritystä.
 
 **Vuotokorjaus muihin tilauksiin (#491):** WooCommerce Blocks tallentaa
 piilotetun, rastittamattoman lisäkentän arvoksi `false` **jokaiselle**
