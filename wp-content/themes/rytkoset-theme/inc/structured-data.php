@@ -98,12 +98,16 @@ function rytkoset_theme_build_event_iso_datetime( $date, $time ) {
  * Free events get an explicit price 0; paid events link the WooCommerce product and only set a
  * numeric price when the price text is cleanly numeric (free-form prices like "Aikuiset 20 €,
  * lapset 10 €" are left without a price rather than guessed). Returns null when there is no
- * usable offer data.
+ * usable offer data. Past events never expose an active offer.
  *
  * @param int $event_id Event post ID.
  * @return array|null
  */
 function rytkoset_theme_get_event_schema_offers( $event_id ) {
+	if ( rytkoset_theme_is_event_date_passed( $event_id ) ) {
+		return null;
+	}
+
 	$fee_type = rytkoset_theme_get_event_fee_type( $event_id );
 
 	if ( 'free' === $fee_type ) {
@@ -149,14 +153,19 @@ function rytkoset_theme_get_event_schema_offers( $event_id ) {
  * Builds the schema.org/Event node for a single event.
  *
  * Maps the registered event meta (inc/events.php getters) to schema.org/Event. Returns null
- * when the event has no title.
+ * when schema output is disabled for the event or the event has no title.
  *
  * @param int $event_id Event post ID.
  * @return array|null
  */
 function rytkoset_theme_get_event_schema( $event_id ) {
 	$event_id = (int) $event_id;
-	$name     = wp_strip_all_tags( (string) get_the_title( $event_id ) );
+
+	if ( ! rytkoset_theme_event_schema_is_enabled( $event_id ) ) {
+		return null;
+	}
+
+	$name = wp_strip_all_tags( (string) get_the_title( $event_id ) );
 
 	if ( '' === $name ) {
 		return null;
