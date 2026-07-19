@@ -53,6 +53,12 @@ Tuote käyttää fyysisten tuotteiden MVP-toimitusmallia:
 
 Toimitusmalli on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-physical-products.md`.
 
+## Rakennedata
+
+Rank Math tuottaa tuotteen Product- ja Offer-rakennedatan. Teema lisää fyysiselle `Sukulehdet`-tuotteelle brändin **Rytkösten sukuseura**, jonka Finnan julkaisutietue vahvistaa lehden julkaisijaksi. Tietueessa ei ole ISSN- eikä ISBN-tunnusta, joten sellaista ei lisätä tuotteelle.
+
+Arvostelu-, hinnan alkamis-, toimitusaika- ja palautustietoja ei lisätä pelkästään Search Console -varoitusten poistamiseksi. Avoimet tiedot ja rajauksen perusteet on kuvattu tiedostossa `docs/woocommerce-physical-products.md`.
+
 ## Ylläpidon tarkistuslista
 
 Kun tuotetta päivitetään:

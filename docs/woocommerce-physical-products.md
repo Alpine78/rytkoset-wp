@@ -43,6 +43,21 @@ Postitus rajataan tässä vaiheessa Suomeen. Nouto tarkoittaa käytännössä ta
 
 Kiinteä `5,90 €` on väliaikainen MVP-postikulu pienille painotuotteille. Hinta pitää tarkistaa ennen oikeiden tuotteiden julkaisua.
 
+## Merchant listing- ja Product-rakennedata
+
+Rank Math muodostaa WooCommerce-tuotteiden Product- ja Offer-rakennedatan. Teema täydentää fyysisille `Sukulehdet`-kategorian tuotteille brändin **Rytkösten sukuseura**. Rajaus tarkistaa myös, ettei tuote ole virtuaalinen tai ladattava, joten jäsenmaksut, tapahtumamaksut ja digitaaliset tuotteet eivät peri fyysisten lehtien tietoja.
+
+Brändi perustuu [Finnan Rytkösten sukulainen -tietueeseen](https://www.finna.fi/Record/jykdok.797937), jossa julkaisijaksi on merkitty Rytkösten sukuseura. Samassa tietueessa ei ole ISSN- eikä ISBN-tunnusta, joten tuotteille ei lisätä globaalia tunnistetta arvaamalla.
+
+Seuraavat Search Consolen ei-kriittiset huomiot hyväksytään toistaiseksi tietoisesti:
+
+- `aggregateRating` ja `review`: lisätään vain, jos tuotteilla on aitoja, hyväksyttyjä ja sivulla näkyviä tuotearvosteluja
+- `validFrom`: lisätään vain hinnalle, jolla on todellinen ja ylläpidetty alkamisajankohta
+- `shippingDetails`: lisätään vasta, kun todellinen käsittely- ja toimitusaikaväli on vahvistettu
+- `hasMerchantReturnPolicy`: lisätään vasta, kun fyysisten tuotteiden palautusajan laskenta, palautustapa ja palautuskulujen vastuu on yhdenmukaistettu julkaistujen ehtojen kanssa
+
+Google määrittelee `merchantReturnDays`-ajan laskettavaksi toimituspäivästä. Nykyinen itsepalveluperuutus ja ehtoteksti käyttävät tilauspäivää, joten rakennedata jätetään tältä osin pois, kunnes käytäntö on päätetty ja dokumentit sekä toiminnallisuus voidaan päivittää yhtenäisesti.
+
 ## Fyysisen tuotteen luonti
 
 Luo uusi fyysinen tuote WooCommerce-adminissa:
@@ -115,6 +130,8 @@ Paikallisessa ympäristössä 19.4.2026 varmistettiin:
 Myöhempiin tiketteihin jäävät:
 
 - postikulun vahvistaminen oikeiden tuotteiden perusteella
+- todellisen käsittely- ja toimitusaikavälin vahvistaminen rakennedataa varten
+- fyysisten tuotteiden palautusajan, palautustavan ja palautuskulujen vastuun vahvistaminen
 - mahdolliset tuotevariantit, kuten t-paitojen koot ja värit
 - tuotekohtainen varastosaldo, jos tuotteita on rajattu määrä
 - toimitusmallin tarkennus, jos myyntiä halutaan Suomen ulkopuolelle

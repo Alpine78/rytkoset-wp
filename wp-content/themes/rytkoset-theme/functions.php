@@ -53,6 +53,7 @@ require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
 require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
+require_once get_template_directory() . '/inc/woocommerce-structured-data.php';
 require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
 require_once get_template_directory() . '/inc/woocommerce-my-account.php';
