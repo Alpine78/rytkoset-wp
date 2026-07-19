@@ -27,6 +27,17 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 		return $order;
 	}
 
+	/**
+	 * Adds a physical product line to a test order.
+	 *
+	 * @param WC_Order $order Test order.
+	 * @return void
+	 */
+	private function add_physical_product( WC_Order $order ): void {
+		$product        = new WC_Product( array( '_virtual' => 'no' ), 456, 'publish', 'Painettu sukulehti' );
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Painettu sukulehti' );
+	}
+
 	// --- Eligibility: status + window ----------------------------------------
 
 	public function test_pending_order_within_window_is_cancellable(): void {
@@ -57,9 +68,45 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_order_is_cancellable( $order, $now ) );
 	}
 
+	public function test_completed_physical_product_order_allows_manual_return_request(): void {
+		$now   = 1_700_000_000;
+		$order = $this->make_order( 'completed', $now - ( 30 * DAY_IN_SECONDS ) );
+		$this->add_physical_product( $order );
+
+		$this->assertTrue( rytkoset_theme_order_has_physical_products( $order ) );
+		$this->assertTrue( rytkoset_theme_order_is_cancellable( $order, $now ) );
+		$this->assertTrue( rytkoset_theme_order_cancellation_requires_manual_handling( $order ) );
+	}
+
 	public function test_order_outside_window_is_not_cancellable(): void {
 		$now   = 1_700_000_000;
 		$order = $this->make_order( 'processing', $now - ( 15 * DAY_IN_SECONDS ) );
+
+		$this->assertFalse( rytkoset_theme_order_is_cancellable( $order, $now ) );
+	}
+
+	public function test_physical_product_order_has_no_automatic_order_date_cutoff(): void {
+		$now   = 1_700_000_000;
+		$order = $this->make_order( 'processing', $now - ( 60 * DAY_IN_SECONDS ) );
+		$this->add_physical_product( $order );
+
+		$this->assertTrue( rytkoset_theme_order_is_cancellable( $order, $now ) );
+	}
+
+	public function test_virtual_product_does_not_use_physical_return_path(): void {
+		$now            = 1_700_000_000;
+		$order          = $this->make_order( 'completed', $now - DAY_IN_SECONDS );
+		$product        = new WC_Product( array( '_virtual' => 'yes' ), 456, 'publish', 'Virtuaalituote' );
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Virtuaalituote' );
+
+		$this->assertFalse( rytkoset_theme_order_has_physical_products( $order ) );
+		$this->assertFalse( rytkoset_theme_order_is_cancellable( $order, $now ) );
+	}
+
+	public function test_future_dated_physical_product_order_is_not_cancellable(): void {
+		$now   = 1_700_000_000;
+		$order = $this->make_order( 'processing', $now + HOUR_IN_SECONDS );
+		$this->add_physical_product( $order );
 
 		$this->assertFalse( rytkoset_theme_order_is_cancellable( $order, $now ) );
 	}
@@ -275,5 +322,33 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 2, $GLOBALS['rytkoset_test_mails'] );
 		$this->assertStringContainsString( 'Peruutuspyyntö: tilaus 123 vaatii palautuksen', $GLOBALS['rytkoset_test_mails'][0]['subject'] );
 		$this->assertStringContainsString( 'Peruutuspyyntösi tilaukselle 123 on vastaanotettu', $GLOBALS['rytkoset_test_mails'][1]['subject'] );
+	}
+
+	public function test_completed_physical_order_request_is_recorded_for_manual_review(): void {
+		$order                 = $this->make_order( 'completed', time() - ( 60 * DAY_IN_SECONDS ) );
+		$order->user_id        = 7;
+		$order->billing_email  = 'asiakas@example.test';
+		$order->edit_order_url = 'https://rytkoset.test/wp-admin/post.php?post=123&action=edit';
+		$this->add_physical_product( $order );
+
+		$GLOBALS['rytkoset_test_current_user']   = 7;
+		$GLOBALS['rytkoset_test_orders'][ 123 ] = $order;
+		$_POST                                  = array(
+			'rytkoset_confirm_cancellation' => '1',
+			'order_id'                      => '123',
+			'_wpnonce'                      => 'rytkoset_confirm_cancel_order_123',
+		);
+
+		try {
+			rytkoset_theme_handle_order_cancellation_submit();
+			$this->fail( 'Expected return request handler to redirect after success.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertSame( 'https://rytkoset.test/tili/tilaukset/', $redirect->location );
+		}
+
+		$this->assertSame( 'completed', $order->get_status() );
+		$this->assertStringContainsString( 'Tarkista vastaanottopäivä', $order->notes[0] );
+		$this->assertStringContainsString( 'Tarkista tuotteen vastaanottopäivä', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+		$this->assertStringContainsString( '14 vuorokauden palautusaika lasketaan tuotteen vastaanottamisesta', $GLOBALS['rytkoset_test_mails'][1]['message'] );
 	}
 }

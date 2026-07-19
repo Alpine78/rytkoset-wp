@@ -43,6 +43,30 @@ Postitus rajataan tässä vaiheessa Suomeen. Nouto tarkoittaa käytännössä ta
 
 Kiinteä `5,90 €` on väliaikainen MVP-postikulu pienille painotuotteille. Hinta pitää tarkistaa ennen oikeiden tuotteiden julkaisua.
 
+Postitettavan tuotteen käsittelyaika on **1–3 arkipäivää**. Postin arvioitu kuljetusaika lähettämisestä on **2–5 arkipäivää**, joten tilauksesta toimitukseen on normaalisti hyvä varata yhteensä noin **3–8 arkipäivää**. Viiveestä ilmoitetaan asiakkaalle.
+
+## Merchant listing- ja Product-rakennedata
+
+Rank Math muodostaa WooCommerce-tuotteiden Product- ja Offer-rakennedatan. Teema täydentää fyysisille `Sukulehdet`-kategorian tuotteille brändin **Rytkösten sukuseura** sekä Suomeen postitettavien tuotteiden toimitus- ja palautustiedot. Rajaus tarkistaa myös, ettei tuote ole virtuaalinen tai ladattava, joten jäsenmaksut, tapahtumamaksut ja digitaaliset tuotteet eivät peri fyysisten lehtien tietoja.
+
+Brändi perustuu [Finnan Rytkösten sukulainen -tietueeseen](https://www.finna.fi/Record/jykdok.797937), jossa julkaisijaksi on merkitty Rytkösten sukuseura. Samassa tietueessa ei ole ISSN- eikä ISBN-tunnusta, joten tuotteille ei lisätä globaalia tunnistetta arvaamalla.
+
+Offer-rakennedata kertoo Googlelle:
+
+- postitus Suomeen `5,90 €`
+- käsittelyaika 1–3 päivää ja kuljetusaika 2–5 päivää (`unitCode: DAY`)
+- 14 vuorokauden palautusaika tuotteen vastaanottamisesta
+- palautus postitse asiakkaan järjestämänä ja maksamana
+
+Virheelliseen tuotteeseen tai toimitukseen liittyvät kulut käsitellään ehtojen mukaisesti myyjän vastuulla. Googlen tuotekohtainen `returnFees`-kenttä kuvaa palautuksen oletustilanteen eli asiakkaan vastuulla olevan postituksen.
+
+Seuraavat Search Consolen ei-kriittiset huomiot hyväksytään edelleen tietoisesti:
+
+- `aggregateRating` ja `review`: lisätään vain, jos tuotteilla on aitoja, hyväksyttyjä ja sivulla näkyviä tuotearvosteluja
+- `validFrom`: lisätään vain hinnalle, jolla on todellinen ja ylläpidetty alkamisajankohta
+
+Google määrittelee `merchantReturnDays`-ajan laskettavaksi toimituspäivästä. Sivusto ei tallenna vastaanottopäivää, joten fyysistä tuotetta sisältävän tilauksen palautuspyyntöä ei katkaista automaattisesti tilauspäivän perusteella. Ylläpitäjä tarkistaa vastaanottopäivän, 14 vuorokauden määräajan ja palautuskelpoisuuden manuaalisesti ennen hyvitystä. Muiden tuotteiden itsepalveluperuutuksessa säilyy nykyinen 14 vuorokauden tilauspäivään perustuva ikkuna.
+
 ## Fyysisen tuotteen luonti
 
 Luo uusi fyysinen tuote WooCommerce-adminissa:

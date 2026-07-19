@@ -34,6 +34,7 @@ $GLOBALS['rytkoset_test_current_user'] = 0;       // get_current_user_id()
 $GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
 $GLOBALS['rytkoset_test_privacy_url']   = 'https://rytkoset.test/tietosuoja/';
 $GLOBALS['rytkoset_test_post_meta']    = array(); // [post_id][key] => value
+$GLOBALS['rytkoset_test_object_terms'] = array(); // [post_id][taxonomy] => term slugs
 $GLOBALS['rytkoset_test_products']     = array(); // [product_id] => WC_Product
 $GLOBALS['rytkoset_test_orders']       = array(); // [order_id] => WC_Order (wc_get_order)
 $GLOBALS['rytkoset_test_bought']       = array(); // ["user_id:product_id"] => true (wc_customer_bought_product)
@@ -75,6 +76,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_current_user']  = 0;
 	$GLOBALS['rytkoset_test_privacy_url']   = 'https://rytkoset.test/tietosuoja/';
 	$GLOBALS['rytkoset_test_post_meta']     = array();
+	$GLOBALS['rytkoset_test_object_terms']  = array();
 	$GLOBALS['rytkoset_test_products']      = array();
 	$GLOBALS['rytkoset_test_orders']        = array();
 	$GLOBALS['rytkoset_test_bought']        = array();
@@ -257,6 +259,14 @@ class WC_Product {
 
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
+	}
+
+	public function is_virtual(): bool {
+		return 'yes' === ( $this->meta['_virtual'] ?? 'no' );
+	}
+
+	public function needs_shipping(): bool {
+		return ! $this->is_virtual();
 	}
 }
 
@@ -640,6 +650,13 @@ function get_post_type( $post = null ) {
 	$post = get_post( $post );
 
 	return $post instanceof WP_Post ? $post->post_type : false;
+}
+
+function has_term( $term, $taxonomy, $post = null ): bool {
+	$post_id = $post instanceof WP_Post ? $post->ID : (int) $post;
+	$terms   = $GLOBALS['rytkoset_test_object_terms'][ $post_id ][ (string) $taxonomy ] ?? array();
+
+	return in_array( (string) $term, $terms, true );
 }
 
 function get_post_status( $post = null ) {

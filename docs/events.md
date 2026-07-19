@@ -75,6 +75,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
 | Järjestäjäilmoitusten vastaanottajat | `_rytkoset_event_organizer_notification_recipients` | sähköpostiosoitteet, yksi per rivi | Maksullisen tapahtuman tilausilmoitusten vastaanottajat |
 | Kysy ruokavalio | `_rytkoset_event_collect_diet` | puuttuva tai `no` | Puuttuva näyttää ruokavaliokentän ja mainitsee ruokarajoitteet GDPR-ilmoituksessa; `no` piilottaa kentän ja jättää ruokarajoitteet pois ilmoituksesta |
+| Näytä tapahtuma Googlen tapahtumahaussa | `_rytkoset_event_schema_enabled` | puuttuva tai `no` | Puuttuva tuottaa Event-rakennedatan; `no` jättää Event-rakennedatan pois |
 | Lisävalinta käytössä | `_rytkoset_event_choice_enabled` | `yes` tai puuttuva | Näyttää maksuttomalla lomakkeella pakollisen valintalistan |
 | Lisävalinnan otsikko | `_rytkoset_event_choice_field_label` | vapaa teksti | Valintalistan otsikko, oletus `Lähtöpaikka` |
 | Lisävalinnan vaihtoehdot | `_rytkoset_event_choice_options` | yksi vaihtoehto per rivi | Valintalistan sallitut arvot |
@@ -123,6 +124,14 @@ Yhteenvetokortissa näytetään täytetyt perustiedot:
 
 Jos linkitetyn WooCommerce-tuotteen ilmoittautuminen on päättynyt tai tuote ei muuten ole ostettavissa, tapahtumasivu näyttää tilaviestinä syyn eikä tarjoa aktiivista maksupainiketta.
 
+### Google-tapahtumahaku ja rakennedata
+
+Julkaistu tapahtuma tuottaa oletuksena schema.org/Event-rakennedatan Googlea ja muita hakukoneita varten. Ylläpidon `Tapahtuman tiedot` -laatikon valinta **Näytä tapahtuma Googlen tapahtumahaussa** kannattaa pitää päällä vain itsenäisillä tapahtumilla. Poista valinta esimerkiksi kuljetuspalvelulta, joka liittyy toiseen tapahtumaan mutta ei ole itse erillinen yleisötapahtuma.
+
+Valinnan poistaminen jättää tapahtumasivun, arkiston, ilmoittautumisen ja tavallisen hakukonenäkyvyyden ennalleen. Se poistaa sivulta vain Event-rakennedatan. Menneen tapahtuman Event-rakennedata voi säilyä historiatietona, mutta teema ei ilmoita sille enää aktiivista `offers`-tarjousta.
+
+Tapahtumien ISO-aikaleimat käyttävät WordPressin kaupunkipohjaista aikavyöhykettä. Tuotannossa asetuksen tulee olla `Europe/Helsinki`, jotta kesäajan tapahtumat saavat offsetin `+03:00`. Aikavyöhykkeen tai rakennedatan muuttamisen jälkeen tyhjennä LiteSpeedin sivuvälimuisti ennen Rich Results Testiä ja Search Consolen validointia; muuten julkinen osoite voi tarjota hetken vanhaa JSON-LD:tä.
+
 **Roskapostisuoja (maksuton lomake):** lomakkeessa on piilotettu honeypot-kenttä ja kevyt IP-kohtainen lähetysrajoitus (oletus 5 lähetystä / 10 min samasta IP-osoitteesta). Rajan ylittävä lähetys hylätään ennen tallennusta ja kuittisähköpostia, jottei lomakkeen toistolla voi synnyttää rajatonta määrää kuittiviestejä tai ilmoittautumistietueita. Tavallinen yksittäinen ilmoittautuminen ei osu rajaan. Rajan ja aikaikkunan voi säätää suodattimilla `rytkoset_theme_event_registration_rate_limit` ja `rytkoset_theme_event_registration_rate_limit_window`. Jos järjestäjä testaa lomaketta toistuvasti samasta verkosta ja saa viestin "Liian monta ilmoittautumisyritystä", kyse on tästä rajasta — odota aikaikkunan verran. (Käänteisen proxyn takana raja kohdistuu proxyn IP:hen; ks. `docs/tietoturva.md`.)
 
 Tapahtuma-arkistossa `/tapahtumat/` tapahtumat jaetaan kolmeen osioon:
@@ -148,6 +157,7 @@ Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Men
    - maksullisuus
    - hintateksti
    - näytetäänkö ruokavalio- ja allergiakysymys maksuttomalla lomakkeella
+   - näytetäänkö sisältö Googlen tapahtumahaussa; poista valinta kuljetuspalvelulta tai muulta sisällöltä, joka ei ole itsenäinen tapahtuma
 8. Jos maksuton tapahtuma käyttää lomakeilmoittautumista, täytä sivupalkin `Tapahtumapäivä`-laatikosta `Maksuttoman ilmoittautumisen määräpäivä`.
 9. Jos maksuton lomake tarvitsee esimerkiksi lähtöpaikan tai osallistujamäärän,
    määritä `Ilmoittautumisen lisävalinta` -laatikossa kentän otsikko,
