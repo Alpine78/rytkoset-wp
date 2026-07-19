@@ -58,6 +58,28 @@ if ( ! function_exists( 'rytkoset_theme_get_cancellable_order_statuses' ) ) {
 }
 
 /**
+ * Order statuses from which a physical-product return request can be submitted.
+ *
+ * Completed orders are included because the statutory return window starts when the customer
+ * receives the goods, and the store does not record that receipt date automatically.
+ *
+ * @return array<int, string>
+ */
+if ( ! function_exists( 'rytkoset_theme_get_physical_product_return_request_statuses' ) ) {
+	function rytkoset_theme_get_physical_product_return_request_statuses() {
+		/**
+		 * Filters statuses that allow a physical-product return request.
+		 *
+		 * @param array<int, string> $statuses Order statuses without the wc- prefix.
+		 */
+		return (array) apply_filters(
+			'rytkoset_theme_physical_product_return_request_statuses',
+			array( 'pending', 'on-hold', 'processing', 'completed' )
+		);
+	}
+}
+
+/**
  * Tilaustilat, joissa peruutus muuttaa statuksen heti 'cancelled'.
  *
  * Maksetut (processing) tilaukset käsitellään manuaalisesti, joten ne eivät ole tässä.
@@ -112,13 +134,42 @@ if ( ! function_exists( 'rytkoset_theme_get_order_cancellation_endpoint_slug' ) 
 }
 
 /**
- * Päättää, onko tilaus asiakkaan peruutettavissa itsepalveluna.
+ * Checks whether an order contains at least one product that requires shipping.
  *
- * Puhdas päätöslogiikka (testattava): ei jo pyydettyä peruutusta, sallittu tila,
- * ja luotu enintään aikaikkunan sisällä. Omistajuus tarkistetaan erikseen kutsujassa.
+ * @param WC_Order $order Order object.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_order_has_physical_products' ) ) {
+	function rytkoset_theme_order_has_physical_products( $order ) {
+		if ( ! $order instanceof WC_Order ) {
+			return false;
+		}
+
+		foreach ( $order->get_items() as $item ) {
+			if ( ! is_callable( array( $item, 'get_product' ) ) ) {
+				continue;
+			}
+
+			$product = $item->get_product();
+
+			if ( $product instanceof WC_Product && $product->needs_shipping() ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+/**
+ * Checks whether an order can be cancelled or submitted for manual return review.
  *
- * @param WC_Order $order               Tilausobjekti.
- * @param int|null $reference_timestamp Vertailuhetki (oletus: nykyhetki).
+ * Physical-product requests have no automatic order-date cutoff because the store does not
+ * record the delivery date. The administrator verifies the 14-day window from receipt manually.
+ * Other orders retain the existing 14-day window from order creation.
+ *
+ * @param WC_Order $order               Order object.
+ * @param int|null $reference_timestamp Reference timestamp; defaults to the current time.
  * @return bool
  */
 if ( ! function_exists( 'rytkoset_theme_order_is_cancellable' ) ) {
@@ -132,7 +183,12 @@ if ( ! function_exists( 'rytkoset_theme_order_is_cancellable' ) ) {
 			return false;
 		}
 
-		if ( ! in_array( $order->get_status(), rytkoset_theme_get_cancellable_order_statuses(), true ) ) {
+		$has_physical_products = rytkoset_theme_order_has_physical_products( $order );
+		$allowed_statuses      = $has_physical_products
+			? rytkoset_theme_get_physical_product_return_request_statuses()
+			: rytkoset_theme_get_cancellable_order_statuses();
+
+		if ( ! in_array( $order->get_status(), $allowed_statuses, true ) ) {
 			return false;
 		}
 
@@ -146,9 +202,13 @@ if ( ! function_exists( 'rytkoset_theme_order_is_cancellable' ) ) {
 		$reference_timestamp = null === $reference_timestamp ? time() : (int) $reference_timestamp;
 		$window_seconds      = rytkoset_theme_get_order_cancellation_window_days() * DAY_IN_SECONDS;
 
-		// Tilaus täytyy olla luotu menneisyydessä ja aikaikkunan sisällä.
+		// Reject invalid future-dated orders for both cancellation paths.
 		if ( $reference_timestamp < $created_ts ) {
 			return false;
+		}
+
+		if ( $has_physical_products ) {
+			return true;
 		}
 
 		return ( $reference_timestamp - $created_ts ) <= $window_seconds;
@@ -426,13 +486,16 @@ if ( ! function_exists( 'rytkoset_theme_handle_order_cancellation_submit' ) ) {
 		}
 
 		$requires_manual = rytkoset_theme_order_cancellation_requires_manual_handling( $order );
+		$has_physical    = rytkoset_theme_order_has_physical_products( $order );
 		$timestamp       = time();
 
 		if ( $requires_manual ) {
-			// Maksettu tilaus: status ennallaan, kirjataan pyyntö + ilmoitetaan adminille.
+			// Keep paid orders unchanged and route the request to an administrator.
 			$order->update_meta_data( rytkoset_theme_get_order_cancellation_requested_meta_key(), gmdate( 'Y-m-d H:i:s', $timestamp ) );
 			$order->add_order_note(
-				__( 'Asiakas pyysi tilauksen peruutusta itsepalveluna. Tilaus on maksettu — käsittele palautus ja lopullinen peruutus manuaalisesti.', 'rytkoset-theme' ),
+				$has_physical
+					? __( 'Asiakas pyysi fyysisen tuotteen palautusta itsepalveluna. Tarkista vastaanottopäivä, 14 vuorokauden määräaika ja tuotteen palautuskelpoisuus ennen hyvitystä.', 'rytkoset-theme' )
+					: __( 'Asiakas pyysi tilauksen peruutusta itsepalveluna. Tilaus on maksettu — käsittele palautus ja lopullinen peruutus manuaalisesti.', 'rytkoset-theme' ),
 				false
 			);
 			$order->save();
@@ -497,6 +560,7 @@ if ( ! function_exists( 'rytkoset_theme_render_order_cancellation_endpoint' ) ) 
 		}
 
 		$requires_manual = rytkoset_theme_order_cancellation_requires_manual_handling( $order );
+		$has_physical    = rytkoset_theme_order_has_physical_products( $order );
 		?>
 		<div class="rytkoset-cancel-order-confirm">
 			<h2><?php esc_html_e( 'Vahvista tilauksen peruutus', 'rytkoset-theme' ); ?></h2>
@@ -545,6 +609,12 @@ if ( ! function_exists( 'rytkoset_theme_render_order_cancellation_endpoint' ) ) 
 			<?php if ( $requires_manual ) : ?>
 				<div class="woocommerce-info">
 					<?php esc_html_e( 'Tilaus on jo maksettu. Peruutuspyyntösi välitetään käsiteltäväksi, ja mahdollinen palautus hoidetaan manuaalisesti. Olemme tarvittaessa sinuun yhteydessä.', 'rytkoset-theme' ); ?>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( $requires_manual && $has_physical ) : ?>
+				<div class="woocommerce-info">
+					<?php esc_html_e( 'Fyysisen tuotteen 14 vuorokauden palautusaika lasketaan tuotteen vastaanottamisesta. Ylläpitäjä tarkistaa määräajan ja palautuskelpoisuuden pyyntösi käsittelyn yhteydessä.', 'rytkoset-theme' ); ?>
 				</div>
 			<?php endif; ?>
 
@@ -641,6 +711,10 @@ if ( ! function_exists( 'rytkoset_theme_send_order_cancellation_customer_email' 
 
 		if ( $requires_manual ) {
 			$lines[] = __( 'Tilaus on jo maksettu. Käsittelemme mahdollisen palautuksen manuaalisesti ja olemme tarvittaessa sinuun yhteydessä. Jäsenyyksien ja tapahtumamaksujen peruutusoikeus voi olla rajoitettu, jos palvelu on jo alkanut.', 'rytkoset-theme' );
+
+			if ( rytkoset_theme_order_has_physical_products( $order ) ) {
+				$lines[] = __( 'Fyysisen tuotteen 14 vuorokauden palautusaika lasketaan tuotteen vastaanottamisesta. Tarkistamme määräajan ja palautuskelpoisuuden käsittelyn yhteydessä.', 'rytkoset-theme' );
+			}
 		} else {
 			$lines[] = __( 'Tilausta ei ollut vielä maksettu, joten erillistä palautusta ei tarvita.', 'rytkoset-theme' );
 		}
@@ -722,6 +796,10 @@ if ( ! function_exists( 'rytkoset_theme_send_order_cancellation_admin_email' ) )
 			'',
 			__( 'Tilauksen status on jätetty ennalleen. Käsittele palautus ja lopullinen peruutus manuaalisesti WooCommercessa. Huomioi mahdolliset peruutusoikeuden poikkeukset (jäsenyydet, tapahtumat).', 'rytkoset-theme' ),
 		);
+
+		if ( rytkoset_theme_order_has_physical_products( $order ) ) {
+			$lines[] = __( 'Tilaus sisältää fyysisen tuotteen. Tarkista tuotteen vastaanottopäivä, 14 vuorokauden määräaika ja palautuskelpoisuus ennen hyvitystä.', 'rytkoset-theme' );
+		}
 
 		$edit_url = $order->get_edit_order_url();
 

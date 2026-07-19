@@ -47,9 +47,10 @@ julkaistuun versioon verrattuna:
   yhdistyslain piiriin kuuluva jäsenyysasia — jää auki; teksti pysyy siksi
   varovaisena ("voi olla rajoitettu... arvioidaan tapauskohtaisesti"),
   samassa hengessä kuin nykyinen live-teksti.
-- Toteutunut itsepalvelu-peruutus (14 vrk, `/oma-tili/peruuta-tilaus/`) on
-  kuvattu [`docs/woocommerce-peruutus.md`](woocommerce-peruutus.md):ssä —
-  tämän sivun teksti on yhdenmukaistettu sen kanssa.
+- Toteutunut itsepalvelu-peruutus (`/oma-tili/peruuta-tilaus/`) on kuvattu
+  [`docs/woocommerce-peruutus.md`](woocommerce-peruutus.md):ssä. Fyysisen
+  tuotteen 14 vuorokauden määräaika alkaa vastaanottamisesta; koska sivusto
+  ei tallenna vastaanottopäivää, ylläpitäjä tarkistaa määräajan manuaalisesti.
 - Lisätty puuttuvat ennakkotiedot (KSL 6:9 §:n 3–4 kohta), jotka eivät
   näkyneet aiemmassa versiossa: puhelinnumero 040 592 2842 ja osoite
   Tyrmynniementie 71, 74595 Runni — sama osoite kuin rekisterinpitäjän
@@ -114,8 +115,9 @@ Puhelin: 0207 181830
 Fyysiset tuotteet toimitetaan asiakkaan antamaan osoitteeseen tai muulla
 tuotteen yhteydessä ilmoitetulla tavalla.
 
-Toimitusaika riippuu tuotteesta ja toimitustavasta. Jos toimituksessa on
-viivettä, sukuseura pyrkii ilmoittamaan siitä asiakkaalle.
+Postitettavat tuotteet käsitellään 1–3 arkipäivässä. Postin arvioitu
+kuljetusaika lähettämisestä on 2–5 arkipäivää. Jos toimituksessa on viivettä,
+sukuseura pyrkii ilmoittamaan siitä asiakkaalle.
 
 ## Digitaaliset tuotteet
 
@@ -144,15 +146,16 @@ määräaika) ilmoitetaan tapahtuman tai tuotteen yhteydessä.
 
 ## Peruuttaminen ja palautukset
 
-Voit peruuttaa tilauksen itsepalveluna kohdassa *Oma tili → Tilaukset*
-14 vuorokauden kuluessa tilauksen tekemisestä. Maksamaton tilaus
-peruuntuu heti; maksettu tilaus käsitellään manuaalisesti ja saat
-vahvistuksen peruutuspyynnön vastaanottamisesta.
+Voit tehdä peruutus- tai palautuspyynnön itsepalveluna kohdassa
+*Oma tili → Tilaukset*. Maksamaton tilaus peruuntuu heti; maksettu tilaus
+käsitellään manuaalisesti ja saat vahvistuksen pyynnön vastaanottamisesta.
 
-Fyysisillä tuotteilla on kuluttajansuojalain mukainen palautusoikeus.
-Palautettavan tuotteen tulee olla käyttämätön ja myyntikuntoinen. Asiakas
-vastaa palautuksen järjestämisestä, ellei palautus johdu virheestä
-tuotteessa tai toimituksessa.
+Fyysisen tuotteen palautuksesta on ilmoitettava 14 vuorokauden kuluessa
+tuotteen vastaanottamisesta. Palautus tehdään postitse. Palautettavan tuotteen
+tulee olla käyttämätön ja myyntikuntoinen. Asiakas järjestää palautuksen ja
+maksaa palautuspostin, ellei palautus johdu virheestä tuotteessa tai
+toimituksessa. Sivusto ei tallenna vastaanottopäivää, joten ylläpitäjä
+tarkistaa vastaanottopäivän, määräajan ja palautuskelpoisuuden manuaalisesti.
 
 Hyvitys palautetaan aina alkuperäiselle maksutavalle.
 

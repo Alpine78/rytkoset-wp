@@ -260,6 +260,14 @@ class WC_Product {
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
 	}
+
+	public function is_virtual(): bool {
+		return 'yes' === ( $this->meta['_virtual'] ?? 'no' );
+	}
+
+	public function needs_shipping(): bool {
+		return ! $this->is_virtual();
+	}
 }
 
 class Rytkoset_Test_Cart {
