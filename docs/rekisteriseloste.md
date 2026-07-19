@@ -17,19 +17,24 @@ tietolähteet, säilytys, rekisteröidyn oikeudet, valitusoikeus, ei-EU-siirrot,
 ei automaattista päätöksentekoa). Yksi täsmennys tehty:
 
 - **Erityisten henkilötietoryhmien käsittelyperuste täsmennetty.**
-  Tarkistin tietosuojalain (1050/2018) 2 luvusta: **2:6 §:n 7-kohta** antaa
-  nimenomaisen kansallisen käsittelyperusteen erityisille
+  Tarkistin tietosuojalain (1050/2018) 2 luvusta: **6 §:n 1 momentin
+  7 kohta** antaa nimenomaisen kansallisen käsittelyperusteen erityisille
   henkilötietoryhmille "tieteellistä tai historiallista tutkimusta taikka
   tilastointia varten" — tämä osuu suoraan sukututkimukseen. Aiempi teksti
   ("jos käsittelylle on selvä oikeusperuste") oli ympäripyöreä; nyt
   viitataan suoraan tähän pykälään.
-- Sama pykälän 2 momentti edellyttää tähän perusteeseen nojattaessa
+- Saman pykälän 2 momentti edellyttää tähän perusteeseen nojattaessa
   erityisiä suojatoimia (mm. pääsynhallinta, jäljitettävyys). Olemassa
   oleva teksti rajatusta käyttöoikeudesta ja siitä, ettei aineistoa
   säilytetä julkisessa verkkopalvelussa, kattaa tämän jo pääosin — lisätty
   eksplisiittinen viittaus.
 - Muu sisältö säilytetty asiallisesti ennallaan, koska se oli jo
   GDPR-rakenteen mukainen.
+- **Viittausmuoto korjattu 19.7.2026 (#571).** Tietosuojalain
+  pykälänumerointi on juokseva, joten aiempi luku-etuliitteinen muoto
+  "2:6 §:n 7-kohta" korjattiin muotoon "6 §:n 1 momentin 7 kohta" (ja
+  vastaavasti "6 §:n 2 momentin"). Pykälän sisältö varmennettiin Finlexin
+  konsolidoidusta lakitekstistä; asiasisältö ei muuttunut.
 
 ## Julkaisu WordPress-adminissa
 
@@ -41,7 +46,7 @@ ei automaattista päätöksentekoa). Yksi täsmennys tehty:
 
 # Rekisteriseloste
 
-Päivitetty: 3.7.2026
+Päivitetty: 19.7.2026
 
 ## Rekisterinpitäjä
 
@@ -89,10 +94,10 @@ toteuttaa sukuseuran sääntöjen mukaista tarkoitusta.
 
 Jos käsitellään erityisiä henkilötietoryhmiä, kuten terveystietoja,
 uskonnollista vakaumusta, geneettisiä tietoja tai muita vastaavia
-arkaluonteisia tietoja, käsittely perustuu tietosuojalain (1050/2018) 2:6
-§:n 7-kohtaan (tieteellistä tai historiallista tutkimusta taikka
-tilastointia varten tehtävä käsittely), ja käsittelyssä noudatetaan saman
-pykälän 2 momentin mukaisia suojatoimia (mm. rajattu käyttöoikeus ja
+arkaluonteisia tietoja, käsittely perustuu tietosuojalain (1050/2018)
+6 §:n 1 momentin 7 kohtaan (tieteellistä tai historiallista tutkimusta
+taikka tilastointia varten tehtävä käsittely), ja käsittelyssä noudatetaan
+saman pykälän 2 momentin mukaisia suojatoimia (mm. rajattu käyttöoikeus ja
 pääsynhallinta, ks. alla "Rekisterin suojaus"). Elossa olevien henkilöiden
 erityisiä henkilötietoryhmiä ei julkaista ilman asianmukaista perustetta
 tai suostumusta.
@@ -121,7 +126,7 @@ lähteitä, julkisia verkkolähteitä, lehtiä, kuolinilmoituksia, muita
 sukukirjoja sekä sukuun kuuluvien henkilöiden antamia tietoja.
 
 Muita sukututkimuslähteitä voivat olla esimerkiksi teos Pohjois-Savon
-Rytköset 1548-1745 sekä muut julkaistut sukututkimukset ja
+Rytköset 1548–1745 sekä muut julkaistut sukututkimukset ja
 paikallishistorialliset lähteet.
 
 Sukutietoa voivat kerätä myös yksittäiset sukuun kuuluvat henkilöt omiin
@@ -163,7 +168,7 @@ molempia aineistoja.
 Digitaalinen aineisto säilytetään rajatun käyttöoikeuden piirissä. Aineistoa
 ei säilytetä julkisessa verkkopalvelussa. Muistitikkuja, kovalevyjä ja
 varmuuskopioita säilytetään huolellisesti, eikä niitä luovuteta
-ulkopuolisille. Nämä toimenpiteet toteuttavat tietosuojalain 2:6 §:n 2
+ulkopuolisille. Nämä toimenpiteet toteuttavat tietosuojalain 6 §:n 2
 momentin edellyttämiä suojatoimia erityisten henkilötietoryhmien
 käsittelylle.
 

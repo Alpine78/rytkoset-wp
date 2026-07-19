@@ -1,6 +1,6 @@
 # Tilauksen peruutus (asiakkaan itsepalvelu)
 
-EU:n kuluttajansuojalakimuutos (voimaan **19.6.2026**) edellyttää, että verkkokaupassa on selkeä peruutuspainike samassa paikassa, jossa sopimus on tehty. Tämä toiminto (#427) lisää lainmukaisen itsepalvelu-peruutuksen WooCommerceen.
+Kuluttajansuojalain (38/1978) 6 luvun 14 a § (voimaan **19.6.2026**) edellyttää, että verkkorajapinnalla tehdyn etäsopimuksen voi peruuttaa selkeästi merkityllä peruuttamistoiminnolla, joka on helposti kuluttajan saatavilla koko peruuttamisajan ja jonka käytöstä lähetetään vastaanottovahvistus. Tämä toiminto (#427) lisää lainmukaisen itsepalvelu-peruutuksen WooCommerceen.
 
 Toteutus: `inc/woocommerce-cancellation.php`. WooCommerce-riippuvainen, teeman koodia (ei ulkoisia kirjastoja).
 
@@ -14,7 +14,7 @@ Toteutus: `inc/woocommerce-cancellation.php`. WooCommerce-riippuvainen, teeman k
 
    Kun tämä painike näkyy, WooCommercen oma natiivi peruutuslinkki (jonka WC näyttää maksamattomille `pending`/`failed`-tilauksille ilman vahvistussivua tai sähköpostia) piilotetaan tilausriviltä, jottei näkyvissä ole kahta peruutuspainiketta.
 2. **Vahvistussivu** (`/tili/peruuta-tilaus/`): näyttää tilausnumeron, -päivän, tuotteet ja summan sekä napit **Vahvista peruutus** ja **Palaa takaisin**. Estää vahinkoperuutukset.
-3. **Vahvistussähköposti** lähetetään välittömästi peruutuksen jälkeen. Sisältää aikaleiman, tilausnumeron ja peruttavat tuotteet.
+3. **Vahvistussähköposti** lähetetään välittömästi peruutuksen jälkeen. Sisältää aikaleiman päivämäärällä ja kellonajalla (muoto `j.n.Y klo H:i`, KSL 6 luvun 14 a §:n 4 momentin vaatimus), tilausnumeron ja peruttavat tuotteet.
 
 ## Mitä peruutus tekee
 
@@ -31,8 +31,10 @@ Admin-ilmoitus menee teeman yhteyssähköpostiin (`rytkoset_theme_get_contact_em
 Fyysisen tuotteen 14 vuorokauden palautusaika lasketaan tuotteen vastaanottamisesta. Koska WooCommerce-tilaukselle ei tallenneta vastaanottopäivää, fyysistä tuotetta sisältävän tilauksen itsepalvelupyyntö sallitaan ilman tilauspäivään perustuvaa automaattista katkaisua. Ylläpitäjän pitää tarkistaa ennen hyvitystä:
 
 - tuotteen vastaanottopäivä ja 14 vuorokauden määräaika
-- että tuote on käyttämätön ja myyntikuntoinen
+- tuotteen mahdollinen arvon alentuminen: asiakas saa avata ja tutkia tuotteen sen luonteen, ominaisuuksien ja toimivuuden toteamiseksi kuten myymälässä, eikä hyvitystä saa evätä pelkän käytön perusteella; laajemmasta käytöstä johtuva arvon alentuminen voidaan vähentää hyvityksestä (KSL 6 luvun 18 §)
 - että asiakas järjestää ja maksaa postipalautuksen, ellei kyse ole virheestä tuotteessa tai toimituksessa
+
+Maksun palautus on tehtävä viivytyksettä ja viimeistään 14 päivän kuluttua peruuttamisilmoituksesta (KSL 6 luvun 17 §:n 3 momentti). Palautuksen maksamista voi kuitenkin pidättää, kunnes tuote on saatu takaisin tai asiakas on osoittanut lähettäneensä sen.
 
 Vahvistussivu, asiakkaan sähköposti, tilausmuistiinpano ja admin-sähköposti muistuttavat manuaalisesta tarkistuksesta. Kun pyyntö on kirjattu, toimintoa ei voi lähettää samalle tilaukselle uudelleen.
 
