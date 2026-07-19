@@ -64,7 +64,7 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 # Tietosuojaseloste
 
-Päivitetty: 15.7.2026
+Päivitetty: 19.7.2026
 
 ## Rekisterinpitäjä
 
@@ -97,7 +97,7 @@ Jäsenyyteen liittyviä tietoja voidaan saada myös yhdistyksen jäsenrekisteris
 
 ## Alaikäisen suostumus
 
-Jos olet alle 13-vuotias, et voi itse antaa tietosuojalain (1050/2018) 5 §:ssä tarkoitettua suostumusta suoraan lapselle tarjottavaan tietoyhteiskunnan palveluun. Pyydä tällöin huoltajaa tekemään tai hyväksymään sellainen sivuston toiminto, jossa henkilötietojen käsittely perustuu suostumukseen, kuten uutiskirjeen tilaaminen. Ikäraja ei sellaisenaan muuta muun oikeusperusteen, kuten sopimuksen tai lakisääteisen velvoitteen, perusteella tehtävää käsittelyä.
+Jos olet alle 13-vuotias, et voi tietosuojalain (1050/2018) 5 §:n mukaan itse antaa pätevää suostumusta henkilötietojesi käsittelyyn tietoyhteiskunnan palvelussa, jota tarjotaan suoraan lapselle. Pyydä tällöin huoltajaa tekemään tai hyväksymään sellainen sivuston toiminto, jossa henkilötietojen käsittely perustuu suostumukseen, kuten uutiskirjeen tilaaminen. Ikäraja ei sellaisenaan muuta muun oikeusperusteen, kuten sopimuksen tai lakisääteisen velvoitteen, perusteella tehtävää käsittelyä.
 
 ## Mitä henkilötietoja keräämme ja miksi
 
@@ -130,7 +130,7 @@ Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -o
 - maksutapahtuman viitetiedot
 - jäsenyyteen liittyvät tiedot
 
-Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
+Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain edellyttämän ajan (tositteet vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt).
 
 Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Perhejäsenen tiedot saadaan jäsenmaksun maksajalta, eivät välttämättä perhejäseneltä itseltään. Tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
 
@@ -221,7 +221,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 
 - Käyttäjätilien tiedot säilytetään niin kauan kuin tilisi on aktiivinen. Voit pyytää tilisi poistamista milloin tahansa.
 - Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.
-- Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti 6 vuotta tilikauden päättymisestä.
+- Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
 - Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
 
