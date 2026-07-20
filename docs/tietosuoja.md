@@ -60,11 +60,13 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 > Sukututkimusrekisteri käsitellään erillisessä rekisteriselosteessa: `/sukuseura/rekisteriseloste/`.
 
+> **Luonnos — tarkistettava ennen julkaisua tai käyttöä.**
+
 ---
 
 # Tietosuojaseloste
 
-Päivitetty: 19.7.2026
+Päivitetty: 20.7.2026
 
 ## Rekisterinpitäjä
 
@@ -214,6 +216,7 @@ Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointit
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
 - **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
 - **Tekoälyavusteinen tukichatti**: Mistral AI SAS (Ranska/EU) — chattiin kirjoitettujen viestien käsittely vastausten tuottamiseksi
+- **Profiilikuvat**: Gravatar / Automattic — kirjautuneen käyttäjän sähköpostiosoitteesta muodostettu tiiviste välitetään Gravatarille profiilikuvan tarkistamista varten. Jos kuva löytyy, käyttäjän selain lataa sen Gravatarista. Gravataria ei käytetä kirjautumattomien kävijöiden, kommenttien tai foorumin avatareihin.
 
 Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on tehtävänsä perusteella tarve käsitellä tietoja, kuten sivuston ylläpitäjät, tapahtumien vastuuhenkilöt, verkkokaupan tilausten käsittelijät ja taloushallinnon vastuuhenkilöt.
 
@@ -248,6 +251,8 @@ Sinulla on myös oikeus tehdä valitus tietosuojavaltuutetun toimistolle (tietos
 Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välittämiseksi tarvittavia tietoja. Tukichatin käsittelijä Mistral AI toimii EU-alueella.
 
 Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.
+
+Kun olet kirjautunut sivustolle ja Gravatar-avatarit ovat käytössä, sähköpostiosoitteestasi muodostettu tiiviste lähetetään Gravatar-palvelulle profiilikuvan olemassaolon tarkistamista varten. Jos kuva löytyy, selaimesi lataa kuvan Gravatarista. Gravatar-palvelua ylläpitää Automattic, joka voi käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä ja niissä kuvattujen suojatoimien mukaisesti.
 
 ## Automaattinen päätöksenteko ja profilointi
 
