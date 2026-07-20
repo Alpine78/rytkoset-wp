@@ -71,6 +71,12 @@ julkaistuun versioon verrattuna:
   6:13 §:n 3 momentin vahvistusvaatimuksen. Peruuttamislomakkeen ja -ohjeen
   (KSL 6:9 §:n 3 momentti, OM:n asetus) tarjoaminen on avoin
   jatkoselvitettävä.
+- **Virhevastuu ja riidanratkaisu 20.7.2026 (#574)**: julkaistavaan tekstiin
+  lisätty yleisluonteinen maininta myyjän lakisääteisestä virhevastuusta sekä
+  tieto siitä, etteivät ehdot rajoita kuluttajan lakisääteisiä oikeuksia.
+  Riidanratkaisun etenemisjärjestys ja linkit on tarkistettu Kilpailu- ja
+  kuluttajaviraston kuluttajaneuvonnan sekä kuluttajariitalautakunnan
+  ajantasaisilta verkkosivuilta.
 
 ## Julkaisu WordPress-adminissa
 
@@ -190,8 +196,27 @@ edellä kohdassa "Digitaaliset tuotteet".
 
 ## Virheet ja reklamaatiot
 
-Jos tuotteessa, maksussa tai toimituksessa on virhe, ota yhteyttä
-mahdollisimman pian.
+Jos tavarassa, digitaalisessa sisällössä tai palvelussa, maksussa tai
+toimituksessa on virhe, ilmoita siitä mahdollisimman pian osoitteeseen
+info@rytkoset.net.
+
+Myyjä vastaa tavaroiden sekä digitaalisten sisältöjen ja palvelujen virheistä
+kuluttajansuojalain virhevastuuta koskevien säännösten mukaisesti. Näillä
+ehdoilla ei rajoiteta kuluttajan lakisääteiseen virhevastuuseen perustuvia
+oikeuksia.
+
+## Erimielisyyksien ratkaiseminen
+
+Jos kauppasopimusta koskevaa erimielisyyttä ei saada ratkaistuksi osapuolten
+välisillä neuvotteluilla, kuluttaja voi ottaa yhteyttä Kilpailu- ja
+kuluttajaviraston kuluttajaneuvontaan:
+[kkv.fi/kuluttajaneuvonta](https://www.kkv.fi/kuluttaja-asiat/kuluttajaneuvonta/).
+
+Jos erimielisyys ei ratkea kuluttajaneuvonnan avulla, kuluttaja voi saattaa
+asian kuluttajariitalautakunnan ratkaistavaksi:
+[kuluttajariita.fi](https://www.kuluttajariita.fi/). Kuluttajariitalautakunta
+voi jättää asian käsittelemättä, jos kuluttaja ei ole ensin ollut yhteydessä
+kuluttajaneuvontaan.
 
 ## Yhteydenotot
 
