@@ -355,6 +355,9 @@ class WC_Order {
 	public ?DateTimeImmutable $date_created = null;
 	public string $order_number = '';
 	public string $billing_email = '';
+	public string $billing_first_name = '';
+	public string $billing_last_name = '';
+	public string $order_key = '';
 	public string $payment_method = '';
 	public string $edit_order_url = '';
 	public bool $payment_needed = false;
@@ -395,6 +398,18 @@ class WC_Order {
 
 	public function get_billing_email(): string {
 		return $this->billing_email;
+	}
+
+	public function get_formatted_billing_full_name(): string {
+		return trim( $this->billing_first_name . ' ' . $this->billing_last_name );
+	}
+
+	public function get_order_key(): string {
+		return '' !== $this->order_key ? $this->order_key : 'wc_order_' . $this->id;
+	}
+
+	public function get_formatted_order_total(): string {
+		return '10,00 €';
 	}
 
 	public function get_edit_order_url(): string {

@@ -555,7 +555,13 @@ function rytkoset_theme_scripts() {
 
 	if (
 		function_exists( 'is_woocommerce' )
-		&& ( is_woocommerce() || is_cart() || is_checkout() || ( function_exists( 'is_account_page' ) && is_account_page() ) )
+		&& (
+			is_woocommerce()
+			|| is_cart()
+			|| is_checkout()
+			|| ( function_exists( 'is_account_page' ) && is_account_page() )
+			|| ( function_exists( 'rytkoset_theme_is_guest_order_cancellation_request' ) && rytkoset_theme_is_guest_order_cancellation_request() )
+		)
 	) {
 		wp_enqueue_style(
 			'rytkoset-theme-shop',
