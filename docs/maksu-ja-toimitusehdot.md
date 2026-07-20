@@ -42,12 +42,15 @@ julkaistuun versioon verrattuna:
   soveltuvuus verkkosisältöön on epäselvä ja tarkistettava juristilta ennen
   kuin siihen nojataan.)*
 - **Jäsenmaksut**: mikään KSL 6:16 §:n poikkeuslista ei suoraan mainitse
-  jäsenmaksua, eikä koodissa ole 15/16 §:n edellyttämää
-  suostumusmekanismia. Syvempi avoin kysymys — onko yhdistyksen jäsenmaksu
-  ylipäätään KSL 6 luvun soveltamisalaan kuuluva kulutushyödykesopimus vai
-  yhdistyslain piiriin kuuluva jäsenyysasia — jää auki. Julkaistava teksti ei
-  siksi väitä peruuttamisoikeutta rajoitetuksi, vaan toteaa soveltumisen
-  arvioitavan tarvittaessa tapauskohtaisesti.
+  jäsenmaksua. Julkaistava teksti, tilausvahvistuksen peruuttamisohje (#573)
+  ja itsepalveluperuutuksen huomautukset kohtelevat jäsenmaksua siksi
+  yhdenmukaisesti tavallisen 14 päivän peruuttamisoikeuden piiriin kuuluvana
+  etämyyntituotteena. Tämä on KSL 6:5 §:n kannalta turvallisin linja, koska
+  ehdot eivät voi poiketa 6 luvusta kuluttajan vahingoksi. Syvempi avoin
+  kysymys — onko yhdistyksen jäsenmaksu ylipäätään KSL 6 luvun soveltamisalaan
+  kuuluva kulutushyödykesopimus vai yhdistyslain piiriin kuuluva jäsenyysasia
+  — jää edelleen juristin vahvistettavaksi; jos jäsenmaksu rajataan 6 luvun
+  ulkopuolelle, linjaus voidaan kiristää.
 - Toteutunut itsepalvelu-peruutus (`/oma-tili/peruuta-tilaus/`) on kuvattu
   [`docs/woocommerce-peruutus.md`](woocommerce-peruutus.md):ssä. Fyysisen
   tuotteen 14 vuorokauden määräaika alkaa vastaanottamisesta; koska sivusto
@@ -199,9 +202,8 @@ Fyysisen tuotteen palautuksessa hyvityksen maksamista voidaan kuitenkin
 odottaa, kunnes tuote on vastaanotettu takaisin tai olet osoittanut
 lähettäneesi sen.
 
-Jäsenmaksun kuluttajaoikeudellinen luokittelu ja kuluttajansuojalain
-etämyyntisäännösten soveltuminen arvioidaan tarvittaessa tapauskohtaisesti
-peruutuspyynnön yhteydessä. Tapahtumamaksuihin ei sovelleta
+Jäsenmaksuihin sovelletaan samaa 14 päivän peruuttamisoikeutta kuin muihinkin
+etämyynnissä myytäviin tuotteisiin. Tapahtumamaksuihin ei sovelleta
 peruuttamisoikeutta yllä kuvatun mukaisesti. Digitaalisten tuotteiden
 peruuttamisoikeus on kuvattu edellä kohdassa "Digitaaliset tuotteet".
 

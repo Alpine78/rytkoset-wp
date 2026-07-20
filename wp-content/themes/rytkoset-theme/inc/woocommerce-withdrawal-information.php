@@ -132,6 +132,10 @@ function rytkoset_theme_get_withdrawal_information_email_ids() {
  * @return array<string, mixed>
  */
 function rytkoset_theme_get_withdrawal_information_content() {
+	$contact_email = function_exists( 'rytkoset_theme_get_contact_email' )
+		? rytkoset_theme_get_contact_email()
+		: 'info@rytkoset.net';
+
 	return array(
 		'intro'        => __( 'Tämä ohje ja lomake koskevat tilauksesi tuotteita, joihin sovelletaan peruuttamisoikeutta.', 'rytkoset-theme' ),
 		'right'        => array(
@@ -139,7 +143,11 @@ function rytkoset_theme_get_withdrawal_information_content() {
 			'paragraphs' => array(
 				__( 'Teillä on oikeus peruuttaa tämä sopimus 14 päivän kuluessa syytä ilmoittamatta.', 'rytkoset-theme' ),
 				__( 'Peruuttamisen määräaika päättyy 14 päivän kuluttua sopimuksen tekemisestä, kun kyseessä on palvelu tai sähköisesti toimitettava digitaalinen sisältö. Tavaran kaupassa määräaika päättyy 14 päivän kuluttua siitä, kun tavara, viimeinen tavaraerä tai säännöllisesti toimitettavien tavaroiden ensimmäinen tavaraerä on vastaanotettu.', 'rytkoset-theme' ),
-				__( 'Peruuttamisoikeuden käyttämiseksi teidän on ilmoitettava meille, Rytkösten sukuseura ry, Tyrmynniementie 71, 74595 Runni, puhelin 040 592 2842, sähköposti info@rytkoset.net, päätöksestänne peruuttaa sopimus yksiselitteisellä tavalla, esimerkiksi kirjeellä postitse tai sähköpostilla. Voitte käyttää jäljempänä olevaa peruuttamislomaketta, mutta sen käyttö ei ole pakollista.', 'rytkoset-theme' ),
+				sprintf(
+					/* translators: %s: association contact email address. */
+					__( 'Peruuttamisoikeuden käyttämiseksi teidän on ilmoitettava meille, Rytkösten sukuseura ry, Tyrmynniementie 71, 74595 Runni, puhelin 040 592 2842, sähköposti %s, päätöksestänne peruuttaa sopimus yksiselitteisellä tavalla, esimerkiksi kirjeellä postitse tai sähköpostilla. Voitte käyttää jäljempänä olevaa peruuttamislomaketta, mutta sen käyttö ei ole pakollista.', 'rytkoset-theme' ),
+					$contact_email
+				),
 				__( 'Voitte tehdä yksiselitteisen peruuttamisilmoituksen myös verkkosivustollamme kohdassa Oma tili → Tilaukset. Jos käytätte tätä vaihtoehtoa, ilmoitamme teille viipymättä sähköpostitse peruuttamisilmoituksen saapumisesta.', 'rytkoset-theme' ),
 				__( 'Peruuttamisen määräajan noudattamiseksi riittää, että lähetätte ilmoituksenne peruuttamisoikeuden käytöstä ennen peruuttamisajan päättymistä.', 'rytkoset-theme' ),
 			),
@@ -165,7 +173,11 @@ function rytkoset_theme_get_withdrawal_information_content() {
 		'form_heading' => __( 'Peruuttamislomakkeen malli', 'rytkoset-theme' ),
 		'form_intro'   => __( 'Täyttäkää ja palauttakaa tämä lomake vain siinä tapauksessa, että haluatte peruuttaa sopimuksen.', 'rytkoset-theme' ),
 		'form_lines'   => array(
-			__( 'Vastaanottaja: Rytkösten sukuseura ry, Tyrmynniementie 71, 74595 Runni, info@rytkoset.net', 'rytkoset-theme' ),
+			sprintf(
+				/* translators: %s: association contact email address. */
+				__( 'Vastaanottaja: Rytkösten sukuseura ry, Tyrmynniementie 71, 74595 Runni, %s', 'rytkoset-theme' ),
+				$contact_email
+			),
 			__( 'Ilmoitan/Ilmoitamme (*), että haluan/haluamme (*) peruuttaa tekemäni/tekemämme (*) sopimuksen, joka koskee seuraavien tavaroiden toimittamista (*) / seuraavan palvelun suorittamista (*):', 'rytkoset-theme' ),
 			__( 'Tavarat tai palvelu: ________________________________________________', 'rytkoset-theme' ),
 			__( 'Tilauspäivä (*) / Vastaanottopäivä (*): _____________________________', 'rytkoset-theme' ),

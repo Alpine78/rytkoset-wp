@@ -122,6 +122,26 @@ final class WithdrawalInformationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'tapahtumamaksuihin', $output );
 	}
 
+	public function test_withdrawal_information_uses_contact_email_helper(): void {
+		$GLOBALS['rytkoset_test_contact_email'] = 'kassa@rytkoset.test';
+
+		$order = $this->order_with_products(
+			new WC_Product( array( '_virtual' => 'no' ), 10, 'publish', 'Painettu sukulehti' )
+		);
+
+		ob_start();
+		rytkoset_theme_render_withdrawal_information_in_email(
+			$order,
+			false,
+			false,
+			$this->email( 'customer_processing_order' )
+		);
+		$output = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'kassa@rytkoset.test', $output );
+		$this->assertStringNotContainsString( 'info@rytkoset.net', $output );
+	}
+
 	public function test_plain_text_completed_order_email_contains_durable_copy(): void {
 		$order = $this->order_with_products(
 			new WC_Product( array( '_virtual' => 'yes' ), 10, 'publish', 'Virtuaalinen palvelu' )

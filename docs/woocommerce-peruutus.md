@@ -41,12 +41,17 @@ Vahvistussivu, asiakkaan sähköposti, tilausmuistiinpano ja admin-sähköposti 
 ## Tuotteiden peruutusoikeuden poikkeukset
 
 Tapahtumamaksuihin ei sovelleta peruuttamisoikeutta, kun vapaa-ajanpalvelu
-suoritetaan määrättynä ajankohtana. Jäsenmaksun kuluttajaoikeudellinen
-luokittelu arvioidaan tarvittaessa tapauskohtaisesti. Jos tilaus sisältää
-jäsenmaksu- tai Tampere 2026 -tuotteen, nykyinen itsepalvelun vahvistussivu
-ja peruutuspyynnön sähköposti näyttävät tästä yleisen huomautuksen.
-**Peruutuspyyntöä ei silti estetä** — maksetut tilaukset käsitellään joka
-tapauksessa manuaalisesti, jolloin soveltuva poikkeus voidaan arvioida.
+suoritetaan määrättynä ajankohtana (KSL 6:16 §:n 1 momentin 11 kohta).
+Jäsenmaksuja kohdellaan tavallisen 14 päivän peruuttamisoikeuden piiriin
+kuuluvina, yhdenmukaisesti tilausvahvistuksen peruuttamisohjeen (#573)
+kanssa — niitä ei enää merkitä peruutusoikeuden poikkeukseksi. Vain
+määrättynä ajankohtana suoritettava tapahtuma (Tampere 2026
+-osallistumismaksu ja saman tapahtuman bussikyyti) laukaisee poikkeushuomautuksen
+`rytkoset_theme_order_has_cancellation_exception_products()`-funktiossa: jos
+tilaus sisältää tällaisen tuotteen, itsepalvelun vahvistussivu ja
+peruutuspyynnön sähköposti näyttävät tästä huomautuksen. **Peruutuspyyntöä ei
+silti estetä** — maksetut tilaukset käsitellään joka tapauksessa manuaalisesti,
+jolloin soveltuva poikkeus voidaan arvioida.
 
 ## Peruuttamisohje ja -lomake tilausvahvistuksessa
 
