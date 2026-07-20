@@ -57,6 +57,7 @@ require_once get_template_directory() . '/inc/woocommerce-empty-cart.php';
 require_once get_template_directory() . '/inc/woocommerce-structured-data.php';
 require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
+require_once get_template_directory() . '/inc/woocommerce-withdrawal-information.php';
 require_once get_template_directory() . '/inc/woocommerce-my-account.php';
 require_once get_template_directory() . '/inc/customizer-contact.php';
 require_once get_template_directory() . '/inc/email.php';

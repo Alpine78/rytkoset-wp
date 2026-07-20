@@ -45,9 +45,9 @@ julkaistuun versioon verrattuna:
   jäsenmaksua, eikä koodissa ole 15/16 §:n edellyttämää
   suostumusmekanismia. Syvempi avoin kysymys — onko yhdistyksen jäsenmaksu
   ylipäätään KSL 6 luvun soveltamisalaan kuuluva kulutushyödykesopimus vai
-  yhdistyslain piiriin kuuluva jäsenyysasia — jää auki; teksti pysyy siksi
-  varovaisena ("voi olla rajoitettu... arvioidaan tapauskohtaisesti"),
-  samassa hengessä kuin nykyinen live-teksti.
+  yhdistyslain piiriin kuuluva jäsenyysasia — jää auki. Julkaistava teksti ei
+  siksi väitä peruuttamisoikeutta rajoitetuksi, vaan toteaa soveltumisen
+  arvioitavan tarvittaessa tapauskohtaisesti.
 - Toteutunut itsepalvelu-peruutus (`/oma-tili/peruuta-tilaus/`) on kuvattu
   [`docs/woocommerce-peruutus.md`](woocommerce-peruutus.md):ssä. Fyysisen
   tuotteen 14 vuorokauden määräaika alkaa vastaanottamisesta; koska sivusto
@@ -69,14 +69,25 @@ julkaistuun versioon verrattuna:
   1 momentin 11 kohta". Digisisällön suostumus näkyy tilausvahvistuksessa ja
   vahvistussähköpostissa (#491:n kenttäsuodattimet), mikä toteuttaa KSL
   6:13 §:n 3 momentin vahvistusvaatimuksen. Peruuttamislomakkeen ja -ohjeen
-  (KSL 6:9 §:n 3 momentti, OM:n asetus) tarjoaminen on avoin
-  jatkoselvitettävä.
+  (KSL 6:9 §:n 3 momentti, OM:n asetus) tarjoaminen jäi tässä vaiheessa
+  #573:ssa toteutettavaksi.
 - **Virhevastuu ja riidanratkaisu 20.7.2026 (#574)**: julkaistavaan tekstiin
   lisätty yleisluonteinen maininta myyjän lakisääteisestä virhevastuusta sekä
   tieto siitä, etteivät ehdot rajoita kuluttajan lakisääteisiä oikeuksia.
   Riidanratkaisun etenemisjärjestys ja linkit on tarkistettu Kilpailu- ja
   kuluttajaviraston kuluttajaneuvonnan sekä kuluttajariitalautakunnan
   ajantasaisilta verkkosivuilta.
+- **Peruuttamisohje ja -lomake 20.7.2026 (#573)**: julkaistavaan tekstiin
+  lisätty [oikeusministeriön asetuksen 110/2014](https://www.finlex.fi/api/media/statute/94081/mainPdf/main.pdf)
+  liitteiden I ja II nykyisten,
+  [asetuksella 754/2022](https://www.finlex.fi/api/media/statute/14014/mainPdf/main.pdf)
+  muutettujen mallien mukainen täytetty peruuttamisohje ja -lomake.
+  Tuoteryhmärajaukset vastaavat #571:n ehtoja: määrättynä
+  ajankohtana suoritettavat tapahtumapalvelut sekä nimenomaisen suostumuksen,
+  hyväksynnän ja vahvistuksen jälkeen toimitettu digisisältö rajataan ulos.
+  Sama pysyvä sisältö lisätään WooCommercen tilausvahvistussähköposteihin
+  niissä tilauksissa, joissa vähintään yhdellä tuotteella on
+  peruuttamisoikeus.
 
 ## Julkaisu WordPress-adminissa
 
@@ -188,11 +199,106 @@ Fyysisen tuotteen palautuksessa hyvityksen maksamista voidaan kuitenkin
 odottaa, kunnes tuote on vastaanotettu takaisin tai olet osoittanut
 lähettäneesi sen.
 
-Jäsenmaksujen peruutusoikeus voi olla rajoitettu, jos jäsenyyteen liittyvä
-palvelu on jo alkanut; tämä arvioidaan tapauskohtaisesti peruutuspyynnön
-yhteydessä. Tapahtumamaksuihin ei sovelleta peruuttamisoikeutta yllä
-kuvatun mukaisesti. Digitaalisten tuotteiden peruuttamisoikeus on kuvattu
-edellä kohdassa "Digitaaliset tuotteet".
+Jäsenmaksun kuluttajaoikeudellinen luokittelu ja kuluttajansuojalain
+etämyyntisäännösten soveltuminen arvioidaan tarvittaessa tapauskohtaisesti
+peruutuspyynnön yhteydessä. Tapahtumamaksuihin ei sovelleta
+peruuttamisoikeutta yllä kuvatun mukaisesti. Digitaalisten tuotteiden
+peruuttamisoikeus on kuvattu edellä kohdassa "Digitaaliset tuotteet".
+
+## Peruuttamisohje
+
+Tämä ohje ja jäljempänä oleva lomake koskevat tuotteita, joihin sovelletaan
+peruuttamisoikeutta.
+
+### Peruuttamisoikeus
+
+Teillä on oikeus peruuttaa tämä sopimus 14 päivän kuluessa syytä
+ilmoittamatta.
+
+Peruuttamisen määräaika päättyy 14 päivän kuluttua sopimuksen tekemisestä,
+kun kyseessä on palvelu tai sähköisesti toimitettava digitaalinen sisältö.
+Tavaran kaupassa määräaika päättyy 14 päivän kuluttua siitä, kun tavara,
+viimeinen tavaraerä tai säännöllisesti toimitettavien tavaroiden ensimmäinen
+tavaraerä on vastaanotettu.
+
+Peruuttamisoikeuden käyttämiseksi teidän on ilmoitettava meille päätöksestänne
+peruuttaa sopimus yksiselitteisellä tavalla, esimerkiksi kirjeellä postitse
+tai sähköpostilla:
+
+- **Rytkösten sukuseura ry**
+- Tyrmynniementie 71, 74595 Runni
+- Puhelin: 040 592 2842
+- Sähköposti: info@rytkoset.net
+
+Voitte käyttää jäljempänä olevaa peruuttamislomaketta, mutta sen käyttö ei
+ole pakollista. Voitte tehdä yksiselitteisen peruuttamisilmoituksen myös
+verkkosivustollamme kohdassa *Oma tili → Tilaukset*. Jos käytätte tätä
+vaihtoehtoa, ilmoitamme teille viipymättä sähköpostitse
+peruuttamisilmoituksen saapumisesta.
+
+Peruuttamisen määräajan noudattamiseksi riittää, että lähetätte ilmoituksenne
+peruuttamisoikeuden käytöstä ennen peruuttamisajan päättymistä.
+
+### Peruuttamisen vaikutukset
+
+Jos peruutatte tämän sopimuksen, palautamme teille kaikki teiltä saamamme
+suoritukset, myös toimituskustannukset (paitsi lisäkustannuksia siitä, että
+olette valinnut tarjoamastamme edullisimmasta vakiotoimitustavasta poikkeavan
+toimitustavan), viivytyksettä ja joka tapauksessa viimeistään 14 päivän
+kuluttua peruuttamisilmoituksen saatuamme. Suoritamme palautuksen sillä
+maksutavalla, jota olette käyttänyt alkuperäisessä liiketoimessa, ellette ole
+nimenomaisesti suostunut muuhun, ja joka tapauksessa siten, että teille ei
+aiheudu suoritusten palauttamisesta kustannuksia.
+
+Voimme pidättyä maksujen palautuksesta, kunnes olemme saaneet tavaran takaisin
+tai kunnes olette osoittanut lähettäneenne tavaran takaisin.
+
+Teidän on lähetettävä tavarat takaisin osoitteeseen Rytkösten sukuseura ry,
+Tyrmynniementie 71, 74595 Runni viivytyksettä ja viimeistään 14 päivän
+kuluttua peruuttamisilmoituksen tekemisestä. Määräaikaa on noudatettu, jos
+lähetätte tavarat takaisin ennen kyseisen 14 päivän määräajan päättymistä.
+
+Teidän on vastattava tavaroiden palauttamisesta johtuvista välittömistä
+kustannuksista.
+
+Olette vastuussa vain sellaisesta tavaroiden arvon alentumisesta, joka on
+seurausta muusta kuin tavaroiden luonteen, ominaisuuksien ja toimivuuden
+toteamiseksi tarvittavasta käsittelystä.
+
+Jos olette pyytänyt palvelun suorittamista ennen peruuttamisajan päättymistä,
+teidän on maksettava meille peruuttamisilmoituksen tekemiseen mennessä
+sopimuksen täyttämiseksi tehdystä suorituksesta kohtuullinen korvaus.
+
+### Tuotteet, joita peruuttamisoikeus ei koske
+
+Peruuttamisoikeutta ei sovelleta tapahtumamaksuihin, kun vapaa-ajanpalvelu
+sovitaan suoritettavaksi määrättynä ajankohtana.
+
+Sähköisesti toimitettavan digitaalisen sisällön peruuttamisoikeus päättyy,
+kun toimittaminen on aloitettu peruuttamisaikana kuluttajan nimenomaisella
+ennakkosuostumuksella, kuluttaja on hyväksynyt peruuttamisoikeuden puuttumisen
+ja elinkeinonharjoittaja on toimittanut tästä vahvistuksen.
+
+## Peruuttamislomakkeen malli
+
+*(Täyttäkää ja palauttakaa tämä lomake vain siinä tapauksessa, että haluatte
+peruuttaa sopimuksen.)*
+
+- Vastaanottaja: Rytkösten sukuseura ry, Tyrmynniementie 71, 74595 Runni,
+  info@rytkoset.net
+- Ilmoitan/Ilmoitamme (\*), että haluan/haluamme (\*) peruuttaa
+  tekemäni/tekemämme (\*) sopimuksen, joka koskee seuraavien tavaroiden
+  toimittamista (\*) / seuraavan palvelun suorittamista (\*):
+- Tavarat tai palvelu: ________________________________________________
+- Tilauspäivä (\*) / Vastaanottopäivä (\*): _____________________________
+- Kuluttajan nimi (\*) / Kuluttajien nimet (\*): _________________________
+- Kuluttajan osoite (\*) / Kuluttajien osoitteet (\*): ___________________
+- Kuluttajan allekirjoitus (\*) / Kuluttajien allekirjoitukset (\*) (vain
+  jos lomake täytetään paperimuodossa):
+- Allekirjoitus: ______________________________________________________
+- Päiväys: ____________________________________________________________
+
+(\*) Tarpeeton yliviivataan.
 
 ## Virheet ja reklamaatiot
 

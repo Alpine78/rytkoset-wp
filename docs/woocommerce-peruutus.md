@@ -40,7 +40,50 @@ Vahvistussivu, asiakkaan sähköposti, tilausmuistiinpano ja admin-sähköposti 
 
 ## Tuotteiden peruutusoikeuden poikkeukset
 
-Ainaisjäsenyyksien ja tapahtumamaksujen peruutusoikeus voi olla rajoitettu, jos palvelu on jo alkanut. Jos tilaus sisältää jäsenmaksu- tai Tampere 2026 -tuotteen, vahvistussivulla ja asiakassähköpostissa näytetään tästä huomautus. **Peruutuspyyntöä ei silti estetä** — maksetut tilaukset käsitellään joka tapauksessa manuaalisesti, jolloin poikkeukset voidaan arvioida.
+Tapahtumamaksuihin ei sovelleta peruuttamisoikeutta, kun vapaa-ajanpalvelu
+suoritetaan määrättynä ajankohtana. Jäsenmaksun kuluttajaoikeudellinen
+luokittelu arvioidaan tarvittaessa tapauskohtaisesti. Jos tilaus sisältää
+jäsenmaksu- tai Tampere 2026 -tuotteen, nykyinen itsepalvelun vahvistussivu
+ja peruutuspyynnön sähköposti näyttävät tästä yleisen huomautuksen.
+**Peruutuspyyntöä ei silti estetä** — maksetut tilaukset käsitellään joka
+tapauksessa manuaalisesti, jolloin soveltuva poikkeus voidaan arvioida.
+
+## Peruuttamisohje ja -lomake tilausvahvistuksessa
+
+Toteutus: `inc/woocommerce-withdrawal-information.php` (#573). Moduuli lisää
+oikeusministeriön asetuksen 110/2014 liitteiden I ja II nykyisten,
+asetuksella 754/2022 muutettujen mallien mukaisen täytetyn peruuttamisohjeen
+ja -lomakkeen WooCommercen asiakassähköpostiin pysyvänä tekstikopiona.
+Sisältö lisätään hookilla `woocommerce_email_after_order_table` sekä HTML-
+että tekstimuotoisiin tilausvahvistuksiin.
+
+Ohje lisätään vain, kun tilauksessa on vähintään yksi tuote, johon
+peruuttamisoikeutta sovelletaan:
+
+- fyysiset tuotteet, jäsenmaksutuotteet ja tuntemattomat uudet tuotetyypit
+  sisällytetään oletuksena, jotta pakollinen ohje ei jää hiljaisesti pois
+- Tampere 2026 -osallistumismaksu ja saman tapahtuman bussikyyti rajataan pois
+  määrättynä ajankohtana suoritettavina vapaa-ajanpalveluina
+- digilehteen linkitetty tuote rajataan pois vain, jos tilaukselle on
+  tallennettu #477:n nimenomainen suostumus välittömään toimitukseen ja
+  peruuttamisoikeuden menettämisen hyväksyntä
+- sekatilauksessa ohje näytetään, jos yksikin tuote kuuluu ohjeen piiriin
+
+Välittömän tilausvahvistuksen mahdolliset WooCommerce-sähköpostit ovat
+`customer_processing_order`, `customer_on_hold_order` ja
+`customer_completed_order`. Viimeinen tarvitaan virtuaalituotteille, jotka
+voivat siirtyä suoraan `completed`-tilaan. Admin-, hyvitys- ja muut
+asiakassähköpostit rajataan pois.
+
+Tuotekohtaista päätöstä voi laajentaa suodattimilla
+`rytkoset_theme_product_is_withdrawal_exempt_event` ja
+`rytkoset_theme_product_has_withdrawal_right`. Sähköpostityyppejä voi
+muuttaa suodattimella `rytkoset_theme_withdrawal_information_email_ids`.
+Julkaistavan verkkosivutekstin versionhallittu lähdekopio on
+[`maksu-ja-toimitusehdot.md`](maksu-ja-toimitusehdot.md)-tiedoston
+*Peruuttamisohje*- ja *Peruuttamislomakkeen malli* -kohdissa.
+Lakitekstiä tai yhteystietoja muutettaessa päivitä aina sekä tämä lähdekopio
+että moduulin sähköpostisisältö ja julkaise lähdekopio uudelleen WordPressiin.
 
 ## Tietoturva
 
