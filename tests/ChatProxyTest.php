@@ -225,6 +225,7 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'ei Markdownia', $prompt );
 		$this->assertStringContainsString( 'Sivuston osoite on https://rytkoset.test', $prompt );
 		$this->assertStringContainsString( 'https://rytkoset.test/kauppa/', $prompt );
+		$this->assertStringContainsString( 'URL-osoitteen jälkeen aina välilyönti tai rivinvaihto', $prompt );
 	}
 
 	public function test_stable_site_context_is_filterable(): void {

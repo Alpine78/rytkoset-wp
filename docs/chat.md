@@ -96,6 +96,8 @@ Promptin tietolähteet:
 3. **Customizerin Tietopohja/FAQ-kenttä** (#414): ylläpitäjän vapaamuotoinen tietopohja vakiintuneille yhdistys- ja toimintaohjeille.
 4. **Automaattinen ajantasainen tietolohko** (#459, #471): tulevat tapahtumat, julkaistut jäsenyystuotteet ja muut verkkokaupan tuotteet sivuston omista lähteistä.
 
+Promptti ohjeistaa jättämään URL-osoitteen jälkeen aina välilyönnin tai rivinvaihdon. Widget rajaa lisäksi oman sivuston URL-kandidaatin polun ensimmäiseen merkkiin, joka ei kuulu permalinkkien tavalliseen merkistöön (`a–z`, numerot, `/`, `-`, `.`, `_`). Näin esimerkiksi polun perään ilman välilyöntiä liimautuva `/Lisätietoa` jää linkin ulkopuolelle, mutta lauseen loppupiste, sulkeet, rivinvaihto sekä kelvollisen polun kyselymerkkijono tai fragmentti säilyvät tekstissä oikein (#579).
+
 Promptin voi korvata tai laajentaa suodattimella `rytkoset_theme_chat_system_prompt` (argumentit: `$prompt`, `$contact_email`). Pysyvää sivustokontekstia voi muokata suodattimella `rytkoset_theme_chat_stable_site_context`. Sivustokartan suodattimet: `rytkoset_theme_chat_sitemap_enabled` (`true`; koko lohkon voi kytkeä pois), `..._sitemap_max_pages` (60) ja `..._sitemap_max_length` (6000 merkkiä).
 
 ## Customizer-asetukset (#414)
