@@ -253,6 +253,14 @@ class WC_Product {
 		return (string) ( $this->meta['_price'] ?? '' );
 	}
 
+	public function get_catalog_visibility(): string {
+		return (string) ( $this->meta['_catalog_visibility'] ?? 'visible' );
+	}
+
+	public function is_purchasable(): bool {
+		return (bool) ( $this->meta['_is_purchasable'] ?? true );
+	}
+
 	public function get_attribute( string $name ): string {
 		return (string) ( $this->meta[ $name ] ?? '' );
 	}
@@ -1129,6 +1137,14 @@ function current_user_can( $capability, ...$args ) {
 
 function wc_get_product( $product_id ) {
 	return $GLOBALS['rytkoset_test_products'][ (int) $product_id ] ?? false;
+}
+
+function wc_get_page_permalink( $page ) {
+	if ( 'myaccount' === $page ) {
+		return 'https://rytkoset.test/oma-tili/';
+	}
+
+	return 'https://rytkoset.test/' . trim( (string) $page, '/' ) . '/';
 }
 
 function WC(): Rytkoset_Test_WC {

@@ -232,6 +232,78 @@ function rytkoset_theme_is_event_date_passed( $event_id ) {
 }
 
 /**
+ * Returns the ID of the next upcoming published event, or 0 when none exist.
+ *
+ * "Upcoming" reuses the public registration cutoff logic: an event counts until
+ * the end of its event day (`rytkoset_theme_is_event_date_passed()`). Events
+ * without a valid date are skipped. Results sort ascending by ISO date, so the
+ * soonest event is returned. Shared by the empty-cart secondary link and any
+ * other surface that needs "the next event".
+ *
+ * @param string $fee_type                 Optional fee type filter: 'free' or 'paid'.
+ * @param bool   $require_open_registration Whether the registration deadline must exist and remain open.
+ * @return int Event post ID, or 0 when there is no matching upcoming event.
+ */
+function rytkoset_theme_get_next_upcoming_event_id( $fee_type = '', $require_open_registration = false ) {
+	if ( ! function_exists( 'rytkoset_theme_get_event_date_raw' ) ) {
+		return 0;
+	}
+
+	$fee_type = in_array( $fee_type, array( 'free', 'paid' ), true ) ? $fee_type : '';
+
+	$ids = get_posts(
+		array(
+			'post_type'        => 'rytkoset_event',
+			'post_status'      => 'publish',
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		)
+	);
+
+	$upcoming = array();
+
+	foreach ( (array) $ids as $event_id ) {
+		$event_id = (int) $event_id;
+
+		if ( 'publish' !== get_post_status( $event_id ) ) {
+			continue;
+		}
+
+		if ( '' !== $fee_type && rytkoset_theme_get_event_fee_type( $event_id ) !== $fee_type ) {
+			continue;
+		}
+
+		$date = rytkoset_theme_get_event_date_raw( $event_id );
+
+		if ( '' === $date || rytkoset_theme_is_event_date_passed( $event_id ) ) {
+			continue;
+		}
+
+		if ( $require_open_registration ) {
+			$deadline = rytkoset_theme_get_event_registration_deadline_raw( $event_id );
+
+			if ( '' === $deadline || rytkoset_theme_is_event_registration_deadline_passed( $event_id ) ) {
+				continue;
+			}
+		}
+
+		$upcoming[ $event_id ] = $date;
+	}
+
+	if ( empty( $upcoming ) ) {
+		return 0;
+	}
+
+	// ISO dates sort correctly as strings; keep the soonest event.
+	asort( $upcoming );
+
+	$event_ids = array_keys( $upcoming );
+
+	return (int) reset( $event_ids );
+}
+
+/**
  * Returns the meta key controlling Event structured-data output.
  *
  * @return string
