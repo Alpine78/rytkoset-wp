@@ -4,6 +4,7 @@
 .woocommerce-page {
   --shop-border-soft: rgba(15, 23, 42, 0.06);
   --shop-focus-ring: 0 0 0 3px rgba(15, 76, 129, 0.18);
+  --shop-accent-shadow: 0 6px 16px rgba(251, 191, 36, 0.35);
   --shop-popover-shadow: 0 1px 0 rgba(15, 23, 42, 0.04),
     0 18px 40px rgba(8, 37, 74, 0.18);
   --shop-accent-soft: #fef3c7;
@@ -18,6 +19,7 @@
 :root[data-theme="dark"] .woocommerce-page {
   --shop-border-soft: rgba(255, 255, 255, 0.08);
   --shop-focus-ring: 0 0 0 3px rgba(251, 191, 36, 0.24);
+  --shop-accent-shadow: 0 6px 16px rgba(251, 191, 36, 0.24);
   --shop-popover-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
     0 18px 40px rgba(0, 0, 0, 0.34);
   --shop-accent-soft: rgba(251, 191, 36, 0.18);
@@ -1893,4 +1895,337 @@ body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block
   .rytkoset-participant-head__title {
     display: none;
   }
+}
+
+/* ==========================================================================
+   Tyhjä ostoskori (#581) — brändinmukainen kutsuva tila
+   Korvaa WooCommercen Cart-lohkon empty-cart-block-oletuksen
+   (ks. inc/woocommerce-empty-cart.php).
+   ========================================================================== */
+.rytkoset-empty-cart {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 8px 0 24px;
+}
+
+.rytkoset-empty-cart__hero {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 3rem;
+  align-items: center;
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--shop-accent-soft) 100%);
+  border: 1px solid var(--shop-border-soft);
+  border-radius: var(--radius-l);
+  padding: 3rem 3.25rem;
+  margin-bottom: 3rem;
+}
+
+.rytkoset-empty-cart__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  margin: 0 0 0.875rem;
+}
+
+.rytkoset-empty-cart__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.rytkoset-empty-cart__title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  color: var(--color-primary-deeper);
+  margin: 0 0 0.875rem;
+  text-wrap: pretty;
+}
+
+.rytkoset-empty-cart__lede {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--color-text-mute);
+  margin: 0 0 1.75rem;
+  max-width: 46ch;
+  text-wrap: pretty;
+}
+
+.rytkoset-empty-cart__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.875rem;
+  align-items: center;
+}
+
+/* Ensisijainen painike käyttää kaupan aksenttitokeneita (vrt. .button.alt). */
+.rytkoset-empty-cart .button.rytkoset-empty-cart__cta,
+.woocommerce .rytkoset-empty-cart .button.rytkoset-empty-cart__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0.7rem 1.6rem;
+  background: var(--color-accent);
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-deeper);
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: background var(--transition-fast), transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.rytkoset-empty-cart .button.rytkoset-empty-cart__cta:hover,
+.rytkoset-empty-cart .button.rytkoset-empty-cart__cta:focus-visible {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: var(--color-primary-deeper);
+  transform: translateY(-1px);
+  box-shadow: var(--shop-accent-shadow);
+}
+
+.rytkoset-empty-cart .button.rytkoset-empty-cart__cta:focus-visible {
+  outline: none;
+  box-shadow: var(--shop-focus-ring);
+}
+
+.rytkoset-empty-cart__arrow {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.rytkoset-empty-cart__ghost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0.7rem 1.2rem;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.975rem;
+  text-decoration: none;
+  border-radius: var(--radius-pill);
+}
+
+.rytkoset-empty-cart__ghost:hover {
+  text-decoration: underline;
+}
+
+.rytkoset-empty-cart__ghost:focus-visible {
+  outline: none;
+  box-shadow: var(--shop-focus-ring);
+}
+
+.rytkoset-empty-cart__art {
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.rytkoset-empty-cart__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Poiminnat */
+.rytkoset-empty-cart__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.rytkoset-empty-cart__h2 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+  letter-spacing: -0.01em;
+  color: var(--color-primary-deeper);
+  margin: 0;
+}
+
+.rytkoset-empty-cart__section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rytkoset-empty-cart__section-link:hover {
+  text-decoration: underline;
+}
+
+.rytkoset-empty-cart__section-link:focus-visible {
+  outline: none;
+  box-shadow: var(--shop-focus-ring);
+  border-radius: var(--radius-small);
+}
+
+.rytkoset-empty-cart__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.rytkoset-empty-cart__card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--shop-border-soft);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.rytkoset-empty-cart__card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.rytkoset-empty-cart__card-media {
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-surface-muted);
+}
+
+.rytkoset-empty-cart__card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rytkoset-empty-cart__card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem 1.2rem;
+  flex: 1 1 auto;
+}
+
+.rytkoset-empty-cart__card-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.rytkoset-empty-cart__card-title a {
+  color: var(--color-primary-deeper);
+  text-decoration: none;
+}
+
+.rytkoset-empty-cart__card-title a:hover {
+  text-decoration: underline;
+}
+
+.rytkoset-empty-cart__card-price {
+  font-weight: 700;
+  color: var(--color-text-mute);
+  font-size: 0.95rem;
+}
+
+.rytkoset-empty-cart__card-price del {
+  opacity: 0.6;
+  margin-right: 0.35rem;
+  font-weight: 500;
+}
+
+.rytkoset-empty-cart__card-cta {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+/* Cardin CTA seuraa teeman kevyttä toissijaista tuotenappia. */
+.rytkoset-empty-cart .button.rytkoset-empty-cart__card-cta,
+.woocommerce .rytkoset-empty-cart .button.rytkoset-empty-cart__card-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0.45rem 1.1rem;
+  background: transparent;
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-pill);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.rytkoset-empty-cart .button.rytkoset-empty-cart__card-cta:hover,
+.rytkoset-empty-cart .button.rytkoset-empty-cart__card-cta:focus-visible {
+  background: var(--color-primary);
+  color: var(--color-text-inverted);
+}
+
+.rytkoset-empty-cart .button.rytkoset-empty-cart__card-cta:focus-visible {
+  outline: none;
+  box-shadow: var(--shop-focus-ring);
+}
+
+@media (max-width: 900px) {
+  .rytkoset-empty-cart__hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 2.25rem;
+  }
+
+  .rytkoset-empty-cart__art {
+    order: -1;
+    max-width: 420px;
+  }
+
+  .rytkoset-empty-cart__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .rytkoset-empty-cart__hero {
+    padding: 1.75rem 1.5rem;
+  }
+
+  .rytkoset-empty-cart__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rytkoset-empty-cart .button.rytkoset-empty-cart__cta,
+  .rytkoset-empty-cart__ghost {
+    justify-content: center;
+  }
+
+  .rytkoset-empty-cart__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tumma teema: navy-otsikot (--color-primary-deeper pysyy tummana) eivät erotu
+   tumman heron/kortin taustalta — vaihdetaan vaaleaan tekstivärin tokeniin. */
+:root[data-theme="dark"] .rytkoset-empty-cart__title,
+:root[data-theme="dark"] .rytkoset-empty-cart__h2,
+:root[data-theme="dark"] .rytkoset-empty-cart__card-title a {
+  color: var(--color-text);
 }
