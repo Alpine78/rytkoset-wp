@@ -78,7 +78,7 @@ Maksuttoman tapahtuman julkinen ilmoittautumislomake (`inc/event-registrations.p
 
 - **Nonce:** pyyntö vaatii voimassa olevan `wp_rest`-noncen (`X-WP-Nonce`-otsake), joten kutsun on tultava sivustolta.
 - **Per-IP rate limit:** kiinteä ikkuna transientilla, oletus 20 viestiä / IP / tunti (`REMOTE_ADDR` vain — välityspalvelinotsakkeisiin ei luoteta). Ylitys → HTTP 429. Säädettävissä suodattimilla `rytkoset_theme_chat_rate_limit` / `rytkoset_theme_chat_rate_window`.
-- **Syöte- ja vastausrajat:** viestin merkkiraja (1000), historian pituus (8 viestiä) ja vastauksen `max_tokens` (512) rajaavat yhden kutsun kulua.
+- **Syöte- ja vastausrajat:** viestin merkkiraja (1000), historian pituus (8 viestiä) ja vastauksen `max_tokens` (800) rajaavat yhden kutsun kulua.
 - **Ylläpitäjän kytkin:** chatti voidaan sulkea kokonaan Customizerista (*Ulkoasu → Mukauta → Tukichatti*), jolloin sekä widget että REST-reitti poistuvat käytöstä.
 - **Avain ei vuoda:** API-avain luetaan vain palvelimella `wp-config.php`-vakiosta eikä koskaan päädy vasteeseen tai lokiin (paitsi tekninen virheviesti `WP_DEBUG`-tilassa, ei koskaan itse avainta).
 
