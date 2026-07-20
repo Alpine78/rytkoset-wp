@@ -50,8 +50,16 @@ Tuote käyttää fyysisten tuotteiden MVP-toimitusmallia:
 
 - `Postitus`, hinta `5,90 €`
 - `Nouto tapahtumasta / sovitusti`, hinta `0 €`
+- postitettavan tuotteen käsittely 1–3 arkipäivää
+- Postin arvioitu kuljetusaika 2–5 arkipäivää lähettämisestä
 
 Toimitusmalli on dokumentoitu tarkemmin tiedostossa `docs/woocommerce-physical-products.md`.
+
+## Rakennedata
+
+Rank Math tuottaa tuotteen Product- ja Offer-rakennedatan. Teema lisää fyysiselle `Sukulehdet`-tuotteelle brändin **Rytkösten sukuseura**, jonka Finnan julkaisutietue vahvistaa lehden julkaisijaksi. Tietueessa ei ole ISSN- eikä ISBN-tunnusta, joten sellaista ei lisätä tuotteelle. Offer sisältää myös vahvistetun Suomi-postituksen hinnan ja toimitusajan sekä 14 vuorokauden postipalautuskäytännön.
+
+Arvostelu- tai hinnan alkamisdataa ei lisätä pelkästään Search Console -varoitusten poistamiseksi. Rajauksen perusteet on kuvattu tiedostossa `docs/woocommerce-physical-products.md`.
 
 ## Ylläpidon tarkistuslista
 

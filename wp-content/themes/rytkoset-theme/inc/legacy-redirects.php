@@ -92,8 +92,13 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			'unohtuiko-salasana'                       => wp_lostpassword_url(),
 			'rekisteroidy'                             => wp_registration_url(),
 			'en/component/users/registration'          => wp_registration_url(),
+			'en/component/users'                       => wp_login_url(),
 			'muokkaa-profiilia'                        => rytkoset_theme_get_my_account_endpoint_url( 'edit-account' ),
 			'kauppa/tilinhallinta'                     => rytkoset_theme_get_my_account_url(),
+			// WooCommercen oletusslugit; endpointit on konfiguroitu suomeksi
+			// (docs/woocommerce-setup.md), joten oletusosoitteet päätyvät 404:ään.
+			'my-account'                               => rytkoset_theme_get_my_account_url(),
+			'oma-tili/lost-password'                   => rytkoset_theme_get_my_account_endpoint_url( 'lost-password' ),
 
 			// Haku.
 			'haku'                                     => home_url( '/?s=' ),
@@ -112,7 +117,11 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			'sukuseura/toimintakertomus.html'          => home_url( '/sukuseura/toimintakertomus/' ),
 			'sukuseura/sukuseuran-saannot'             => home_url( '/sukuseura/saannot/' ),
 			'sukuseura/content/5-sukututkimus'         => home_url( '/sukuseura/sukututkimus/' ),
-			'sukuseura/perhetietolomake'               => home_url( '/sukuseura/jasenyys/' ),
+			'sukututkimus'                             => home_url( '/sukuseura/sukututkimus/' ),
+
+			// Galleria: /kuvat/ ei ole koskaan ollut olemassa, mutta siihen on
+			// linkitetty (mm. tukichatin aiemmin keksimä osoite) — albumit on kohde.
+			'kuvat'                                    => home_url( '/albumit/' ),
 
 			// Tapahtumat: linkkejä, joiden perässä on vahingossa ylimääräinen sana.
 			'tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/Tervetuloa' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
@@ -161,8 +170,11 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			'component/virtuemart'                     => home_url( '/kauppa/' ),
 		);
 
-		// Malformed legacy gallery feed URL with query arguments in the path.
+		// Malformed legacy gallery feed URLs with query arguments in the path.
+		// The prefix rule below does not catch these because the path continues
+		// with "&" instead of "/" after the prefix.
 		$exact_map['valokuvat&format=feed&Itemid=175&type=rss'] = home_url( '/albumit/' );
+		$exact_map['valokuvat&format=feed&Itemid=175']          = home_url( '/albumit/' );
 
 		// Flat legacy URL for the current family book product.
 		$exact_map['sukuseura/tuotteet/sukukirja_pohjois-savon_rytkoset.html'] = home_url( '/kauppa/sukukirjat/rytkosia-sukupolvesta-toiseen/' );
@@ -182,9 +194,16 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_prefix_rules' ) ) {
 	function rytkoset_theme_get_legacy_redirect_prefix_rules() {
 		return array(
 			// Entire legacy gallery section: albums, tags, authors and feeds.
+			// Sukujuhlat 2006/2009 are ancient static slide-show galleries
+			// (incl. slides/*.php subpaths) predating even the Joomla site.
 			array(
-				'prefixes' => array( 'valokuvat' ),
+				'prefixes' => array( 'valokuvat', 'Sukujuhlat2006', 'Sukujuhlat_2009' ),
 				'target'   => home_url( '/albumit/' ),
+			),
+			// Vanha perhetietolomake (myös content/*-alipolut) → sukututkimussivu.
+			array(
+				'prefixes' => array( 'sukuseura/perhetietolomake' ),
+				'target'   => home_url( '/sukuseura/sukututkimus/' ),
 			),
 			array(
 				'prefixes' => array( 'foorumi', 'en/forum', 'fi/foorumi' ),

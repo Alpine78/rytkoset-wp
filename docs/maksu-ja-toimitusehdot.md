@@ -16,10 +16,10 @@ julkaistuun versioon verrattuna:
 - **KSL 6:5 §** — ehto, joka poikkeaa 6 luvusta kuluttajan vahingoksi, on
   **mitätön**. Ympäripyöreä "tapauskohtaisesti"-muotoilu ilman lakiperustetta
   ei ole turvallinen tapa rajata peruuttamisoikeutta.
-- **Tapahtumamaksut**: KSL 6:16 §:n 11-kohta poistaa peruuttamisoikeuden
-  vapaa-ajanpalvelusta, kun sopimus edellyttää suoritusta **määrättynä
-  ajankohtana** — osuu suoraan tapahtumailmoittautumisiin. Tämä on nimetty
-  tekstissä.
+- **Tapahtumamaksut**: KSL 6:16 §:n 1 momentin 11 kohta poistaa
+  peruuttamisoikeuden vapaa-ajanpalvelusta, kun sopimus edellyttää suoritusta
+  **määrättynä ajankohtana** — osuu suoraan tapahtumailmoittautumisiin. Tämä on
+  nimetty tekstissä.
 - **Digitaaliset tuotteet (digilehdet)**: KSL 6:15 § 2 mom ja 6:24 § 2 mom
   edellyttävät kuluttajan **nimenomaista ennakkosuostumusta ja hyväksyntää
   peruuttamisoikeuden menettämisestä** kassalla, ennen kuin sähköinen
@@ -36,10 +36,11 @@ julkaistuun versioon verrattuna:
   #477:n perässä mainittu itsepalveluperuutuksen kytkentä toteaa, tätä ei
   vielä tarkisteta automaattisesti peruutuspainikkeen puolella — ylläpitäjä
   tarkistaa suostumuksen tilaukselta manuaalisen käsittelyn yhteydessä).
-  *(Sivuhuomio: KSL 6:16 § 9-kohta poistaa peruuttamisoikeuden "yksittäisen
-  aikakausjulkaisun toimittamisesta" — voisi periaatteessa koskea yksittäistä
-  digilehteä, mutta soveltuvuus verkkosisältöön on epäselvä ja tarkistettava
-  juristilta ennen kuin siihen nojataan.)*
+  *(Sivuhuomio: KSL 6:16 §:n 1 momentin 9 kohta poistaa peruuttamisoikeuden
+  "yksittäisen sanoma- tai aikakauslehden tai aikakausjulkaisun
+  toimittamisesta" — voisi periaatteessa koskea yksittäistä digilehteä, mutta
+  soveltuvuus verkkosisältöön on epäselvä ja tarkistettava juristilta ennen
+  kuin siihen nojataan.)*
 - **Jäsenmaksut**: mikään KSL 6:16 §:n poikkeuslista ei suoraan mainitse
   jäsenmaksua, eikä koodissa ole 15/16 §:n edellyttämää
   suostumusmekanismia. Syvempi avoin kysymys — onko yhdistyksen jäsenmaksu
@@ -47,13 +48,29 @@ julkaistuun versioon verrattuna:
   yhdistyslain piiriin kuuluva jäsenyysasia — jää auki; teksti pysyy siksi
   varovaisena ("voi olla rajoitettu... arvioidaan tapauskohtaisesti"),
   samassa hengessä kuin nykyinen live-teksti.
-- Toteutunut itsepalvelu-peruutus (14 vrk, `/oma-tili/peruuta-tilaus/`) on
-  kuvattu [`docs/woocommerce-peruutus.md`](woocommerce-peruutus.md):ssä —
-  tämän sivun teksti on yhdenmukaistettu sen kanssa.
-- Lisätty puuttuvat ennakkotiedot (KSL 6:9 §:n 3–4 kohta), jotka eivät
-  näkyneet aiemmassa versiossa: puhelinnumero 040 592 2842 ja osoite
-  Tyrmynniementie 71, 74595 Runni — sama osoite kuin rekisterinpitäjän
+- Toteutunut itsepalvelu-peruutus (`/oma-tili/peruuta-tilaus/`) on kuvattu
+  [`docs/woocommerce-peruutus.md`](woocommerce-peruutus.md):ssä. Fyysisen
+  tuotteen 14 vuorokauden määräaika alkaa vastaanottamisesta; koska sivusto
+  ei tallenna vastaanottopäivää, ylläpitäjä tarkistaa määräajan manuaalisesti.
+- Lisätty puuttuvat ennakkotiedot (KSL 6:9 §:n 1 momentin 3 ja 4 kohta),
+  jotka eivät näkyneet aiemmassa versiossa: puhelinnumero 040 592 2842 ja
+  osoite Tyrmynniementie 71, 74595 Runni — sama osoite kuin rekisterinpitäjän
   osoite [`docs/tietosuoja.md`](tietosuoja.md):ssä.
+- **Juridisten tekstien tarkistus 19.7.2026 (#571)**, viittaukset varmennettu
+  Finlexin konsolidoidusta lakitekstistä: "käyttämätön ja myyntikuntoinen"
+  -palautusehto korvattu KSL 6:18 §:n mukaisella arvonalennusmallilla, koska
+  ehdoton kuntovaatimus poikkeaisi 6 luvusta kuluttajan vahingoksi ja olisi
+  KSL 6:5 §:n nojalla mitätön (kuluttaja saa tutkia tuotteen kuten
+  myymälässä; laajemmasta käytöstä seuraa arvonalennusvastuu, ei
+  peruuttamisoikeuden menetys). Lisätty hyvityksen palautuksen 14 päivän
+  määräaika ja pidätysoikeus (KSL 6:17 §:n 3 momentti) sekä digituotteen
+  peruuttamisajan alkamishetki sopimuksen tekemisestä (KSL 6:14 §).
+  Julkaistavan tekstin KSL-viittaus kirjoitettu auki muotoon "6 luvun 16 §:n
+  1 momentin 11 kohta". Digisisällön suostumus näkyy tilausvahvistuksessa ja
+  vahvistussähköpostissa (#491:n kenttäsuodattimet), mikä toteuttaa KSL
+  6:13 §:n 3 momentin vahvistusvaatimuksen. Peruuttamislomakkeen ja -ohjeen
+  (KSL 6:9 §:n 3 momentti, OM:n asetus) tarjoaminen on avoin
+  jatkoselvitettävä.
 
 ## Julkaisu WordPress-adminissa
 
@@ -114,19 +131,20 @@ Puhelin: 0207 181830
 Fyysiset tuotteet toimitetaan asiakkaan antamaan osoitteeseen tai muulla
 tuotteen yhteydessä ilmoitetulla tavalla.
 
-Toimitusaika riippuu tuotteesta ja toimitustavasta. Jos toimituksessa on
-viivettä, sukuseura pyrkii ilmoittamaan siitä asiakkaalle.
+Postitettavat tuotteet käsitellään 1–3 arkipäivässä. Postin arvioitu
+kuljetusaika lähettämisestä on 2–5 arkipäivää. Jos toimituksessa on viivettä,
+sukuseura pyrkii ilmoittamaan siitä asiakkaalle.
 
 ## Digitaaliset tuotteet
 
 Digitaaliset tuotteet (esim. digilehdet) toimitetaan tai avataan käyttöön
 tuotteen yhteydessä ilmoitetulla tavalla.
 
-Digitaalisiin tuotteisiin sovelletaan samaa 14 vuorokauden
-peruuttamisoikeutta kuin muihinkin verkkokaupan tuotteisiin (ks. alla
-"Peruuttaminen ja palautukset"), ellei tuotteen yhteydessä erikseen pyydetä
-ja vahvisteta suostumustasi sisällön välittömään toimittamiseen ennen
-peruuttamisajan päättymistä.
+Digitaalisiin tuotteisiin sovelletaan 14 vuorokauden peruuttamisoikeutta,
+joka lasketaan sopimuksen tekemisestä (ks. alla "Peruuttaminen ja
+palautukset"), ellei tuotteen yhteydessä erikseen pyydetä ja vahvisteta
+suostumustasi sisällön välittömään toimittamiseen ennen peruuttamisajan
+päättymistä.
 
 ## Jäsenmaksut
 
@@ -138,23 +156,31 @@ tuote. Jäsenmaksun peruutus- ja palautuskäytäntö on kuvattu alla kohdassa
 
 Tapahtumamaksu koskee valittua tapahtumaa ja osallistujamäärää. Koska
 tapahtuma järjestetään määrättynä ajankohtana, tapahtumamaksuun ei
-kuluttajansuojalain (38/1978, 6:16 § 11 kohta) mukaan sovelleta
-peruuttamisoikeutta. Tapahtuman mahdolliset erityisehdot (esim. ilmoittautumisen
+kuluttajansuojalain (38/1978) 6 luvun 16 §:n 1 momentin 11 kohdan mukaan
+sovelleta peruuttamisoikeutta. Tapahtuman mahdolliset erityisehdot (esim. ilmoittautumisen
 määräaika) ilmoitetaan tapahtuman tai tuotteen yhteydessä.
 
 ## Peruuttaminen ja palautukset
 
-Voit peruuttaa tilauksen itsepalveluna kohdassa *Oma tili → Tilaukset*
-14 vuorokauden kuluessa tilauksen tekemisestä. Maksamaton tilaus
-peruuntuu heti; maksettu tilaus käsitellään manuaalisesti ja saat
-vahvistuksen peruutuspyynnön vastaanottamisesta.
+Voit tehdä peruutus- tai palautuspyynnön itsepalveluna kohdassa
+*Oma tili → Tilaukset*. Maksamaton tilaus peruuntuu heti; maksettu tilaus
+käsitellään manuaalisesti ja saat vahvistuksen pyynnön vastaanottamisesta.
 
-Fyysisillä tuotteilla on kuluttajansuojalain mukainen palautusoikeus.
-Palautettavan tuotteen tulee olla käyttämätön ja myyntikuntoinen. Asiakas
-vastaa palautuksen järjestämisestä, ellei palautus johdu virheestä
-tuotteessa tai toimituksessa.
+Fyysisen tuotteen palautuksesta on ilmoitettava 14 vuorokauden kuluessa
+tuotteen vastaanottamisesta. Palautus tehdään postitse. Tuotteen saa avata
+ja tutkia sen luonteen, ominaisuuksien ja toimivuuden toteamiseksi samaan
+tapaan kuin myymälässä. Jos tuotetta on käytetty tätä laajemmin,
+hyvityksestä voidaan vähentää tuotteen arvon alentumista vastaava määrä.
+Asiakas järjestää palautuksen ja maksaa palautuspostin, ellei palautus
+johdu virheestä tuotteessa tai toimituksessa. Sivusto ei tallenna
+vastaanottopäivää, joten ylläpitäjä tarkistaa vastaanottopäivän ja
+määräajan manuaalisesti.
 
-Hyvitys palautetaan aina alkuperäiselle maksutavalle.
+Hyvitys palautetaan aina alkuperäiselle maksutavalle viivytyksettä ja
+viimeistään 14 päivän kuluttua peruuttamisilmoituksen saapumisesta.
+Fyysisen tuotteen palautuksessa hyvityksen maksamista voidaan kuitenkin
+odottaa, kunnes tuote on vastaanotettu takaisin tai olet osoittanut
+lähettäneesi sen.
 
 Jäsenmaksujen peruutusoikeus voi olla rajoitettu, jos jäsenyyteen liittyvä
 palvelu on jo alkanut; tämä arvioidaan tapauskohtaisesti peruutuspyynnön
