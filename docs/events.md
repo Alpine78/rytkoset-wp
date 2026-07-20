@@ -191,6 +191,17 @@ Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan
 
 Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, mutta tapahtumaviittaus ja status säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
 
+### Automaattinen 12 kuukauden anonymisointi (#580)
+
+Tietosuojaseloste lupaa, että tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta. Lupaus toteutetaan automaattisesti ilman ylläpitäjän muistinvaraista rutiinia päivittäisellä WP-Cron-ajolla (`inc/event-registration-anonymization.php`).
+
+- Ajo käy läpi maksuttomat `event_registration`-tietueet, joita ei ole vielä anonymisoitu, ja anonymisoi ne samalla #250:n polulla (`rytkoset_theme_anonymize_event_registration()`), kun tapahtumapäivästä on kulunut yli 12 kuukautta. Kynnys lasketaan tapahtumapäivän lopusta, ja se on säädettävissä suodattimella `rytkoset_theme_event_registration_anonymization_months` (oletus 12).
+- Ajo on **idempotentti**: jo anonymisoidut rivit ohitetaan (niillä on `_rytkoset_registration_anonymized_at`), joten uudelleenajo ei kosketa niitä eikä riko tai toista rekisteröidyn pyynnöstä tehtyä anonymisointia. Manuaalinen työkalu ja Privacy Tools -polut toimivat ennallaan.
+- Ajon tulos kirjataan kevyesti optioon `rytkoset_event_registration_anonymization` (aikaleima, viimeisimmän ajon määrä, kumulatiivinen määrä ja päivämäärää vailla olevien tapahtumien ID:t) — **ei koskaan henkilötietoja**.
+- Jos tapahtumalta puuttuu kelvollinen päivämäärä, sen ilmoittautumisia ei voida anonymisoida ajastetusti. Ne ohitetaan ja tapahtumat raportoidaan ylläpitäjälle admin-ilmoituksella (`edit_others_event_registrations`), jossa on linkit tapahtumien muokkaukseen päivämäärän lisäämistä varten.
+- Jos ilmoittautumisen tapahtumaviittaus puuttuu tai tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan seuraavassa ajossa heti. Tapahtumaa ei silloin enää ole perusteluna henkilötietojen säilyttämiselle. Sama anonymisointiaikaleima tekee myös tämän polun idempotentiksi.
+- Ajo ei koske WooCommerce-tilauksia (kirjanpitolain säilytysvelvoite; WooCommerce-puolen GDPR-työ on eri tiketti).
+
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 
 1. ylläpitäjä luo WooCommerce-tuotteen

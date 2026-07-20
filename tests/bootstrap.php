@@ -1124,6 +1124,33 @@ function wp_insert_post( $postarr, $wp_error = false ) {
 }
 
 /**
+ * Updates an already-registered post in place. Only the fields the theme touches
+ * (title, status) and any meta_input are applied.
+ */
+function wp_update_post( $postarr, $wp_error = false ) {
+	$post_id = isset( $postarr['ID'] ) ? absint( $postarr['ID'] ) : 0;
+	$post    = $GLOBALS['rytkoset_test_posts'][ $post_id ] ?? null;
+
+	if ( $post_id <= 0 || ! $post instanceof WP_Post ) {
+		return $wp_error ? new WP_Error( 'invalid_post', 'Invalid post ID.' ) : 0;
+	}
+
+	if ( array_key_exists( 'post_title', $postarr ) ) {
+		$post->post_title = (string) $postarr['post_title'];
+	}
+
+	if ( array_key_exists( 'post_status', $postarr ) ) {
+		$post->post_status = (string) $postarr['post_status'];
+	}
+
+	foreach ( (array) ( $postarr['meta_input'] ?? array() ) as $meta_key => $meta_value ) {
+		update_post_meta( $post_id, (string) $meta_key, $meta_value );
+	}
+
+	return $post_id;
+}
+
+/**
  * Resolves a post's parent ID. The explicit parent map wins (articles registered without a
  * WP_Post), otherwise the registered post's own post_parent is used.
  */
@@ -1327,7 +1354,20 @@ function rytkoset_test_match_meta_query( int $post_id, array $meta_query ): bool
 			continue;
 		}
 
-		$results[] = (string) get_post_meta( $post_id, $clause['key'], true ) === (string) $clause['value'];
+		$compare = strtoupper( (string) ( $clause['compare'] ?? '=' ) );
+		$exists  = array_key_exists( $clause['key'], $GLOBALS['rytkoset_test_post_meta'][ $post_id ] ?? array() );
+
+		if ( 'NOT EXISTS' === $compare ) {
+			$results[] = ! $exists;
+			continue;
+		}
+
+		if ( 'EXISTS' === $compare ) {
+			$results[] = $exists;
+			continue;
+		}
+
+		$results[] = (string) get_post_meta( $post_id, $clause['key'], true ) === (string) ( $clause['value'] ?? '' );
 	}
 
 	if ( empty( $results ) ) {
@@ -1615,6 +1655,7 @@ require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
+require_once $rytkoset_theme_inc . '/event-registration-anonymization.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
 require_once $rytkoset_theme_inc . '/email.php';
 require_once $rytkoset_theme_inc . '/gallery-albums.php';

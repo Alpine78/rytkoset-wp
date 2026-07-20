@@ -121,7 +121,7 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 
-Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
+Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Jos ilmoittautumiseen liittyvä tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan automaattisesti seuraavassa siivousajossa. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 
@@ -223,7 +223,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 ## Kuinka kauan säilytämme tietoja
 
 - Käyttäjätilien tiedot säilytetään niin kauan kuin tilisi on aktiivinen. Voit pyytää tilisi poistamista milloin tahansa.
-- Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.
+- Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta. Tämä toteutuu automaattisesti päivittäisellä ajastetulla siivouksella; ylläpitäjä voi anonymisoida ilmoittautumiset myös aiemmin käsin.
 - Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
 - Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
@@ -270,6 +270,7 @@ Sivustolla käytetään LiteSpeed Cache -välimuistia suorituskyvyn parantamisee
 
 - Ilmoittautumislomakkeen GDPR-teksti: [`inc/event-registrations.php`](../wp-content/themes/rytkoset-theme/inc/event-registrations.php) — käyttää `get_privacy_policy_url()`-funktiota, joten linkki näkyy automaattisesti, kun tietosuojasivu on asetettu **Asetukset → Tietosuoja** -näkymässä.
 - Suostumuksen aikaleima tallennetaan meta-kenttään `_rytkoset_registration_gdpr_consent`.
+- Tapahtumailmoittautumisten anonymisointi: [`inc/event-registration-privacy.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-privacy.php) (Privacy Tools -vienti/-poisto ja tapahtumakohtainen massa-anonymisointi) ja [`inc/event-registration-anonymization.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-anonymization.php) (päivittäinen WP-Cron-ajo, joka anonymisoi yli 12 kuukautta vanhojen tapahtumien ilmoittautumiset automaattisesti). Anonymisoinnissa nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, ja tallennetaan aikaleima `_rytkoset_registration_anonymized_at`. Tekninen kuvaus: [`docs/events.md`](events.md).
 - Albumien YouTube-upotukset: [`inc/gallery-albums.php`](../wp-content/themes/rytkoset-theme/inc/gallery-albums.php) — käyttää `youtube-nocookie.com`-osoitetta.
 - Sisältöön (esim. tapahtumasivun tallenne tai blogikirjoitus) upotetut YouTube-videot: [`inc/youtube-privacy.php`](../wp-content/themes/rytkoset-theme/inc/youtube-privacy.php) — `embed_oembed_html`-suodatin kirjoittaa WordPressin oEmbed-upotusten iframe-osoitteen muotoon `www.youtube-nocookie.com/embed/…`, myös Gutenbergin upotuslohkolle ja postmetaan välimuistitetuille tuloksille. Suodatin muuttaa vain osoitteen isäntänimen, joten iframen `title`-attribuutti säilyy. Näin selosteen lupaus toteutuu sisältötyypistä riippumatta.
 - Footerin linkki tulee `footer`-valikosta ([`footer.php`](../wp-content/themes/rytkoset-theme/footer.php)) — ei vaadi koodimuutoksia.
