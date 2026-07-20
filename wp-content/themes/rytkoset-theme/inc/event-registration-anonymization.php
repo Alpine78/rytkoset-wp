@@ -170,14 +170,14 @@ function rytkoset_theme_record_event_registration_anonymization_run( $anonymized
 }
 
 /**
- * Returns distinct event IDs that still have non-anonymized free registrations.
+ * Returns non-anonymized free registration IDs for the scheduled cleanup.
  *
  * @return int[]
  */
-function rytkoset_theme_get_event_ids_with_pending_registration_anonymization() {
+function rytkoset_theme_get_pending_event_registration_ids() {
 	$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
 
-	$registration_ids = get_posts(
+	return get_posts(
 		array(
 			'post_type'              => 'event_registration',
 			'post_status'            => 'any',
@@ -195,18 +195,6 @@ function rytkoset_theme_get_event_ids_with_pending_registration_anonymization() 
 			),
 		)
 	);
-
-	$event_ids = array();
-
-	foreach ( $registration_ids as $registration_id ) {
-		$event_id = absint( rytkoset_theme_get_event_registration_meta( $registration_id, 'event_id' ) );
-
-		if ( $event_id > 0 ) {
-			$event_ids[ $event_id ] = $event_id;
-		}
-	}
-
-	return array_values( $event_ids );
 }
 
 /**
@@ -215,7 +203,8 @@ function rytkoset_theme_get_event_ids_with_pending_registration_anonymization() 
  * Idempotent: rows already carrying an anonymization timestamp are excluded by
  * the query, so re-running never touches them and never blocks or repeats a
  * data-subject request. Events lacking a valid date are skipped and reported to
- * the admin via the run state.
+ * the admin via the run state. Registrations without an existing event are
+ * anonymized immediately because no event remains to justify retaining them.
  *
  * @return array {
  *     @type int   $anonymized             Number of registrations anonymized.
@@ -225,16 +214,27 @@ function rytkoset_theme_get_event_ids_with_pending_registration_anonymization() 
 function rytkoset_theme_run_event_registration_anonymization() {
 	$months                 = rytkoset_theme_get_event_registration_anonymization_months();
 	$reference              = current_datetime();
-	$event_ids              = rytkoset_theme_get_event_ids_with_pending_registration_anonymization();
+	$registration_ids       = rytkoset_theme_get_pending_event_registration_ids();
+	$registrations_by_event = array();
 	$anonymized             = 0;
 	$missing_date_event_ids = array();
 
-	foreach ( $event_ids as $event_id ) {
-		// Skip registrations whose event no longer exists; nothing an admin can fix.
-		if ( 'rytkoset_event' !== get_post_type( $event_id ) ) {
+	foreach ( $registration_ids as $registration_id ) {
+		$event_id = absint( rytkoset_theme_get_event_registration_meta( $registration_id, 'event_id' ) );
+
+		// No event remains to justify retaining an orphaned registration's personal data.
+		if ( $event_id <= 0 || 'rytkoset_event' !== get_post_type( $event_id ) ) {
+			if ( rytkoset_theme_anonymize_event_registration( $registration_id ) ) {
+				++$anonymized;
+			}
+
 			continue;
 		}
 
+		$registrations_by_event[ $event_id ][] = $registration_id;
+	}
+
+	foreach ( $registrations_by_event as $event_id => $event_registration_ids ) {
 		$event_date = rytkoset_theme_get_event_date_raw( $event_id );
 
 		if ( '' === $event_date ) {
@@ -246,7 +246,7 @@ function rytkoset_theme_run_event_registration_anonymization() {
 			continue;
 		}
 
-		foreach ( rytkoset_theme_get_event_registration_ids_for_event_anonymization( $event_id ) as $registration_id ) {
+		foreach ( $event_registration_ids as $registration_id ) {
 			if ( rytkoset_theme_anonymize_event_registration( $registration_id ) ) {
 				++$anonymized;
 			}

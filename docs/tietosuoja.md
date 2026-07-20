@@ -121,7 +121,7 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 
-Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
+Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Jos ilmoittautumiseen liittyvä tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan automaattisesti seuraavassa siivousajossa. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 

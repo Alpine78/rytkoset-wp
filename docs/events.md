@@ -199,6 +199,7 @@ Tietosuojaseloste lupaa, että tapahtumailmoittautumisten tiedot poistetaan tai 
 - Ajo on **idempotentti**: jo anonymisoidut rivit ohitetaan (niillä on `_rytkoset_registration_anonymized_at`), joten uudelleenajo ei kosketa niitä eikä riko tai toista rekisteröidyn pyynnöstä tehtyä anonymisointia. Manuaalinen työkalu ja Privacy Tools -polut toimivat ennallaan.
 - Ajon tulos kirjataan kevyesti optioon `rytkoset_event_registration_anonymization` (aikaleima, viimeisimmän ajon määrä, kumulatiivinen määrä ja päivämäärää vailla olevien tapahtumien ID:t) — **ei koskaan henkilötietoja**.
 - Jos tapahtumalta puuttuu kelvollinen päivämäärä, sen ilmoittautumisia ei voida anonymisoida ajastetusti. Ne ohitetaan ja tapahtumat raportoidaan ylläpitäjälle admin-ilmoituksella (`edit_others_event_registrations`), jossa on linkit tapahtumien muokkaukseen päivämäärän lisäämistä varten.
+- Jos ilmoittautumisen tapahtumaviittaus puuttuu tai tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan seuraavassa ajossa heti. Tapahtumaa ei silloin enää ole perusteluna henkilötietojen säilyttämiselle. Sama anonymisointiaikaleima tekee myös tämän polun idempotentiksi.
 - Ajo ei koske WooCommerce-tilauksia (kirjanpitolain säilytysvelvoite; WooCommerce-puolen GDPR-työ on eri tiketti).
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:

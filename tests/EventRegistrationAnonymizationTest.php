@@ -188,4 +188,38 @@ final class EventRegistrationAnonymizationTest extends Rytkoset_Theme_Test_Case 
 		$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
 		$this->assertSame( 'Maija Meikäläinen', get_post_meta( 101, $meta_keys['name'], true ) );
 	}
+
+	public function test_run_anonymizes_registration_whose_event_was_deleted(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-20 03:00:00';
+
+		$this->register_registration( 101, 99, 'Maija Meikäläinen', 'maija@example.test' );
+
+		$first_result = rytkoset_theme_run_event_registration_anonymization();
+		$meta_keys    = rytkoset_theme_get_event_registration_meta_keys();
+		$timestamp    = get_post_meta( 101, $meta_keys['anonymized_at'], true );
+
+		$this->assertSame( 1, $first_result['anonymized'] );
+		$this->assertSame( 'Anonymisoitu osallistuja', get_post_meta( 101, $meta_keys['name'], true ) );
+		$this->assertSame( '', get_post_meta( 101, $meta_keys['email'], true ) );
+		$this->assertNotSame( '', $timestamp );
+
+		$second_result = rytkoset_theme_run_event_registration_anonymization();
+
+		$this->assertSame( 0, $second_result['anonymized'] );
+		$this->assertSame( $timestamp, get_post_meta( 101, $meta_keys['anonymized_at'], true ) );
+	}
+
+	public function test_run_anonymizes_registration_without_event_reference(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-20 03:00:00';
+
+		$this->register_registration( 101, 0, 'Maija Meikäläinen', 'maija@example.test' );
+
+		$result    = rytkoset_theme_run_event_registration_anonymization();
+		$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+
+		$this->assertSame( 1, $result['anonymized'] );
+		$this->assertSame( 'Anonymisoitu osallistuja', get_post_meta( 101, $meta_keys['name'], true ) );
+		$this->assertSame( '', get_post_meta( 101, $meta_keys['email'], true ) );
+		$this->assertNotSame( '', get_post_meta( 101, $meta_keys['anonymized_at'], true ) );
+	}
 }
