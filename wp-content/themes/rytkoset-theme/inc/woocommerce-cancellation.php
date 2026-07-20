@@ -236,9 +236,14 @@ if ( ! function_exists( 'rytkoset_theme_order_cancellation_requires_manual_handl
 }
 
 /**
- * Sisältääkö tilaus tuotteita, joiden peruutusoikeus voi olla rajoitettu?
+ * Sisältääkö tilaus tuotteita, joihin ei sovelleta peruuttamisoikeutta?
  *
- * Käytetään vahvistussivun selitteeseen (ainaisjäsenyys, tapahtumat). Ei estä
+ * Käytetään vahvistussivun ja peruutusviestin selitteeseen. Rajaus koskee vain
+ * määrättynä ajankohtana suoritettavia tapahtumapalveluja (KSL 6:16 §:n 1
+ * momentin 11 kohta): Tampere 2026 -osallistumismaksu ja saman tapahtuman
+ * bussikyyti. Jäsenmaksuja kohdellaan tavallisen 14 päivän peruuttamisoikeuden
+ * piiriin kuuluvina, yhdenmukaisesti tilausvahvistuksen peruuttamisohjeen
+ * (`inc/woocommerce-withdrawal-information.php`, #573) kanssa. Ei estä
  * peruutuspyyntöä — maksetut tilaukset käsitellään joka tapauksessa manuaalisesti.
  *
  * @param WC_Order $order Tilausobjekti.
@@ -264,8 +269,8 @@ if ( ! function_exists( 'rytkoset_theme_order_has_cancellation_exception_product
 			}
 
 			if (
-				( function_exists( 'rytkoset_theme_is_membership_product' ) && rytkoset_theme_is_membership_product( $product ) )
-				|| ( function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' ) && rytkoset_theme_is_tampere_2026_registration_product( $product ) )
+				( function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' ) && rytkoset_theme_is_tampere_2026_registration_product( $product ) )
+				|| ( function_exists( 'rytkoset_theme_is_bus_transport_product' ) && rytkoset_theme_is_bus_transport_product( $product ) )
 			) {
 				$has_exception = true;
 				break;
@@ -620,7 +625,7 @@ if ( ! function_exists( 'rytkoset_theme_render_order_cancellation_endpoint' ) ) 
 
 			<?php if ( rytkoset_theme_order_has_cancellation_exception_products( $order ) ) : ?>
 				<div class="woocommerce-info">
-					<?php esc_html_e( 'Huomaa: jäsenyyksien ja tapahtumamaksujen peruutusoikeus voi olla rajoitettu, jos palvelu on jo alkanut. Tarkistamme tilanteen pyyntösi yhteydessä.', 'rytkoset-theme' ); ?>
+					<?php esc_html_e( 'Huomaa: tapahtumamaksuihin ei sovelleta peruuttamisoikeutta, kun palvelu suoritetaan määrättynä ajankohtana. Tarkistamme tilanteen pyyntösi yhteydessä.', 'rytkoset-theme' ); ?>
 				</div>
 			<?php endif; ?>
 
@@ -710,7 +715,11 @@ if ( ! function_exists( 'rytkoset_theme_send_order_cancellation_customer_email' 
 		$lines[] = '';
 
 		if ( $requires_manual ) {
-			$lines[] = __( 'Tilaus on jo maksettu. Käsittelemme mahdollisen palautuksen manuaalisesti ja olemme tarvittaessa sinuun yhteydessä. Jäsenyyksien ja tapahtumamaksujen peruutusoikeus voi olla rajoitettu, jos palvelu on jo alkanut.', 'rytkoset-theme' );
+			$lines[] = __( 'Tilaus on jo maksettu. Käsittelemme mahdollisen palautuksen manuaalisesti ja olemme tarvittaessa sinuun yhteydessä.', 'rytkoset-theme' );
+
+			if ( rytkoset_theme_order_has_cancellation_exception_products( $order ) ) {
+				$lines[] = __( 'Tapahtumamaksuihin ei sovelleta peruuttamisoikeutta, kun palvelu suoritetaan määrättynä ajankohtana.', 'rytkoset-theme' );
+			}
 
 			if ( rytkoset_theme_order_has_physical_products( $order ) ) {
 				$lines[] = __( 'Fyysisen tuotteen 14 vuorokauden palautusaika lasketaan tuotteen vastaanottamisesta. Tarkistamme määräajan ja palautuskelpoisuuden käsittelyn yhteydessä.', 'rytkoset-theme' );
@@ -794,7 +803,7 @@ if ( ! function_exists( 'rytkoset_theme_send_order_cancellation_admin_email' ) )
 				$datetime_label
 			),
 			'',
-			__( 'Tilauksen status on jätetty ennalleen. Käsittele palautus ja lopullinen peruutus manuaalisesti WooCommercessa. Huomioi mahdolliset peruutusoikeuden poikkeukset (jäsenyydet, tapahtumat).', 'rytkoset-theme' ),
+			__( 'Tilauksen status on jätetty ennalleen. Käsittele palautus ja lopullinen peruutus manuaalisesti WooCommercessa. Huomioi mahdolliset peruutusoikeuden poikkeukset (tapahtumamaksut, joissa palvelu suoritetaan määrättynä ajankohtana).', 'rytkoset-theme' ),
 		);
 
 		if ( rytkoset_theme_order_has_physical_products( $order ) ) {

@@ -212,6 +212,24 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_order_cancellation_requires_manual_handling( $order ) );
 	}
 
+	// --- Cancellation exception classification (#573) ------------------------
+
+	public function test_membership_order_is_not_a_cancellation_exception(): void {
+		$order          = $this->make_order( 'processing', 1_700_000_000 );
+		$product        = $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' );
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, $product->get_name() );
+
+		$this->assertFalse( rytkoset_theme_order_has_cancellation_exception_products( $order ) );
+	}
+
+	public function test_tampere_event_order_is_a_cancellation_exception(): void {
+		$order          = $this->make_order( 'processing', 1_700_000_000 );
+		$product        = new WC_Product( array( '_rytkoset_registration_mode' => 'tampere_2026' ), 11, 'publish', 'Tampere 2026' );
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, $product->get_name() );
+
+		$this->assertTrue( rytkoset_theme_order_has_cancellation_exception_products( $order ) );
+	}
+
 	// --- Email notifications -------------------------------------------------
 
 	public function test_customer_email_contains_timestamp_and_order_details(): void {
