@@ -1035,6 +1035,12 @@ if ( ! function_exists( 'rytkoset_theme_render_guest_order_cancellation_page' ) 
 						<div class="article__content">
 							<?php
 							if ( $received ) {
+								// The receipt view shows its own dedicated message, so drop any notice
+								// queued by the preceding submission to avoid a duplicate/stale message.
+								if ( function_exists( 'wc_clear_notices' ) ) {
+									wc_clear_notices();
+								}
+
 								$order       = rytkoset_theme_get_authenticated_cancellation_order( $order_id, $order_key );
 								$is_recorded = $order instanceof WC_Order
 									&& (
@@ -1048,6 +1054,12 @@ if ( ! function_exists( 'rytkoset_theme_render_guest_order_cancellation_page' ) 
 									wc_print_notice( __( 'Peruuttamisilmoituksesi on vastaanotettu. Vahvistus on lähetetty tilauksen sähköpostiosoitteeseen.', 'rytkoset-theme' ), 'success' );
 								}
 							} else {
+								// Flush notices queued by a failed submission (e.g. an expired nonce)
+								// so the guest sees the error instead of a silently re-rendered form.
+								if ( function_exists( 'wc_print_notices' ) ) {
+									wc_print_notices();
+								}
+
 								$order = rytkoset_theme_get_validated_cancellation_order( $order_id, 'view', $order_key );
 
 								if ( is_wp_error( $order ) ) {
