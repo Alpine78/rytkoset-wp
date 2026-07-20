@@ -1941,6 +1941,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Vastaa aina ja vain suomeksi, ystävällisesti ja tiiviisti.\n";
 		$prompt .= "- Vastaa pelkkänä tekstinä ilman muotoilumerkintöjä: ei Markdownia, ei tähtiä lihavointiin, ei [teksti](osoite)-linkkejä eikä otsikkomerkkejä. Luettelot saa tehdä viivalla alkavina riveinä.\n";
 		$prompt .= "- Sivuston osoite on {$home_url}. Kun viittaat sivuston sivuun, kirjoita koko osoite paljaana tekstinä (esim. {$home_url}/kauppa/) — chatti muuttaa sen automaattisesti linkiksi.\n";
+		$prompt .= "- Jätä URL-osoitteen jälkeen aina välilyönti tai rivinvaihto ennen seuraavaa sanaa.\n";
 		$prompt .= "- Käytä vain tässä system-promptissa annettuja osoitteita (sivustokartta ja muut lähteet). Älä koskaan keksi, arvaa tai päättele osoitetta — jos sopivaa osoitetta ei löydy lähteistä, jätä osoite mainitsematta.\n";
 		$prompt .= "- Pysy yhdistyksen ja sen verkkosivujen aiheissa: jäsenyys, tapahtumat, sukujuhlat, sukututkimus, kuvat/albumit, digilehdet ja yhteystiedot.\n";
 		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
