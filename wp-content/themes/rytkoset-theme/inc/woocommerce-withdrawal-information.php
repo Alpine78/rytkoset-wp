@@ -148,7 +148,7 @@ function rytkoset_theme_get_withdrawal_information_content() {
 					__( 'Peruuttamisoikeuden käyttämiseksi teidän on ilmoitettava meille, Rytkösten sukuseura ry, Tyrmynniementie 71, 74595 Runni, puhelin 040 592 2842, sähköposti %s, päätöksestänne peruuttaa sopimus yksiselitteisellä tavalla, esimerkiksi kirjeellä postitse tai sähköpostilla. Voitte käyttää jäljempänä olevaa peruuttamislomaketta, mutta sen käyttö ei ole pakollista.', 'rytkoset-theme' ),
 					$contact_email
 				),
-				__( 'Voitte tehdä yksiselitteisen peruuttamisilmoituksen myös verkkosivustollamme kohdassa Oma tili → Tilaukset. Jos käytätte tätä vaihtoehtoa, ilmoitamme teille viipymättä sähköpostitse peruuttamisilmoituksen saapumisesta.', 'rytkoset-theme' ),
+				__( 'Voitte tehdä yksiselitteisen peruuttamisilmoituksen myös verkkosivustollamme. Jos teitte tilauksen käyttäjätilillä, toiminto löytyy kohdasta Oma tili → Tilaukset. Ilman käyttäjätiliä tehdyn tilauksen henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa. Jos käytätte verkkosivuston peruuttamistoimintoa, ilmoitamme teille viipymättä sähköpostitse peruuttamisilmoituksen saapumisesta.', 'rytkoset-theme' ),
 				__( 'Peruuttamisen määräajan noudattamiseksi riittää, että lähetätte ilmoituksenne peruuttamisoikeuden käytöstä ennen peruuttamisajan päättymistä.', 'rytkoset-theme' ),
 			),
 		),

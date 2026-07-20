@@ -182,9 +182,15 @@ määräaika) ilmoitetaan tapahtuman tai tuotteen yhteydessä.
 
 ## Peruuttaminen ja palautukset
 
-Voit tehdä peruutus- tai palautuspyynnön itsepalveluna kohdassa
-*Oma tili → Tilaukset*. Maksamaton tilaus peruuntuu heti; maksettu tilaus
-käsitellään manuaalisesti ja saat vahvistuksen pyynnön vastaanottamisesta.
+Voit tehdä peruutus- tai palautuspyynnön itsepalveluna. Jos teit tilauksen
+käyttäjätilillä, toiminto löytyy kohdasta *Oma tili → Tilaukset*. Ilman
+käyttäjätiliä tehdyn tilauksen henkilökohtainen **Peruuta tilaus** -linkki on
+tilausvahvistuksessa. Tarkista tilauksen ja peruuttajan tiedot erillisellä
+vahvistussivulla ja lähetä ilmoitus selkeästi merkityllä vahvistuspainikkeella.
+Saat viipymättä sähköpostitse vahvistuksen, joka sisältää ilmoituksen sisällön
+sekä lähetyspäivän ja -ajan. Maksamaton tilaus peruuntuu heti, jos tilaus ei
+sisällä peruuttamisoikeuden ulkopuolisia tuotteita; muut pyynnöt käsitellään
+manuaalisesti.
 
 Fyysisen tuotteen palautuksesta on ilmoitettava 14 vuorokauden kuluessa
 tuotteen vastaanottamisesta. Palautus tehdään postitse. Tuotteen saa avata
@@ -234,9 +240,12 @@ tai sähköpostilla:
 
 Voitte käyttää jäljempänä olevaa peruuttamislomaketta, mutta sen käyttö ei
 ole pakollista. Voitte tehdä yksiselitteisen peruuttamisilmoituksen myös
-verkkosivustollamme kohdassa *Oma tili → Tilaukset*. Jos käytätte tätä
-vaihtoehtoa, ilmoitamme teille viipymättä sähköpostitse
-peruuttamisilmoituksen saapumisesta.
+verkkosivustollamme. Jos teitte tilauksen käyttäjätilillä, toiminto löytyy
+kohdasta *Oma tili → Tilaukset*. Ilman käyttäjätiliä tehdyn tilauksen
+henkilökohtainen **Peruuta tilaus** -linkki on tilausvahvistuksessa. Jos
+käytätte verkkosivuston peruuttamistoimintoa, ilmoitamme teille viipymättä
+sähköpostitse peruuttamisilmoituksen saapumisesta sekä ilmoituksen lähetyspäivän
+ja -ajan.
 
 Peruuttamisen määräajan noudattamiseksi riittää, että lähetätte ilmoituksenne
 peruuttamisoikeuden käytöstä ennen peruuttamisajan päättymistä.
