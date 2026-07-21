@@ -119,14 +119,21 @@
   background: rgba(255, 255, 255, 0.16);
 }
 
+/* AI Act Art. 50(5): the AI disclosure must be clear and distinguishable —
+   full text color instead of the muted tone, and the "Tekoälyavustaja"
+   lead-in emphasized. */
 .rytkoset-chat__disclaimer {
   margin: 0;
   padding: 0.6rem 1rem;
   background: var(--color-surface-alt);
   border-bottom: 1px solid var(--color-border-neutral);
-  color: var(--color-text-mute);
+  color: var(--color-text);
   font-size: 0.8rem;
   line-height: 1.4;
+}
+
+.rytkoset-chat__disclaimer strong {
+  font-weight: 700;
 }
 
 /* --- Viestiloki ----------------------------------------------------------- */

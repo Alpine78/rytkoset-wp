@@ -538,4 +538,20 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_chat_sanitize_checkbox( '' ) );
 		$this->assertFalse( rytkoset_theme_chat_sanitize_checkbox( '0' ) );
 	}
+
+	// --- rytkoset_theme_chat_build_response_body() (#600, AI Act 50(2)) -----
+
+	public function test_response_body_contains_reply_and_ai_generated_flag(): void {
+		$body = rytkoset_theme_chat_build_response_body( 'Tervetuloa!' );
+
+		$this->assertSame( 'Tervetuloa!', $body['reply'] );
+		$this->assertTrue( $body['ai_generated'] );
+	}
+
+	public function test_response_body_ai_generated_is_strict_boolean_true(): void {
+		$body = rytkoset_theme_chat_build_response_body( '' );
+
+		$this->assertArrayHasKey( 'ai_generated', $body );
+		$this->assertSame( true, $body['ai_generated'] );
+	}
 }

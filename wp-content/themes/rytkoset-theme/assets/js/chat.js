@@ -293,6 +293,11 @@
       var el = document.createElement('div');
       el.className = 'rytkoset-chat__msg rytkoset-chat__msg--' + role;
       if (role === 'assistant') {
+        // AI Act (EU 2024/1689) Art. 50(2): machine-readable marking of
+        // AI-generated content. Applies to live replies and sessionStorage
+        // restores; the server-rendered welcome message is maintainer text,
+        // not model output, so it is intentionally not marked.
+        el.setAttribute('data-ai-generated', 'true');
         renderMessageContent(el, text);
       } else {
         el.textContent = text;

@@ -971,7 +971,28 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		// 9. Onnistumislaskuri (#472) — ei sisältöä eikä IP:tä, vain määrä + ajankohta.
 		rytkoset_theme_chat_record_message_sent_stat();
 
-		return new WP_REST_Response( array( 'reply' => $reply ), 200 );
+		return new WP_REST_Response( rytkoset_theme_chat_build_response_body( $reply ), 200 );
+	}
+}
+
+/**
+ * Builds the successful chat REST response body.
+ *
+ * The `ai_generated` flag is the machine-readable marking required by
+ * Regulation (EU) 2024/1689 (AI Act) Article 50(2) for AI-generated content:
+ * every reply produced by the upstream model is explicitly labelled in the
+ * API response. The matching DOM marking (`data-ai-generated`) is added in
+ * `assets/js/chat.js`. See docs/chat.md for the dated feasibility rationale.
+ *
+ * @param string $reply Assistant reply text.
+ * @return array Response body.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_build_response_body' ) ) {
+	function rytkoset_theme_chat_build_response_body( $reply ) {
+		return array(
+			'reply'        => $reply,
+			'ai_generated' => true,
+		);
 	}
 }
 
@@ -2375,7 +2396,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_widget' ) ) {
 				</header>
 
 				<p class="rytkoset-chat__disclaimer">
-					<?php esc_html_e( 'Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse.', 'rytkoset-theme' ); ?>
+					<strong><?php esc_html_e( 'Tekoälyavustaja.', 'rytkoset-theme' ); ?></strong>
+					<?php esc_html_e( 'Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse.', 'rytkoset-theme' ); ?>
 				</p>
 
 				<div
