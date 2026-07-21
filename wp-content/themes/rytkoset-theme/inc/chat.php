@@ -848,6 +848,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 		if ( $tool_enabled ) {
 			$payload['tools'] = array( rytkoset_theme_chat_get_page_tool_definition() );
+
+			if ( rytkoset_theme_chat_should_force_page_tool( $messages ) ) {
+				// Mistral's "any" mode requires an initial tool call. Restore the
+				// default automatic choice after the first tool result.
+				$payload['tool_choice'] = 'any';
+			}
 		}
 
 		// 6.–7. Mistral-kutsu + työkalusilmukka (#501) ja virheenkäsittely — avainta
@@ -920,6 +926,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 					'content'      => $content,
 				);
 			}
+
+			unset( $payload['tool_choice'] );
 
 			if ( $rounds_used >= $max_rounds ) {
 				// Viimeinen kierros: pakota tekstivastaus, ettei malli jää kutsumaan työkalua.
@@ -1731,7 +1739,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
 
 		// Prioritize names preceded by a profession, title, or authorship verb so
 		// people near the end of a long publication list remain within the limit.
-		$attribution = '(?:diplomi-insinööri|insinööri|rovasti|pastori|maisteri|toimitti|kokosi|kirjoitti|laati|selvitti)';
+		$attribution = '(?:(?:diplomi-insinööri|insinööri|rovasti|pastori|maisteri|puheenjohtaja|sihteeri|esimies)[\p{Ll}-]*|toimitti|kokosi|kirjoitti|laati|selvitti)';
 		if ( preg_match_all( '/\b' . $attribution . '(?:\s+[\p{Ll}-]+){0,2}\s+(' . $capitalized_word . '\s+' . $capitalized_word . ')\b/u', $text, $person_matches ) ) {
 			foreach ( $person_matches[1] as $person ) {
 				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $person );
@@ -1956,6 +1964,46 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_definition' ) ) {
 				),
 			),
 		);
+	}
+}
+
+/**
+ * Determines whether the first completion must read a public page.
+ *
+ * The model may answer a first-turn person or rare-term query without calling
+ * the tool even when the sitemap contains an exact hint. Force one initial
+ * read for those queries and for unambiguous pronoun follow-ups; ordinary
+ * support questions retain Mistral's default automatic tool choice.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
+	function rytkoset_theme_chat_should_force_page_tool( $messages ) {
+		$latest_user_message = '';
+
+		foreach ( array_reverse( (array) $messages ) as $message ) {
+			if ( is_array( $message ) && 'user' === ( $message['role'] ?? '' ) ) {
+				$latest_user_message = trim( (string) ( $message['content'] ?? '' ) );
+				break;
+			}
+		}
+
+		if ( '' === $latest_user_message ) {
+			return false;
+		}
+
+		if ( preg_match( '/\b(?:hän|hänen|häntä|hänellä|häneltä|hänelle|hänestä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		if ( preg_match( '/\b(?:kuka|kenen|ketä|toimitti|kokosi|kirjoitti|laati|selvitti)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		// A capitalized term after the sentence-opening word is usually a person,
+		// publication, or rare name form that needs page content for an answer.
+		return (bool) preg_match( '/\s[A-ZÅÄÖ][\p{L}]{3,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?\b/u', $latest_user_message );
 	}
 }
 
