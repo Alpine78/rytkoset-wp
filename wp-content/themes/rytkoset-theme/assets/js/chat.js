@@ -39,11 +39,20 @@
     // Keskusteluhistoria + paneelin auki-tila välilehtikohtaisessa
     // sessionStoragessa (#498). Ei localStoragea eikä keksejä; storage-virheissä
     // pudotaan muistinvaraiseen toimintaan (sivulataus nollaa keskustelun).
-    var STORAGE_KEY = 'rytkosetChat.v1';
+    var LEGACY_STORAGE_KEY = 'rytkosetChat.v1';
+    var STORAGE_KEY = 'rytkosetChat.v2';
     var MAX_STORED_MESSAGES = 40;
     var history = [];
     var isSending = false;
     var typingEl = null;
+
+    // Do not migrate the previous history: it may contain a malformed model
+    // response. Remove only the chat key and leave unrelated session data intact.
+    try {
+      window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (e) {
+      // Storage may be unavailable; the in-memory fallback still works.
+    }
 
     /**
      * Lukee ja validoi tallennetun istunnon. Palauttaa null, jos storagea ei

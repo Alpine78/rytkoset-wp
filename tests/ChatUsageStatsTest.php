@@ -291,6 +291,10 @@ final class ChatUsageStatsTest extends Rytkoset_Theme_Test_Case {
 	public function test_error_type_label_maps_known_types(): void {
 		$this->assertSame( 'Yhteysvirhe Mistraliin', rytkoset_theme_chat_get_error_type_label( 'network' ) );
 		$this->assertSame( 'Tyhjä vastaus Mistralilta', rytkoset_theme_chat_get_error_type_label( 'empty_reply' ) );
+		$this->assertSame( 'Varmennettua tilikausilähdettä ei löytynyt', rytkoset_theme_chat_get_error_type_label( 'direct_source_missing' ) );
+		$this->assertSame( 'Pakotettu sivunluku epäonnistui', rytkoset_theme_chat_get_error_type_label( 'forced_tool_missing' ) );
+		$this->assertSame( 'Mistralin vastaus jäi kesken', rytkoset_theme_chat_get_error_type_label( 'invalid_finish_reason' ) );
+		$this->assertSame( 'Mistralin vastaus hylättiin', rytkoset_theme_chat_get_error_type_label( 'invalid_reply' ) );
 	}
 
 	public function test_error_type_label_formats_http_status_dynamically(): void {

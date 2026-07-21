@@ -2,10 +2,10 @@
 /**
  * Tests for inc/chat.php — the Mistral chat backend-proxy helpers (#412).
  *
- * Covers only the deterministic pure/near-pure helpers (rate-limit decision,
+ * Covers the deterministic pure/near-pure helpers (rate-limit decision,
  * message preparation/truncation, reply extraction, system prompt, config).
- * The REST wiring and the live wp_remote_post() call are validated manually
- * with curl against a configured environment.
+ * REST rejection wiring has focused tests in ChatRequestHandlerTest; live HTTP
+ * integration is validated manually against a configured environment.
  *
  * @package Rytkoset\Tests
  */
@@ -137,6 +137,36 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( $raw, rytkoset_theme_chat_prepare_messages( $raw, 8, 1000 ) );
 	}
 
+	public function test_prepare_messages_filters_malformed_assistant_history_only(): void {
+		$messages = rytkoset_theme_chat_prepare_messages(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mikä on tilikausi?',
+				),
+				array(
+					'role'    => 'assistant',
+					'content' => '<end_of_thinking>' . str_repeat( '9', 20 ),
+				),
+				array(
+					'role'    => 'user',
+					'content' => 'Entä toimintakausi?',
+				),
+				array(
+					'role'    => 'assistant',
+					'content' => 'Toimintakausi on varsinaisten kokousten välinen aika.',
+				),
+			),
+			8,
+			1000
+		);
+
+		$this->assertCount( 3, $messages );
+		$this->assertSame( 'Mikä on tilikausi?', $messages[0]['content'] );
+		$this->assertSame( 'Entä toimintakausi?', $messages[1]['content'] );
+		$this->assertSame( 'assistant', $messages[2]['role'] );
+	}
+
 	public function test_prepare_messages_returns_empty_for_no_valid_messages(): void {
 		$this->assertSame( array(), rytkoset_theme_chat_prepare_messages( array(), 8, 1000 ) );
 	}
@@ -162,6 +192,90 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( '', rytkoset_theme_chat_extract_reply( null ) );
 		$this->assertSame( '', rytkoset_theme_chat_extract_reply( array() ) );
 		$this->assertSame( '', rytkoset_theme_chat_extract_reply( array( 'choices' => array() ) ) );
+	}
+
+	// --- final response validation -------------------------------------------
+
+	public function test_reply_validator_accepts_normal_plain_text(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_reply_is_valid(
+				"Sukuseuran tilikausi kerrotaan säännöissä.\n\nLähde: https://rytkoset.test/sukuseura/saannot/"
+			)
+		);
+	}
+
+	public function test_reply_validator_rejects_html_and_model_control_tokens(): void {
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '<p>Vastaus</p>' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '&lt;think&gt;ajatus&lt;/think&gt; Vastaus' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '<!DOCTYPE html><p>Vastaus</p>' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '<!-- keskeneräinen ajatus --> Vastaus' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '&lt;!-- ajatus --&gt; Vastaus' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '&lt;img src=&quot;x&quot;&gt; Vastaus' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '[INST] Vastaa uudelleen.' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '[TOOL_RESULTS] Työkalun sisältö.' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '[/TOOL_RESULTS] Vastaus.' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '[/AVAILABLE_TOOLS] Vastaus.' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '[/TOOL_CALLS] Vastaus.' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '[PREFIX] Keskeneräinen vastaus.' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '<|assistant|> Vastaus' ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( '&lt;|assistant|&gt; Vastaus' ) );
+	}
+
+	public function test_reply_validator_rejects_long_character_runs_and_motifs(): void {
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( 'Vastaus ' . str_repeat( '9', 12 ) ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( 'Vastaus ' . str_repeat( '()', 6 ) ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( str_repeat( 'a', 201 ) ) );
+	}
+
+	public function test_reply_validator_rejects_repeated_eight_word_shingle_three_times(): void {
+		$phrase = 'Tilikausi alkaa heinäkuussa ja päättyy seuraavan vuoden kesäkuussa.';
+
+		$this->assertTrue( rytkoset_theme_chat_reply_is_valid( $phrase . ' ' . $phrase ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( $phrase . ' ' . $phrase . ' ' . $phrase ) );
+	}
+
+	public function test_reply_validator_rejects_more_than_three_thousand_characters(): void {
+		$unique_words = array();
+		for ( $index = 0; $index < 600; ++$index ) {
+			$unique_words[] = 'sana' . $index;
+		}
+
+		$at_limit = rytkoset_theme_chat_truncate( implode( ' ', $unique_words ), 3000 );
+
+		$this->assertSame( 3000, mb_strlen( $at_limit ) );
+		$this->assertTrue( rytkoset_theme_chat_reply_is_valid( $at_limit ) );
+		$this->assertFalse( rytkoset_theme_chat_reply_is_valid( $at_limit . 'x' ) );
+	}
+
+	public function test_final_response_requires_stop_finish_reason(): void {
+		$valid = array(
+			'choices' => array(
+				array(
+					'finish_reason' => 'stop',
+					'message'       => array( 'content' => 'Varmennettu vastaus.' ),
+				),
+			),
+		);
+		$cut_off = $valid;
+
+		$cut_off['choices'][0]['finish_reason'] = 'length';
+
+		$this->assertSame( '', rytkoset_theme_chat_get_final_response_error_type( $valid ) );
+		$this->assertSame( 'invalid_finish_reason', rytkoset_theme_chat_get_final_response_error_type( $cut_off ) );
+		$this->assertSame( 'invalid_finish_reason', rytkoset_theme_chat_get_final_response_error_type( array() ) );
+	}
+
+	public function test_final_response_rejects_invalid_plain_text_content(): void {
+		$body = array(
+			'choices' => array(
+				array(
+					'finish_reason' => 'stop',
+					'message'       => array( 'content' => '<end_of_thinking>rikkinäinen' ),
+				),
+			),
+		);
+
+		$this->assertSame( 'invalid_reply', rytkoset_theme_chat_get_final_response_error_type( $body ) );
 	}
 
 	// --- rytkoset_theme_chat_get_system_prompt() -----------------------------
