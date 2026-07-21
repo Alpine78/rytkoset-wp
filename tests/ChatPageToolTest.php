@@ -6,8 +6,8 @@
  * extraction from the Mistral response, argument parsing, page content
  * extraction/sanitization, the leak-guarded page resolver, sitemap page-id
  * markers, system prompt wiring, the tool definition and the usage-stats
- * counter. The wp_remote_post tool loop itself is network wiring and is
- * validated manually (curl / dev), per the project's testing guidance.
+ * counter. Focused REST rejection paths are covered in ChatRequestHandlerTest;
+ * a successful live tool loop is validated manually (curl / dev).
  *
  * @package Rytkoset\Tests
  */
@@ -24,6 +24,23 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	 */
 	private function response_body( array $message ): array {
 		return array( 'choices' => array( array( 'message' => $message ) ) );
+	}
+
+	/**
+	 * Registers the hierarchical public rules page used by direct-source tests.
+	 *
+	 * @param string $content Rules page content.
+	 * @return WP_Post Rules page.
+	 */
+	private function register_rules_page( string $content ): WP_Post {
+		$parent            = rytkoset_test_register_post( 90, 'page', 'Sukuseura' );
+		$parent->post_name = 'sukuseura';
+
+		$page               = rytkoset_test_register_post( 91, 'page', 'Säännöt', 90 );
+		$page->post_name    = 'saannot';
+		$page->post_content = $content;
+
+		return $page;
 	}
 
 	// --- rytkoset_theme_chat_extract_tool_calls() -----------------------------
@@ -109,6 +126,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 0, rytkoset_theme_chat_parse_page_tool_args( 'ei-jsonia{' ) );
 		$this->assertSame( 0, rytkoset_theme_chat_parse_page_tool_args( '{"muu_avain":1}' ) );
 		$this->assertSame( 0, rytkoset_theme_chat_parse_page_tool_args( '{"sivu_id":"abc"}' ) );
+		$this->assertSame( 0, rytkoset_theme_chat_parse_page_tool_args( '{"sivu_id":1.9}' ) );
+		$this->assertSame( 0, rytkoset_theme_chat_parse_page_tool_args( '{"sivu_id":"1.9"}' ) );
 		$this->assertSame( 0, rytkoset_theme_chat_parse_page_tool_args( null ) );
 	}
 
@@ -140,6 +159,136 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	public function test_extract_page_text_returns_empty_for_markup_only_content(): void {
 		$this->assertSame( '', rytkoset_theme_chat_extract_page_text( '<!-- wp:spacer --><div></div><!-- /wp:spacer -->' ) );
 		$this->assertSame( '', rytkoset_theme_chat_extract_page_text( '' ) );
+	}
+
+	// --- deterministic fiscal-year source -----------------------------------
+
+	public function test_extract_numbered_section_stops_at_next_heading(): void {
+		$text = "9. Kokoukset\nEdellinen kohta.\n10. Tilikausi ja tilintarkastus\nEnsimmäinen lause.\nToinen lause.\n11. Sääntöjen muuttaminen\nEi saa vuotaa.";
+
+		$this->assertSame(
+			"Ensimmäinen lause.\nToinen lause.",
+			rytkoset_theme_chat_extract_numbered_section( $text, 10 )
+		);
+		$this->assertSame( '', rytkoset_theme_chat_extract_numbered_section( $text, 12 ) );
+	}
+
+	public function test_fiscal_year_inflections_return_section_ten_and_source_url(): void {
+		$this->register_rules_page(
+			'<h2>9. Sukuseuran kokoukset</h2><p>Edellinen kohta.</p>'
+			. '<h2>10. Tilikausi ja tilintarkastus</h2><p>Sukuseuran tilikausi on vuosi ja toimintakausi on kokousten välinen aika.</p><p>Tilikausi alkaa 1. heinäkuuta ja päättyy 30. kesäkuuta.</p>'
+			. '<h2>11. Sääntöjen muuttaminen</h2><p>Tämä ei kuulu vastaukseen.</p>'
+		);
+
+		$queries = array(
+			'Mikä on tilikausi?',
+			'Miten tilikauden ajankohta määräytyy?',
+			'Mitä tilikautta säännöissä tarkoitetaan?',
+			'Mitä tilikaudesta sanotaan?',
+			'Mitä tapahtuu tilikaudella?',
+			'Miten tilikausia verrataan?',
+			'Entä tilikaudet?',
+			'Mikä on tilikautemme?',
+			'Milloin tilikautenne alkaa?',
+		);
+
+		foreach ( $queries as $query ) {
+			$result = rytkoset_theme_chat_get_fiscal_year_source_reply(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $query,
+					),
+				)
+			);
+
+			$this->assertTrue( $result['matched'], $query );
+			$this->assertStringContainsString( 'Tilikausi alkaa 1. heinäkuuta ja päättyy 30. kesäkuuta.', $result['reply'], $query );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=91', $result['reply'], $query );
+			$this->assertStringNotContainsString( 'Tämä ei kuulu vastaukseen.', $result['reply'], $query );
+		}
+	}
+
+	public function test_fiscal_year_reply_follows_source_instead_of_hard_coded_dates(): void {
+		$this->register_rules_page(
+			'<h2>10. Tilikausi ja tilintarkastus</h2><p>Testisäännön tilikausi alkaa 2. elokuuta ja päättyy 1. elokuuta.</p><h2>11. Muutokset</h2>'
+		);
+
+		$result = rytkoset_theme_chat_get_fiscal_year_source_reply(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mikä on tilikausi?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( '2. elokuuta', $result['reply'] );
+		$this->assertStringNotContainsString( '1. heinäkuuta', $result['reply'] );
+	}
+
+	public function test_non_fiscal_query_does_not_enter_direct_source_path(): void {
+		$queries = array(
+			'Miten liityn jäseneksi?',
+			'Mistä löydän tilikausikertomuksen?',
+			'Miten tilikausiraportti toimitetaan?',
+		);
+
+		foreach ( $queries as $query ) {
+			$result = rytkoset_theme_chat_get_fiscal_year_source_reply(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $query,
+					),
+				)
+			);
+
+			$this->assertFalse( $result['matched'], $query );
+			$this->assertSame( '', $result['reply'], $query );
+		}
+	}
+
+	public function test_missing_rules_page_or_section_fails_closed(): void {
+		$messages = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Mikä on tilikausi?',
+			),
+		);
+
+		$this->assertSame(
+			array(
+				'matched' => true,
+				'reply'   => '',
+			),
+			rytkoset_theme_chat_get_fiscal_year_source_reply( $messages )
+		);
+
+		$this->register_rules_page( '<h2>9. Kokoukset</h2><p>Ei kohtaa 10.</p><h2>11. Muutokset</h2>' );
+
+		$this->assertSame( '', rytkoset_theme_chat_get_fiscal_year_source_reply( $messages )['reply'] );
+	}
+
+	public function test_restricted_rules_pages_fail_closed(): void {
+		$messages = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Mikä on tilikausi?',
+			),
+		);
+
+		$page              = $this->register_rules_page( '<h2>10. Tilikausi</h2><p>Salainen päivämäärä.</p>' );
+		$page->post_status = 'draft';
+		$this->assertSame( '', rytkoset_theme_chat_get_fiscal_year_source_reply( $messages )['reply'] );
+
+		$page->post_status   = 'publish';
+		$page->post_password = 'salasana';
+		$this->assertSame( '', rytkoset_theme_chat_get_fiscal_year_source_reply( $messages )['reply'] );
+
+		$page->post_password = '';
+		update_post_meta( $page->ID, rytkoset_theme_get_members_only_page_meta_key(), 'yes' );
+		$this->assertSame( '', rytkoset_theme_chat_get_fiscal_year_source_reply( $messages )['reply'] );
 	}
 
 	// --- rytkoset_theme_chat_resolve_page_tool_result() -----------------------
@@ -265,6 +414,105 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	// --- forced initial tool choice ---------------------------------------------
+
+	public function test_forced_initial_tool_response_rejects_plain_text_and_invalid_calls(): void {
+		$plain_text_body = $this->response_body(
+			array(
+				'role'    => 'assistant',
+				'content' => 'Vastaus lukematta sivua.',
+			)
+		);
+		$malformed_call_body = $this->response_body(
+			array(
+				'role'       => 'assistant',
+				'tool_calls' => array(
+					array( 'function' => array( 'name' => 'lue_sivu' ) ),
+				),
+			)
+		);
+
+		$this->assertFalse(
+			rytkoset_theme_chat_forced_tool_response_is_valid(
+				true,
+				0,
+				rytkoset_theme_chat_extract_tool_calls( $plain_text_body )
+			)
+		);
+		$this->assertFalse(
+			rytkoset_theme_chat_forced_tool_response_is_valid(
+				true,
+				0,
+				rytkoset_theme_chat_extract_tool_calls( $malformed_call_body )
+			)
+		);
+		$this->assertFalse(
+			rytkoset_theme_chat_forced_tool_response_is_valid(
+				true,
+				0,
+				array(
+					array(
+						'id'        => 'call_bad_args',
+						'name'      => 'lue_sivu',
+						'arguments' => '{rikkinäinen',
+					),
+				)
+			)
+		);
+		$this->assertFalse(
+			rytkoset_theme_chat_forced_tool_response_is_valid(
+				true,
+				0,
+				array(
+					array(
+						'id'        => 'call_wrong_tool',
+						'name'      => 'muu_tyokalu',
+						'arguments' => '{"sivu_id":20}',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_forced_initial_tool_response_accepts_valid_page_read_only(): void {
+		$calls = array(
+			array(
+				'id'        => 'call_ok',
+				'name'      => 'lue_sivu',
+				'arguments' => '{"sivu_id":20}',
+			),
+		);
+
+		$this->assertTrue( rytkoset_theme_chat_forced_tool_response_is_valid( true, 0, $calls ) );
+		$this->assertTrue( rytkoset_theme_chat_forced_tool_response_is_valid( false, 0, array() ) );
+		$this->assertTrue( rytkoset_theme_chat_forced_tool_response_is_valid( true, 1, array() ) );
+	}
+
+	public function test_forced_initial_tool_response_ignores_valid_fourth_call(): void {
+		$calls = array(
+			array(
+				'id'        => 'call_wrong_1',
+				'name'      => 'muu_tyokalu',
+				'arguments' => '{"sivu_id":20}',
+			),
+			array(
+				'id'        => 'call_wrong_2',
+				'name'      => 'muu_tyokalu',
+				'arguments' => '{"sivu_id":20}',
+			),
+			array(
+				'id'        => 'call_wrong_3',
+				'name'      => 'muu_tyokalu',
+				'arguments' => '{"sivu_id":20}',
+			),
+			array(
+				'id'        => 'call_valid_but_not_executed',
+				'name'      => 'lue_sivu',
+				'arguments' => '{"sivu_id":20}',
+			),
+		);
+
+		$this->assertFalse( rytkoset_theme_chat_forced_tool_response_is_valid( true, 0, $calls ) );
+	}
 
 	public function test_person_term_and_follow_up_queries_force_initial_page_tool(): void {
 		$queries = array(

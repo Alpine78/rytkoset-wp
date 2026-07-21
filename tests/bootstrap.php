@@ -55,6 +55,8 @@ $GLOBALS['rytkoset_test_wc']           = null; // Minimal WC() container; cart i
 $GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 $GLOBALS['rytkoset_test_cron_events']  = array(); // [hook] => timestamp
 $GLOBALS['rytkoset_test_dashboard_widgets'] = array(); // [id] => callback
+$GLOBALS['rytkoset_test_http_responses'] = array(); // queued wp_remote_post() responses
+$GLOBALS['rytkoset_test_http_requests']  = array(); // captured wp_remote_post() calls
 
 // The hook registry is populated once at module load below and must NOT be reset between tests,
 // otherwise add_filter()/add_action() registrations from the loaded modules would be lost.
@@ -99,6 +101,8 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 	$GLOBALS['rytkoset_test_cron_events']   = array();
 	$GLOBALS['rytkoset_test_dashboard_widgets'] = array();
+	$GLOBALS['rytkoset_test_http_responses'] = array();
+	$GLOBALS['rytkoset_test_http_requests']  = array();
 
 	if ( isset( $GLOBALS['wpdb'] ) && $GLOBALS['wpdb'] instanceof Rytkoset_Test_WPDB ) {
 		$GLOBALS['wpdb']->reset();
@@ -462,10 +466,16 @@ class WC_Order {
 class WP_Error {
 	/** @var array<string,string[]> */
 	private array $errors = array();
+	/** @var array<string,mixed> */
+	private array $error_data = array();
 
-	public function __construct( string $code = '', string $message = '' ) {
+	public function __construct( string $code = '', string $message = '', $data = '' ) {
 		if ( '' !== $code ) {
 			$this->add( $code, $message );
+
+			if ( '' !== $data ) {
+				$this->add_data( $data, $code );
+			}
 		}
 	}
 
@@ -498,6 +508,69 @@ class WP_Error {
 		$messages = $this->get_error_messages( $code );
 
 		return $messages[0] ?? '';
+	}
+
+	public function get_error_code(): string {
+		$codes = $this->get_error_codes();
+
+		return $codes[0] ?? '';
+	}
+
+	public function add_data( $data, string $code = '' ): void {
+		$code = '' !== $code ? $code : $this->get_error_code();
+
+		if ( '' !== $code ) {
+			$this->error_data[ $code ] = $data;
+		}
+	}
+
+	public function get_error_data( string $code = '' ) {
+		$code = '' !== $code ? $code : $this->get_error_code();
+
+		return $this->error_data[ $code ] ?? null;
+	}
+}
+
+/** Minimal REST request stand-in for chat handler integration tests. */
+class WP_REST_Request {
+	/** @var array<string,mixed> */
+	private array $params = array();
+	/** @var array<string,string> */
+	private array $headers = array();
+
+	public function set_param( string $key, $value ): void {
+		$this->params[ $key ] = $value;
+	}
+
+	public function get_param( string $key ) {
+		return $this->params[ $key ] ?? null;
+	}
+
+	public function set_header( string $key, string $value ): void {
+		$this->headers[ strtolower( $key ) ] = $value;
+	}
+
+	public function get_header( string $key ): string {
+		return $this->headers[ strtolower( $key ) ] ?? '';
+	}
+}
+
+/** Minimal REST response stand-in for chat handler integration tests. */
+class WP_REST_Response {
+	private $data;
+	private int $status;
+
+	public function __construct( $data = null, int $status = 200 ) {
+		$this->data   = $data;
+		$this->status = $status;
+	}
+
+	public function get_data() {
+		return $this->data;
+	}
+
+	public function get_status(): int {
+		return $this->status;
 	}
 }
 
@@ -657,6 +730,31 @@ function esc_attr_e( $text, $domain = 'default' ): void {
 
 function is_wp_error( $thing ): bool {
 	return $thing instanceof WP_Error;
+}
+
+function wp_remote_post( $url, $args = array() ) {
+	$GLOBALS['rytkoset_test_http_requests'][] = array(
+		'url'  => (string) $url,
+		'args' => $args,
+	);
+
+	if ( empty( $GLOBALS['rytkoset_test_http_responses'] ) ) {
+		return new WP_Error( 'http_response_missing', 'No queued HTTP response.' );
+	}
+
+	return array_shift( $GLOBALS['rytkoset_test_http_responses'] );
+}
+
+function wp_remote_retrieve_response_code( $response ): int {
+	return is_array( $response ) ? (int) ( $response['response']['code'] ?? 0 ) : 0;
+}
+
+function wp_remote_retrieve_body( $response ): string {
+	return is_array( $response ) ? (string) ( $response['body'] ?? '' ) : '';
+}
+
+function wp_json_encode( $value, $flags = 0, $depth = 512 ) {
+	return json_encode( $value, (int) $flags, (int) $depth );
 }
 
 function sanitize_email( $email ) {
@@ -887,6 +985,36 @@ function get_post( $post = null ) {
 	}
 
 	return $GLOBALS['rytkoset_test_posts'][ (int) $post ] ?? null;
+}
+
+function get_page_by_path( $page_path, $output = 'OBJECT', $post_type = 'page' ) {
+	$page_path  = trim( (string) $page_path, '/' );
+	$post_types = (array) $post_type;
+
+	foreach ( $GLOBALS['rytkoset_test_posts'] as $post ) {
+		if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, $post_types, true ) ) {
+			continue;
+		}
+
+		$segments = array();
+		$current  = $post;
+		$seen     = array();
+
+		while ( $current instanceof WP_Post && ! isset( $seen[ $current->ID ] ) ) {
+			$seen[ $current->ID ] = true;
+			array_unshift( $segments, (string) $current->post_name );
+
+			$current = $current->post_parent > 0
+				? ( $GLOBALS['rytkoset_test_posts'][ $current->post_parent ] ?? null )
+				: null;
+		}
+
+		if ( $page_path === implode( '/', $segments ) ) {
+			return $post;
+		}
+	}
+
+	return null;
 }
 
 function get_the_title( $post = 0 ) {
