@@ -439,6 +439,32 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		remove_filter( 'rytkoset_theme_chat_temperature', $low );
 	}
 
+	// --- rytkoset_theme_chat_get_frequency_penalty() -------------------------
+
+	public function test_frequency_penalty_default_and_filterable(): void {
+		$this->assertSame( 0.3, rytkoset_theme_chat_get_frequency_penalty() );
+
+		$filter = static fn() => 1.0;
+		add_filter( 'rytkoset_theme_chat_frequency_penalty', $filter );
+
+		$this->assertSame( 1.0, rytkoset_theme_chat_get_frequency_penalty() );
+
+		remove_filter( 'rytkoset_theme_chat_frequency_penalty', $filter );
+	}
+
+	public function test_frequency_penalty_is_clamped_between_zero_and_two(): void {
+		$high = static fn() => 9.0;
+		add_filter( 'rytkoset_theme_chat_frequency_penalty', $high );
+		$this->assertSame( 2.0, rytkoset_theme_chat_get_frequency_penalty() );
+		remove_filter( 'rytkoset_theme_chat_frequency_penalty', $high );
+
+		// A negative penalty would encourage repetition, so it is clamped away.
+		$low = static fn() => -1.5;
+		add_filter( 'rytkoset_theme_chat_frequency_penalty', $low );
+		$this->assertSame( 0.0, rytkoset_theme_chat_get_frequency_penalty() );
+		remove_filter( 'rytkoset_theme_chat_frequency_penalty', $low );
+	}
+
 	// --- rytkoset_theme_chat_widget_is_enabled() -----------------------------
 
 	public function test_widget_disabled_when_backend_not_configured(): void {
