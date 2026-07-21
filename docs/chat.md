@@ -70,12 +70,16 @@ Kaikki oletukset ovat suodatettavia:
 | Historian pituus (viimeisimmät viestit) | 8 | `rytkoset_theme_chat_max_history` |
 | Vastauksen `max_tokens` | 800 | `rytkoset_theme_chat_max_tokens` |
 | Mallin `temperature` (0–1) | 0.2 | `rytkoset_theme_chat_temperature` |
+| Mallin `frequency_penalty` (0–2) | 0.3 | `rytkoset_theme_chat_frequency_penalty` |
 | Työkalukierrokset / käyttäjäviesti (#501) | 2 (kova yläraja 3) | `rytkoset_theme_chat_page_tool_max_rounds` |
 | Työkalun palauttaman sivusisällön merkkiraja (#501) | 5000 | `rytkoset_theme_chat_page_tool_max_length` |
 
 - **Rate limit**: kiinteä ikkuna transientilla (`rytkoset_chat_rl_<md5(ip)>`), IP luetaan vain `REMOTE_ADDR`:sta (välityspalvelinotsakkeisiin ei luoteta). Ylitys → HTTP 429. Huom: raja on IP-kohtainen, ei käyttäjäkohtainen — saman verkon (esim. sama WiFi tai operaattorin NAT) kävijät jakavat saman laskurin.
 - **Syöte- ja historiarajat**: `rytkoset_theme_chat_prepare_messages()` säilyttää vain `user`/`assistant`-roolit, sanitoi sisällön (`sanitize_textarea_field`), katkaisee jokaisen viestin merkkirajaan ja leikkaa historian viimeisimpiin viesteihin **ennen** API-kutsua.
 - **Temperature**: matala oletus (0.2), koska tukichatin vastaukset ovat faktavastauksia — satunnaisuus lisäisi vain epäjohdonmukaisuutta. Arvo rajataan välille 0–1.
+- **Frequency penalty**: Mistralin dokumentaatio esittää rangaistusparametrit nimenomaan keinona välttää toistosilmukat, joihin malli voi pitkässä kontekstissa tai pitkässä vastauksessa jäädä. Rangaistus kertyy toistuvaa tokenia kohden, joten matalakin arvo voimistuu nopeasti heti kun ilmaus alkaa toistua. Oletus on tarkoituksella varovainen (0.3): suomenkielinen tukivastaus toistaa luonnostaan aihesanoja kuten "sukuseura" tai "jäsenyys", ja liian voimakas rangaistus vääristää sanamuotoja. Arvo rajataan välille 0–2 — negatiivinen rangaistus *lisäisi* toistoa, mitä ei koskaan haluta. Jos toistosilmukka toistuu vielä oletusarvolla, nosta suodattimella asteittain (0.5 → 1.0) ja todenna sama kysymys uudelleen.
+
+> **Tausta (#507):** dev-ympäristössä havaittiin toistuva silmukka, jossa kysymys "Mikä on sukuseuran tilikausi?" session ensimmäisenä viestinä tuotti saman virheellisen väitteen kymmeniä kertoja peräkkäin, Markdown-lihavointia vastoin promptin ohjetta sekä mallin omia erikoismerkkijonoja (`<end_of_thinking>`, pitkiä `]]]]`- ja `000000`-jaksoja), kunnes `max_tokens` katkaisi vastauksen kesken sanan. Vika oli deterministinen (3/3 samalla syötteellä) kahdella eri koodiversiolla — myös ennen kuin `tool_choice: "any"` -pakotus ja käsite-erotteleva promptirivi olivat olemassa, joten kumpikaan niistä ei ollut syy. Dashboard-widgetin laskurit osoittivat epäonnistuneessa ajossa yhden API-kutsun ja **nolla** sivunlukua, kun sama pakotus toimi moitteettomasti kysymyksellä "Kuka on Marja-Liisa Patrikainen?" (kaksi API-kutsua, yksi sivunluku, oikea vastaus). Matala `temperature` tekee samplauksesta lähes deterministisen, joten sama syöte päätyi joka kerta samaan toistoattraktoriin. `frequency_penalty` osuu suoraan tähän mekanismiin.
 
 ### Dev-ympäristön löysemmät rajat
 
@@ -234,7 +238,7 @@ Ennen tätä kokonaisuutta kulusuojien osumat eivät näkyneet ylläpitäjälle 
 
 ## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
 
-Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Mistral-kohtainen `prompt_cache_key` lisätään vain, kun endpointin isäntä on täsmälleen `api.mistral.ai`; se jää automaattisesti pois muiden tarjoajien payloadista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
+Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature, frequency_penalty}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Mistral-kohtainen `prompt_cache_key` lisätään vain, kun endpointin isäntä on täsmälleen `api.mistral.ai`; se jää automaattisesti pois muiden tarjoajien payloadista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
 
 1. Hanki uuden tarjoajan API-avain ja chat-completions-päätepisteen koko URL (esim. Mistral-malli Azure AI:n Sweden Central -alueella).
 2. Päivitä `RYTKOSET_CHAT_API_KEY`, `RYTKOSET_CHAT_API_ENDPOINT` ja tarvittaessa `RYTKOSET_CHAT_API_MODEL` kohdeympäristön `wp-config.php`:hen.

@@ -178,6 +178,30 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_temperature' ) ) {
 }
 
 /**
+ * Returns the frequency penalty applied to the generated response.
+ *
+ * Mistral documents penalties as the parameter for avoiding the repetition
+ * loops a model can fall into with long contexts or long outputs. The penalty
+ * accumulates per repeated token, so a low value still compounds quickly once a
+ * phrase starts repeating. The default is deliberately conservative: a Finnish
+ * support answer legitimately reuses domain words such as "sukuseura" or
+ * "jäsenyys", and an aggressive penalty distorts that wording. Raise it through
+ * the filter if a repetition loop still reproduces.
+ *
+ * Clamped to 0–2 rather than the API's own bounds: a negative penalty would
+ * encourage repetition, which is never wanted here.
+ *
+ * @return float
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_frequency_penalty' ) ) {
+	function rytkoset_theme_chat_get_frequency_penalty() {
+		$penalty = (float) apply_filters( 'rytkoset_theme_chat_frequency_penalty', 0.3 );
+
+		return min( 2.0, max( 0.0, $penalty ) );
+	}
+}
+
+/**
  * Kertoo, onko chatti kytketty päälle Customizerissa.
  *
  * Oletus on päällä, jotta jo konfiguroitujen ympäristöjen toiminta säilyy
@@ -832,10 +856,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		);
 
 		$payload = array(
-			'model'       => $config['model'],
-			'messages'    => $payload_messages,
-			'max_tokens'  => rytkoset_theme_chat_get_max_tokens(),
-			'temperature' => rytkoset_theme_chat_get_temperature(),
+			'model'             => $config['model'],
+			'messages'          => $payload_messages,
+			'max_tokens'        => rytkoset_theme_chat_get_max_tokens(),
+			'temperature'       => rytkoset_theme_chat_get_temperature(),
+			'frequency_penalty' => rytkoset_theme_chat_get_frequency_penalty(),
 		);
 		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
 			$payload,
