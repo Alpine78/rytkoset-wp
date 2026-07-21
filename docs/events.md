@@ -75,6 +75,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
 | Järjestäjäilmoitusten vastaanottajat | `_rytkoset_event_organizer_notification_recipients` | sähköpostiosoitteet, yksi per rivi | Maksullisen tapahtuman tilausilmoitusten vastaanottajat |
 | Kysy ruokavalio | `_rytkoset_event_collect_diet` | puuttuva tai `no` | Puuttuva näyttää ruokavaliokentän ja mainitsee ruokarajoitteet GDPR-ilmoituksessa; `no` piilottaa kentän ja jättää ruokarajoitteet pois ilmoituksesta |
+| Näytä tapahtuma Googlen tapahtumahaussa | `_rytkoset_event_schema_enabled` | puuttuva tai `no` | Puuttuva tuottaa Event-rakennedatan; `no` jättää Event-rakennedatan pois |
 | Lisävalinta käytössä | `_rytkoset_event_choice_enabled` | `yes` tai puuttuva | Näyttää maksuttomalla lomakkeella pakollisen valintalistan |
 | Lisävalinnan otsikko | `_rytkoset_event_choice_field_label` | vapaa teksti | Valintalistan otsikko, oletus `Lähtöpaikka` |
 | Lisävalinnan vaihtoehdot | `_rytkoset_event_choice_options` | yksi vaihtoehto per rivi | Valintalistan sallitut arvot |
@@ -123,6 +124,14 @@ Yhteenvetokortissa näytetään täytetyt perustiedot:
 
 Jos linkitetyn WooCommerce-tuotteen ilmoittautuminen on päättynyt tai tuote ei muuten ole ostettavissa, tapahtumasivu näyttää tilaviestinä syyn eikä tarjoa aktiivista maksupainiketta.
 
+### Google-tapahtumahaku ja rakennedata
+
+Julkaistu tapahtuma tuottaa oletuksena schema.org/Event-rakennedatan Googlea ja muita hakukoneita varten. Ylläpidon `Tapahtuman tiedot` -laatikon valinta **Näytä tapahtuma Googlen tapahtumahaussa** kannattaa pitää päällä vain itsenäisillä tapahtumilla. Poista valinta esimerkiksi kuljetuspalvelulta, joka liittyy toiseen tapahtumaan mutta ei ole itse erillinen yleisötapahtuma.
+
+Valinnan poistaminen jättää tapahtumasivun, arkiston, ilmoittautumisen ja tavallisen hakukonenäkyvyyden ennalleen. Se poistaa sivulta vain Event-rakennedatan. Menneen tapahtuman Event-rakennedata voi säilyä historiatietona, mutta teema ei ilmoita sille enää aktiivista `offers`-tarjousta.
+
+Tapahtumien ISO-aikaleimat käyttävät WordPressin kaupunkipohjaista aikavyöhykettä. Tuotannossa asetuksen tulee olla `Europe/Helsinki`, jotta kesäajan tapahtumat saavat offsetin `+03:00`. Aikavyöhykkeen tai rakennedatan muuttamisen jälkeen tyhjennä LiteSpeedin sivuvälimuisti ennen Rich Results Testiä ja Search Consolen validointia; muuten julkinen osoite voi tarjota hetken vanhaa JSON-LD:tä.
+
 **Roskapostisuoja (maksuton lomake):** lomakkeessa on piilotettu honeypot-kenttä ja kevyt IP-kohtainen lähetysrajoitus (oletus 5 lähetystä / 10 min samasta IP-osoitteesta). Rajan ylittävä lähetys hylätään ennen tallennusta ja kuittisähköpostia, jottei lomakkeen toistolla voi synnyttää rajatonta määrää kuittiviestejä tai ilmoittautumistietueita. Tavallinen yksittäinen ilmoittautuminen ei osu rajaan. Rajan ja aikaikkunan voi säätää suodattimilla `rytkoset_theme_event_registration_rate_limit` ja `rytkoset_theme_event_registration_rate_limit_window`. Jos järjestäjä testaa lomaketta toistuvasti samasta verkosta ja saa viestin "Liian monta ilmoittautumisyritystä", kyse on tästä rajasta — odota aikaikkunan verran. (Käänteisen proxyn takana raja kohdistuu proxyn IP:hen; ks. `docs/tietoturva.md`.)
 
 Tapahtuma-arkistossa `/tapahtumat/` tapahtumat jaetaan kolmeen osioon:
@@ -148,6 +157,7 @@ Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Men
    - maksullisuus
    - hintateksti
    - näytetäänkö ruokavalio- ja allergiakysymys maksuttomalla lomakkeella
+   - näytetäänkö sisältö Googlen tapahtumahaussa; poista valinta kuljetuspalvelulta tai muulta sisällöltä, joka ei ole itsenäinen tapahtuma
 8. Jos maksuton tapahtuma käyttää lomakeilmoittautumista, täytä sivupalkin `Tapahtumapäivä`-laatikosta `Maksuttoman ilmoittautumisen määräpäivä`.
 9. Jos maksuton lomake tarvitsee esimerkiksi lähtöpaikan tai osallistujamäärän,
    määritä `Ilmoittautumisen lisävalinta` -laatikossa kentän otsikko,
@@ -180,6 +190,17 @@ Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisält
 Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa honeypot-kentän, noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa. Onnistuneen maksuttoman ilmoittautumisen jälkeen ilmoittautujalle lähetetään `wp_mail()`-pohjainen tekstimuotoinen kuittisähköposti, jossa kerrotaan ilmoittautumisen vastaanotosta ja näytetään tapahtuman perustiedot.
 
 Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, mutta tapahtumaviittaus ja status säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
+
+### Automaattinen 12 kuukauden anonymisointi (#580)
+
+Tietosuojaseloste lupaa, että tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta. Lupaus toteutetaan automaattisesti ilman ylläpitäjän muistinvaraista rutiinia päivittäisellä WP-Cron-ajolla (`inc/event-registration-anonymization.php`).
+
+- Ajo käy läpi maksuttomat `event_registration`-tietueet, joita ei ole vielä anonymisoitu, ja anonymisoi ne samalla #250:n polulla (`rytkoset_theme_anonymize_event_registration()`), kun tapahtumapäivästä on kulunut yli 12 kuukautta. Kynnys lasketaan tapahtumapäivän lopusta, ja se on säädettävissä suodattimella `rytkoset_theme_event_registration_anonymization_months` (oletus 12).
+- Ajo on **idempotentti**: jo anonymisoidut rivit ohitetaan (niillä on `_rytkoset_registration_anonymized_at`), joten uudelleenajo ei kosketa niitä eikä riko tai toista rekisteröidyn pyynnöstä tehtyä anonymisointia. Manuaalinen työkalu ja Privacy Tools -polut toimivat ennallaan.
+- Ajon tulos kirjataan kevyesti optioon `rytkoset_event_registration_anonymization` (aikaleima, viimeisimmän ajon määrä, kumulatiivinen määrä ja päivämäärää vailla olevien tapahtumien ID:t) — **ei koskaan henkilötietoja**.
+- Jos tapahtumalta puuttuu kelvollinen päivämäärä, sen ilmoittautumisia ei voida anonymisoida ajastetusti. Ne ohitetaan ja tapahtumat raportoidaan ylläpitäjälle admin-ilmoituksella (`edit_others_event_registrations`), jossa on linkit tapahtumien muokkaukseen päivämäärän lisäämistä varten.
+- Jos ilmoittautumisen tapahtumaviittaus puuttuu tai tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan seuraavassa ajossa heti. Tapahtumaa ei silloin enää ole perusteluna henkilötietojen säilyttämiselle. Sama anonymisointiaikaleima tekee myös tämän polun idempotentiksi.
+- Ajo ei koske WooCommerce-tilauksia (kirjanpitolain säilytysvelvoite; WooCommerce-puolen GDPR-työ on eri tiketti).
 
 Ilmoittautumiset kulkevat WooCommercen kautta silloin, kun tapahtumaan on linkitetty maksutuote:
 

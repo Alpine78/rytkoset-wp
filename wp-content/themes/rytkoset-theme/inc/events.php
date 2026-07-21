@@ -232,6 +232,101 @@ function rytkoset_theme_is_event_date_passed( $event_id ) {
 }
 
 /**
+ * Returns the ID of the next upcoming published event, or 0 when none exist.
+ *
+ * "Upcoming" reuses the public registration cutoff logic: an event counts until
+ * the end of its event day (`rytkoset_theme_is_event_date_passed()`). Events
+ * without a valid date are skipped. Results sort ascending by ISO date, so the
+ * soonest event is returned. Shared by the empty-cart secondary link and any
+ * other surface that needs "the next event".
+ *
+ * @param string $fee_type                 Optional fee type filter: 'free' or 'paid'.
+ * @param bool   $require_open_registration Whether the registration deadline must exist and remain open.
+ * @return int Event post ID, or 0 when there is no matching upcoming event.
+ */
+function rytkoset_theme_get_next_upcoming_event_id( $fee_type = '', $require_open_registration = false ) {
+	if ( ! function_exists( 'rytkoset_theme_get_event_date_raw' ) ) {
+		return 0;
+	}
+
+	$fee_type = in_array( $fee_type, array( 'free', 'paid' ), true ) ? $fee_type : '';
+
+	$ids = get_posts(
+		array(
+			'post_type'        => 'rytkoset_event',
+			'post_status'      => 'publish',
+			'numberposts'      => -1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		)
+	);
+
+	$upcoming = array();
+
+	foreach ( (array) $ids as $event_id ) {
+		$event_id = (int) $event_id;
+
+		if ( 'publish' !== get_post_status( $event_id ) ) {
+			continue;
+		}
+
+		if ( '' !== $fee_type && rytkoset_theme_get_event_fee_type( $event_id ) !== $fee_type ) {
+			continue;
+		}
+
+		$date = rytkoset_theme_get_event_date_raw( $event_id );
+
+		if ( '' === $date || rytkoset_theme_is_event_date_passed( $event_id ) ) {
+			continue;
+		}
+
+		if ( $require_open_registration ) {
+			$deadline = rytkoset_theme_get_event_registration_deadline_raw( $event_id );
+
+			if ( '' === $deadline || rytkoset_theme_is_event_registration_deadline_passed( $event_id ) ) {
+				continue;
+			}
+		}
+
+		$upcoming[ $event_id ] = $date;
+	}
+
+	if ( empty( $upcoming ) ) {
+		return 0;
+	}
+
+	// ISO dates sort correctly as strings; keep the soonest event.
+	asort( $upcoming );
+
+	$event_ids = array_keys( $upcoming );
+
+	return (int) reset( $event_ids );
+}
+
+/**
+ * Returns the meta key controlling Event structured-data output.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_schema_enabled_meta_key() {
+	return '_rytkoset_event_schema_enabled';
+}
+
+/**
+ * Checks whether an event should be exposed as schema.org/Event data.
+ *
+ * Events default to enabled for backward compatibility. An explicit `no` lets editors keep
+ * transport services and other event-adjacent content in the event archive without presenting
+ * them to search engines as standalone events.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_event_schema_is_enabled( $event_id ) {
+	return 'no' !== get_post_meta( absint( $event_id ), rytkoset_theme_get_event_schema_enabled_meta_key(), true );
+}
+
+/**
  * Returns meta keys used for event details.
  *
  * @return array
@@ -637,12 +732,13 @@ add_action( 'add_meta_boxes_rytkoset_event', 'rytkoset_theme_register_event_deta
  * @param WP_Post $post Event post object.
  */
 function rytkoset_theme_render_event_details_metabox( $post ) {
-	$start_time   = rytkoset_theme_get_event_time_raw( $post->ID, 'start_time' );
-	$end_time     = rytkoset_theme_get_event_time_raw( $post->ID, 'end_time' );
-	$location     = rytkoset_theme_get_event_location( $post->ID );
-	$fee_type     = rytkoset_theme_get_event_fee_type( $post->ID );
-	$price_text   = rytkoset_theme_get_event_price_text( $post->ID );
-	$collect_diet = rytkoset_theme_event_collects_diet( $post->ID );
+	$start_time     = rytkoset_theme_get_event_time_raw( $post->ID, 'start_time' );
+	$end_time       = rytkoset_theme_get_event_time_raw( $post->ID, 'end_time' );
+	$location       = rytkoset_theme_get_event_location( $post->ID );
+	$fee_type       = rytkoset_theme_get_event_fee_type( $post->ID );
+	$price_text     = rytkoset_theme_get_event_price_text( $post->ID );
+	$collect_diet   = rytkoset_theme_event_collects_diet( $post->ID );
+	$schema_enabled = rytkoset_theme_event_schema_is_enabled( $post->ID );
 
 	wp_nonce_field( 'rytkoset_save_event_details', 'rytkoset_event_details_nonce' );
 	?>
@@ -733,6 +829,22 @@ function rytkoset_theme_render_event_details_metabox( $post ) {
 	<p class="description">
 		<?php esc_html_e( 'Poista valinta, jos tapahtumassa ei ole tarjoiluita. Koskee maksutonta ilmoittautumislomaketta.', 'rytkoset-theme' ); ?>
 	</p>
+	<hr />
+	<p>
+		<label for="rytkoset_event_schema_enabled">
+			<input
+				type="checkbox"
+				id="rytkoset_event_schema_enabled"
+				name="rytkoset_event_schema_enabled"
+				value="yes"
+				<?php checked( $schema_enabled ); ?>
+			/>
+			<?php esc_html_e( 'Näytä tapahtuma Googlen tapahtumahaussa', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Poista valinta kuljetuspalvelulta tai muulta sisällöltä, joka ei ole itsenäinen tapahtuma. Sivun tavallinen hakukonenäkyvyys säilyy.', 'rytkoset-theme' ); ?>
+	</p>
 	<?php
 }
 
@@ -817,6 +929,13 @@ function rytkoset_theme_save_event_details( $post_id ) {
 		delete_post_meta( $post_id, rytkoset_theme_get_event_collect_diet_meta_key() );
 	} else {
 		update_post_meta( $post_id, rytkoset_theme_get_event_collect_diet_meta_key(), 'no' );
+	}
+
+	// Checkbox: enabled is the backward-compatible default; only an explicit `no` is stored.
+	if ( isset( $_POST['rytkoset_event_schema_enabled'] ) ) {
+		delete_post_meta( $post_id, rytkoset_theme_get_event_schema_enabled_meta_key() );
+	} else {
+		update_post_meta( $post_id, rytkoset_theme_get_event_schema_enabled_meta_key(), 'no' );
 	}
 }
 add_action( 'save_post_rytkoset_event', 'rytkoset_theme_save_event_details' );

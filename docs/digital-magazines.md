@@ -192,6 +192,12 @@ vähintään yksi digilehteen linkitetty tuote (normaali- tai jäsenhintatuote):
   näkyy siis tilauksella todisteena annetusta suostumuksesta.
   `rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order )`
   lukee arvon takaisin.
+- **Vahvistus (KSL 6:13 § 3 mom):** kun tilauksessa on digilehtituote,
+  suostumuskenttä näytetään myös tilausvahvistussivulla ja
+  vahvistussähköpostissa (#491:n
+  `woocommerce_filter_fields_for_order_confirmation` -suodatus), joten
+  sopimusvahvistus sisältää lain edellyttämän tiedon annetusta
+  ennakkosuostumuksesta ja hyväksynnästä.
 - **Rajaus:** tämä tiketti lisää vain suostumuksen keräämisen ja tallennuksen.
   Itsepalvelutilauksen peruutuspainike (`inc/woocommerce-cancellation.php`,
   `docs/woocommerce-peruutus.md`) ei toistaiseksi tarkista tätä suostumusta —

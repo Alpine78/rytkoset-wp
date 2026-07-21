@@ -30,24 +30,67 @@ if ( ! defined( 'ABSPATH' ) ) {
  * pakollisia — ilman niitä `is_configured` on false ja reitti palauttaa
  * hallitun virheen fatalin sijaan.
  *
- * @return array{api_key:string,endpoint:string,model:string,is_configured:bool}
+ * @return array{api_key:string,endpoint:string,model:string,prompt_cache_key:string,is_configured:bool}
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_config' ) ) {
 	function rytkoset_theme_chat_get_config() {
-		$api_key  = defined( 'RYTKOSET_CHAT_API_KEY' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_KEY' ) ) : '';
-		$endpoint = defined( 'RYTKOSET_CHAT_API_ENDPOINT' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_ENDPOINT' ) ) : '';
-		$model    = defined( 'RYTKOSET_CHAT_API_MODEL' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_MODEL' ) ) : '';
+		$api_key          = defined( 'RYTKOSET_CHAT_API_KEY' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_KEY' ) ) : '';
+		$endpoint         = defined( 'RYTKOSET_CHAT_API_ENDPOINT' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_ENDPOINT' ) ) : '';
+		$model            = defined( 'RYTKOSET_CHAT_API_MODEL' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_MODEL' ) ) : '';
+		$prompt_cache_key = defined( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY' ) ? trim( (string) constant( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY' ) ) : '';
 
 		if ( '' === $model ) {
 			$model = 'mistral-small-latest';
 		}
 
 		return array(
-			'api_key'       => $api_key,
-			'endpoint'      => $endpoint,
-			'model'         => $model,
-			'is_configured' => ( '' !== $api_key && '' !== $endpoint ),
+			'api_key'          => $api_key,
+			'endpoint'         => $endpoint,
+			'model'            => $model,
+			'prompt_cache_key' => $prompt_cache_key,
+			'is_configured'    => ( '' !== $api_key && '' !== $endpoint ),
 		);
+	}
+}
+
+/**
+ * Kertoo, onko endpoint Mistralin oma chat-rajapinta.
+ *
+ * Prompt-välimuistin kenttää ei lähetetä Azurelle tai muille mahdollisille
+ * palveluntarjoajille ilman erillistä yhteensopivuuden varmistusta.
+ *
+ * @param string $endpoint API-endpointin URL.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_endpoint_is_mistral' ) ) {
+	function rytkoset_theme_chat_endpoint_is_mistral( $endpoint ) {
+		$host = wp_parse_url( (string) $endpoint, PHP_URL_HOST );
+
+		return is_string( $host ) && 'api.mistral.ai' === strtolower( $host );
+	}
+}
+
+/**
+ * Lisää Mistralin kokeellisen prompt-välimuistiavaimen payloadiin tarvittaessa.
+ *
+ * Tyhjä avain tai muu palveluntarjoaja palauttaa payloadin täsmälleen
+ * ennallaan. Palautettu payload säilyy samana myös sivunlukutyökalun sisäisillä
+ * jatkokierroksilla, joilla vain messages- ja tool_choice-kenttiä muutetaan.
+ *
+ * @param array  $payload          Chat completions -payload.
+ * @param string $endpoint         API-endpointin URL.
+ * @param string $prompt_cache_key Ympäristökohtainen, henkilötiedoton avain.
+ * @return array
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_maybe_add_prompt_cache_key' ) ) {
+	function rytkoset_theme_chat_maybe_add_prompt_cache_key( $payload, $endpoint, $prompt_cache_key ) {
+		$prompt_cache_key = trim( (string) $prompt_cache_key );
+
+		if ( '' !== $prompt_cache_key && rytkoset_theme_chat_endpoint_is_mistral( $endpoint ) ) {
+			$payload['prompt_cache_key'] = $prompt_cache_key;
+		}
+
+		return $payload;
 	}
 }
 
@@ -131,6 +174,30 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_temperature' ) ) {
 		$temperature = (float) apply_filters( 'rytkoset_theme_chat_temperature', 0.2 );
 
 		return min( 1.0, max( 0.0, $temperature ) );
+	}
+}
+
+/**
+ * Returns the frequency penalty applied to the generated response.
+ *
+ * Mistral documents penalties as the parameter for avoiding the repetition
+ * loops a model can fall into with long contexts or long outputs. The penalty
+ * accumulates per repeated token, so a low value still compounds quickly once a
+ * phrase starts repeating. The default is deliberately conservative: a Finnish
+ * support answer legitimately reuses domain words such as "sukuseura" or
+ * "jäsenyys", and an aggressive penalty distorts that wording. Raise it through
+ * the filter if a repetition loop still reproduces.
+ *
+ * Clamped to 0–2 rather than the API's own bounds: a negative penalty would
+ * encourage repetition, which is never wanted here.
+ *
+ * @return float
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_frequency_penalty' ) ) {
+	function rytkoset_theme_chat_get_frequency_penalty() {
+		$penalty = (float) apply_filters( 'rytkoset_theme_chat_frequency_penalty', 0.3 );
+
+		return min( 2.0, max( 0.0, $penalty ) );
 	}
 }
 
@@ -789,10 +856,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		);
 
 		$payload = array(
-			'model'       => $config['model'],
-			'messages'    => $payload_messages,
-			'max_tokens'  => rytkoset_theme_chat_get_max_tokens(),
-			'temperature' => rytkoset_theme_chat_get_temperature(),
+			'model'             => $config['model'],
+			'messages'          => $payload_messages,
+			'max_tokens'        => rytkoset_theme_chat_get_max_tokens(),
+			'temperature'       => rytkoset_theme_chat_get_temperature(),
+			'frequency_penalty' => rytkoset_theme_chat_get_frequency_penalty(),
+		);
+		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
+			$payload,
+			$config['endpoint'],
+			$config['prompt_cache_key']
 		);
 
 		$tool_enabled = rytkoset_theme_chat_page_tool_is_enabled();
@@ -800,6 +873,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 		if ( $tool_enabled ) {
 			$payload['tools'] = array( rytkoset_theme_chat_get_page_tool_definition() );
+
+			if ( rytkoset_theme_chat_should_force_page_tool( $messages ) ) {
+				// Mistral's "any" mode requires an initial tool call. Restore the
+				// default automatic choice after the first tool result.
+				$payload['tool_choice'] = 'any';
+			}
 		}
 
 		// 6.–7. Mistral-kutsu + työkalusilmukka (#501) ja virheenkäsittely — avainta
@@ -837,6 +916,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 				return rytkoset_theme_chat_upstream_error();
 			}
 
+			if ( rytkoset_theme_chat_endpoint_is_mistral( $config['endpoint'] ) ) {
+				$prompt_cache_usage = rytkoset_theme_chat_extract_prompt_cache_usage( $body );
+				if ( null !== $prompt_cache_usage ) {
+					rytkoset_theme_chat_record_prompt_cache_usage_stat( $prompt_cache_usage );
+				}
+			}
+
 			$tool_calls = $tool_enabled ? rytkoset_theme_chat_extract_tool_calls( $body ) : array();
 
 			if ( empty( $tool_calls ) || $rounds_used >= $max_rounds ) {
@@ -866,6 +952,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 				);
 			}
 
+			unset( $payload['tool_choice'] );
+
 			if ( $rounds_used >= $max_rounds ) {
 				// Viimeinen kierros: pakota tekstivastaus, ettei malli jää kutsumaan työkalua.
 				$payload['tool_choice'] = 'none';
@@ -883,7 +971,28 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		// 9. Onnistumislaskuri (#472) — ei sisältöä eikä IP:tä, vain määrä + ajankohta.
 		rytkoset_theme_chat_record_message_sent_stat();
 
-		return new WP_REST_Response( array( 'reply' => $reply ), 200 );
+		return new WP_REST_Response( rytkoset_theme_chat_build_response_body( $reply ), 200 );
+	}
+}
+
+/**
+ * Builds the successful chat REST response body.
+ *
+ * The `ai_generated` flag is the machine-readable marking required by
+ * Regulation (EU) 2024/1689 (AI Act) Article 50(2) for AI-generated content:
+ * every reply produced by the upstream model is explicitly labelled in the
+ * API response. The matching DOM marking (`data-ai-generated`) is added in
+ * `assets/js/chat.js`. See docs/chat.md for the dated feasibility rationale.
+ *
+ * @param string $reply Assistant reply text.
+ * @return array Response body.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_build_response_body' ) ) {
+	function rytkoset_theme_chat_build_response_body( $reply ) {
+		return array(
+			'reply'        => $reply,
+			'ai_generated' => true,
+		);
 	}
 }
 
@@ -928,15 +1037,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_log_error' ) ) {
  * IP-osoitetta eikä viestisisältöä, sama periaate kuin rate limit
  * -transientissa (joka tallentaa vain MD5-tiivisteen).
  *
- * @return array{messages:string,rate_limit:string,error:string,tool_calls:string}
+ * @return array{messages:string,rate_limit:string,error:string,tool_calls:string,prompt_cache:string}
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
 	function rytkoset_theme_chat_get_stat_option_names() {
 		return array(
-			'messages'   => 'rytkoset_chat_stat_messages',
-			'rate_limit' => 'rytkoset_chat_stat_rate_limit',
-			'error'      => 'rytkoset_chat_stat_error',
-			'tool_calls' => 'rytkoset_chat_stat_tool_calls',
+			'messages'     => 'rytkoset_chat_stat_messages',
+			'rate_limit'   => 'rytkoset_chat_stat_rate_limit',
+			'error'        => 'rytkoset_chat_stat_error',
+			'tool_calls'   => 'rytkoset_chat_stat_tool_calls',
+			'prompt_cache' => 'rytkoset_chat_stat_prompt_cache',
 		);
 	}
 }
@@ -992,6 +1102,67 @@ if ( ! function_exists( 'rytkoset_theme_chat_bump_error_stat' ) ) {
 }
 
 /**
+ * Poimii Mistralin vastauksesta prompt-välimuistin käyttöarvot.
+ *
+ * Vain ei-negatiiviset kokonaisluvut hyväksytään. Ristiriitainen vaste, jossa
+ * välimuistitokeneita on enemmän kuin syötetokeneita, ohitetaan kokonaan, jotta
+ * koontitilasto ei vääristy odottamattomasta tai toisen tarjoajan rakenteesta.
+ *
+ * @param mixed $body Purettu API-vastaus.
+ * @return array{prompt_tokens:int,cached_tokens:int}|null
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_extract_prompt_cache_usage' ) ) {
+	function rytkoset_theme_chat_extract_prompt_cache_usage( $body ) {
+		if (
+			! is_array( $body )
+			|| ! isset( $body['usage'] )
+			|| ! is_array( $body['usage'] )
+			|| ! isset( $body['usage']['prompt_tokens'] )
+			|| ! is_int( $body['usage']['prompt_tokens'] )
+			|| $body['usage']['prompt_tokens'] < 0
+			|| ! isset( $body['usage']['prompt_tokens_details'] )
+			|| ! is_array( $body['usage']['prompt_tokens_details'] )
+			|| ! isset( $body['usage']['prompt_tokens_details']['cached_tokens'] )
+			|| ! is_int( $body['usage']['prompt_tokens_details']['cached_tokens'] )
+			|| $body['usage']['prompt_tokens_details']['cached_tokens'] < 0
+			|| $body['usage']['prompt_tokens_details']['cached_tokens'] > $body['usage']['prompt_tokens']
+		) {
+			return null;
+		}
+
+		return array(
+			'prompt_tokens' => $body['usage']['prompt_tokens'],
+			'cached_tokens' => $body['usage']['prompt_tokens_details']['cached_tokens'],
+		);
+	}
+}
+
+/**
+ * Kasvattaa prompt-välimuistin henkilötiedotonta koontia yhdellä API-kutsulla.
+ *
+ * @param mixed                                  $stat  Nykyinen tallennettu arvo.
+ * @param array{prompt_tokens:int,cached_tokens:int} $usage API-kutsun käyttöarvot.
+ * @param int                                    $now   Nykyinen Unix-aikaleima.
+ * @return array{api_calls:int,cache_hit_calls:int,prompt_tokens:int,cached_tokens:int,last_prompt_tokens:int,last_cached_tokens:int,last_at:int}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_bump_prompt_cache_stat' ) ) {
+	function rytkoset_theme_chat_bump_prompt_cache_stat( $stat, $usage, $now ) {
+		$prompt_tokens = max( 0, (int) $usage['prompt_tokens'] );
+		$cached_tokens = min( $prompt_tokens, max( 0, (int) $usage['cached_tokens'] ) );
+
+		return array(
+			'api_calls'          => (int) rytkoset_theme_chat_stat_value( $stat, 'api_calls', 0 ) + 1,
+			'cache_hit_calls'    => (int) rytkoset_theme_chat_stat_value( $stat, 'cache_hit_calls', 0 ) + ( $cached_tokens > 0 ? 1 : 0 ),
+			'prompt_tokens'      => (int) rytkoset_theme_chat_stat_value( $stat, 'prompt_tokens', 0 ) + $prompt_tokens,
+			'cached_tokens'      => (int) rytkoset_theme_chat_stat_value( $stat, 'cached_tokens', 0 ) + $cached_tokens,
+			'last_prompt_tokens' => $prompt_tokens,
+			'last_cached_tokens' => $cached_tokens,
+			'last_at'            => (int) $now,
+		);
+	}
+}
+
+/**
  * Kirjaa yhden onnistuneesti lähetetyn chat-viestin käyttötilastoon.
  *
  * Kutsutaan `rytkoset_theme_chat_handle_request()`:sta onnistuneen vastauksen
@@ -1027,6 +1198,27 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_tool_call_stat' ) ) {
 		update_option(
 			$names['tool_calls'],
 			rytkoset_theme_chat_bump_stat( get_option( $names['tool_calls'], array() ), time() ),
+			false
+		);
+	}
+}
+
+/**
+ * Kirjaa yhden onnistuneen Mistral-kutsun tokenit prompt-välimuistikoontiin.
+ *
+ * Tietue sisältää vain tokenimääriä, osumakutsujen määrän ja aikaleiman — ei
+ * viestejä, IP-osoitteita eikä prompt_cache_key-arvoa.
+ *
+ * @param array{prompt_tokens:int,cached_tokens:int} $usage API-kutsun käyttöarvot.
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_prompt_cache_usage_stat' ) ) {
+	function rytkoset_theme_chat_record_prompt_cache_usage_stat( $usage ) {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['prompt_cache'],
+			rytkoset_theme_chat_bump_prompt_cache_stat( get_option( $names['prompt_cache'], array() ), $usage, time() ),
 			false
 		);
 	}
@@ -1082,17 +1274,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_error_stat' ) ) {
  *     messages_sent: array{count:int,last_at:int},
  *     rate_limit_hits: array{count:int,last_at:int},
  *     last_error: array{count:int,last_at:int,last_type:string},
- *     tool_calls: array{count:int,last_at:int}
+ *     tool_calls: array{count:int,last_at:int},
+ *     prompt_cache: array{api_calls:int,cache_hit_calls:int,prompt_tokens:int,cached_tokens:int,last_prompt_tokens:int,last_cached_tokens:int,last_at:int}
  * }
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 	function rytkoset_theme_chat_get_usage_stats() {
 		$names = rytkoset_theme_chat_get_stat_option_names();
 
-		$messages   = get_option( $names['messages'], array() );
-		$rate_limit = get_option( $names['rate_limit'], array() );
-		$error      = get_option( $names['error'], array() );
-		$tool_calls = get_option( $names['tool_calls'], array() );
+		$messages     = get_option( $names['messages'], array() );
+		$rate_limit   = get_option( $names['rate_limit'], array() );
+		$error        = get_option( $names['error'], array() );
+		$tool_calls   = get_option( $names['tool_calls'], array() );
+		$prompt_cache = get_option( $names['prompt_cache'], array() );
 
 		return array(
 			'messages_sent'   => array(
@@ -1111,6 +1305,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 			'tool_calls'      => array(
 				'count'   => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'count', 0 ),
 				'last_at' => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'last_at', 0 ),
+			),
+			'prompt_cache'    => array(
+				'api_calls'          => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'api_calls', 0 ),
+				'cache_hit_calls'    => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'cache_hit_calls', 0 ),
+				'prompt_tokens'      => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'prompt_tokens', 0 ),
+				'cached_tokens'      => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'cached_tokens', 0 ),
+				'last_prompt_tokens' => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_prompt_tokens', 0 ),
+				'last_cached_tokens' => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_cached_tokens', 0 ),
+				'last_at'            => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_at', 0 ),
 			),
 		);
 	}
@@ -1191,9 +1394,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 			$status = __( 'Käytössä.', 'rytkoset-theme' );
 		}
 
-		$stats = rytkoset_theme_chat_get_usage_stats();
+		$stats                = rytkoset_theme_chat_get_usage_stats();
+		$prompt_cache_enabled = '' !== $config['prompt_cache_key'] && rytkoset_theme_chat_endpoint_is_mistral( $config['endpoint'] );
 
 		echo '<p><strong>' . esc_html__( 'Tila:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $status ) . '</p>';
+		echo '<p><strong>' . esc_html__( 'Mistral prompt-välimuisti:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $prompt_cache_enabled ? __( 'Käytössä.', 'rytkoset-theme' ) : __( 'Pois käytöstä.', 'rytkoset-theme' ) ) . '</p>';
 
 		echo '<ul>';
 
@@ -1212,6 +1417,31 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 		echo '<li>' . esc_html__( 'Sivunlukuhakuja (lue_sivu-työkalu) yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['tool_calls']['count'] ) ) . '</strong>';
 		if ( $stats['tool_calls']['last_at'] > 0 ) {
 			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['tool_calls']['last_at'] ) );
+		}
+		echo '</li>';
+
+		echo '<li>' . esc_html__( 'Prompt-välimuistin API-kutsuja tokenitiedoin:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['prompt_cache']['api_calls'] ) ) . '</strong>';
+		if ( $stats['prompt_cache']['api_calls'] > 0 ) {
+			echo ' &ndash; ' . esc_html(
+				sprintf(
+				/* translators: 1: cached prompt tokens, 2: all prompt tokens, 3: cache-hit API calls. */
+					__( '%1$s / %2$s syötetokenia välimuistista, osumia %3$s kutsussa', 'rytkoset-theme' ),
+					number_format_i18n( $stats['prompt_cache']['cached_tokens'] ),
+					number_format_i18n( $stats['prompt_cache']['prompt_tokens'] ),
+					number_format_i18n( $stats['prompt_cache']['cache_hit_calls'] )
+				)
+			);
+			if ( $stats['prompt_cache']['last_at'] > 0 ) {
+				echo '; ' . esc_html(
+					sprintf(
+						/* translators: 1: latest cached prompt tokens, 2: latest all prompt tokens, 3: timestamp. */
+						__( 'viimeisin %1$s / %2$s (%3$s)', 'rytkoset-theme' ),
+						number_format_i18n( $stats['prompt_cache']['last_cached_tokens'] ),
+						number_format_i18n( $stats['prompt_cache']['last_prompt_tokens'] ),
+						wp_date( 'j.n.Y H:i', $stats['prompt_cache']['last_at'] )
+					)
+				);
+			}
 		}
 		echo '</li>';
 
@@ -1470,6 +1700,33 @@ if ( ! function_exists( 'rytkoset_theme_chat_add_sitemap_hint_term' ) ) {
 }
 
 /**
+ * Joins sitemap hints within a character limit without truncating a term.
+ *
+ * @param array<int,string> $terms      Hint terms in priority order.
+ * @param int               $max_length Character limit.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_join_sitemap_hint_terms' ) ) {
+	function rytkoset_theme_chat_join_sitemap_hint_terms( $terms, $max_length ) {
+		$max_length = max( 1, (int) $max_length );
+		$output     = '';
+
+		foreach ( $terms as $term ) {
+			$term      = (string) $term;
+			$candidate = '' === $output ? $term : $output . ', ' . $term;
+
+			if ( mb_strlen( $candidate ) > $max_length ) {
+				continue;
+			}
+
+			$output = $candidate;
+		}
+
+		return $output;
+	}
+}
+
+/**
  * Kertoo, voiko sivustokarttaan lisätä sivun sisältöön perustuvia hakuvihjeitä.
  *
  * Hakuvihjeet auttavat mallia valitsemaan oikean sivun lue_sivu-työkalulle,
@@ -1525,19 +1782,31 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
 		$text = rytkoset_theme_chat_extract_page_text( $html );
 
 		$capitalized_word = '[A-ZÅÄÖ][\p{L}]{2,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?';
-		if ( preg_match_all( '/\b' . $capitalized_word . '(?:\s+' . $capitalized_word . '){1,3}\b/u', $text, $phrase_matches ) ) {
-			foreach ( $phrase_matches[0] as $phrase ) {
-				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $phrase );
+
+		// Prioritize names preceded by a profession, title, or authorship verb so
+		// people near the end of a long publication list remain within the limit.
+		$attribution = '(?:(?:diplomi-insinööri|insinööri|rovasti|pastori|maisteri|puheenjohtaja|sihteeri|esimies)[\p{Ll}-]*|toimitti|kokosi|kirjoitti|laati|selvitti)';
+		if ( preg_match_all( '/\b' . $attribution . '(?:\s+[\p{Ll}-]+){0,2}\s+(' . $capitalized_word . '\s+' . $capitalized_word . ')\b/u', $text, $person_matches ) ) {
+			foreach ( $person_matches[1] as $person ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $person );
 			}
 		}
 
+		// A short rare name can occur alone within a sentence (for example,
+		// Rodhger), so standalone proper names precede generic phrases.
 		if ( preg_match_all( '/\b' . $capitalized_word . '\b/u', $text, $word_matches ) ) {
 			foreach ( $word_matches[0] as $word ) {
 				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $word );
 			}
 		}
 
-		return rytkoset_theme_chat_truncate( implode( ', ', $terms ), 280 );
+		if ( preg_match_all( '/\b' . $capitalized_word . '(?:\s+' . $capitalized_word . '){1,3}\b/u', $text, $phrase_matches ) ) {
+			foreach ( $phrase_matches[0] as $phrase ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $phrase );
+			}
+		}
+
+		return rytkoset_theme_chat_join_sitemap_hint_terms( $terms, 360 );
 	}
 }
 
@@ -1745,6 +2014,56 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_definition' ) ) {
 }
 
 /**
+ * Determines whether the first completion must read a public page.
+ *
+ * The model may answer a first-turn person or rare-term query without calling
+ * the tool even when the sitemap contains an exact hint. Force one initial
+ * read for those queries and for unambiguous pronoun follow-ups; ordinary
+ * support questions retain Mistral's default automatic tool choice.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
+	function rytkoset_theme_chat_should_force_page_tool( $messages ) {
+		$latest_user_message = '';
+
+		foreach ( array_reverse( (array) $messages ) as $message ) {
+			if ( is_array( $message ) && 'user' === ( $message['role'] ?? '' ) ) {
+				$latest_user_message = trim( (string) ( $message['content'] ?? '' ) );
+				break;
+			}
+		}
+
+		if ( '' === $latest_user_message ) {
+			return false;
+		}
+
+		if ( preg_match( '/\b(?:hän|hänen|häntä|hänellä|häneltä|hänelle|hänestä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		if ( preg_match( '/\b(?:kuka|kenen|ketä|toimitti|kokosi|kirjoitti|laati|selvitti)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		// Elliptical follow-ups and rule-specific concepts need a fresh page read;
+		// prior assistant text may contain a related but different concept.
+		if ( preg_match( '/^\s*(?:entä|entäs|entäpä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		if ( preg_match( '/\b(?:tilikausi|toimintakausi|tilintarkastus|nimenkirjoitus|säännöt|säännöissä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		// A capitalized term after the sentence-opening word is usually a person,
+		// publication, or rare name form that needs page content for an answer.
+		return (bool) preg_match( '/\s[A-ZÅÄÖ][\p{L}]{3,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?\b/u', $latest_user_message );
+	}
+}
+
+/**
  * Poimii Mistralin vastauksesta assistentin työkalukutsut (#501).
  *
  * Puhdas funktio (testattava): odottaa jo dekoodattua vastausrakennetta ja
@@ -1941,6 +2260,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Vastaa aina ja vain suomeksi, ystävällisesti ja tiiviisti.\n";
 		$prompt .= "- Vastaa pelkkänä tekstinä ilman muotoilumerkintöjä: ei Markdownia, ei tähtiä lihavointiin, ei [teksti](osoite)-linkkejä eikä otsikkomerkkejä. Luettelot saa tehdä viivalla alkavina riveinä.\n";
 		$prompt .= "- Sivuston osoite on {$home_url}. Kun viittaat sivuston sivuun, kirjoita koko osoite paljaana tekstinä (esim. {$home_url}/kauppa/) — chatti muuttaa sen automaattisesti linkiksi.\n";
+		$prompt .= "- Jätä URL-osoitteen jälkeen aina välilyönti tai rivinvaihto ennen seuraavaa sanaa.\n";
 		$prompt .= "- Käytä vain tässä system-promptissa annettuja osoitteita (sivustokartta ja muut lähteet). Älä koskaan keksi, arvaa tai päättele osoitetta — jos sopivaa osoitetta ei löydy lähteistä, jätä osoite mainitsematta.\n";
 		$prompt .= "- Pysy yhdistyksen ja sen verkkosivujen aiheissa: jäsenyys, tapahtumat, sukujuhlat, sukututkimus, kuvat/albumit, digilehdet ja yhteystiedot.\n";
 		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
@@ -1949,6 +2269,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Älä koskaan esitä vuosilukua, päivämäärää, hintaa tai lukumäärää, jota ei ole annetuissa lähteissä — älä myöskään arvaa tai päättele sellaista. Jos tarkkaa lukua ei löydy lähteistä, kerro ettet tiedä sitä.\n";
 		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
 		$prompt .= "- Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa, toista vain lähteessä annetut nimet ja roolit. Älä täydennä listaa oletetuilla nimillä.\n";
+		$prompt .= "- Tulkitse seurantakysymyksen pronomini tai muu viittaus (esimerkiksi hän tai hänen) viimeisimmän yksiselitteisen keskustelukontekstin perusteella. Jos viittaus on epäselvä, pyydä täsmennys äläkä arvaa.\n";
+		$prompt .= "- Älä korvaa käyttäjän kysymää käsitettä samankaltaisella käsitteellä. Hallituskausi, toimintakausi ja tilikausi ovat eri asioita. Jos kysytyn käsitteen täsmällinen tieto ei ole jo lähteissä, lue sopiva sivu työkalulla.\n";
+		$prompt .= "- Kun käyttäjä kysyy henkilön ammattia, tehtävää tai roolia, käytä lähteessä henkilölle nimenomaisesti annettua nimikettä äläkä yleistä tai päättele sitä.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
 
@@ -1971,7 +2294,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
 		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos käyttäjä jatkaa aiempaa henkilöä koskevaa kysymystä pronominilla tai muulla viittauksella, käytä aiemman kysymyksen nimeä saman sivun valintaan ja lue sivu uudelleen tarvittaessa. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).
@@ -2073,7 +2396,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_widget' ) ) {
 				</header>
 
 				<p class="rytkoset-chat__disclaimer">
-					<?php esc_html_e( 'Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse.', 'rytkoset-theme' ); ?>
+					<strong><?php esc_html_e( 'Tekoälyavustaja.', 'rytkoset-theme' ); ?></strong>
+					<?php esc_html_e( 'Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse.', 'rytkoset-theme' ); ?>
 				</p>
 
 				<div

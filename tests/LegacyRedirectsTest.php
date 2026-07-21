@@ -110,7 +110,6 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'https://rytkoset.test/wp-login.php', $map['en/component/users/login'] );
 		$this->assertSame( 'https://rytkoset.test/?s=', $map['haku'] );
 		$this->assertSame( 'https://rytkoset.test/tapahtumat/', $map['sukuseura/sukukokous'] );
-		$this->assertSame( 'https://rytkoset.test/sukuseura/jasenyys/', $map['sukuseura/perhetietolomake'] );
 		$this->assertSame(
 			'https://rytkoset.test/kauppa/sukulehdet/rytkosten-sukulainen-nro-8/',
 			$map['kauppa/sukulehdet/rytkösten-sukulainen-nro-8-detail']
@@ -125,6 +124,10 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 		$map = rytkoset_theme_get_legacy_redirect_exact_map();
 
 		$this->assertSame( 'https://rytkoset.test/albumit/', $map['valokuvat&format=feed&Itemid=175&type=rss'] );
+		$this->assertSame( 'https://rytkoset.test/albumit/', $map['valokuvat&format=feed&Itemid=175'] );
+		$this->assertSame( 'https://rytkoset.test/albumit/', $map['kuvat'] );
+		$this->assertSame( 'https://rytkoset.test/sukuseura/sukututkimus/', $map['sukututkimus'] );
+		$this->assertSame( 'https://rytkoset.test/wp-login.php', $map['en/component/users'] );
 		$this->assertSame( 'https://rytkoset.test/tapahtumat/', $map['sukuseura/tapahtumat.html'] );
 		$this->assertSame( 'https://rytkoset.test/sukuseura/jasenyys/', $map['sukuseura/jaesenyys'] );
 		$this->assertSame( 'https://rytkoset.test/sukuseura/jasenyys/', $map['sukuseura/jasenyys.html'] );
@@ -156,5 +159,38 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 
 		$shop_target = rytkoset_theme_resolve_legacy_redirect_target( 'kauppa/manufacturer/sukuseura', array(), $rules );
 		$this->assertSame( 'https://rytkoset.test/kauppa/', $shop_target );
+	}
+
+	public function test_exact_map_redirects_default_woocommerce_account_slugs(): void {
+		$map = rytkoset_theme_get_legacy_redirect_exact_map();
+
+		$this->assertSame( 'https://rytkoset.test/oma-tili/', $map['my-account'] );
+		$this->assertSame( 'https://rytkoset.test/tili/unohtunut-salasana/', $map['oma-tili/lost-password'] );
+	}
+
+	public function test_prefix_rules_cover_static_slide_galleries_and_perhetietolomake(): void {
+		$rules = rytkoset_theme_get_legacy_redirect_prefix_rules();
+
+		$this->assertSame(
+			'https://rytkoset.test/albumit/',
+			rytkoset_theme_resolve_legacy_redirect_target( 'Sukujuhlat2006', array(), $rules )
+		);
+		$this->assertSame(
+			'https://rytkoset.test/albumit/',
+			rytkoset_theme_resolve_legacy_redirect_target( 'Sukujuhlat2006/slides/IMG_8163.php', array(), $rules )
+		);
+		$this->assertSame(
+			'https://rytkoset.test/albumit/',
+			rytkoset_theme_resolve_legacy_redirect_target( 'Sukujuhlat_2009/slides/Rytkosten_sukujuhlat_Maavedella_2009_45.php', array(), $rules )
+		);
+
+		$this->assertSame(
+			'https://rytkoset.test/sukuseura/sukututkimus/',
+			rytkoset_theme_resolve_legacy_redirect_target( 'sukuseura/perhetietolomake', array(), $rules )
+		);
+		$this->assertSame(
+			'https://rytkoset.test/sukuseura/sukututkimus/',
+			rytkoset_theme_resolve_legacy_redirect_target( 'sukuseura/perhetietolomake/content/4-yleinen', array(), $rules )
+		);
 	}
 }

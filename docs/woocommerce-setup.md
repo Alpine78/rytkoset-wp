@@ -62,6 +62,23 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - Sähköpostien sisällön ja ulkoasun tarkempi viimeistely.
 - Verot, painoperusteiset toimitukset ja muut tarkemmat myyntilogiikan asetukset.
 
+## Tyhjän ostoskorin näkymä (#581)
+
+Teema korvaa Cart-lohkon `woocommerce/empty-cart-block`-sisällön
+`inc/woocommerce-empty-cart.php`-moduulissa. Näkymässä on kauppaan ohjaava hero,
+`assets/images/home/home-kauppa-illustration.png`-kuvitus ja enintään neljä
+julkaistua, katalogissa näkyvää ja ostettavaa tuotepoimintaa. Featured-tuotteet
+ovat etusijalla, ja puuttuvat paikat täytetään uusimmilla tuotteilla.
+
+Toissijainen linkki muodostetaan seuraavasta tulevasta julkaistusta
+**maksullisesta** tapahtumasta `rytkoset_theme_get_next_upcoming_event_id( 'paid', true )`
+-helperillä. Ostoskorin kutsu vaatii lisäksi, että tapahtumalla on linkitetystä
+tuotteesta ratkaistava ilmoittautumisen määräaika eikä se ole mennyt umpeen.
+Maksuttomia tapahtumia tai sulkeutuneita ilmoittautumisia ei nosteta ostoskorin
+yhteydessä. Tapahtumapäivä lasketaan tulevaksi päivän loppuun asti. Jos sopivaa
+maksullista ja ilmoittautumiseltaan avointa tapahtumaa ei ole, linkkiä ei
+renderöidä. Täytetyn ostoskorin näkymään moduuli ei vaikuta.
+
 ## Suomenkieliset WooCommerce-loppuliitteet (#462)
 
 WooCommerce tallentaa kassan ja Oma tili -sivun erityistoiminnot asetuksina.

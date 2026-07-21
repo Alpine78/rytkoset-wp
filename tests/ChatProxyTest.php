@@ -118,6 +118,25 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'viesti 12', $messages[7]['content'] );
 	}
 
+	public function test_prepare_messages_preserves_context_for_pronoun_follow_up(): void {
+		$raw = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Kuka on Teuvo Rönkkö?',
+			),
+			array(
+				'role'    => 'assistant',
+				'content' => 'Teuvo Rönkkö mainitaan pastorina.',
+			),
+			array(
+				'role'    => 'user',
+				'content' => 'Mikä on hänen ammattinsa?',
+			),
+		);
+
+		$this->assertSame( $raw, rytkoset_theme_chat_prepare_messages( $raw, 8, 1000 ) );
+	}
+
 	public function test_prepare_messages_returns_empty_for_no_valid_messages(): void {
 		$this->assertSame( array(), rytkoset_theme_chat_prepare_messages( array(), 8, 1000 ) );
 	}
@@ -225,6 +244,7 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'ei Markdownia', $prompt );
 		$this->assertStringContainsString( 'Sivuston osoite on https://rytkoset.test', $prompt );
 		$this->assertStringContainsString( 'https://rytkoset.test/kauppa/', $prompt );
+		$this->assertStringContainsString( 'URL-osoitteen jälkeen aina välilyönti tai rivinvaihto', $prompt );
 	}
 
 	public function test_stable_site_context_is_filterable(): void {
@@ -253,6 +273,74 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertFalse( $config['is_configured'] );
 		$this->assertSame( 'mistral-small-latest', $config['model'] );
+		$this->assertSame( '', $config['prompt_cache_key'] );
+	}
+
+	// --- rytkoset_theme_chat_maybe_add_prompt_cache_key() --------------------
+
+	public function test_prompt_cache_key_is_not_added_without_setting(): void {
+		$payload = array(
+			'model'    => 'mistral-medium-latest',
+			'messages' => array(
+				array(
+					'role'    => 'system',
+					'content' => 'Ohje',
+				),
+			),
+		);
+
+		$this->assertSame(
+			$payload,
+			rytkoset_theme_chat_maybe_add_prompt_cache_key(
+				$payload,
+				'https://api.mistral.ai/v1/chat/completions',
+				''
+			)
+		);
+	}
+
+	public function test_prompt_cache_key_is_added_to_mistral_payload(): void {
+		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
+			array( 'model' => 'mistral-medium-latest' ),
+			'https://api.mistral.ai/v1/chat/completions',
+			'rytkoset-chat-dev-v1'
+		);
+
+		$this->assertSame( 'rytkoset-chat-dev-v1', $payload['prompt_cache_key'] );
+	}
+
+	public function test_prompt_cache_key_is_not_added_to_other_providers(): void {
+		$payload = array( 'model' => 'mistral-medium-latest' );
+
+		$this->assertSame(
+			$payload,
+			rytkoset_theme_chat_maybe_add_prompt_cache_key(
+				$payload,
+				'https://example.openai.azure.com/models/chat/completions',
+				'rytkoset-chat-dev-v1'
+			)
+		);
+	}
+
+	public function test_prompt_cache_key_stays_in_payload_when_tool_messages_are_appended(): void {
+		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
+			array( 'messages' => array() ),
+			'https://api.mistral.ai/v1/chat/completions',
+			'rytkoset-chat-dev-v1'
+		);
+
+		$payload['messages'][] = array(
+			'role'    => 'tool',
+			'content' => 'Sivun sisältö',
+		);
+
+		$this->assertSame( 'rytkoset-chat-dev-v1', $payload['prompt_cache_key'] );
+	}
+
+	public function test_mistral_endpoint_detection_requires_exact_host(): void {
+		$this->assertTrue( rytkoset_theme_chat_endpoint_is_mistral( 'https://api.mistral.ai/v1/chat/completions' ) );
+		$this->assertFalse( rytkoset_theme_chat_endpoint_is_mistral( 'https://api.mistral.ai.example.com/v1/chat/completions' ) );
+		$this->assertFalse( rytkoset_theme_chat_endpoint_is_mistral( 'not-a-url' ) );
 	}
 
 	// --- rytkoset_theme_chat_get_max_input_length() --------------------------
@@ -351,6 +439,32 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		remove_filter( 'rytkoset_theme_chat_temperature', $low );
 	}
 
+	// --- rytkoset_theme_chat_get_frequency_penalty() -------------------------
+
+	public function test_frequency_penalty_default_and_filterable(): void {
+		$this->assertSame( 0.3, rytkoset_theme_chat_get_frequency_penalty() );
+
+		$filter = static fn() => 1.0;
+		add_filter( 'rytkoset_theme_chat_frequency_penalty', $filter );
+
+		$this->assertSame( 1.0, rytkoset_theme_chat_get_frequency_penalty() );
+
+		remove_filter( 'rytkoset_theme_chat_frequency_penalty', $filter );
+	}
+
+	public function test_frequency_penalty_is_clamped_between_zero_and_two(): void {
+		$high = static fn() => 9.0;
+		add_filter( 'rytkoset_theme_chat_frequency_penalty', $high );
+		$this->assertSame( 2.0, rytkoset_theme_chat_get_frequency_penalty() );
+		remove_filter( 'rytkoset_theme_chat_frequency_penalty', $high );
+
+		// A negative penalty would encourage repetition, so it is clamped away.
+		$low = static fn() => -1.5;
+		add_filter( 'rytkoset_theme_chat_frequency_penalty', $low );
+		$this->assertSame( 0.0, rytkoset_theme_chat_get_frequency_penalty() );
+		remove_filter( 'rytkoset_theme_chat_frequency_penalty', $low );
+	}
+
 	// --- rytkoset_theme_chat_widget_is_enabled() -----------------------------
 
 	public function test_widget_disabled_when_backend_not_configured(): void {
@@ -423,5 +537,21 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertTrue( rytkoset_theme_chat_sanitize_checkbox( true ) );
 		$this->assertFalse( rytkoset_theme_chat_sanitize_checkbox( '' ) );
 		$this->assertFalse( rytkoset_theme_chat_sanitize_checkbox( '0' ) );
+	}
+
+	// --- rytkoset_theme_chat_build_response_body() (#600, AI Act 50(2)) -----
+
+	public function test_response_body_contains_reply_and_ai_generated_flag(): void {
+		$body = rytkoset_theme_chat_build_response_body( 'Tervetuloa!' );
+
+		$this->assertSame( 'Tervetuloa!', $body['reply'] );
+		$this->assertTrue( $body['ai_generated'] );
+	}
+
+	public function test_response_body_ai_generated_is_strict_boolean_true(): void {
+		$body = rytkoset_theme_chat_build_response_body( '' );
+
+		$this->assertArrayHasKey( 'ai_generated', $body );
+		$this->assertSame( true, $body['ai_generated'] );
 	}
 }

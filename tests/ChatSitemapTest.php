@@ -27,7 +27,7 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_sitemap_includes_public_page_hints_for_tool_selection(): void {
 		$page               = rytkoset_test_register_post( 21, 'page', 'Sukututkimus' );
-		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen.</p>';
+		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen. Julkaisun yhteydessä mainitaan monia paikkoja ja tutkimuksia ennen pastori Teuvo Rönkön selvitystä. Sukukirjan toimitti Antero Rytkönen työryhmineen. Pitkäaikaisella puheenjohtajalla Marja-Liisa Patrikaisella oli merkittävä rooli.</p>';
 
 		$sitemap = rytkoset_theme_chat_get_sitemap_context();
 
@@ -37,6 +37,29 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Rodhger', $sitemap );
 		$this->assertStringContainsString( 'Arvo Korpela', $sitemap );
 		$this->assertStringContainsString( 'Taavi Kilven', $sitemap );
+		$this->assertStringContainsString( 'Teuvo Rönkön', $sitemap );
+		$this->assertStringContainsString( 'Antero Rytkönen', $sitemap );
+		$this->assertStringContainsString( 'Marja-Liisa Patrikaisella', $sitemap );
+	}
+
+	public function test_sitemap_hint_join_skips_terms_that_would_be_cut_midword(): void {
+		$hints = rytkoset_theme_chat_join_sitemap_hint_terms(
+			array( str_repeat( 'a', 275 ), 'Antero Rytkönen', 'Rodhger' ),
+			280
+		);
+
+		$this->assertSame( str_repeat( 'a', 275 ), $hints );
+		$this->assertStringNotContainsString( 'Antero', $hints );
+	}
+
+	public function test_sitemap_hints_include_late_rule_heading_within_budget(): void {
+		$page               = rytkoset_test_register_post( 21, 'page', 'Säännöt' );
+		$page->post_content = '<h2>1. Nimi ja kotipaikka</h2><h2>2. Tarkoitus ja toiminnan laatu</h2><h2>3. Tarkoituksensa toteuttamiseksi yhdistys</h2><h2>4. Jäsenet</h2><h2>5. Jäsenen eroaminen ja erottaminen</h2><h2>6. Jäsenmaksu</h2><h2>7. Sukuseuran sukuhallitus ja kokoukset</h2><h2>8. Sukuhallitus</h2><h2>9. Yhdistyksen nimen kirjoittaminen</h2><h2>10. Tilikausi ja tilintarkastus</h2><p>Tilikausi alkaa 1. heinäkuuta ja päättyy 30. kesäkuuta.</p>';
+
+		$hints = rytkoset_theme_chat_get_sitemap_page_hints( $page );
+
+		$this->assertLessThanOrEqual( 360, mb_strlen( $hints ) );
+		$this->assertStringContainsString( '10. Tilikausi ja tilintarkastus', $hints );
 	}
 
 	public function test_sitemap_omits_hints_when_page_tool_disabled(): void {

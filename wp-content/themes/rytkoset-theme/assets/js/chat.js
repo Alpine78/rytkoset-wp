@@ -210,6 +210,42 @@
     }
 
     /**
+     * Rajaa mallin tuottaman URL-kandidaatin sivuston tavalliseen
+     * permalinkkimerkistöön. Iso kirjain tai ääkkönen kesken polun on vahva
+     * merkki siitä, että URL:n perään on liimautunut seuraava sana (#579).
+     * Kyselymerkkijono ja fragmentti säilytetään, kun niitä edeltävä polku on
+     * kelvollinen.
+     */
+    function trimUrlCandidate(rawCandidate) {
+      // Lauseen loppuvälimerkit eivät kuulu osoitteeseen.
+      var candidate = rawCandidate.replace(/[.,;:!?)]+$/, '');
+      var schemeEnd = candidate.indexOf('://') + 3;
+      var pathStart = candidate.indexOf('/', schemeEnd);
+
+      if (pathStart === -1) {
+        return candidate;
+      }
+
+      var queryStart = candidate.indexOf('?', pathStart);
+      var fragmentStart = candidate.indexOf('#', pathStart);
+      var pathEnd = candidate.length;
+
+      if (queryStart !== -1) {
+        pathEnd = queryStart;
+      }
+      if (fragmentStart !== -1 && fragmentStart < pathEnd) {
+        pathEnd = fragmentStart;
+      }
+
+      var invalidPathIndex = candidate.slice(pathStart, pathEnd).search(/[^a-z0-9/._-]/);
+      if (invalidPathIndex !== -1) {
+        return candidate.slice(0, pathStart + invalidPathIndex);
+      }
+
+      return candidate;
+    }
+
+    /**
      * Renderöi viestin tekstin turvallisesti: tekstisolmuja ja oman sivuston
      * paljaista https-osoitteista rakennettuja <a>-elementtejä. Ei innerHTML:ää,
      * joten mallin vastaus ei voi tuoda merkkausta tai skriptejä DOMiin.
@@ -220,8 +256,7 @@
       var match;
 
       while ((match = urlPattern.exec(text)) !== null) {
-        // Lauseen loppuvälimerkit eivät kuulu osoitteeseen.
-        var candidate = match[0].replace(/[.,;:!?)]+$/, '');
+        var candidate = trimUrlCandidate(match[0]);
         var url = null;
 
         try {
@@ -258,6 +293,11 @@
       var el = document.createElement('div');
       el.className = 'rytkoset-chat__msg rytkoset-chat__msg--' + role;
       if (role === 'assistant') {
+        // AI Act (EU 2024/1689) Art. 50(2): machine-readable marking of
+        // AI-generated content. Applies to live replies and sessionStorage
+        // restores; the server-rendered welcome message is maintainer text,
+        // not model output, so it is intentionally not marked.
+        el.setAttribute('data-ai-generated', 'true');
         renderMessageContent(el, text);
       } else {
         el.textContent = text;

@@ -34,6 +34,7 @@ $GLOBALS['rytkoset_test_current_user'] = 0;       // get_current_user_id()
 $GLOBALS['rytkoset_test_contact_email'] = 'yhteys@rytkoset.test';
 $GLOBALS['rytkoset_test_privacy_url']   = 'https://rytkoset.test/tietosuoja/';
 $GLOBALS['rytkoset_test_post_meta']    = array(); // [post_id][key] => value
+$GLOBALS['rytkoset_test_object_terms'] = array(); // [post_id][taxonomy] => term slugs
 $GLOBALS['rytkoset_test_products']     = array(); // [product_id] => WC_Product
 $GLOBALS['rytkoset_test_orders']       = array(); // [order_id] => WC_Order (wc_get_order)
 $GLOBALS['rytkoset_test_bought']       = array(); // ["user_id:product_id"] => true (wc_customer_bought_product)
@@ -75,6 +76,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_current_user']  = 0;
 	$GLOBALS['rytkoset_test_privacy_url']   = 'https://rytkoset.test/tietosuoja/';
 	$GLOBALS['rytkoset_test_post_meta']     = array();
+	$GLOBALS['rytkoset_test_object_terms']  = array();
 	$GLOBALS['rytkoset_test_products']      = array();
 	$GLOBALS['rytkoset_test_orders']        = array();
 	$GLOBALS['rytkoset_test_bought']        = array();
@@ -251,12 +253,28 @@ class WC_Product {
 		return (string) ( $this->meta['_price'] ?? '' );
 	}
 
+	public function get_catalog_visibility(): string {
+		return (string) ( $this->meta['_catalog_visibility'] ?? 'visible' );
+	}
+
+	public function is_purchasable(): bool {
+		return (bool) ( $this->meta['_is_purchasable'] ?? true );
+	}
+
 	public function get_attribute( string $name ): string {
 		return (string) ( $this->meta[ $name ] ?? '' );
 	}
 
 	public function get_parent_id(): int {
 		return (int) ( $this->meta['_parent_id'] ?? 0 );
+	}
+
+	public function is_virtual(): bool {
+		return 'yes' === ( $this->meta['_virtual'] ?? 'no' );
+	}
+
+	public function needs_shipping(): bool {
+		return ! $this->is_virtual();
 	}
 }
 
@@ -337,6 +355,9 @@ class WC_Order {
 	public ?DateTimeImmutable $date_created = null;
 	public string $order_number = '';
 	public string $billing_email = '';
+	public string $billing_first_name = '';
+	public string $billing_last_name = '';
+	public string $order_key = '';
 	public string $payment_method = '';
 	public string $edit_order_url = '';
 	public bool $payment_needed = false;
@@ -377,6 +398,18 @@ class WC_Order {
 
 	public function get_billing_email(): string {
 		return $this->billing_email;
+	}
+
+	public function get_formatted_billing_full_name(): string {
+		return trim( $this->billing_first_name . ' ' . $this->billing_last_name );
+	}
+
+	public function get_order_key(): string {
+		return '' !== $this->order_key ? $this->order_key : 'wc_order_' . $this->id;
+	}
+
+	public function get_formatted_order_total(): string {
+		return '10,00 €';
 	}
 
 	public function get_edit_order_url(): string {
@@ -640,6 +673,13 @@ function get_post_type( $post = null ) {
 	$post = get_post( $post );
 
 	return $post instanceof WP_Post ? $post->post_type : false;
+}
+
+function has_term( $term, $taxonomy, $post = null ): bool {
+	$post_id = $post instanceof WP_Post ? $post->ID : (int) $post;
+	$terms   = $GLOBALS['rytkoset_test_object_terms'][ $post_id ][ (string) $taxonomy ] ?? array();
+
+	return in_array( (string) $term, $terms, true );
 }
 
 function get_post_status( $post = null ) {
@@ -1084,6 +1124,33 @@ function wp_insert_post( $postarr, $wp_error = false ) {
 }
 
 /**
+ * Updates an already-registered post in place. Only the fields the theme touches
+ * (title, status) and any meta_input are applied.
+ */
+function wp_update_post( $postarr, $wp_error = false ) {
+	$post_id = isset( $postarr['ID'] ) ? absint( $postarr['ID'] ) : 0;
+	$post    = $GLOBALS['rytkoset_test_posts'][ $post_id ] ?? null;
+
+	if ( $post_id <= 0 || ! $post instanceof WP_Post ) {
+		return $wp_error ? new WP_Error( 'invalid_post', 'Invalid post ID.' ) : 0;
+	}
+
+	if ( array_key_exists( 'post_title', $postarr ) ) {
+		$post->post_title = (string) $postarr['post_title'];
+	}
+
+	if ( array_key_exists( 'post_status', $postarr ) ) {
+		$post->post_status = (string) $postarr['post_status'];
+	}
+
+	foreach ( (array) ( $postarr['meta_input'] ?? array() ) as $meta_key => $meta_value ) {
+		update_post_meta( $post_id, (string) $meta_key, $meta_value );
+	}
+
+	return $post_id;
+}
+
+/**
  * Resolves a post's parent ID. The explicit parent map wins (articles registered without a
  * WP_Post), otherwise the registered post's own post_parent is used.
  */
@@ -1112,6 +1179,14 @@ function current_user_can( $capability, ...$args ) {
 
 function wc_get_product( $product_id ) {
 	return $GLOBALS['rytkoset_test_products'][ (int) $product_id ] ?? false;
+}
+
+function wc_get_page_permalink( $page ) {
+	if ( 'myaccount' === $page ) {
+		return 'https://rytkoset.test/oma-tili/';
+	}
+
+	return 'https://rytkoset.test/' . trim( (string) $page, '/' ) . '/';
 }
 
 function WC(): Rytkoset_Test_WC {
@@ -1279,7 +1354,20 @@ function rytkoset_test_match_meta_query( int $post_id, array $meta_query ): bool
 			continue;
 		}
 
-		$results[] = (string) get_post_meta( $post_id, $clause['key'], true ) === (string) $clause['value'];
+		$compare = strtoupper( (string) ( $clause['compare'] ?? '=' ) );
+		$exists  = array_key_exists( $clause['key'], $GLOBALS['rytkoset_test_post_meta'][ $post_id ] ?? array() );
+
+		if ( 'NOT EXISTS' === $compare ) {
+			$results[] = ! $exists;
+			continue;
+		}
+
+		if ( 'EXISTS' === $compare ) {
+			$results[] = $exists;
+			continue;
+		}
+
+		$results[] = (string) get_post_meta( $post_id, $clause['key'], true ) === (string) ( $clause['value'] ?? '' );
 	}
 
 	if ( empty( $results ) ) {
@@ -1567,6 +1655,7 @@ require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
+require_once $rytkoset_theme_inc . '/event-registration-anonymization.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
 require_once $rytkoset_theme_inc . '/email.php';
 require_once $rytkoset_theme_inc . '/gallery-albums.php';

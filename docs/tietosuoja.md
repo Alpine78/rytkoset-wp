@@ -60,11 +60,13 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 > Sukututkimusrekisteri käsitellään erillisessä rekisteriselosteessa: `/sukuseura/rekisteriseloste/`.
 
+> **Luonnos — tarkistettava ennen julkaisua tai käyttöä.**
+
 ---
 
 # Tietosuojaseloste
 
-Päivitetty: 15.7.2026
+Päivitetty: 20.7.2026
 
 ## Rekisterinpitäjä
 
@@ -97,7 +99,7 @@ Jäsenyyteen liittyviä tietoja voidaan saada myös yhdistyksen jäsenrekisteris
 
 ## Alaikäisen suostumus
 
-Jos olet alle 13-vuotias, et voi itse antaa tietosuojalain (1050/2018) 5 §:ssä tarkoitettua suostumusta suoraan lapselle tarjottavaan tietoyhteiskunnan palveluun. Pyydä tällöin huoltajaa tekemään tai hyväksymään sellainen sivuston toiminto, jossa henkilötietojen käsittely perustuu suostumukseen, kuten uutiskirjeen tilaaminen. Ikäraja ei sellaisenaan muuta muun oikeusperusteen, kuten sopimuksen tai lakisääteisen velvoitteen, perusteella tehtävää käsittelyä.
+Jos olet alle 13-vuotias, et voi tietosuojalain (1050/2018) 5 §:n mukaan itse antaa pätevää suostumusta henkilötietojesi käsittelyyn tietoyhteiskunnan palvelussa, jota tarjotaan suoraan lapselle. Pyydä tällöin huoltajaa tekemään tai hyväksymään sellainen sivuston toiminto, jossa henkilötietojen käsittely perustuu suostumukseen, kuten uutiskirjeen tilaaminen. Ikäraja ei sellaisenaan muuta muun oikeusperusteen, kuten sopimuksen tai lakisääteisen velvoitteen, perusteella tehtävää käsittelyä.
 
 ## Mitä henkilötietoja keräämme ja miksi
 
@@ -119,7 +121,7 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 
-Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
+Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Jos ilmoittautumiseen liittyvä tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan automaattisesti seuraavassa siivousajossa. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 
@@ -130,7 +132,7 @@ Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -o
 - maksutapahtuman viitetiedot
 - jäsenyyteen liittyvät tiedot
 
-Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain vaatima aika (6 vuotta tilikauden päättymisestä).
+Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain edellyttämän ajan (tositteet vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt).
 
 Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Perhejäsenen tiedot saadaan jäsenmaksun maksajalta, eivät välttämättä perhejäseneltä itseltään. Tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
 
@@ -214,14 +216,15 @@ Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointit
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
 - **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
 - **Tekoälyavusteinen tukichatti**: Mistral AI SAS (Ranska/EU) — chattiin kirjoitettujen viestien käsittely vastausten tuottamiseksi
+- **Profiilikuvat**: Gravatar / Automattic — kirjautuneen käyttäjän sähköpostiosoitteesta muodostettu tiiviste välitetään Gravatarille profiilikuvan tarkistamista varten. Jos kuva löytyy, käyttäjän selain lataa sen Gravatarista. Gravataria ei käytetä kirjautumattomien kävijöiden, kommenttien tai foorumin avatareihin.
 
 Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on tehtävänsä perusteella tarve käsitellä tietoja, kuten sivuston ylläpitäjät, tapahtumien vastuuhenkilöt, verkkokaupan tilausten käsittelijät ja taloushallinnon vastuuhenkilöt.
 
 ## Kuinka kauan säilytämme tietoja
 
 - Käyttäjätilien tiedot säilytetään niin kauan kuin tilisi on aktiivinen. Voit pyytää tilisi poistamista milloin tahansa.
-- Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.
-- Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti 6 vuotta tilikauden päättymisestä.
+- Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta. Tämä toteutuu automaattisesti päivittäisellä ajastetulla siivouksella; ylläpitäjä voi anonymisoida ilmoittautumiset myös aiemmin käsin.
+- Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
 - Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
 
@@ -249,6 +252,8 @@ Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välitt�
 
 Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.
 
+Kun olet kirjautunut sivustolle ja Gravatar-avatarit ovat käytössä, sähköpostiosoitteestasi muodostettu tiiviste lähetetään Gravatar-palvelulle profiilikuvan olemassaolon tarkistamista varten. Jos kuva löytyy, selaimesi lataa kuvan Gravatarista. Gravatar-palvelua ylläpitää Automattic, joka voi käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä ja niissä kuvattujen suojatoimien mukaisesti.
+
 ## Automaattinen päätöksenteko ja profilointi
 
 Sivustolla ei tehdä automaattista päätöksentekoa tai profilointia, jolla olisi sinua koskevia oikeusvaikutuksia tai vastaavia merkittäviä vaikutuksia.
@@ -265,6 +270,8 @@ Sivustolla käytetään LiteSpeed Cache -välimuistia suorituskyvyn parantamisee
 
 - Ilmoittautumislomakkeen GDPR-teksti: [`inc/event-registrations.php`](../wp-content/themes/rytkoset-theme/inc/event-registrations.php) — käyttää `get_privacy_policy_url()`-funktiota, joten linkki näkyy automaattisesti, kun tietosuojasivu on asetettu **Asetukset → Tietosuoja** -näkymässä.
 - Suostumuksen aikaleima tallennetaan meta-kenttään `_rytkoset_registration_gdpr_consent`.
+- Tapahtumailmoittautumisten anonymisointi: [`inc/event-registration-privacy.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-privacy.php) (Privacy Tools -vienti/-poisto ja tapahtumakohtainen massa-anonymisointi) ja [`inc/event-registration-anonymization.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-anonymization.php) (päivittäinen WP-Cron-ajo, joka anonymisoi yli 12 kuukautta vanhojen tapahtumien ilmoittautumiset automaattisesti). Anonymisoinnissa nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, ja tallennetaan aikaleima `_rytkoset_registration_anonymized_at`. Tekninen kuvaus: [`docs/events.md`](events.md).
 - Albumien YouTube-upotukset: [`inc/gallery-albums.php`](../wp-content/themes/rytkoset-theme/inc/gallery-albums.php) — käyttää `youtube-nocookie.com`-osoitetta.
+- Sisältöön (esim. tapahtumasivun tallenne tai blogikirjoitus) upotetut YouTube-videot: [`inc/youtube-privacy.php`](../wp-content/themes/rytkoset-theme/inc/youtube-privacy.php) — `embed_oembed_html`-suodatin kirjoittaa WordPressin oEmbed-upotusten iframe-osoitteen muotoon `www.youtube-nocookie.com/embed/…`, myös Gutenbergin upotuslohkolle ja postmetaan välimuistitetuille tuloksille. Suodatin muuttaa vain osoitteen isäntänimen, joten iframen `title`-attribuutti säilyy. Näin selosteen lupaus toteutuu sisältötyypistä riippumatta.
 - Footerin linkki tulee `footer`-valikosta ([`footer.php`](../wp-content/themes/rytkoset-theme/footer.php)) — ei vaadi koodimuutoksia.
 - AI-tukichatti: [`inc/chat.php`](../wp-content/themes/rytkoset-theme/inc/chat.php) — API-avain ja kävijän IP eivät koskaan välity Mistralille, keskusteluhistoria ei tallennu palvelimelle eikä selaimen pysyvään muistiin. Tekninen kuvaus ja kulusuojat: [`docs/chat.md`](chat.md).
