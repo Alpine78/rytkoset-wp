@@ -30,24 +30,67 @@ if ( ! defined( 'ABSPATH' ) ) {
  * pakollisia — ilman niitä `is_configured` on false ja reitti palauttaa
  * hallitun virheen fatalin sijaan.
  *
- * @return array{api_key:string,endpoint:string,model:string,is_configured:bool}
+ * @return array{api_key:string,endpoint:string,model:string,prompt_cache_key:string,is_configured:bool}
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_config' ) ) {
 	function rytkoset_theme_chat_get_config() {
-		$api_key  = defined( 'RYTKOSET_CHAT_API_KEY' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_KEY' ) ) : '';
-		$endpoint = defined( 'RYTKOSET_CHAT_API_ENDPOINT' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_ENDPOINT' ) ) : '';
-		$model    = defined( 'RYTKOSET_CHAT_API_MODEL' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_MODEL' ) ) : '';
+		$api_key          = defined( 'RYTKOSET_CHAT_API_KEY' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_KEY' ) ) : '';
+		$endpoint         = defined( 'RYTKOSET_CHAT_API_ENDPOINT' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_ENDPOINT' ) ) : '';
+		$model            = defined( 'RYTKOSET_CHAT_API_MODEL' ) ? trim( (string) constant( 'RYTKOSET_CHAT_API_MODEL' ) ) : '';
+		$prompt_cache_key = defined( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY' ) ? trim( (string) constant( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY' ) ) : '';
 
 		if ( '' === $model ) {
 			$model = 'mistral-small-latest';
 		}
 
 		return array(
-			'api_key'       => $api_key,
-			'endpoint'      => $endpoint,
-			'model'         => $model,
-			'is_configured' => ( '' !== $api_key && '' !== $endpoint ),
+			'api_key'          => $api_key,
+			'endpoint'         => $endpoint,
+			'model'            => $model,
+			'prompt_cache_key' => $prompt_cache_key,
+			'is_configured'    => ( '' !== $api_key && '' !== $endpoint ),
 		);
+	}
+}
+
+/**
+ * Kertoo, onko endpoint Mistralin oma chat-rajapinta.
+ *
+ * Prompt-välimuistin kenttää ei lähetetä Azurelle tai muille mahdollisille
+ * palveluntarjoajille ilman erillistä yhteensopivuuden varmistusta.
+ *
+ * @param string $endpoint API-endpointin URL.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_endpoint_is_mistral' ) ) {
+	function rytkoset_theme_chat_endpoint_is_mistral( $endpoint ) {
+		$host = wp_parse_url( (string) $endpoint, PHP_URL_HOST );
+
+		return is_string( $host ) && 'api.mistral.ai' === strtolower( $host );
+	}
+}
+
+/**
+ * Lisää Mistralin kokeellisen prompt-välimuistiavaimen payloadiin tarvittaessa.
+ *
+ * Tyhjä avain tai muu palveluntarjoaja palauttaa payloadin täsmälleen
+ * ennallaan. Palautettu payload säilyy samana myös sivunlukutyökalun sisäisillä
+ * jatkokierroksilla, joilla vain messages- ja tool_choice-kenttiä muutetaan.
+ *
+ * @param array  $payload          Chat completions -payload.
+ * @param string $endpoint         API-endpointin URL.
+ * @param string $prompt_cache_key Ympäristökohtainen, henkilötiedoton avain.
+ * @return array
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_maybe_add_prompt_cache_key' ) ) {
+	function rytkoset_theme_chat_maybe_add_prompt_cache_key( $payload, $endpoint, $prompt_cache_key ) {
+		$prompt_cache_key = trim( (string) $prompt_cache_key );
+
+		if ( '' !== $prompt_cache_key && rytkoset_theme_chat_endpoint_is_mistral( $endpoint ) ) {
+			$payload['prompt_cache_key'] = $prompt_cache_key;
+		}
+
+		return $payload;
 	}
 }
 
@@ -794,6 +837,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 			'max_tokens'  => rytkoset_theme_chat_get_max_tokens(),
 			'temperature' => rytkoset_theme_chat_get_temperature(),
 		);
+		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
+			$payload,
+			$config['endpoint'],
+			$config['prompt_cache_key']
+		);
 
 		$tool_enabled = rytkoset_theme_chat_page_tool_is_enabled();
 		$max_rounds   = $tool_enabled ? rytkoset_theme_chat_get_page_tool_max_rounds() : 0;
@@ -835,6 +883,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 				rytkoset_theme_chat_log_error( 'Mistral HTTP ' . $status_code );
 				rytkoset_theme_chat_record_error_stat( 'http_' . $status_code );
 				return rytkoset_theme_chat_upstream_error();
+			}
+
+			if ( rytkoset_theme_chat_endpoint_is_mistral( $config['endpoint'] ) ) {
+				$prompt_cache_usage = rytkoset_theme_chat_extract_prompt_cache_usage( $body );
+				if ( null !== $prompt_cache_usage ) {
+					rytkoset_theme_chat_record_prompt_cache_usage_stat( $prompt_cache_usage );
+				}
 			}
 
 			$tool_calls = $tool_enabled ? rytkoset_theme_chat_extract_tool_calls( $body ) : array();
@@ -928,15 +983,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_log_error' ) ) {
  * IP-osoitetta eikä viestisisältöä, sama periaate kuin rate limit
  * -transientissa (joka tallentaa vain MD5-tiivisteen).
  *
- * @return array{messages:string,rate_limit:string,error:string,tool_calls:string}
+ * @return array{messages:string,rate_limit:string,error:string,tool_calls:string,prompt_cache:string}
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
 	function rytkoset_theme_chat_get_stat_option_names() {
 		return array(
-			'messages'   => 'rytkoset_chat_stat_messages',
-			'rate_limit' => 'rytkoset_chat_stat_rate_limit',
-			'error'      => 'rytkoset_chat_stat_error',
-			'tool_calls' => 'rytkoset_chat_stat_tool_calls',
+			'messages'     => 'rytkoset_chat_stat_messages',
+			'rate_limit'   => 'rytkoset_chat_stat_rate_limit',
+			'error'        => 'rytkoset_chat_stat_error',
+			'tool_calls'   => 'rytkoset_chat_stat_tool_calls',
+			'prompt_cache' => 'rytkoset_chat_stat_prompt_cache',
 		);
 	}
 }
@@ -992,6 +1048,67 @@ if ( ! function_exists( 'rytkoset_theme_chat_bump_error_stat' ) ) {
 }
 
 /**
+ * Poimii Mistralin vastauksesta prompt-välimuistin käyttöarvot.
+ *
+ * Vain ei-negatiiviset kokonaisluvut hyväksytään. Ristiriitainen vaste, jossa
+ * välimuistitokeneita on enemmän kuin syötetokeneita, ohitetaan kokonaan, jotta
+ * koontitilasto ei vääristy odottamattomasta tai toisen tarjoajan rakenteesta.
+ *
+ * @param mixed $body Purettu API-vastaus.
+ * @return array{prompt_tokens:int,cached_tokens:int}|null
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_extract_prompt_cache_usage' ) ) {
+	function rytkoset_theme_chat_extract_prompt_cache_usage( $body ) {
+		if (
+			! is_array( $body )
+			|| ! isset( $body['usage'] )
+			|| ! is_array( $body['usage'] )
+			|| ! isset( $body['usage']['prompt_tokens'] )
+			|| ! is_int( $body['usage']['prompt_tokens'] )
+			|| $body['usage']['prompt_tokens'] < 0
+			|| ! isset( $body['usage']['prompt_tokens_details'] )
+			|| ! is_array( $body['usage']['prompt_tokens_details'] )
+			|| ! isset( $body['usage']['prompt_tokens_details']['cached_tokens'] )
+			|| ! is_int( $body['usage']['prompt_tokens_details']['cached_tokens'] )
+			|| $body['usage']['prompt_tokens_details']['cached_tokens'] < 0
+			|| $body['usage']['prompt_tokens_details']['cached_tokens'] > $body['usage']['prompt_tokens']
+		) {
+			return null;
+		}
+
+		return array(
+			'prompt_tokens' => $body['usage']['prompt_tokens'],
+			'cached_tokens' => $body['usage']['prompt_tokens_details']['cached_tokens'],
+		);
+	}
+}
+
+/**
+ * Kasvattaa prompt-välimuistin henkilötiedotonta koontia yhdellä API-kutsulla.
+ *
+ * @param mixed                                  $stat  Nykyinen tallennettu arvo.
+ * @param array{prompt_tokens:int,cached_tokens:int} $usage API-kutsun käyttöarvot.
+ * @param int                                    $now   Nykyinen Unix-aikaleima.
+ * @return array{api_calls:int,cache_hit_calls:int,prompt_tokens:int,cached_tokens:int,last_prompt_tokens:int,last_cached_tokens:int,last_at:int}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_bump_prompt_cache_stat' ) ) {
+	function rytkoset_theme_chat_bump_prompt_cache_stat( $stat, $usage, $now ) {
+		$prompt_tokens = max( 0, (int) $usage['prompt_tokens'] );
+		$cached_tokens = min( $prompt_tokens, max( 0, (int) $usage['cached_tokens'] ) );
+
+		return array(
+			'api_calls'          => (int) rytkoset_theme_chat_stat_value( $stat, 'api_calls', 0 ) + 1,
+			'cache_hit_calls'    => (int) rytkoset_theme_chat_stat_value( $stat, 'cache_hit_calls', 0 ) + ( $cached_tokens > 0 ? 1 : 0 ),
+			'prompt_tokens'      => (int) rytkoset_theme_chat_stat_value( $stat, 'prompt_tokens', 0 ) + $prompt_tokens,
+			'cached_tokens'      => (int) rytkoset_theme_chat_stat_value( $stat, 'cached_tokens', 0 ) + $cached_tokens,
+			'last_prompt_tokens' => $prompt_tokens,
+			'last_cached_tokens' => $cached_tokens,
+			'last_at'            => (int) $now,
+		);
+	}
+}
+
+/**
  * Kirjaa yhden onnistuneesti lähetetyn chat-viestin käyttötilastoon.
  *
  * Kutsutaan `rytkoset_theme_chat_handle_request()`:sta onnistuneen vastauksen
@@ -1027,6 +1144,27 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_tool_call_stat' ) ) {
 		update_option(
 			$names['tool_calls'],
 			rytkoset_theme_chat_bump_stat( get_option( $names['tool_calls'], array() ), time() ),
+			false
+		);
+	}
+}
+
+/**
+ * Kirjaa yhden onnistuneen Mistral-kutsun tokenit prompt-välimuistikoontiin.
+ *
+ * Tietue sisältää vain tokenimääriä, osumakutsujen määrän ja aikaleiman — ei
+ * viestejä, IP-osoitteita eikä prompt_cache_key-arvoa.
+ *
+ * @param array{prompt_tokens:int,cached_tokens:int} $usage API-kutsun käyttöarvot.
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_prompt_cache_usage_stat' ) ) {
+	function rytkoset_theme_chat_record_prompt_cache_usage_stat( $usage ) {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['prompt_cache'],
+			rytkoset_theme_chat_bump_prompt_cache_stat( get_option( $names['prompt_cache'], array() ), $usage, time() ),
 			false
 		);
 	}
@@ -1082,17 +1220,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_error_stat' ) ) {
  *     messages_sent: array{count:int,last_at:int},
  *     rate_limit_hits: array{count:int,last_at:int},
  *     last_error: array{count:int,last_at:int,last_type:string},
- *     tool_calls: array{count:int,last_at:int}
+ *     tool_calls: array{count:int,last_at:int},
+ *     prompt_cache: array{api_calls:int,cache_hit_calls:int,prompt_tokens:int,cached_tokens:int,last_prompt_tokens:int,last_cached_tokens:int,last_at:int}
  * }
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 	function rytkoset_theme_chat_get_usage_stats() {
 		$names = rytkoset_theme_chat_get_stat_option_names();
 
-		$messages   = get_option( $names['messages'], array() );
-		$rate_limit = get_option( $names['rate_limit'], array() );
-		$error      = get_option( $names['error'], array() );
-		$tool_calls = get_option( $names['tool_calls'], array() );
+		$messages     = get_option( $names['messages'], array() );
+		$rate_limit   = get_option( $names['rate_limit'], array() );
+		$error        = get_option( $names['error'], array() );
+		$tool_calls   = get_option( $names['tool_calls'], array() );
+		$prompt_cache = get_option( $names['prompt_cache'], array() );
 
 		return array(
 			'messages_sent'   => array(
@@ -1111,6 +1251,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 			'tool_calls'      => array(
 				'count'   => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'count', 0 ),
 				'last_at' => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'last_at', 0 ),
+			),
+			'prompt_cache'    => array(
+				'api_calls'          => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'api_calls', 0 ),
+				'cache_hit_calls'    => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'cache_hit_calls', 0 ),
+				'prompt_tokens'      => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'prompt_tokens', 0 ),
+				'cached_tokens'      => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'cached_tokens', 0 ),
+				'last_prompt_tokens' => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_prompt_tokens', 0 ),
+				'last_cached_tokens' => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_cached_tokens', 0 ),
+				'last_at'            => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_at', 0 ),
 			),
 		);
 	}
@@ -1191,9 +1340,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 			$status = __( 'Käytössä.', 'rytkoset-theme' );
 		}
 
-		$stats = rytkoset_theme_chat_get_usage_stats();
+		$stats                = rytkoset_theme_chat_get_usage_stats();
+		$prompt_cache_enabled = '' !== $config['prompt_cache_key'] && rytkoset_theme_chat_endpoint_is_mistral( $config['endpoint'] );
 
 		echo '<p><strong>' . esc_html__( 'Tila:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $status ) . '</p>';
+		echo '<p><strong>' . esc_html__( 'Mistral prompt-välimuisti:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $prompt_cache_enabled ? __( 'Käytössä.', 'rytkoset-theme' ) : __( 'Pois käytöstä.', 'rytkoset-theme' ) ) . '</p>';
 
 		echo '<ul>';
 
@@ -1212,6 +1363,31 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 		echo '<li>' . esc_html__( 'Sivunlukuhakuja (lue_sivu-työkalu) yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['tool_calls']['count'] ) ) . '</strong>';
 		if ( $stats['tool_calls']['last_at'] > 0 ) {
 			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['tool_calls']['last_at'] ) );
+		}
+		echo '</li>';
+
+		echo '<li>' . esc_html__( 'Prompt-välimuistin API-kutsuja tokenitiedoin:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['prompt_cache']['api_calls'] ) ) . '</strong>';
+		if ( $stats['prompt_cache']['api_calls'] > 0 ) {
+			echo ' &ndash; ' . esc_html(
+				sprintf(
+				/* translators: 1: cached prompt tokens, 2: all prompt tokens, 3: cache-hit API calls. */
+					__( '%1$s / %2$s syötetokenia välimuistista, osumia %3$s kutsussa', 'rytkoset-theme' ),
+					number_format_i18n( $stats['prompt_cache']['cached_tokens'] ),
+					number_format_i18n( $stats['prompt_cache']['prompt_tokens'] ),
+					number_format_i18n( $stats['prompt_cache']['cache_hit_calls'] )
+				)
+			);
+			if ( $stats['prompt_cache']['last_at'] > 0 ) {
+				echo '; ' . esc_html(
+					sprintf(
+						/* translators: 1: latest cached prompt tokens, 2: latest all prompt tokens, 3: timestamp. */
+						__( 'viimeisin %1$s / %2$s (%3$s)', 'rytkoset-theme' ),
+						number_format_i18n( $stats['prompt_cache']['last_cached_tokens'] ),
+						number_format_i18n( $stats['prompt_cache']['last_prompt_tokens'] ),
+						wp_date( 'j.n.Y H:i', $stats['prompt_cache']['last_at'] )
+					)
+				);
+			}
 		}
 		echo '</li>';
 

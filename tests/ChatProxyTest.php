@@ -273,6 +273,74 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertFalse( $config['is_configured'] );
 		$this->assertSame( 'mistral-small-latest', $config['model'] );
+		$this->assertSame( '', $config['prompt_cache_key'] );
+	}
+
+	// --- rytkoset_theme_chat_maybe_add_prompt_cache_key() --------------------
+
+	public function test_prompt_cache_key_is_not_added_without_setting(): void {
+		$payload = array(
+			'model'    => 'mistral-medium-latest',
+			'messages' => array(
+				array(
+					'role'    => 'system',
+					'content' => 'Ohje',
+				),
+			),
+		);
+
+		$this->assertSame(
+			$payload,
+			rytkoset_theme_chat_maybe_add_prompt_cache_key(
+				$payload,
+				'https://api.mistral.ai/v1/chat/completions',
+				''
+			)
+		);
+	}
+
+	public function test_prompt_cache_key_is_added_to_mistral_payload(): void {
+		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
+			array( 'model' => 'mistral-medium-latest' ),
+			'https://api.mistral.ai/v1/chat/completions',
+			'rytkoset-chat-dev-v1'
+		);
+
+		$this->assertSame( 'rytkoset-chat-dev-v1', $payload['prompt_cache_key'] );
+	}
+
+	public function test_prompt_cache_key_is_not_added_to_other_providers(): void {
+		$payload = array( 'model' => 'mistral-medium-latest' );
+
+		$this->assertSame(
+			$payload,
+			rytkoset_theme_chat_maybe_add_prompt_cache_key(
+				$payload,
+				'https://example.openai.azure.com/models/chat/completions',
+				'rytkoset-chat-dev-v1'
+			)
+		);
+	}
+
+	public function test_prompt_cache_key_stays_in_payload_when_tool_messages_are_appended(): void {
+		$payload = rytkoset_theme_chat_maybe_add_prompt_cache_key(
+			array( 'messages' => array() ),
+			'https://api.mistral.ai/v1/chat/completions',
+			'rytkoset-chat-dev-v1'
+		);
+
+		$payload['messages'][] = array(
+			'role'    => 'tool',
+			'content' => 'Sivun sisältö',
+		);
+
+		$this->assertSame( 'rytkoset-chat-dev-v1', $payload['prompt_cache_key'] );
+	}
+
+	public function test_mistral_endpoint_detection_requires_exact_host(): void {
+		$this->assertTrue( rytkoset_theme_chat_endpoint_is_mistral( 'https://api.mistral.ai/v1/chat/completions' ) );
+		$this->assertFalse( rytkoset_theme_chat_endpoint_is_mistral( 'https://api.mistral.ai.example.com/v1/chat/completions' ) );
+		$this->assertFalse( rytkoset_theme_chat_endpoint_is_mistral( 'not-a-url' ) );
 	}
 
 	// --- rytkoset_theme_chat_get_max_input_length() --------------------------
