@@ -272,6 +272,9 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			'Mikä tai kuka on Rodhger?',
 			'Kuka toimitti kirjan Rytkösiä sukupolvesta toiseen?',
 			'Mikä on hänen ammattinsa?',
+			'Mikä on sukuseuran toimintakausi?',
+			'Entä tilikausi?',
+			'Mitä säännöissä sanotaan tilintarkastuksesta?',
 		);
 
 		foreach ( $queries as $query ) {
@@ -349,6 +352,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua', $prompt );
 		$this->assertStringContainsString( 'käytä aiemman kysymyksen nimeä saman sivun valintaan', $prompt );
 		$this->assertStringContainsString( 'viittaus on epäselvä, pyydä täsmennys äläkä arvaa', $prompt );
+		$this->assertStringContainsString( 'Hallituskausi, toimintakausi ja tilikausi ovat eri asioita', $prompt );
+		$this->assertStringContainsString( 'älä korvaa käyttäjän kysymää käsitettä samankaltaisella käsitteellä', mb_strtolower( $prompt ) );
 		$this->assertStringContainsString( 'käytä lähteessä henkilölle nimenomaisesti annettua nimikettä', $prompt );
 	}
 

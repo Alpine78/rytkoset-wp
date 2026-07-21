@@ -1760,7 +1760,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
 			}
 		}
 
-		return rytkoset_theme_chat_join_sitemap_hint_terms( $terms, 280 );
+		return rytkoset_theme_chat_join_sitemap_hint_terms( $terms, 360 );
 	}
 }
 
@@ -2001,6 +2001,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 			return true;
 		}
 
+		// Elliptical follow-ups and rule-specific concepts need a fresh page read;
+		// prior assistant text may contain a related but different concept.
+		if ( preg_match( '/^\s*(?:entä|entäs|entäpä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		if ( preg_match( '/\b(?:tilikausi|toimintakausi|tilintarkastus|nimenkirjoitus|säännöt|säännöissä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
 		// A capitalized term after the sentence-opening word is usually a person,
 		// publication, or rare name form that needs page content for an answer.
 		return (bool) preg_match( '/\s[A-ZÅÄÖ][\p{L}]{3,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?\b/u', $latest_user_message );
@@ -2214,6 +2224,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
 		$prompt .= "- Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa, toista vain lähteessä annetut nimet ja roolit. Älä täydennä listaa oletetuilla nimillä.\n";
 		$prompt .= "- Tulkitse seurantakysymyksen pronomini tai muu viittaus (esimerkiksi hän tai hänen) viimeisimmän yksiselitteisen keskustelukontekstin perusteella. Jos viittaus on epäselvä, pyydä täsmennys äläkä arvaa.\n";
+		$prompt .= "- Älä korvaa käyttäjän kysymää käsitettä samankaltaisella käsitteellä. Hallituskausi, toimintakausi ja tilikausi ovat eri asioita. Jos kysytyn käsitteen täsmällinen tieto ei ole jo lähteissä, lue sopiva sivu työkalulla.\n";
 		$prompt .= "- Kun käyttäjä kysyy henkilön ammattia, tehtävää tai roolia, käytä lähteessä henkilölle nimenomaisesti annettua nimikettä äläkä yleistä tai päättele sitä.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
