@@ -92,7 +92,7 @@ define( 'RYTKOSET_CHAT_MAX_HISTORY', 30 );  // dev: pidempi keskustelumuisti (ol
 
 Mistralin dokumentaation mukaan sama `prompt_cache_key` kasvattaa yhteisen promptin alun välimuistiosuman todennäköisyyttä, mutta ei takaa osumaa. Välimuistista käytetyt syötetokenit näkyvät vastauksen `usage.prompt_tokens_details.cached_tokens`-kentässä ja kaikki syötetokenit `usage.prompt_tokens`-kentässä. Välimuistitokenit laskutetaan 10 prosentilla normaalista syötetokenien hinnasta.
 
-Koodi säilyttää saman avaimen myös `lue_sivu`-työkalun sisäisillä jatkokierroksilla: työkalusilmukka muuttaa vain saman payloadin viesti- ja `tool_choice`-kenttiä. System-promptia ei siirretä Mistralin beta-Prompts-palveluun. Nykyinen tuotantopäätös on **ei vielä käyttöön**: tuotannossa vakio jätetään määrittelemättä, kunnes alla oleva dev-koe osoittaa mitattavan hyödyn ilman vastauslaadun heikkenemistä.
+Koodi säilyttää saman avaimen myös `lue_sivu`-työkalun sisäisillä jatkokierroksilla: työkalusilmukka muuttaa vain saman payloadin viesti- ja `tool_choice`-kenttiä. System-promptia ei siirretä Mistralin beta-Prompts-palveluun. Dev-koe 21.7.2026 osoitti mitattavan hyödyn ilman havaittua vastauslaadun tai työkalukäytön heikkenemistä. **Tuotantopäätös: ota käyttöön**, kun tämä toteutus viedään tuotantoon, omalla vakaalla henkilötiedottomalla avaimella kuten `rytkoset-chat-prod-v1`.
 
 Dev-koe:
 
@@ -102,6 +102,8 @@ Dev-koe:
 4. Tarkista wp-adminin **Ohjausnäkymä → Tukichatti** -widgetistä mitattujen Mistral API-kutsujen määrä, syötetokenien kokonaismäärä, välimuistista käytetyt tokenit ja osumakutsujen määrä. Työkalukysymys voi kasvattaa API-kutsujen määrää useammin kuin viestimäärää, koska jokainen sisäinen kierros mitataan erikseen.
 5. Kirjaa tikettiin tavallisen kysymyksen ja työkalukysymyksen toimivuus, `cached_tokens / prompt_tokens` sekä arvioitu syötekustannussäästö: `cached_tokens / prompt_tokens × 90 %`. Jos `cached_tokens` pysyy nollassa riittävän monen samanalkuisen pyynnön jälkeen, kirjaa käytetty malli, avain, pyyntömäärä ja se, muuttuuko system-promptin alkupää kokeen aikana.
 6. Ota tuotantoon vain, jos osumia syntyy ja vastaukset sekä virheenkäsittely pysyvät ennallaan. Käytä tuotannolle omaa henkilötiedotonta arvoa; muuten jätä vakio määrittelemättä.
+
+**Toteutunut dev-tulos 21.7.2026:** kokeen lopussa 9/12 Mistral API -kutsusta oli välimuistiosumia ja 68 336 / 93 989 syötetokenia tuli välimuistista (72,7 %; arvioitu syötekustannussäästö 65,4 %). Viimeisessä kutsussa välimuistista tuli 7 424 / 8 180 tokenia (90,8 %; arvioitu säästö 81,7 %). Viimeisessä laadullisessa testissä kaksi käyttäjäviestiä tuotti kolme API-kutsua ja kaksi `lue_sivu`-hakua; kaikki kolme API-kutsua olivat välimuistiosumia (22 160 / 23 087 tokenia eli 96,0 % välimuistista). Tavallinen kysymys palautti oikeat kaupan ja tilausten URLit ilman turhaa sivunlukua. `lue_sivu`-vastaus tunnisti Teuvo Rönkön pastoriksi ja Ylä-Savon Tyrmyn sukuhaaraa koskeneen selvityksen tekijäksi julkisen Sukututkimus-sivun mukaisesti. Rate limit- ja virhelaskurit eivät kasvaneet. Tulos täyttää #567:n dev-validoinnin ja puoltaa tuotantokäyttöä.
 
 Koonti hyväksyy vain ei-negatiiviset kokonaisluvut ja ohittaa puuttuvan tai ristiriitaisen usage-rakenteen. Se tallentaa `wp_options`-tauluun vain tokenimäärät, osumakutsujen määrän ja viimeisimmän mittausajan — ei viestejä, IP-osoitteita eikä välimuistiavainta.
 
