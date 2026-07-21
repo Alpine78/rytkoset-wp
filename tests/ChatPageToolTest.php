@@ -264,6 +264,44 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'integer', $definition['function']['parameters']['properties']['sivu_id']['type'] );
 	}
 
+	// --- forced initial tool choice ---------------------------------------------
+
+	public function test_person_term_and_follow_up_queries_force_initial_page_tool(): void {
+		$queries = array(
+			'Kuka on Marja-Liisa Patrikainen?',
+			'Mikä tai kuka on Rodhger?',
+			'Kuka toimitti kirjan Rytkösiä sukupolvesta toiseen?',
+			'Mikä on hänen ammattinsa?',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertTrue(
+				rytkoset_theme_chat_should_force_page_tool(
+					array(
+						array(
+							'role'    => 'user',
+							'content' => $query,
+						),
+					)
+				),
+				$query
+			);
+		}
+	}
+
+	public function test_ordinary_support_question_keeps_automatic_tool_choice(): void {
+		$this->assertFalse(
+			rytkoset_theme_chat_should_force_page_tool(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Miten jäsenmaksun voi maksaa?',
+					),
+				)
+			)
+		);
+	}
+
 	// --- sitemap page-id markers ----------------------------------------------
 
 	public function test_sitemap_includes_page_ids_when_tool_enabled(): void {
