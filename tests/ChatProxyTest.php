@@ -118,6 +118,25 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'viesti 12', $messages[7]['content'] );
 	}
 
+	public function test_prepare_messages_preserves_context_for_pronoun_follow_up(): void {
+		$raw = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Kuka on Teuvo Rönkkö?',
+			),
+			array(
+				'role'    => 'assistant',
+				'content' => 'Teuvo Rönkkö mainitaan pastorina.',
+			),
+			array(
+				'role'    => 'user',
+				'content' => 'Mikä on hänen ammattinsa?',
+			),
+		);
+
+		$this->assertSame( $raw, rytkoset_theme_chat_prepare_messages( $raw, 8, 1000 ) );
+	}
+
 	public function test_prepare_messages_returns_empty_for_no_valid_messages(): void {
 		$this->assertSame( array(), rytkoset_theme_chat_prepare_messages( array(), 8, 1000 ) );
 	}
