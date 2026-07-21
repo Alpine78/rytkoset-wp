@@ -9,11 +9,28 @@ Toteutus: `inc/chat.php`. Teeman koodia, ei ulkoisia kirjastoja. Tämä on teema
 Arvioitu 15.7.2026 asetuksen (EU) 2024/1689 perusteella:
 
 - **Riskiluokka:** rajoitettu riski, korkea varmuus. Chatti keskustelee luonnollisten henkilöiden kanssa ja tuottaa tekstiä, mutta se ei kuulu liitteen III korkean riskin käyttötarkoituksiin. Se ei käytä biometriaa, profiloi käyttäjiä, tunnista tunteita tai tee henkilöitä koskevia päätöksiä.
-- **Rooli:** yhdistys on vähintään tekoälyjärjestelmän käyttöönottaja, koska se käyttää järjestelmää omassa toiminnassaan. Oman WordPress-välityskerroksen ja widgetin vuoksi on erikseen vahvistettava, katsotaanko yhdistys myös koko chat-järjestelmän tarjoajaksi. Dokumentaatiossa ja käyttöliittymässä noudatetaan varovaisesti myös tarjoajaa koskevaa näkyvää läpinäkyvyyttä.
-- **50 artiklan 1 kohta:** käyttäjälle kerrotaan ennen viestin lähettämistä, että kyseessä on tekoälyavustaja. Paneelissa näkyy teksti: "Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse."
-- **50 artiklan 2 kohta:** koneellisesti luettavan AI-merkinnän soveltuminen ja tekninen toteutustapa on vahvistettava, jos yhdistys katsotaan järjestelmän tarjoajaksi. Pelkkää CSS-luokkaa tai omaa `data-*`-attribuuttia ei kirjata vaatimuksen täyttäväksi ilman hyväksyttyä teknistä perustetta.
+- **Rooli (työoletus, päivitetty 21.7.2026):** yhdistys on **tarjoaja ja käyttöönottaja** (3 artiklan 3 ja 11 kohta). Yhdistys rakensi välityskerroksen, system-promptin, `lue_sivu`-työkalun ja widgetin Mistralin GPAI-mallin päälle ja ajaa niitä omissa nimissään, joten pelkkä käyttöönottaja-rooli ei ole varovainen oletus. Roolin lopullinen vahvistus juristin kanssa tehdään tiketissä #564; 50 artiklan 1 ja 2 kohdan toteutus tehdään joka tapauksessa.
+- **50 artiklan 1 kohta:** käyttäjälle kerrotaan ennen viestin lähettämistä, että kyseessä on tekoälyavustaja. Paneelissa näkyy teksti: "Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse." 50 artiklan 5 kohdan "selkeästi ja erottuvasti" -vaatimuksen vuoksi teksti on normaalilla tekstivärillä (ei muted-sävyllä) ja sana "Tekoälyavustaja" on korostettu (`<strong>`) (#600).
+- **50 artiklan 2 kohta:** toteutettu tekninen minimi #600:ssa — katso alla oleva päivätty toteutettavuusperustelu.
 - **50 artiklan 4 kohta:** chatti vastaa yksittäisen käyttäjän kysymykseen eikä julkaise vastauksia yleisölle yleistä etua koskevana sisältönä. Jos chatin tekstiä myöhemmin julkaistaan verkkosivun sisältönä, ihmisen toimituksellinen tarkistus ja tarvittava AI-merkintä arvioidaan erikseen.
 - **Aikataulu:** 50 artiklan velvoitteita sovelletaan 2.8.2026 alkaen. Tekoälylukutaitoa koskevaa 4 artiklaa on sovellettu 2.2.2025 alkaen.
+
+### 50 artiklan 2 kohdan toteutus ja toteutettavuusperustelu (kirjattu 21.7.2026, #600)
+
+**Toteutettu koneellisesti luettava merkintä:**
+
+1. REST-vastauksessa kenttä `ai_generated: true` jokaisessa onnistuneessa chat-vastauksessa (`rytkoset_theme_chat_build_response_body()`, `inc/chat.php`).
+2. DOM:ssa attribuutti `data-ai-generated="true"` jokaisessa assistentin viestielementissä (`appendMessage()`, `assets/js/chat.js`) — kattaa sekä live-vastaukset että `sessionStorage`-palautuksen. Palvelimella renderöity tervetuloviesti on ylläpitäjän kirjoittamaa tekstiä, ei mallin tuottamaa, joten sitä ei tarkoituksella merkitä.
+
+**Toteutettavuusperustelu (50 artiklan 2 kohdan sanamuoto):** merkintöjen on oltava tehokkaita, yhteentoimivia, tunnistettavia ja luotettavia "siinä määrin kuin se on teknisesti mahdollista, ottaen huomioon eri sisältötyyppien erityispiirteet ja rajoitukset, toteuttamiskustannukset ja yleisesti tunnustettu viimeisin kehitys". Tähän nojaten toteutus rajataan yllä kuvattuun tekniseen minimiin (JSON-kenttä + data-attribuutti), koska:
+
+- Chatin tuotos on kolmannen osapuolen GPAI-mallin tuottamaa **paljasta tekstiä**. Tekstin robusti vesileimaus edellyttää mallin token-tason näytteistykseen (logit-jakaumaan) puuttumista, mikä on mahdollista vain mallin tarjoajalle — ei API-asiakkaalle, joka vastaanottaa valmiin tekstin.
+- Yleisesti tunnustettu alkuperämerkintästandardi C2PA kattaa käytännössä mediatiedostot (kuva, ääni, video), ei API:sta palautuvaa paljasta tekstivastausta. Yhdistyksen sovellettavissa olevaa robustia, yhteentoimivaa tekstivesileimaa ei ole.
+- Yhdistys on pieni yleishyödyllinen toimija; erillisen vesileimainfrastruktuurin rakentaminen ei ole oikeasuhtaista toteuttamiskustannuksiin nähden.
+
+**Mistralin oma merkintä (tarkistettu 21.7.2026):** Mistralin virallinen API-referenssi ([docs.mistral.ai/api/endpoint/chat](https://docs.mistral.ai/api/endpoint/chat)) ei dokumentoi vesileima- tai alkuperämerkintäparametria pyyntöön eikä merkintäkenttää tai -otsaketta vastaukseen (pyyntöparametrit ja vastauskentät käyty läpi; ei `watermark`-, provenance- tai C2PA-mainintoja). Eräät kolmannen osapuolen sivustot väittävät Mistralilla olevan vesileimaominaisuuksia, mutta väitteelle ei löytynyt tukea virallisesta dokumentaatiosta — asiaa ei oleteta ilman lähdettä. Jos Mistral myöhemmin lisää vastauksiinsa oman merkinnän, se välittyy tämän toteutuksen rinnalla eikä korvaa sitä.
+
+**Tarkistuspäivä:** arvioi tämä perustelu ja toteutuksen riittävyys uudelleen, kun (a) komissio julkaisee 50 artiklan 7 kohdan mukaiset lopulliset käytännesäännöt merkinnästä (toinen luonnos julkaistu keväällä 2026, lopullinen odotettavissa ennen 2.8.2026) tai (b) Digital Omnibus (poliittinen yhteisymmärrys 7.5.2026) julkaistaan virallisessa lehdessä — se siirtäisi ennen 2.8.2026 käyttöön otettujen järjestelmien merkintävelvoitteen 2.2.2027:ään, mutta sitä ei sovelleta ennen julkaisua. Tarkista tilanne viimeistään **2.8.2026**.
 
 ### Ylläpitäjän vähimmäisperehdytys
 
@@ -30,7 +47,7 @@ Perehdytyksen suorittajat, päivämäärä, käytetty materiaali ja vastuuhenkil
 
 Lähde: [asetus (EU) 2024/1689, erityisesti 3, 4 ja 50 artikla](https://eur-lex.europa.eu/legal-content/FI/TXT/?uri=CELEX:32024R1689). Luokittelu ja rooliarvio ovat tarkistettavia ensiarvioita, eivät sitova oikeudellinen kannanotto.
 
-Tuotantoroolin, mahdollisen 50 artiklan 2 kohdan toteutuksen ja perehdytyksen todentaminen tehdään jatkotiketissä [#564](https://github.com/Alpine78/rytkoset-wp/issues/564).
+50 artiklan 2 kohdan tekninen toteutus tehtiin tiketissä [#600](https://github.com/Alpine78/rytkoset-wp/issues/600) (katso yllä oleva toteutettavuusperustelu). Tuotantoroolin vahvistaminen juristin kanssa ja perehdytyksen todentaminen jäävät jatkotikettiin [#564](https://github.com/Alpine78/rytkoset-wp/issues/564).
 
 ## Päätepiste
 
@@ -41,7 +58,7 @@ POST /wp-json/rytkoset/v1/chat
 - Julkinen reitti (`permission_callback => __return_true`).
 - Suojana `wp_rest`-nonce (`X-WP-Nonce`-otsake), IP-pohjainen rate limit sekä syöte-, historia- ja token-rajat.
 - Pyynnön runko (JSON): `messages`-taulukko, jossa kukin alkio `{ "role": "user" | "assistant", "content": "…" }`.
-- Vastaus (JSON): `{ "reply": "…" }`. Virhetilanteessa WordPressin REST-virhemuoto (`code`, `message`, `data.status`).
+- Vastaus (JSON): `{ "reply": "…", "ai_generated": true }`. `ai_generated` on tekoälyasetuksen 50 artiklan 2 kohdan koneellisesti luettava merkintä tekoälyn tuottamasta sisällöstä (#600). Virhetilanteessa WordPressin REST-virhemuoto (`code`, `message`, `data.status`).
 
 ## Konfiguraatio (`wp-config.php`-vakiot)
 
