@@ -51,9 +51,12 @@ Avainta **ei kirjata repoon**. Aseta kohdeympäristön `wp-config.php`:hen:
 define( 'RYTKOSET_CHAT_API_KEY', 'sk-...' );                              // Pakollinen. Mistralin API-avain.
 define( 'RYTKOSET_CHAT_API_ENDPOINT', 'https://api.mistral.ai/v1/chat/completions' ); // Pakollinen. Mistralin EU-endpoint (koko URL).
 define( 'RYTKOSET_CHAT_API_MODEL', 'mistral-small-latest' );             // Valinnainen. Oletus: mistral-small-latest.
+define( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY', 'rytkoset-chat-dev-v1' );       // Valinnainen dev-kokeilu. Puuttuva/tyhjä = pois käytöstä.
 ```
 
 Jos `RYTKOSET_CHAT_API_KEY` tai `RYTKOSET_CHAT_API_ENDPOINT` puuttuu, reitti palauttaa **hallitun virheen** (HTTP 503) — ei PHP-fatalia. Avain luetaan vain palvelimella eikä sitä koskaan tulosteta vasteeseen tai lokiin.
+
+`RYTKOSET_CHAT_PROMPT_CACHE_KEY` on oletuksena pois käytöstä. Kun vakio sisältää arvon ja endpointin isäntä on täsmälleen `api.mistral.ai`, backend lisää Mistralin payloadiin `prompt_cache_key`-kentän. Kenttää ei lähetetä Azurelle tai muille palveluntarjoajille. Käytä ympäristöä ja kokeiluversiota kuvaavaa vakaata arvoa, kuten `rytkoset-chat-dev-v1` — älä johda avainta käyttäjästä, IP-osoitteesta, viestistä tai muusta henkilötiedosta. Avaimen arvoa ei tallenneta käyttötilastoihin eikä näytetä Dashboard-widgetissä.
 
 ## Kulusuojat
 
@@ -84,6 +87,23 @@ define( 'RYTKOSET_CHAT_MAX_HISTORY', 30 );  // dev: pidempi keskustelumuisti (ol
 ```
 
 > Huom: `add_filter()`-kutsut **eivät** toimi `wp-config.php`:ssä (WordPress lataa sen ennen `plugin.php`:tä) — siksi ylikirjoitus on toteutettu vakioina, samaan tapaan kuin `RYTKOSET_CHAT_API_KEY`. Suodattimet (`rytkoset_theme_chat_rate_limit`, `..._max_history`) ajetaan vakion päälle ja sopivat teeman/mu-pluginin koodiin. Älä löysää tuotannon rajoja ilman erillistä päätöstä — ne ovat kulusuojia.
+
+### Mistralin prompt-välimuistin dev-kokeilu (#567)
+
+Mistralin dokumentaation mukaan sama `prompt_cache_key` kasvattaa yhteisen promptin alun välimuistiosuman todennäköisyyttä, mutta ei takaa osumaa. Välimuistista käytetyt syötetokenit näkyvät vastauksen `usage.prompt_tokens_details.cached_tokens`-kentässä ja kaikki syötetokenit `usage.prompt_tokens`-kentässä. Välimuistitokenit laskutetaan 10 prosentilla normaalista syötetokenien hinnasta.
+
+Koodi säilyttää saman avaimen myös `lue_sivu`-työkalun sisäisillä jatkokierroksilla: työkalusilmukka muuttaa vain saman payloadin viesti- ja `tool_choice`-kenttiä. System-promptia ei siirretä Mistralin beta-Prompts-palveluun. Nykyinen tuotantopäätös on **ei vielä käyttöön**: tuotannossa vakio jätetään määrittelemättä, kunnes alla oleva dev-koe osoittaa mitattavan hyödyn ilman vastauslaadun heikkenemistä.
+
+Dev-koe:
+
+1. Aseta vain devin `wp-config.php`:hen `define( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY', 'rytkoset-chat-dev-v1' );`. Arvon pitää pysyä samana koko kokeen ajan.
+2. Nollaa vain kokeen henkilötiedoton tokenikoonti: `wp option delete rytkoset_chat_stat_prompt_cache` (paikallisessa Dockerissa komennon alkuun `docker compose run --rm wpcli`).
+3. Lähetä vähintään yksi tavallinen peruskysymys toistuvasti samalla tai yhteisen alkuosan säilyttävällä keskustelulla. Savutestaa erikseen yksi kysymys, joka käyttää `lue_sivu`-työkalua.
+4. Tarkista wp-adminin **Ohjausnäkymä → Tukichatti** -widgetistä mitattujen Mistral API-kutsujen määrä, syötetokenien kokonaismäärä, välimuistista käytetyt tokenit ja osumakutsujen määrä. Työkalukysymys voi kasvattaa API-kutsujen määrää useammin kuin viestimäärää, koska jokainen sisäinen kierros mitataan erikseen.
+5. Kirjaa tikettiin tavallisen kysymyksen ja työkalukysymyksen toimivuus, `cached_tokens / prompt_tokens` sekä arvioitu syötekustannussäästö: `cached_tokens / prompt_tokens × 90 %`. Jos `cached_tokens` pysyy nollassa riittävän monen samanalkuisen pyynnön jälkeen, kirjaa käytetty malli, avain, pyyntömäärä ja se, muuttuuko system-promptin alkupää kokeen aikana.
+6. Ota tuotantoon vain, jos osumia syntyy ja vastaukset sekä virheenkäsittely pysyvät ennallaan. Käytä tuotannolle omaa henkilötiedotonta arvoa; muuten jätä vakio määrittelemättä.
+
+Koonti hyväksyy vain ei-negatiiviset kokonaisluvut ja ohittaa puuttuvan tai ristiriitaisen usage-rakenteen. Se tallentaa `wp_options`-tauluun vain tokenimäärät, osumakutsujen määrän ja viimeisimmän mittausajan — ei viestejä, IP-osoitteita eikä välimuistiavainta.
 
 ## System-prompt
 
@@ -190,11 +210,11 @@ rajaus on dokumentoitu tiedostossa `docs/woocommerce-paytrail.md`.
 
 ## Käyttötilastot ylläpitäjälle (#472)
 
-Ennen tätä tikettiä kulusuojien osumat eivät näkyneet ylläpitäjälle mitenkään tuotannossa: `rytkoset_theme_chat_log_error()` kirjoittaa lokiin vain `WP_DEBUG`-tilassa, eikä rate limit -osumia kirjattu mihinkään. Nyt kolme kevyttä laskuria näyttävät suoraan wp-adminissa, käytetäänkö chattia, osuuko joku rate limitiin ja toimiiko Mistral-yhteys — ilman palvelimen lokien tarkistamista.
+Ennen tätä kokonaisuutta kulusuojien osumat eivät näkyneet ylläpitäjälle mitenkään tuotannossa: `rytkoset_theme_chat_log_error()` kirjoittaa lokiin vain `WP_DEBUG`-tilassa, eikä rate limit -osumia kirjattu mihinkään. Kevyet koontilaskurit näyttävät suoraan wp-adminissa, käytetäänkö chattia, osuuko joku rate limitiin, toimiiko Mistral-yhteys ja tuottaako prompt-välimuistikoe mitattavia osumia — ilman palvelimen lokien tarkistamista.
 
-**Näkyvyys:** WordPressin Dashboard-widget **"Tukichatti"** (`rytkoset_theme_chat_register_dashboard_widget()`, koukku `wp_dashboard_setup`), näkyy vain `manage_options`-käyttäjille. Widget näyttää chatin tilan (käytössä / pois päältä Customizerista / API-avain puuttuu), lähetettyjen viestien kokonaismäärän + viimeisimmän ajankohdan, rate limit -osumien kokonaismäärän + viimeisimmän ajankohdan sekä viimeisimmän Mistral-/yhteysvirheen kokonaismäärän, ajankohdan ja tyypin.
+**Näkyvyys:** WordPressin Dashboard-widget **"Tukichatti"** (`rytkoset_theme_chat_register_dashboard_widget()`, koukku `wp_dashboard_setup`), näkyy vain `manage_options`-käyttäjille. Widget näyttää chatin tilan, prompt-välimuistin ympäristökohtaisen päällä/pois-tilan, lähetettyjen viestien, rate limit -osumien ja sivunlukujen määrät, Mistral-/yhteysvirheet sekä prompt-välimuistin syötetokenien ja osumien koonnin.
 
-**Tallennus:** kolme `wp_options`-riviä, `autoload = false`, päivitetään olemassa olevissa päätöspisteissä koodimuutoksella — ei erillistä seurantajärjestelmää:
+**Tallennus:** erilliset `wp_options`-rivit (`autoload = false`) päivitetään olemassa olevissa päätöspisteissä — ei erillistä seurantajärjestelmää:
 
 | Option | Sisältö | Päivityskohta |
 |---|---|---|
@@ -202,16 +222,17 @@ Ennen tätä tikettiä kulusuojien osumat eivät näkyneet ylläpitäjälle mite
 | `rytkoset_chat_stat_rate_limit` | `count`, `last_at` | `rytkoset_theme_chat_register_rate_limit_hit()` palauttaa `true` (`rytkoset_theme_chat_record_rate_limit_hit_stat()`) |
 | `rytkoset_chat_stat_error` | `count`, `last_at`, `last_type` | Samat kolme kohtaa kuin `rytkoset_theme_chat_log_error()` (verkkovirhe, ei-2xx-HTTP-vastaus, tyhjä/odottamaton vastaus) — `log_error()` säilyy ennallaan WP_DEBUG-lokitusta varten, `rytkoset_theme_chat_record_error_stat( $type )` on erillinen, rinnakkainen kutsu |
 | `rytkoset_chat_stat_tool_calls` | `count`, `last_at` | Jokainen **suoritettu** `lue_sivu`-työkalukutsu (#501, `rytkoset_theme_chat_record_tool_call_stat()`) — kierroskaton ylittäneitä, ohitettuja kutsuja ei lasketa; viestimäärälaskuri kasvaa edelleen vain kerran per käyttäjäpyyntö |
+| `rytkoset_chat_stat_prompt_cache` | `api_calls`, `cache_hit_calls`, `prompt_tokens`, `cached_tokens`, viimeisimmän kutsun tokenit ja `last_at` | Jokainen onnistunut suora Mistral API -kutsu, jonka vastauksessa on ehjä `usage.prompt_tokens_details.cached_tokens`-rakenne; myös työkalun sisäiset jatkokierrokset lasketaan |
 
 `last_type`-arvo on lyhyt, staattinen tunniste (`network`, `http_<koodi>`, `empty_reply`) — ei koskaan dynaamista virhesanomaa. `rytkoset_theme_chat_get_error_type_label()` muotoilee sen ihmisluettavaksi widgetissä.
 
-**Ei henkilötietoa:** laskurit eivät koskaan sisällä raakaa IP-osoitetta eivätkä viestisisältöä — vain lukumäärät, aikaleimat ja lyhyt virhetyypin tunniste, sama periaate kuin nykyisessä rate limit -transientissa (joka tallentaa vain MD5-tiivisteen). Koska data ei yksilöi ketään, se ei ole GDPR:n tarkoittamaa henkilötietoa eikä `docs/tietosuoja.md`-tietosuojaselosteen sisältöä tarvinnut tämän vuoksi muuttaa (ks. selosteen "AI-tukichatti"-kohta).
+**Ei henkilötietoa:** laskurit eivät koskaan sisällä raakaa IP-osoitetta, viestisisältöä eivätkä `prompt_cache_key`-arvoa — vain lukumäärät, tokenimäärät, aikaleimat ja lyhyt virhetyypin tunniste, sama periaate kuin nykyisessä rate limit -transientissa (joka tallentaa vain MD5-tiivisteen). Koska data ei yksilöi ketään, se ei ole GDPR:n tarkoittamaa henkilötietoa eikä `docs/tietosuoja.md`-tietosuojaselosteen sisältöä tarvinnut tämän vuoksi muuttaa (ks. selosteen "AI-tukichatti"-kohta).
 
-**Puhtaat apufunktiot** (testattu `tests/ChatUsageStatsTest.php`:ssä): `rytkoset_theme_chat_bump_stat()` / `..._bump_error_stat()` (laskurin kasvatus, ei kosketa `wp_options`-tauluun), `rytkoset_theme_chat_get_usage_stats()` (yhteenveto widgetiä varten) ja `rytkoset_theme_chat_get_error_type_label()`. Itse Dashboard-widgetin rekisteröinti ja renderöinti ovat ohutta admin-liimakoodia, joka on tarkoituksella jätetty yksikkötestien ulkopuolelle (ks. `CLAUDE.md`:n testausohje render-raskaille admin-näkymille) — todennettu manuaalisesti wp-adminissa.
+**Puhtaat apufunktiot** (testattu `tests/ChatUsageStatsTest.php`:ssä): `rytkoset_theme_chat_bump_stat()` / `..._bump_error_stat()` (laskurin kasvatus, ei kosketa `wp_options`-tauluun), `rytkoset_theme_chat_get_usage_stats()` (yhteenveto widgetiä varten) ja `rytkoset_theme_chat_get_error_type_label()`. Itse Dashboard-widgetin rekisteröinti ja renderöinti ovat ohutta admin-liimakoodia, joka on tarkoituksella jätetty yksikkötestien ulkopuolelle (ks. `CLAUDE.md`:n testausohje render-raskaille admin-näkymille). Widgetin aiemmat rivit todennettiin #472:ssa manuaalisesti wp-adminissa; uuden prompt-välimuistirivin dev-todennus kuuluu yllä kuvattuun #567-kokeeseen.
 
 ## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
 
-Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
+Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Mistral-kohtainen `prompt_cache_key` lisätään vain, kun endpointin isäntä on täsmälleen `api.mistral.ai`; se jää automaattisesti pois muiden tarjoajien payloadista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
 
 1. Hanki uuden tarjoajan API-avain ja chat-completions-päätepisteen koko URL (esim. Mistral-malli Azure AI:n Sweden Central -alueella).
 2. Päivitä `RYTKOSET_CHAT_API_KEY`, `RYTKOSET_CHAT_API_ENDPOINT` ja tarvittaessa `RYTKOSET_CHAT_API_MODEL` kohdeympäristön `wp-config.php`:hen.
@@ -272,8 +293,9 @@ Selosteteksti on sivun sisältöä (ei koodia), joten alla oleva on **ehdotus yl
 11. **Kaupan tuotekatalogi (#471)**: julkaise uusi tuote (esim. t-paita, hinta asetettu) → chatti kertoo siitä nimellä ja hinnalla ilman FAQ- tai koodimuutosta. Lisää jäsenyystuote → se ei toistu "muut tuotteet" -listassa, koska se on jo jäsenyysosiossa. Aseta tuote luonnokseksi tai poista sen hinta → chatti ei enää mainitse sitä. Kysy tuotteen olevan varastossa → chatti ei väitä varastotilannetta vaan ohjaa tuotesivulle.
 12. **Sivun lukutyökalu (#501)**: kysy asiaa, joka löytyy vain jonkin julkaistun sivun sisällöstä (ei FAQ:sta eikä pysyvästä kontekstista) → chatti vastaa sivun sisällön perusteella (vastaus kestää kaksi–kolme API-kierrosta). Kysy peruskysymys (esim. jäsenmaksun hinta) → vastaus tulee yhtä nopeasti kuin ennen (yksi kutsu, työkalua ei käytetä turhaan). Merkitse testisivu "Vain jäsenille" (#392) → chatti ei saa kertoa sen sisältöä millään kysymyksellä. Tarkista Dashboard-widgetistä, että sivunlukuhakujen laskuri kasvaa vain työkalullisista kysymyksistä. Kysy vielä sama pitkän, moniosaisen sivun (esim. sääntöjen) yksityiskohta useammalla eri kysymyksellä peräkkäin (esim. tilikausi, nimenkirjoitusoikeus) → jokaisen pitäisi onnistua itsenäisesti, koska jokainen käyttäjäviesti on backendille erillinen pyyntö eikä aiemman kierroksen työkalutulos säily seuraavaan viestiin.
 13. **Käyttötilastot (#472)**: lähetä chatiin muutama viesti → wp-adminin Ohjausnäkymän **Tukichatti**-widget näyttää lähetettyjen viestien määrän kasvavan ja viimeisimmän ajankohdan päivittyvän. Täytä rate limit (esim. `RYTKOSET_CHAT_RATE_LIMIT` väliaikaisesti pieneksi devissä) → rate limit -osumien laskuri kasvaa. Aiheuta upstream-virhe (esim. väliaikaisesti virheellinen `RYTKOSET_CHAT_API_ENDPOINT`) → virhelaskuri kasvaa ja widget näyttää viimeisimmän virhetyypin. Poista `RYTKOSET_CHAT_API_KEY` → widgetin tila-rivi kertoo "API-avain puuttuu". Tarkista, ettei widgetissä näy IP-osoitteita eikä viestien sisältöä.
+14. **Prompt-välimuisti (#567)**: suorita edellä kuvattu dev-koe ensin ilman `RYTKOSET_CHAT_PROMPT_CACHE_KEY`-vakiota ja sitten vakaalla dev-avaimella. Varmista Dashboard-widgetistä `prompt_tokens`, `cached_tokens` ja osumakutsut sekä tarkista tavallinen vastaus ja `lue_sivu`-vastaus. Vaihda endpoint väliaikaisesti ei-Mistral-testiosoitteeksi vain payloadin tarkasteluun → `prompt_cache_key` ei saa olla mukana. Palauta oikea endpoint heti testin jälkeen.
 
-Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta ja system-prompt. `tests/ChatLiveContextTest.php` kattaa ajantasaisen tietolohkon (tapahtumat, jäsenyystuotteet, muut verkkokaupan tuotteet). `tests/ChatSitemapTest.php` kattaa sivustokarttalohkon (julkaistut sivut, arkistolinkit, rajaukset, kytkentä system-promptiin). `tests/ChatUsageStatsTest.php` kattaa käyttötilastojen laskurit, tallennuksen ja yhteenvedon (#472). `tests/ChatPageToolTest.php` kattaa sivun lukutyökalun puhtaat helperit (#501): tool_calls-poiminta, argumenttien jäsennys, sisällön riisunta, vuotosuojattu sivuhaku, sivu-id-merkinnät, prompt-kytkentä ja työkalulaskuri. Verkko- ja REST-kytkentä (ml. työkalusilmukka) sekä Dashboard-widget varmistetaan yllä olevalla manuaalisella curl-/selaintestillä.
+Yksikkötestit (`tests/ChatProxyTest.php`) kattavat puhtaat helperit: rate limit -päätös, viestien valmistelu/katkaisu, vastauksen poiminta, system-prompt sekä prompt-välimuistiavaimen oletuksen ja Mistral-rajatun payload-kytkennän. `tests/ChatLiveContextTest.php` kattaa ajantasaisen tietolohkon (tapahtumat, jäsenyystuotteet, muut verkkokaupan tuotteet). `tests/ChatSitemapTest.php` kattaa sivustokarttalohkon (julkaistut sivut, arkistolinkit, rajaukset, kytkentä system-promptiin). `tests/ChatUsageStatsTest.php` kattaa käyttötilastojen laskurit, turvallisen usage-poiminnan, tallennuksen ja yhteenvedon (#472/#567). `tests/ChatPageToolTest.php` kattaa sivun lukutyökalun puhtaat helperit (#501): tool_calls-poiminta, argumenttien jäsennys, sisällön riisunta, vuotosuojattu sivuhaku, sivu-id-merkinnät, prompt-kytkentä ja työkalulaskuri. Verkko- ja REST-kytkentä (ml. työkalusilmukka) sekä Dashboard-widget varmistetaan yllä olevalla manuaalisella curl-/selaintestillä.
 
 ## Käyttöliittymä (chat-widget, #413)
 
