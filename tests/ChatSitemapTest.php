@@ -27,7 +27,7 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_sitemap_includes_public_page_hints_for_tool_selection(): void {
 		$page               = rytkoset_test_register_post( 21, 'page', 'Sukututkimus' );
-		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen.</p>';
+		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen. Julkaisun yhteydessä mainitaan monia paikkoja ja tutkimuksia ennen pastori Teuvo Rönkön selvitystä. Sukukirjan toimitti Antero Rytkönen työryhmineen.</p>';
 
 		$sitemap = rytkoset_theme_chat_get_sitemap_context();
 
@@ -37,6 +37,18 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Rodhger', $sitemap );
 		$this->assertStringContainsString( 'Arvo Korpela', $sitemap );
 		$this->assertStringContainsString( 'Taavi Kilven', $sitemap );
+		$this->assertStringContainsString( 'Teuvo Rönkön', $sitemap );
+		$this->assertStringContainsString( 'Antero Rytkönen', $sitemap );
+	}
+
+	public function test_sitemap_hint_join_skips_terms_that_would_be_cut_midword(): void {
+		$hints = rytkoset_theme_chat_join_sitemap_hint_terms(
+			array( str_repeat( 'a', 275 ), 'Antero Rytkönen', 'Rodhger' ),
+			280
+		);
+
+		$this->assertSame( str_repeat( 'a', 275 ), $hints );
+		$this->assertStringNotContainsString( 'Antero', $hints );
 	}
 
 	public function test_sitemap_omits_hints_when_page_tool_disabled(): void {

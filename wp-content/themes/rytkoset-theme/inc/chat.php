@@ -1470,6 +1470,33 @@ if ( ! function_exists( 'rytkoset_theme_chat_add_sitemap_hint_term' ) ) {
 }
 
 /**
+ * Joins sitemap hints within a character limit without truncating a term.
+ *
+ * @param array<int,string> $terms      Hint terms in priority order.
+ * @param int               $max_length Character limit.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_join_sitemap_hint_terms' ) ) {
+	function rytkoset_theme_chat_join_sitemap_hint_terms( $terms, $max_length ) {
+		$max_length = max( 1, (int) $max_length );
+		$output     = '';
+
+		foreach ( $terms as $term ) {
+			$term      = (string) $term;
+			$candidate = '' === $output ? $term : $output . ', ' . $term;
+
+			if ( mb_strlen( $candidate ) > $max_length ) {
+				continue;
+			}
+
+			$output = $candidate;
+		}
+
+		return $output;
+	}
+}
+
+/**
  * Kertoo, voiko sivustokarttaan lisätä sivun sisältöön perustuvia hakuvihjeitä.
  *
  * Hakuvihjeet auttavat mallia valitsemaan oikean sivun lue_sivu-työkalulle,
@@ -1525,19 +1552,31 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
 		$text = rytkoset_theme_chat_extract_page_text( $html );
 
 		$capitalized_word = '[A-ZÅÄÖ][\p{L}]{2,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?';
-		if ( preg_match_all( '/\b' . $capitalized_word . '(?:\s+' . $capitalized_word . '){1,3}\b/u', $text, $phrase_matches ) ) {
-			foreach ( $phrase_matches[0] as $phrase ) {
-				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $phrase );
+
+		// Prioritize names preceded by a profession, title, or authorship verb so
+		// people near the end of a long publication list remain within the limit.
+		$attribution = '(?:diplomi-insinööri|insinööri|rovasti|pastori|maisteri|toimitti|kokosi|kirjoitti|laati|selvitti)';
+		if ( preg_match_all( '/\b' . $attribution . '(?:\s+[\p{Ll}-]+){0,2}\s+(' . $capitalized_word . '\s+' . $capitalized_word . ')\b/u', $text, $person_matches ) ) {
+			foreach ( $person_matches[1] as $person ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $person );
 			}
 		}
 
+		// A short rare name can occur alone within a sentence (for example,
+		// Rodhger), so standalone proper names precede generic phrases.
 		if ( preg_match_all( '/\b' . $capitalized_word . '\b/u', $text, $word_matches ) ) {
 			foreach ( $word_matches[0] as $word ) {
 				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $word );
 			}
 		}
 
-		return rytkoset_theme_chat_truncate( implode( ', ', $terms ), 280 );
+		if ( preg_match_all( '/\b' . $capitalized_word . '(?:\s+' . $capitalized_word . '){1,3}\b/u', $text, $phrase_matches ) ) {
+			foreach ( $phrase_matches[0] as $phrase ) {
+				rytkoset_theme_chat_add_sitemap_hint_term( $terms, $seen, $phrase );
+			}
+		}
+
+		return rytkoset_theme_chat_join_sitemap_hint_terms( $terms, 280 );
 	}
 }
 
@@ -1950,6 +1989,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Älä koskaan esitä vuosilukua, päivämäärää, hintaa tai lukumäärää, jota ei ole annetuissa lähteissä — älä myöskään arvaa tai päättele sellaista. Jos tarkkaa lukua ei löydy lähteistä, kerro ettet tiedä sitä.\n";
 		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
 		$prompt .= "- Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa, toista vain lähteessä annetut nimet ja roolit. Älä täydennä listaa oletetuilla nimillä.\n";
+		$prompt .= "- Tulkitse seurantakysymyksen pronomini tai muu viittaus (esimerkiksi hän tai hänen) viimeisimmän yksiselitteisen keskustelukontekstin perusteella. Jos viittaus on epäselvä, pyydä täsmennys äläkä arvaa.\n";
+		$prompt .= "- Kun käyttäjä kysyy henkilön ammattia, tehtävää tai roolia, käytä lähteessä henkilölle nimenomaisesti annettua nimikettä äläkä yleistä tai päättele sitä.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
 
@@ -1972,7 +2013,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
 		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos käyttäjä jatkaa aiempaa henkilöä koskevaa kysymystä pronominilla tai muulla viittauksella, käytä aiemman kysymyksen nimeä saman sivun valintaan ja lue sivu uudelleen tarvittaessa. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).

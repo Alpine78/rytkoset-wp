@@ -309,6 +309,9 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		// nyt nimenomaan kehottaa kokeilemaan toista sivua ennen kieltäytymistä.
 		$this->assertStringContainsString( 'kokeile vielä toista aiheeseen sopivaa sivustokartan sivua', $prompt );
 		$this->assertStringContainsString( 'Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua', $prompt );
+		$this->assertStringContainsString( 'käytä aiemman kysymyksen nimeä saman sivun valintaan', $prompt );
+		$this->assertStringContainsString( 'viittaus on epäselvä, pyydä täsmennys äläkä arvaa', $prompt );
+		$this->assertStringContainsString( 'käytä lähteessä henkilölle nimenomaisesti annettua nimikettä', $prompt );
 	}
 
 	public function test_system_prompt_unchanged_when_tool_disabled(): void {
