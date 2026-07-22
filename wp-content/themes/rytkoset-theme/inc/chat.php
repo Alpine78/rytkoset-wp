@@ -1843,6 +1843,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 			'- Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa: /kauppa/sukulehdet/rytkosten-sukulainen-nro-9/. Se on painettu lehti eikä digilehti — älä väitä sen olevan saatavilla digilehtenä, ellei ajantasainen tietolohko niin kerro. Ohjaa tuotteen sivulle ajantasaisen hinnan ja saatavuuden tarkistamiseksi.',
 			'- Sukuseuran hallitus kerrotaan sivulla /sukuseura/sukuseuran-hallitus/. Hallituskausi on 2023-2026. Hallitukseen kuuluvat: Esa Rytkönen (jäsen, Espoo / Maaninka), Mikko Rytkönen (suvun esimies, Runni), Antti Rytkönen (puheenjohtaja, Tampere), Eeli Rytkönen (Kinnulanlahti / Maaninka), Eeva-Liisa Ryhänen (jäsen, Helsinki), Ilkka Rytkönen (jäsen / rytkoset.net ylläpitäjä, Kuopio), Juha Rytkönen (jäsen, Maavesi / Joroinen), Mauri Rytkönen (jäsen, Helsinki), Tapani Rytkönen (sihteeri, Pieksämäki) ja Kimmo Tuulenkari (jäsen, Kajaani). Kun kysytään hallituksesta, käytä vain tätä listaa äläkä lisää muita nimiä.',
 			'- Maksuongelmissa ohjeista Oma tili -> Tilaukset vain ehdollisesti: jos tilauksella näkyy Maksa / yritä uudelleen -painike, maksua voi jatkaa ja valita kassalla toisen maksutavan; jos painiketta ei näy, ohjaa sähköpostiin.',
+			'- Kaupan käytettävissä olevat maksutavat, toimitusehdot ja peruuttamisoikeus kerrotaan Maksu- ja toimitusehdot -sivulla. Älä luettele maksutapoja muistista äläkä yleisenä listana: lue sivu työkalulla ja kerro vain siellä mainitut maksutavat. Erityisesti älä mainitse lasku- tai osamaksua, ellei sivu nimenomaisesti kerro niiden olevan käytössä.',
+			'- Tukichatista itsestään: chattiin kirjoitetut viestit välitetään vastauksen tuottamista varten tekoälypalveluun EU-alueelle, ja vastauksen pohjaksi lähetetään sivuston julkaistua julkista sisältöä. Keskusteluja ei tallenneta palvelimelle vaan ne säilyvät selaimen istuntomuistissa, eikä chatti käytä evästeitä. Kävijän IP-osoitetta käsitellään lyhytaikaisesti viestimäärän rajoittamiseksi. Älä siis väitä, ettei chatti käsittele lainkaan henkilötietoja, äläkä anna yleistä turvallisuustakuuta. Kehota olemaan kirjoittamatta arkaluonteisia tietoja ja ohjaa tarkemmat tietosuojakysymykset tietosuojaselosteeseen.',
 		);
 
 		/**
@@ -2820,7 +2822,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 				. $excerpt;
 		}
 
-		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos otteet eivät riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite.\n\n"
+		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos otteet eivät riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
 			. implode( "\n\n---\n\n", $source_blocks );
 	}
 }
@@ -2887,6 +2889,20 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 		}
 
 		if ( preg_match( '/\b(?:tilikausi|toimintakausi|tilintarkastus|nimenkirjoitus|säännöt|säännöissä)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		// Privacy, data-protection and shop-terms questions are answered on a
+		// published page, but the model tended to reply "en tiedä" without
+		// reading it. Stems cover the ordinary Finnish inflections.
+		if ( preg_match( '/\b(?:tietosuoj[\p{L}-]*|rekisteriselost[\p{L}-]*|henkilötie[\p{L}-]*|eväste[\p{L}-]*|uutiskirje[\p{L}-]*|maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $latest_user_message ) ) {
+			return true;
+		}
+
+		// The data subject's own data in any case form ("Missä maissa tietojani
+		// käsitellään?"). Requiring a possessive suffix keeps ordinary
+		// "tietoa" / "tiedot" questions on the automatic tool choice.
+		if ( preg_match( '/\b(?:tieto|tiedo)[\p{L}]{0,10}(?:ni|si|mme|nne)\b/ui', $latest_user_message ) ) {
 			return true;
 		}
 
