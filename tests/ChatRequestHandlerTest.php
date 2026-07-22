@@ -45,6 +45,39 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_verified_chair_source_uses_one_plain_completion_without_forced_tool(): void {
+		$this->configure_chat_backend();
+		$this->register_board_page( '<p>Antti Rytkönen, puheenjohtaja</p><p>Mauri Rytkönen, jäsen</p>' );
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array(
+							'content' => "Puheenjohtaja on Antti Rytkönen.\n\nLähde: https://rytkoset.test/?p=81",
+						),
+					),
+				),
+			)
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Kuka on puheenjohtaja nyt?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'Antti Rytkönen', $result->get_data()['reply'] );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$payload = json_decode( $GLOBALS['rytkoset_test_http_requests'][0]['args']['body'], true );
+		$this->assertIsArray( $payload );
+		$this->assertArrayHasKey( 'tools', $payload );
+		$this->assertSame( 'none', $payload['tool_choice'] );
+		$this->assertStringContainsString( 'Palvelin on lukenut ja varmistanut', $payload['messages'][0]['content'] );
+		$this->assertStringContainsString( 'Antti Rytkönen, puheenjohtaja', $payload['messages'][0]['content'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_forced_plain_text_response_returns_safe_502(): void {
 		$this->configure_chat_backend();
 		$this->queue_mistral_response(
@@ -153,6 +186,15 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 		$page               = rytkoset_test_register_post( 91, 'page', 'Säännöt', 90 );
 		$page->post_name    = 'saannot';
+		$page->post_content = $content;
+	}
+
+	private function register_board_page( string $content ): void {
+		$parent            = rytkoset_test_register_post( 80, 'page', 'Sukuseura' );
+		$parent->post_name = 'sukuseura';
+
+		$page               = rytkoset_test_register_post( 81, 'page', 'Sukuseuran hallitus', 80 );
+		$page->post_name    = 'sukuseuran-hallitus';
 		$page->post_content = $content;
 	}
 

@@ -99,6 +99,19 @@
       }
     }
 
+    /**
+     * Removes the current user turn after a failed request so it cannot be
+     * answered together with a later question. The visible transcript remains
+     * unchanged until the page is reloaded.
+     */
+    function rollbackFailedUserTurn(text) {
+      var latest = history.length ? history[history.length - 1] : null;
+      if (latest && latest.role === 'user' && latest.content === text) {
+        history.pop();
+        saveSession();
+      }
+    }
+
     // JS on käytettävissä: paljasta widget (ilman JS:ää se pysyy piilossa).
     root.hidden = false;
 
@@ -385,11 +398,13 @@
             appendMessage('assistant', result.data.reply, 'start');
           } else {
             var message = (result.data && result.data.message) || config.errorText;
+            rollbackFailedUserTurn(text);
             appendMessage('error', message, 'start');
           }
         })
         .catch(function () {
           hideTyping();
+          rollbackFailedUserTurn(text);
           appendMessage('error', config.errorText, 'start');
         })
         .then(function () {
