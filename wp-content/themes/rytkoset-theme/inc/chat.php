@@ -861,15 +861,23 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		}
 
 		// 5. Payload: system-prompt + rajattu historia (+ sivun lukutyökalu, #501).
-		$payload_messages = array_merge(
+		$tool_enabled        = rytkoset_theme_chat_page_tool_is_enabled();
+		$prefetched_source   = $tool_enabled ? rytkoset_theme_chat_get_prefetched_public_source( $messages ) : '';
+		$tool_rounds_enabled = $tool_enabled && '' === $prefetched_source;
+		$system_prompt       = rytkoset_theme_chat_get_system_prompt();
+
+		if ( '' !== $prefetched_source ) {
+			$system_prompt .= "\n\n" . $prefetched_source;
+		}
+
+		$payload_messages = array(
 			array(
-				array(
-					'role'    => 'system',
-					'content' => rytkoset_theme_chat_get_system_prompt(),
-				),
+				'role'    => 'system',
+				'content' => $system_prompt,
 			),
-			$messages
 		);
+
+		$payload_messages = array_merge( $payload_messages, $messages );
 
 		$payload = array(
 			'model'             => $config['model'],
@@ -884,14 +892,17 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 			$config['prompt_cache_key']
 		);
 
-		$tool_enabled    = rytkoset_theme_chat_page_tool_is_enabled();
-		$max_rounds      = $tool_enabled ? rytkoset_theme_chat_get_page_tool_max_rounds() : 0;
-		$force_page_tool = $tool_enabled && rytkoset_theme_chat_should_force_page_tool( $messages );
+		$max_rounds      = $tool_rounds_enabled ? rytkoset_theme_chat_get_page_tool_max_rounds() : 0;
+		$force_page_tool = $tool_rounds_enabled && rytkoset_theme_chat_should_force_page_tool( $messages );
 
 		if ( $tool_enabled ) {
 			$payload['tools'] = array( rytkoset_theme_chat_get_page_tool_definition() );
 
-			if ( $force_page_tool ) {
+			if ( '' !== $prefetched_source ) {
+				// The source is already verified, so expose the normal tool schema for
+				// prompt consistency but prohibit an unnecessary tool round.
+				$payload['tool_choice'] = 'none';
+			} elseif ( $force_page_tool ) {
 				// Mistral's "any" mode requires an initial tool call. Restore the
 				// default automatic choice after the first tool result.
 				$payload['tool_choice'] = 'any';
@@ -940,7 +951,14 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 				}
 			}
 
-			$tool_calls = $tool_enabled ? rytkoset_theme_chat_extract_tool_calls( $body ) : array();
+			$tool_calls = $tool_rounds_enabled ? rytkoset_theme_chat_extract_tool_calls( $body ) : array();
+
+			if ( ! rytkoset_theme_chat_forced_tool_response_is_valid( $force_page_tool, $rounds_used, $tool_calls ) ) {
+				rytkoset_theme_chat_log_error( 'Forced page read returned no valid tool call.' );
+				rytkoset_theme_chat_record_error_stat( 'forced_tool_missing' );
+
+				return rytkoset_theme_chat_upstream_error();
+			}
 
 			if ( ! rytkoset_theme_chat_forced_tool_response_is_valid( $force_page_tool, $rounds_used, $tool_calls ) ) {
 				rytkoset_theme_chat_log_error( 'Forced page read returned no valid tool call.' );
@@ -2179,6 +2197,221 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_latest_user_message' ) ) {
 		}
 
 		return '';
+	}
+}
+
+/**
+ * Extracts proper-name terms from a person question.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string> Name terms in question order.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
+	function rytkoset_theme_chat_get_person_search_terms( $message ) {
+		if ( ! preg_match( '/\b(?:kuka|kenen|ketä|kerro)\b/ui', (string) $message ) ) {
+			return array();
+		}
+
+		if ( ! preg_match_all( '/\b[A-ZÅÄÖ][\p{Ll}]{2,}(?:-[A-ZÅÄÖ][\p{Ll}]{2,})?\b/u', (string) $message, $matches ) ) {
+			return array();
+		}
+
+		$ignored = array( 'kuka', 'kenen', 'ketä', 'kerro', 'mikä', 'mitä', 'sukuseuran', 'rytkösten' );
+		$terms   = array();
+
+		foreach ( $matches[0] as $term ) {
+			if ( in_array( mb_strtolower( $term ), $ignored, true ) ) {
+				continue;
+			}
+
+			$terms[] = $term;
+		}
+
+		return array_slice( array_values( array_unique( $terms ) ), 0, 3 );
+	}
+}
+
+/**
+ * Checks whether plain page text contains a complete Unicode word.
+ *
+ * @param string $text Page text.
+ * @param string $term Search term.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_text_contains_term' ) ) {
+	function rytkoset_theme_chat_text_contains_term( $text, $term ) {
+		$term = trim( (string) $term );
+
+		if ( '' === $term ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/(?<!\p{L})' . preg_quote( $term, '/' ) . '(?!\p{L})/ui', (string) $text );
+	}
+}
+
+/**
+ * Extracts the matching lines and their immediate context from a page.
+ *
+ * @param string            $text       Plain page text.
+ * @param array<int,string> $terms      Search terms.
+ * @param int               $max_length Maximum excerpt length.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_matching_page_excerpt' ) ) {
+	function rytkoset_theme_chat_get_matching_page_excerpt( $text, $terms, $max_length ) {
+		$lines = preg_split( '/\R/u', (string) $text );
+
+		if ( ! is_array( $lines ) ) {
+			return '';
+		}
+
+		$selected = array();
+
+		foreach ( $lines as $index => $line ) {
+			$matches = false;
+
+			foreach ( (array) $terms as $term ) {
+				if ( rytkoset_theme_chat_text_contains_term( $line, $term ) ) {
+					$matches = true;
+					break;
+				}
+			}
+
+			if ( ! $matches ) {
+				continue;
+			}
+
+			foreach ( range( max( 0, $index - 1 ), min( count( $lines ) - 1, $index + 2 ) ) as $line_index ) {
+				$selected[ $line_index ] = trim( $lines[ $line_index ] );
+			}
+		}
+
+		if ( empty( $selected ) ) {
+			return '';
+		}
+
+		ksort( $selected );
+
+		return rytkoset_theme_chat_truncate( trim( implode( "\n", array_filter( $selected ) ) ), max( 1, (int) $max_length ) );
+	}
+}
+
+/**
+ * Builds a bounded, access-checked source context for board and person queries.
+ *
+ * This avoids a fragile forced function-call round when WordPress can resolve
+ * the public source itself. Ambiguous or unavailable matches return an empty
+ * context and keep the existing fail-closed tool path.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return string Verified source context, or an empty string.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
+	function rytkoset_theme_chat_get_prefetched_public_source( $messages ) {
+		$message     = rytkoset_theme_chat_get_latest_user_message( $messages );
+		$board_query = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
+		$name_terms  = rytkoset_theme_chat_get_person_search_terms( $message );
+
+		if ( ! $board_query && empty( $name_terms ) ) {
+			return '';
+		}
+
+		$candidates = array();
+		$board_page = function_exists( 'get_page_by_path' ) ? get_page_by_path( 'sukuseura/sukuseuran-hallitus' ) : null;
+		$board_page = $board_page instanceof WP_Post ? rytkoset_theme_chat_get_public_page( $board_page->ID ) : null;
+
+		if ( $board_page instanceof WP_Post ) {
+			$board_text     = rytkoset_theme_chat_extract_page_text( (string) $board_page->post_content );
+			$board_has_name = ! empty( $name_terms );
+
+			foreach ( $name_terms as $term ) {
+				if ( ! rytkoset_theme_chat_text_contains_term( $board_text, $term ) ) {
+					$board_has_name = false;
+					break;
+				}
+			}
+
+			if ( $board_query || $board_has_name ) {
+				$candidates[] = array(
+					'post' => $board_page,
+					'text' => $board_text,
+				);
+			}
+		}
+
+		if ( empty( $candidates ) && ! empty( $name_terms ) ) {
+			$max_pages  = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
+			$page_ids   = get_posts(
+				array(
+					'post_type'   => 'page',
+					'post_status' => 'publish',
+					'numberposts' => $max_pages,
+					'fields'      => 'ids',
+					'orderby'     => 'menu_order title',
+					'order'       => 'ASC',
+				)
+			);
+			$best_score = 0;
+
+			foreach ( (array) $page_ids as $page_id ) {
+				$page = rytkoset_theme_chat_get_public_page( (int) $page_id );
+
+				if ( ! $page instanceof WP_Post ) {
+					continue;
+				}
+
+				$text  = rytkoset_theme_chat_extract_page_text( (string) $page->post_content );
+				$score = 0;
+
+				foreach ( $name_terms as $term ) {
+					if ( rytkoset_theme_chat_text_contains_term( $text, $term ) ) {
+						++$score;
+					}
+				}
+
+				if ( 0 === $score || $score < $best_score ) {
+					continue;
+				}
+
+				if ( $score > $best_score ) {
+					$candidates = array();
+					$best_score = $score;
+				}
+
+				$candidates[] = array(
+					'post' => $page,
+					'text' => $text,
+				);
+			}
+		}
+
+		// Only an unambiguous public page is trusted as server-resolved context.
+		if ( 1 !== count( $candidates ) ) {
+			return '';
+		}
+
+		$page = $candidates[0]['post'];
+		$text = $candidates[0]['text'];
+		$url  = get_permalink( $page->ID );
+
+		if ( ! is_string( $url ) || '' === trim( $url ) ) {
+			return '';
+		}
+
+		$max_length = max( 800, min( 5000, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_length', 3000 ) ) );
+		$excerpt    = $board_query && empty( $name_terms )
+			? rytkoset_theme_chat_truncate( $text, $max_length )
+			: rytkoset_theme_chat_get_matching_page_excerpt( $text, $name_terms, $max_length );
+
+		if ( '' === $excerpt ) {
+			return '';
+		}
+
+		return "Palvelin on lukenut ja varmistanut seuraavan julkisen lähteen. Vastaa vain uusimpaan käyttäjäkysymykseen tämän lähdeotteen perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos ote ei riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen lähteen osoite.\n\n"
+			. 'Sivu: ' . trim( (string) get_the_title( $page->ID ) ) . "\n"
+			. 'Lähde: ' . trim( $url ) . "\n\n"
+			. $excerpt;
 	}
 }
 
