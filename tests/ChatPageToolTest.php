@@ -736,6 +736,79 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
+	// --- server-resolved public source ---------------------------------------
+
+	public function test_board_and_chair_queries_prefetch_the_public_board_page(): void {
+		$this->register_board_page(
+			'<h2>Hallitus 2023–2026</h2><ul><li>Antti Rytkönen, puheenjohtaja</li><li>Mauri Rytkönen, jäsen</li></ul>'
+		);
+
+		foreach ( array( 'Kuka on puheenjohtaja nyt?', 'Keitä kuuluu hallitukseen?', 'Kuka on Antti Rytkönen?' ) as $query ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $query,
+					),
+				)
+			);
+
+			$this->assertStringContainsString( 'Antti Rytkönen, puheenjohtaja', $context, $query );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=81', $context, $query );
+		}
+	}
+
+	public function test_unique_person_first_name_prefetches_source_for_inflected_surname(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukukirjat' );
+		$page->post_content = '<p>Kirjan kuvittaja oli Teuvo Rönkkö Kuopiosta.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kerro Teuvo Rönköstä.',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Teuvo Rönkkö Kuopiosta', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_ambiguous_or_restricted_person_source_does_not_bypass_tool_path(): void {
+		$first                = rytkoset_test_register_post( 70, 'page', 'Ensimmäinen' );
+		$first->post_content = '<p>Teuvo mainitaan tällä sivulla.</p>';
+		$second                = rytkoset_test_register_post( 71, 'page', 'Toinen' );
+		$second->post_content = '<p>Teuvo mainitaan myös tällä sivulla.</p>';
+
+		$messages = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Kerro Teuvo Rönköstä.',
+			),
+		);
+
+		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
+
+		$second->post_password = 'salasana';
+		$first->post_password  = 'salasana';
+		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
+
+		$board                = $this->register_board_page( '<p>Antti Rytkönen, puheenjohtaja</p>' );
+		$board->post_password = 'salasana';
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Kuka on puheenjohtaja?',
+					),
+				)
+			)
+		);
+	}
+
 	// --- sitemap page-id markers ----------------------------------------------
 
 	public function test_sitemap_includes_page_ids_when_tool_enabled(): void {
