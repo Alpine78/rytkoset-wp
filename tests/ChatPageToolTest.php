@@ -60,6 +60,54 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		return $page;
 	}
 
+	/**
+	 * Registers the public payment/delivery terms page (#614 concept prefetch).
+	 *
+	 * @param string $content Page content.
+	 * @return WP_Post Payment terms page.
+	 */
+	private function register_payment_terms_page( string $content ): WP_Post {
+		$parent            = rytkoset_test_register_post( 60, 'page', 'Kauppa' );
+		$parent->post_name = 'kauppa';
+
+		$page               = rytkoset_test_register_post( 61, 'page', 'Maksu- ja toimitusehdot', 60 );
+		$page->post_name    = 'maksu-ja-toimitusehdot';
+		$page->post_content = $content;
+
+		return $page;
+	}
+
+	/**
+	 * Registers the public privacy-statement page (#614 concept prefetch).
+	 *
+	 * @param string $content Page content.
+	 * @return WP_Post Privacy statement page.
+	 */
+	private function register_privacy_page( string $content ): WP_Post {
+		$page               = rytkoset_test_register_post( 62, 'page', 'Tietosuojaseloste' );
+		$page->post_name    = 'tietosuoja';
+		$page->post_content = $content;
+
+		return $page;
+	}
+
+	/**
+	 * Registers the public genealogy-register description page (#614).
+	 *
+	 * @param string $content Page content.
+	 * @return WP_Post Register description page.
+	 */
+	private function register_register_description_page( string $content ): WP_Post {
+		$parent            = rytkoset_test_register_post( 63, 'page', 'Sukuseura' );
+		$parent->post_name = 'sukuseura';
+
+		$page               = rytkoset_test_register_post( 64, 'page', 'Rekisteriseloste', 63 );
+		$page->post_name    = 'rekisteriseloste';
+		$page->post_content = $content;
+
+		return $page;
+	}
+
 	// --- rytkoset_theme_chat_extract_tool_calls() -----------------------------
 
 	public function test_extract_tool_calls_returns_parsed_calls(): void {
@@ -479,7 +527,7 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	// --- forced initial tool choice ---------------------------------------------
 
 	public function test_forced_initial_tool_response_rejects_plain_text_and_invalid_calls(): void {
-		$plain_text_body = $this->response_body(
+		$plain_text_body     = $this->response_body(
 			array(
 				'role'    => 'assistant',
 				'content' => 'Vastaus lukematta sivua.',
@@ -603,7 +651,10 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
-	public function test_privacy_and_shop_terms_questions_force_a_page_read(): void {
+	public function test_privacy_and_shop_terms_questions_do_not_force_a_page_read(): void {
+		// #614: these concepts are resolved by the server-side concept prefetch
+		// (rytkoset_theme_chat_get_concept_source), so they must no longer take
+		// the slow, timeout-prone tool_choice:any path.
 		$queries = array(
 			'Missä maissa tietojani käsitellään?',
 			'Mitä rekisteriselosteessa lukee?',
@@ -615,7 +666,7 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		);
 
 		foreach ( $queries as $query ) {
-			$this->assertTrue(
+			$this->assertFalse(
 				rytkoset_theme_chat_should_force_page_tool(
 					array(
 						array(
@@ -655,6 +706,184 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
+	// --- rytkoset_theme_chat_get_concept_source_path() (#614) -----------------
+
+	public function test_concept_source_path_maps_each_concept_to_its_page(): void {
+		$cases = array(
+			'Mitä maksutapoja on käytössä?'        => 'kauppa/maksu-ja-toimitusehdot',
+			'Mitkä ovat toimitusehdot?'            => 'kauppa/maksu-ja-toimitusehdot',
+			'Onko minulla peruuttamisoikeus?'      => 'kauppa/maksu-ja-toimitusehdot',
+			'Käsitteleekö sivusto henkilötietoja?' => 'tietosuoja',
+			'Käyttääkö sivusto evästeitä?'         => 'tietosuoja',
+			'Mitä tietosuojaselosteessa lukee?'    => 'tietosuoja',
+			'Missä maissa tietojani käsitellään?'  => 'tietosuoja',
+			'Voinko pyytää tietojeni poistamista?' => 'tietosuoja',
+			'Mitä rekisteriselosteessa lukee?'     => 'sukuseura/rekisteriseloste',
+		);
+
+		foreach ( $cases as $query => $expected ) {
+			$this->assertSame( $expected, rytkoset_theme_chat_get_concept_source_path( $query ), $query );
+		}
+	}
+
+	public function test_concept_source_path_ignores_unrelated_questions(): void {
+		$queries = array(
+			'Milloin seuraava sukukokous pidetään?',
+			'Kuka on puheenjohtaja?',
+			'Paljonko jäsenmaksu on?',
+			'Miten perun uutiskirjeen?',
+			'',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertSame( '', rytkoset_theme_chat_get_concept_source_path( $query ), $query );
+		}
+	}
+
+	// --- concept source prefetch via get_prefetched_public_source() (#614) ----
+
+	public function test_concept_prefetch_returns_verified_payment_terms_source(): void {
+		$this->register_payment_terms_page(
+			'<h2>Maksutavat</h2><p>Maksut välittää Paytrail. Käytettävissä olevat maksutavat näkyvät kassalla.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä maksutapoja on käytössä?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Maksut välittää Paytrail', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=61', $context );
+		$this->assertStringContainsString( 'täsmälleen tässä annetussa muodossa', $context );
+	}
+
+	public function test_concept_prefetch_returns_register_description_source(): void {
+		$this->register_register_description_page(
+			'<p>Rekisterinpitäjä on Rytkösten sukuseura ry. Rekisteri sisältää sukututkimustietoja.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä rekisteriselosteessa lukee?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Rekisterinpitäjä on Rytkösten sukuseura ry', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=64', $context );
+	}
+
+	public function test_concept_prefetch_finds_a_late_privacy_section_on_a_long_page(): void {
+		// A long page with heavy "tieto" filler up top; the country/transfer
+		// answer sits near the end. A head-of-page cut would miss it, so this
+		// proves the ranked excerpt (not document order) is used.
+		$filler = str_repeat( "<p>Käsittelemme henkilötietoja huolellisesti ja tietoturvallisesti.</p>\n", 120 );
+		$answer = '<h2>Tietojen siirto</h2><p>Tietojani käsitellään ainoastaan EU- ja ETA-maissa.</p>';
+		$this->register_privacy_page( $filler . $answer );
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Missä maissa tietojani käsitellään?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'EU- ja ETA-maissa', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=62', $context );
+
+		// A reduced page must say so, or the model fills the gap by inference
+		// instead of admitting the excerpt did not carry the answer.
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $context );
+	}
+
+	public function test_concept_prefetch_sends_a_short_page_whole_without_excerpt_notice(): void {
+		$this->register_register_description_page( '<p>Rekisterinpitäjä on Rytkösten sukuseura ry.</p>' );
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä rekisteriselosteessa lukee?',
+				),
+			)
+		);
+
+		$this->assertStringNotContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $context );
+	}
+
+	public function test_concept_prefetch_skips_members_only_page(): void {
+		$page = $this->register_privacy_page( '<p>Tietojani käsitellään EU-maissa.</p>' );
+		update_post_meta( $page->ID, '_rytkoset_members_only', 'yes' );
+
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Missä maissa tietojani käsitellään?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_concept_prefetch_skips_draft_and_password_protected_pages(): void {
+		$draft              = $this->register_payment_terms_page( '<p>Maksut välittää Paytrail.</p>' );
+		$draft->post_status = 'draft';
+
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitä maksutapoja on käytössä?',
+					),
+				)
+			)
+		);
+
+		$draft->post_status   = 'publish';
+		$draft->post_password = 'salasana';
+
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitä maksutapoja on käytössä?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_concept_prefetch_is_empty_when_the_page_is_missing(): void {
+		// No concept page registered: the query falls back to the ordinary path
+		// (automatic tool choice) rather than forcing or inventing an answer.
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitkä ovat toimitusehdot?',
+					),
+				)
+			)
+		);
+	}
+
 	public function test_stable_context_states_what_the_chat_does_with_data(): void {
 		$context = rytkoset_theme_chat_get_stable_site_context();
 
@@ -671,6 +900,19 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		// Uutiskirjeen peruutusta ei saa ohjata pelkkään sähköpostiin.
 		$this->assertStringContainsString( '/oma-tili/uutiskirje/', $context );
 		$this->assertStringContainsString( 'peruutuslinkki', $context );
+	}
+
+	public function test_stable_context_blocks_invented_resignation_procedure(): void {
+		$context = rytkoset_theme_chat_get_stable_site_context();
+
+		// Tuotannossa `Miten eroan sukuseurasta?` sai keksityn vastauksen: kassan
+		// "ei jatkoa" -valinta, jäsenyyden poisto Oma tililtä ja automaattinen
+		// päättyminen maksamatta jättämällä. Mitään näistä ei ole olemassa, eikä
+		// sivustolla kuvata vapaaehtoisen eroamisen menettelyä lainkaan.
+		$this->assertStringContainsString( 'ei kuvata vapaaehtoisen eroamisen menettelyä', $context );
+		$this->assertStringContainsString( 'Oma tililtä ei voi lopettaa omaa jäsenyyttä', $context );
+		$this->assertStringContainsString( 'perhejäsenten poisto koskee vain perhejäsenrivejä', $context );
+		$this->assertStringContainsString( 'älä väitä jäsenyyden päättyvän automaattisesti', $context );
 	}
 
 	public function test_ordinary_support_question_keeps_automatic_tool_choice(): void {
@@ -957,8 +1199,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_publication_title_terms_prefetch_one_public_page(): void {
-		$general               = rytkoset_test_register_post( 69, 'page', 'Sukuseura' );
-		$general->post_content = '<p>Rytkösiä on julkaistu monissa teoksissa.</p>';
+		$general                = rytkoset_test_register_post( 69, 'page', 'Sukuseura' );
+		$general->post_content  = '<p>Rytkösiä on julkaistu monissa teoksissa.</p>';
 		$research               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
 		$research->post_content = '<p>Sukukirja Rytkösiä sukupolvesta toiseen ilmestyi vuonna 2006 ja on loppuunmyyty.</p>';
 
@@ -982,8 +1224,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$unrelated               = rytkoset_test_register_post( 69, 'page', 'Hallituksen tiedot' );
 		$unrelated->post_content = '<p>Antti, Tampere</p><p>Seuraava sukukokous päätetään myöhemmin.</p>';
 
-		$main               = rytkoset_test_register_post( 70, 'rytkoset_event', 'Sukukokous Tampereella' );
-		$main->post_content = '<p>Rytkösten sukukokous Tampereella pidetään 29.8.2026.</p>';
+		$main                    = rytkoset_test_register_post( 70, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$main->post_content      = '<p>Rytkösten sukukokous Tampereella pidetään 29.8.2026.</p>';
 		$transport               = rytkoset_test_register_post( 71, 'rytkoset_event', 'Yhteiskuljetus Tampereen sukukokoukseen' );
 		$transport->post_content = '<p>Kuljetus palvelee Tampereen sukukokousta.</p>';
 
@@ -1029,8 +1271,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_ambiguous_or_restricted_person_source_does_not_bypass_tool_path(): void {
 		$first                = rytkoset_test_register_post( 70, 'page', 'Ensimmäinen' );
-		$first->post_content = '<p>Teuvo mainitaan tällä sivulla.</p>';
-		$second                = rytkoset_test_register_post( 71, 'page', 'Toinen' );
+		$first->post_content  = '<p>Teuvo mainitaan tällä sivulla.</p>';
+		$second               = rytkoset_test_register_post( 71, 'page', 'Toinen' );
 		$second->post_content = '<p>Teuvo mainitaan myös tällä sivulla.</p>';
 
 		$messages = array(

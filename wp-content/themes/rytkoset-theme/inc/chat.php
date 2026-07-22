@@ -1849,6 +1849,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 			'- Maksuongelmissa ohjeista Oma tili -> Tilaukset vain ehdollisesti: jos tilauksella näkyy Maksa / yritä uudelleen -painike, maksua voi jatkaa ja valita kassalla toisen maksutavan; jos painiketta ei näy, ohjaa sähköpostiin.',
 			'- Kaupan maksutavat: maksut välittää Paytrail, ja käytettävissä olevat maksutavat näkyvät vasta kassalla. Sivusto ei luettele yksittäisiä maksutapoja millään sivulla, joten älä luettele niitä sinäkään: älä mainitse pankki-, mobiili-, kortti-, lasku- tai osamaksua äläkä muutakaan yksittäistä maksutapaa. Älä myöskään päättele maksutapoja sivun muista sanoista — esimerkiksi Paytrailin vakiotekstin "näkyy maksun saajana tiliotteella tai korttilaskulla" ei ole luettelo maksutavoista. Toimitusehdot ja peruuttamisoikeus kerrotaan Maksu- ja toimitusehdot -sivulla.',
 			'- Uutiskirjeen voi tilata sivuston alalaidan lomakkeella. Kirjautunut käyttäjä hallitsee tilaustaan kohdassa Oma tili -> Uutiskirje (/oma-tili/uutiskirje/), jossa tilauksen voi myös peruuttaa. Lisäksi jokaisen lähetetyn uutiskirjeen alalaidassa on peruutuslinkki. Älä siis ohjaa uutiskirjeen peruuttamista pelkästään sähköpostiin.',
+			'- Sukuseurasta eroaminen: sivustolla ei kuvata vapaaehtoisen eroamisen menettelyä, joten älä kerro sellaista etkä päättele sitä. Sääntöjen kohta 5 käsittelee vain erottamista, josta päättää sukukokous. Eroamiseen ei ole mitään itsepalvelutoimintoa: Oma tililtä ei voi lopettaa omaa jäsenyyttä eikä kassalla ole jäsenyyden jatkumisen peruuttavaa valintaa. Oma tilin perhejäsenten poisto koskee vain perhejäsenrivejä, ei omaa jäsenyyttä. Jäsenkauden tai jäsenyyden voimassaolon päättyminen ei myöskään ole sama asia kuin eroaminen, joten älä väitä jäsenyyden päättyvän automaattisesti maksamatta jättämällä. Ohjaa eroamista koskevat kysymykset aina sähköpostitse yhdistykselle.',
 			'- Tukichatista itsestään: chattiin kirjoitetut viestit välitetään vastauksen tuottamista varten tekoälypalveluun EU-alueelle, ja vastauksen pohjaksi lähetetään sivuston julkaistua julkista sisältöä. Keskusteluja ei tallenneta palvelimelle vaan ne säilyvät selaimen istuntomuistissa, eikä chatti käytä evästeitä. Kävijän IP-osoitetta käsitellään lyhytaikaisesti viestimäärän rajoittamiseksi. Älä siis väitä, ettei chatti käsittele lainkaan henkilötietoja, äläkä anna yleistä turvallisuustakuuta. Kehota olemaan kirjoittamatta arkaluonteisia tietoja ja ohjaa tarkemmat tietosuojakysymykset tietosuojaselosteeseen.',
 		);
 
@@ -2668,6 +2669,135 @@ if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) )
 }
 
 /**
+ * Wraps one or more verified source blocks in the shared prefetch instruction.
+ *
+ * The wrapper binds the answer to the given excerpts and their own URL and
+ * forbids generalizing their dates, years and places. Both the named-source
+ * prefetch and the concept prefetch (#614) build their context through it, so
+ * the model sees one consistent contract.
+ *
+ * @param array<int,string> $source_blocks Verified "Sivu/Lähde/excerpt" blocks.
+ * @return string Full source context, or an empty string when no blocks.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_build_prefetched_source_context' ) ) {
+	function rytkoset_theme_chat_build_prefetched_source_context( $source_blocks ) {
+		$source_blocks = array_values( array_filter( array_map( 'strval', (array) $source_blocks ) ) );
+
+		if ( empty( $source_blocks ) ) {
+			return '';
+		}
+
+		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos otteet eivät riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
+			. implode( "\n\n---\n\n", $source_blocks );
+	}
+}
+
+/**
+ * Maps a concept question to the path of the public page that answers it.
+ *
+ * Payment/delivery terms, the privacy statement and the genealogy register
+ * description each live on one long published page. Resolving the concept to a
+ * known page lets the server verify and excerpt that exact page itself, so the
+ * question is answered in one ordinary completion instead of the slow,
+ * timeout-prone forced tool round these concepts used to take (#614; see the
+ * latency measurement in docs/chat.md).
+ *
+ * @param string $message Latest user message.
+ * @return string Page path for get_page_by_path(), or '' when no concept matched.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_path' ) ) {
+	function rytkoset_theme_chat_get_concept_source_path( $message ) {
+		$message = (string) $message;
+
+		if ( '' === trim( $message ) ) {
+			return '';
+		}
+
+		// Checked before the privacy statement: the genealogy register
+		// description is its own page and the word contains "-seloste".
+		if ( preg_match( '/\brekisteriselost[\p{L}-]*\b/ui', $message ) ) {
+			return 'sukuseura/rekisteriseloste';
+		}
+
+		// Payment, delivery and withdrawal-right questions.
+		if ( preg_match( '/\b(?:maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $message ) ) {
+			return 'kauppa/maksu-ja-toimitusehdot';
+		}
+
+		// Data-protection questions, including the data subject's own data in any
+		// case form ("Missä maissa tietojani käsitellään?"). Requiring a
+		// possessive suffix keeps ordinary "tietoa" / "tiedot" questions out.
+		if (
+			preg_match( '/\b(?:tietosuoj[\p{L}-]*|henkilötie[\p{L}-]*|eväste[\p{L}-]*)\b/ui', $message )
+			|| preg_match( '/\b(?:tieto|tiedo)[\p{L}]{0,10}(?:ni|si|mme|nne)\b/ui', $message )
+		) {
+			return 'tietosuoja';
+		}
+
+		return '';
+	}
+}
+
+/**
+ * Builds a verified, question-scored source context for a concept question.
+ *
+ * The page goes through the same access gate as every other prefetch source, so
+ * members-only, draft or password-protected content never travels. Long pages
+ * (the privacy statement is ~17 000 characters) are reduced to the lines
+ * matching the question with the ranked excerpt, so a late answer such as the
+ * retention or transfer section is not lost to a head-of-page cut. An
+ * unavailable page or an empty excerpt returns '' and lets the ordinary
+ * automatic tool path take over.
+ *
+ * @param string $message Latest user message.
+ * @return string Verified source context, or an empty string.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source' ) ) {
+	function rytkoset_theme_chat_get_concept_source( $message ) {
+		$path = rytkoset_theme_chat_get_concept_source_path( $message );
+
+		if ( '' === $path || ! function_exists( 'get_page_by_path' ) ) {
+			return '';
+		}
+
+		$resolved = get_page_by_path( $path );
+		$page     = $resolved instanceof WP_Post ? rytkoset_theme_chat_get_public_page( $resolved->ID ) : null;
+
+		if ( ! $page instanceof WP_Post ) {
+			return '';
+		}
+
+		$text = rytkoset_theme_chat_extract_page_text( (string) $page->post_content );
+		$url  = get_permalink( $page->ID );
+
+		if ( '' === $text || ! is_string( $url ) || '' === trim( $url ) ) {
+			return '';
+		}
+
+		$head = 'Sivu: ' . trim( (string) get_the_title( $page->ID ) ) . "\n"
+			. 'Lähde: ' . trim( $url );
+
+		// This is a server-side read of one long page, so it gets the page tool's
+		// own budget rather than the narrower named-source prefetch budget, which
+		// is sized for short name excerpts from several candidate pages. The
+		// shared helper also marks a reduced result as an excerpt, so the model
+		// says it did not find the answer instead of inferring one. The privacy
+		// statement's transfer section is easily missed at a smaller budget.
+		$max_length = rytkoset_theme_chat_get_page_tool_max_length();
+		$budget     = max( 400, $max_length - mb_strlen( $head ) - 2 );
+		$excerpt    = rytkoset_theme_chat_get_page_tool_excerpt( $text, $message, $budget );
+
+		if ( '' === trim( $excerpt ) ) {
+			return '';
+		}
+
+		return rytkoset_theme_chat_build_prefetched_source_context(
+			array( $head . "\n\n" . $excerpt )
+		);
+	}
+}
+
+/**
  * Builds a bounded, access-checked source context for named fact questions.
  *
  * This avoids a fragile forced function-call round when WordPress can resolve
@@ -2679,7 +2809,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) )
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 	function rytkoset_theme_chat_get_prefetched_public_source( $messages ) {
-		$message           = rytkoset_theme_chat_get_latest_user_message( $messages );
+		$message = rytkoset_theme_chat_get_latest_user_message( $messages );
+
+		// Concept questions (payment/delivery terms, privacy statement, register
+		// description) resolve to one known long page; try that verified page
+		// first so they skip the slow, timeout-prone forced tool round (#614).
+		$concept_source = rytkoset_theme_chat_get_concept_source( $message );
+		if ( '' !== $concept_source ) {
+			return $concept_source;
+		}
+
 		$board_query       = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
 		$meeting_query     = (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message );
 		$person_terms      = rytkoset_theme_chat_get_person_search_terms( $message );
@@ -2837,8 +2976,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 				. $excerpt;
 		}
 
-		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos otteet eivät riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
-			. implode( "\n\n---\n\n", $source_blocks );
+		return rytkoset_theme_chat_build_prefetched_source_context( $source_blocks );
 	}
 }
 
@@ -2907,30 +3045,17 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 			return true;
 		}
 
-		// Privacy, data-protection and shop-terms questions are answered on a
-		// published page, but the model tended to reply "en tiedä" without
-		// reading it. Stems cover the ordinary Finnish inflections.
+		// Privacy, data-protection, register-description, payment and
+		// delivery-terms questions are no longer forced here (#614). The server
+		// resolves them itself in rytkoset_theme_chat_get_concept_source(), which
+		// verifies and excerpts the exact page and answers in one ordinary
+		// tool_choice:none completion, avoiding the slow, timeout-prone
+		// tool_choice:any round that made these questions intermittently 502.
+		// When that prefetch cannot resolve the page the query simply falls back
+		// to Mistral's automatic tool choice, still without forcing.
 		//
-		// Newsletter questions are deliberately NOT forced here: the subscribe /
-		// manage / cancel self-service answer already lives in the stable site
-		// context, so the model answers it directly. Forcing them onto the
-		// tool_choice:any path made the common "Miten perun uutiskirjeen?" /
-		// "Miten tilaan uutiskirjeen?" questions intermittently exceed the 20 s
-		// wp_remote_post timeout and return a 502 (the retry-without-forcing path
-		// only covers an invalid tool response, not a network timeout). A
-		// newsletter *privacy/retention* question worded with "tietosuoja",
-		// "henkilötieto" or a possessive "tietoni" still routes through the
-		// patterns above/below.
-		if ( preg_match( '/\b(?:tietosuoj[\p{L}-]*|rekisteriselost[\p{L}-]*|henkilötie[\p{L}-]*|eväste[\p{L}-]*|maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $latest_user_message ) ) {
-			return true;
-		}
-
-		// The data subject's own data in any case form ("Missä maissa tietojani
-		// käsitellään?"). Requiring a possessive suffix keeps ordinary
-		// "tietoa" / "tiedot" questions on the automatic tool choice.
-		if ( preg_match( '/\b(?:tieto|tiedo)[\p{L}]{0,10}(?:ni|si|mme|nne)\b/ui', $latest_user_message ) ) {
-			return true;
-		}
+		// Newsletter questions are likewise not forced: the subscribe / manage /
+		// cancel self-service answer already lives in the stable site context.
 
 		return rytkoset_theme_chat_is_named_source_query( $messages );
 	}
