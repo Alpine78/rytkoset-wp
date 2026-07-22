@@ -2223,6 +2223,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			return array();
 		}
 
+		// Sentence-initial question and command words are capitalized like proper
+		// names. None of these collide with a Finnish personal or place name, so
+		// ignoring them cannot drop a real search term.
 		$ignored = array(
 			'entä',
 			'kenen',
@@ -2230,15 +2233,21 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			'ketä',
 			'keitä',
 			'keistä',
+			'ketkä',
 			'kuka',
+			'listaa',
+			'luettele',
 			'mikä',
 			'milloin',
 			'missä',
 			'miten',
 			'mitä',
+			'näytä',
 			'onko',
 			'rytkösten',
+			'saako',
 			'sukuseuran',
+			'voiko',
 			'voinko',
 		);
 		$terms   = array();
@@ -2263,7 +2272,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
 	function rytkoset_theme_chat_get_person_search_terms( $message ) {
-		if ( ! preg_match( '/\b(?:kuka|kenen|ketä|kerro)\b/ui', (string) $message ) ) {
+		// "kuka tahansa" / "kuka vain" is an indefinite pronoun, never a person
+		// question, so it must not route a general question to the person path.
+		if ( ! preg_match( '/\b(?:kuka|kenen|ketä|kerro)\b(?!\s+(?:tahansa|vain)\b)/ui', (string) $message ) ) {
 			return array();
 		}
 
@@ -2279,7 +2290,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_publication_search_terms' ) ) {
 	function rytkoset_theme_chat_get_publication_search_terms( $message ) {
-		if ( ! preg_match( '/\b(?:kirj[\p{L}-]*|teos[\p{L}-]*)\b/ui', (string) $message ) ) {
+		// "kirjasto" and its inflections are about borrowing, not about a
+		// publication title, and must not trigger the publication source path.
+		if ( ! preg_match( '/\b(?:kirj(?!asto)[\p{L}-]*|teos[\p{L}-]*)\b/ui', (string) $message ) ) {
 			return array();
 		}
 
@@ -2516,8 +2529,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 
 			if ( $board_query || $board_has_name ) {
 				$candidates[] = array(
-					'post' => $board_page,
-					'text' => $board_text,
+					'post'  => $board_page,
+					'text'  => $board_text,
+					// Without a verified name on the page there is no line to
+					// excerpt around, and a board question may carry stray terms
+					// that appear nowhere on it. The verified membership list is
+					// short, so send the whole page instead of failing closed.
+					'whole' => ! $board_has_name,
 				);
 			}
 		}
@@ -2603,7 +2621,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			$page    = $candidate['post'];
 			$text    = $candidate['text'];
 			$url     = get_permalink( $page->ID );
-			$excerpt = $board_query && empty( $search_terms )
+			$excerpt = ! empty( $candidate['whole'] )
 				? rytkoset_theme_chat_truncate( $text, $excerpt_max )
 				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query );
 
