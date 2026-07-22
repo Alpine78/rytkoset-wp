@@ -960,6 +960,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 				return rytkoset_theme_chat_upstream_error();
 			}
 
+			if ( ! rytkoset_theme_chat_forced_tool_response_is_valid( $force_page_tool, $rounds_used, $tool_calls ) ) {
+				rytkoset_theme_chat_log_error( 'Forced page read returned no valid tool call.' );
+				rytkoset_theme_chat_record_error_stat( 'forced_tool_missing' );
+
+				return rytkoset_theme_chat_upstream_error();
+			}
+
 			if ( empty( $tool_calls ) || $rounds_used >= $max_rounds ) {
 				break;
 			}

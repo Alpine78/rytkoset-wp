@@ -79,20 +79,20 @@ Jos `RYTKOSET_CHAT_API_KEY` tai `RYTKOSET_CHAT_API_ENDPOINT` puuttuu, reitti pal
 
 Kaikki oletukset ovat suodatettavia:
 
-| Suoja | Oletus | Suodatin |
-|---|---|---|
-| Rate limit (viestiä / IP / ikkuna) | 20 | `rytkoset_theme_chat_rate_limit` |
-| Rate limit -ikkuna | `HOUR_IN_SECONDS` (1 h) | `rytkoset_theme_chat_rate_window` |
-| Yksittäisen viestin merkkiraja | 1000 | `rytkoset_theme_chat_max_input_length` |
-| Historian pituus (viimeisimmät viestit) | 8 | `rytkoset_theme_chat_max_history` |
-| Vastauksen `max_tokens` | 800 | `rytkoset_theme_chat_max_tokens` |
-| Mallin `temperature` (0–1) | 0.2 | `rytkoset_theme_chat_temperature` |
-| Mallin `frequency_penalty` (0–2) | 0.3 | `rytkoset_theme_chat_frequency_penalty` |
-| Käyttäjälle hyväksyttävän vastauksen merkkiraja | 3000 | kiinteä turvaraja |
-| Työkalukierrokset / käyttäjäviesti (#501) | 2 (kova yläraja 3) | `rytkoset_theme_chat_page_tool_max_rounds` |
-| Työkalun palauttaman sivusisällön merkkiraja (#501) | 5000 | `rytkoset_theme_chat_page_tool_max_length` |
-| Henkilölähteen palvelinhaun sivuraja | 60 (kova yläraja 100) | `rytkoset_theme_chat_prefetch_max_pages` |
-| Henkilölähdeotteen merkkiraja | 3000 (800–5000) | `rytkoset_theme_chat_prefetch_max_length` |
+| Suoja                                               | Oletus                  | Suodatin                                   |
+| --------------------------------------------------- | ----------------------- | ------------------------------------------ |
+| Rate limit (viestiä / IP / ikkuna)                  | 20                      | `rytkoset_theme_chat_rate_limit`           |
+| Rate limit -ikkuna                                  | `HOUR_IN_SECONDS` (1 h) | `rytkoset_theme_chat_rate_window`          |
+| Yksittäisen viestin merkkiraja                      | 1000                    | `rytkoset_theme_chat_max_input_length`     |
+| Historian pituus (viimeisimmät viestit)             | 8                       | `rytkoset_theme_chat_max_history`          |
+| Vastauksen `max_tokens`                             | 800                     | `rytkoset_theme_chat_max_tokens`           |
+| Mallin `temperature` (0–1)                          | 0.2                     | `rytkoset_theme_chat_temperature`          |
+| Mallin `frequency_penalty` (0–2)                    | 0.3                     | `rytkoset_theme_chat_frequency_penalty`    |
+| Käyttäjälle hyväksyttävän vastauksen merkkiraja     | 3000                    | kiinteä turvaraja                          |
+| Työkalukierrokset / käyttäjäviesti (#501)           | 2 (kova yläraja 3)      | `rytkoset_theme_chat_page_tool_max_rounds` |
+| Työkalun palauttaman sivusisällön merkkiraja (#501) | 5000                    | `rytkoset_theme_chat_page_tool_max_length` |
+| Henkilölähteen palvelinhaun sivuraja                | 60 (kova yläraja 100)   | `rytkoset_theme_chat_prefetch_max_pages`   |
+| Henkilölähdeotteen merkkiraja                       | 3000 (800–5000)         | `rytkoset_theme_chat_prefetch_max_length`  |
 
 - **Rate limit**: kiinteä ikkuna transientilla (`rytkoset_chat_rl_<md5(ip)>`), IP luetaan vain `REMOTE_ADDR`:sta (välityspalvelinotsakkeisiin ei luoteta). Ylitys → HTTP 429. Huom: raja on IP-kohtainen, ei käyttäjäkohtainen — saman verkon (esim. sama WiFi tai operaattorin NAT) kävijät jakavat saman laskurin.
 - **Syöte- ja historiarajat**: `rytkoset_theme_chat_prepare_messages()` säilyttää vain `user`/`assistant`-roolit, sanitoi sisällön (`sanitize_textarea_field`), katkaisee jokaisen viestin merkkirajaan ja leikkaa historian viimeisimpiin viesteihin **ennen** API-kutsua. Rikkinäisen mallivastauksen tunnistava validaattori pudottaa epäkelvon `assistant`-rivin historiasta ennen kuin historia lähetetään takaisin Mistralille (#604); käyttäjän omiin riveihin sisältövalidaattoria ei sovelleta. Widget poistaa kuitenkin juuri lähetetyn käyttäjärivin omasta tulevasta historiastaan, jos REST-pyyntö epäonnistuu, jotta seuraava onnistunut vastaus ei vastaa samalla aiempaan epäonnistuneeseen kysymykseen. Kysymys ja virheilmoitus jäävät nykyisen näkymän lokiin, mutta eivät seuraavaan REST-payloadiin tai `sessionStorage`en.
@@ -164,11 +164,11 @@ Promptin voi korvata tai laajentaa suodattimella `rytkoset_theme_chat_system_pro
 
 **Ulkoasu → Mukauta → Tukichatti** (`customize.php`, osio `rytkoset_theme_chat`). Kolme kenttää, jotka ei-tekninen ylläpitäjä voi muokata ilman koodimuutoksia:
 
-| Kenttä | Setting | Vaikutus |
-|---|---|---|
-| Näytä tukichatti sivustolla (checkbox, oletus **päällä**) | `rytkoset_theme_chat_enabled` | Pois → widget piilotetaan **ja** REST-reitti palauttaa hallitun virheen (HTTP 503). Suora rajapintakutsukin siis estyy. |
-| Tervetuloviesti (textarea) | `rytkoset_theme_chat_welcome_message` | Chatin avausviesti. Tyhjä = teeman oletusteksti. |
-| Tietopohja / usein kysytyt kysymykset (textarea) | `rytkoset_theme_chat_faq` | Liitetään system-promptiin jokaiseen API-kutsuun. Muutos näkyy chatin vastauksissa heti julkaisun jälkeen. |
+| Kenttä                                                    | Setting                               | Vaikutus                                                                                                                |
+| --------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Näytä tukichatti sivustolla (checkbox, oletus **päällä**) | `rytkoset_theme_chat_enabled`         | Pois → widget piilotetaan **ja** REST-reitti palauttaa hallitun virheen (HTTP 503). Suora rajapintakutsukin siis estyy. |
+| Tervetuloviesti (textarea)                                | `rytkoset_theme_chat_welcome_message` | Chatin avausviesti. Tyhjä = teeman oletusteksti.                                                                        |
+| Tietopohja / usein kysytyt kysymykset (textarea)          | `rytkoset_theme_chat_faq`             | Liitetään system-promptiin jokaiseen API-kutsuun. Muutos näkyy chatin vastauksissa heti julkaisun jälkeen.              |
 
 Getterit: `rytkoset_theme_chat_admin_enabled()`, `rytkoset_theme_chat_get_welcome_message()`, `rytkoset_theme_chat_get_faq_text()`. Sanitointi: checkbox → bool, tekstikentät → `sanitize_textarea_field`.
 
@@ -217,12 +217,12 @@ Lohkon perään lisätään ohje, ettei malli arvioi vapaita paikkoja, ilmoittau
 
 Suodattimet:
 
-| Suodatin | Oletus | Vaikutus |
-|---|---|---|
-| `rytkoset_theme_chat_live_context_enabled` | `true` | Koko lohkon voi kytkeä pois |
-| `rytkoset_theme_chat_live_context_max_events` | 5 | Tapahtumien enimmäismäärä |
-| `rytkoset_theme_chat_live_context_max_products` | 20 | Muiden verkkokaupan tuotteiden enimmäismäärä (#471) |
-| `rytkoset_theme_chat_live_context_max_length` | 4000 | Lohkon merkkiraja (katkaisu) |
+| Suodatin                                        | Oletus | Vaikutus                                            |
+| ----------------------------------------------- | ------ | --------------------------------------------------- |
+| `rytkoset_theme_chat_live_context_enabled`      | `true` | Koko lohkon voi kytkeä pois                         |
+| `rytkoset_theme_chat_live_context_max_events`   | 5      | Tapahtumien enimmäismäärä                           |
+| `rytkoset_theme_chat_live_context_max_products` | 20     | Muiden verkkokaupan tuotteiden enimmäismäärä (#471) |
+| `rytkoset_theme_chat_live_context_max_length`   | 4000   | Lohkon merkkiraja (katkaisu)                        |
 
 Työnjako FAQ:n kanssa: **rakenteinen, muuttuva tieto** (päivämäärät, hinnat, lähtöpaikat) tulee tästä lohkosta automaattisesti — sitä ei tarvitse eikä kannata kopioida FAQ:hun. FAQ:hun kirjoitetaan vain vakaat faktat ja toimintaohjeet (maksaminen, käytännöt, historia). Uuden tuotteen lisääminen kauppaan riittää — chatti kertoo siitä ilman FAQ- tai koodimuutosta heti kun tuote on julkaistu ja sillä on hinta.
 
@@ -263,13 +263,13 @@ Ennen tätä kokonaisuutta kulusuojien osumat eivät näkyneet ylläpitäjälle 
 
 **Tallennus:** erilliset `wp_options`-rivit (`autoload = false`) päivitetään olemassa olevissa päätöspisteissä — ei erillistä seurantajärjestelmää:
 
-| Option | Sisältö | Päivityskohta |
-|---|---|---|
-| `rytkoset_chat_stat_messages` | `count`, `last_at` | `rytkoset_theme_chat_handle_request()`:n onnistunut paluu (`rytkoset_theme_chat_record_message_sent_stat()`) |
-| `rytkoset_chat_stat_rate_limit` | `count`, `last_at` | `rytkoset_theme_chat_register_rate_limit_hit()` palauttaa `true` (`rytkoset_theme_chat_record_rate_limit_hit_stat()`) |
-| `rytkoset_chat_stat_error` | `count`, `last_at`, `last_type` | Verkkovirhe, ei-2xx-HTTP-vastaus, tyhjä/odottamaton vastaus sekä #604:n varmennetun lähteen, pakotetun työkalukutsun, `finish_reason`-arvon ja sisältövalidaattorin hylkäykset — `log_error()` säilyy WP_DEBUG-lokitusta varten, `rytkoset_theme_chat_record_error_stat( $type )` on erillinen, rinnakkainen kutsu |
-| `rytkoset_chat_stat_tool_calls` | `count`, `last_at` | Jokainen **suoritettu** `lue_sivu`-työkalukutsu (#501, `rytkoset_theme_chat_record_tool_call_stat()`) — kierroskaton ylittäneitä, ohitettuja kutsuja ei lasketa; viestimäärälaskuri kasvaa edelleen vain kerran per käyttäjäpyyntö |
-| `rytkoset_chat_stat_prompt_cache` | `api_calls`, `cache_hit_calls`, `prompt_tokens`, `cached_tokens`, viimeisimmän kutsun tokenit ja `last_at` | Jokainen onnistunut suora Mistral API -kutsu, jonka vastauksessa on ehjä `usage.prompt_tokens_details.cached_tokens`-rakenne; myös työkalun sisäiset jatkokierrokset lasketaan |
+| Option                            | Sisältö                                                                                                    | Päivityskohta                                                                                                                                                                                                                                                                                                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `rytkoset_chat_stat_messages`     | `count`, `last_at`                                                                                         | `rytkoset_theme_chat_handle_request()`:n onnistunut paluu (`rytkoset_theme_chat_record_message_sent_stat()`)                                                                                                                                                                                                       |
+| `rytkoset_chat_stat_rate_limit`   | `count`, `last_at`                                                                                         | `rytkoset_theme_chat_register_rate_limit_hit()` palauttaa `true` (`rytkoset_theme_chat_record_rate_limit_hit_stat()`)                                                                                                                                                                                              |
+| `rytkoset_chat_stat_error`        | `count`, `last_at`, `last_type`                                                                            | Verkkovirhe, ei-2xx-HTTP-vastaus, tyhjä/odottamaton vastaus sekä #604:n varmennetun lähteen, pakotetun työkalukutsun, `finish_reason`-arvon ja sisältövalidaattorin hylkäykset — `log_error()` säilyy WP_DEBUG-lokitusta varten, `rytkoset_theme_chat_record_error_stat( $type )` on erillinen, rinnakkainen kutsu |
+| `rytkoset_chat_stat_tool_calls`   | `count`, `last_at`                                                                                         | Jokainen **suoritettu** `lue_sivu`-työkalukutsu (#501, `rytkoset_theme_chat_record_tool_call_stat()`) — kierroskaton ylittäneitä, ohitettuja kutsuja ei lasketa; viestimäärälaskuri kasvaa edelleen vain kerran per käyttäjäpyyntö                                                                                 |
+| `rytkoset_chat_stat_prompt_cache` | `api_calls`, `cache_hit_calls`, `prompt_tokens`, `cached_tokens`, viimeisimmän kutsun tokenit ja `last_at` | Jokainen onnistunut suora Mistral API -kutsu, jonka vastauksessa on ehjä `usage.prompt_tokens_details.cached_tokens`-rakenne; myös työkalun sisäiset jatkokierrokset lasketaan                                                                                                                                     |
 
 `last_type`-arvo on lyhyt, staattinen tunniste (`network`, `http_<koodi>`, `empty_reply`, `direct_source_missing`, `forced_tool_missing`, `invalid_finish_reason` tai `invalid_reply`) — ei koskaan dynaamista virhesanomaa, viestisisältöä tai mallin palauttamaa syyarvoa. `rytkoset_theme_chat_get_error_type_label()` muotoilee sen ihmisluettavaksi widgetissä.
 
