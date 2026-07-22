@@ -203,7 +203,21 @@ the printed `Rytkösten sukulainen nro 9` product is not itself a digital
 magazine — added after production claimed digital magazines were available
 when the archive was still empty), sukukirja library borrowing, the published
 `Rytkösten sukulainen nro 9` product, the board page and full 2023-2026 board
-member list, and conditional payment retry wording. A dynamically built sitemap
+member list, conditional payment retry wording, a rule that payment methods must
+be read from the Maksu- ja toimitusehdot page instead of listed from memory (the
+model offered a generic list including an installment option the shop does not
+sell), and the chat's own data handling — messages go to an EU AI service,
+published site content travels with them, conversations are not stored
+server-side, no cookies, IP handled briefly for rate limiting — added after the
+model answered "Onko tämä turvallinen chatti?" by claiming the chat processes no
+personal data at all, contradicting the association's own privacy statement.
+The server-verified source block additionally binds the answer to its own URL
+and forbids generalizing the excerpt's dates, years and places, after the model
+cited an unrelated page for a fact the verified excerpt supplied precisely.
+`rytkoset_theme_chat_should_force_page_tool()` also forces a page read for
+privacy and shop-terms concepts and for data-subject phrasings carrying a
+possessive suffix (`tietojani`), since those questions were answered "en tiedä"
+even though the answer sits on a sitemap-listed page. A dynamically built sitemap
 block (`rytkoset_theme_chat_get_sitemap_context()`) additionally lists all
 published pages and the event/album archives with real permalinks. The prompt
 now explicitly limits factual answers to the supplied prompt sources (stable

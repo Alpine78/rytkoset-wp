@@ -603,6 +603,45 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
+	public function test_privacy_and_shop_terms_questions_force_a_page_read(): void {
+		$queries = array(
+			'Missä maissa tietojani käsitellään?',
+			'Mitä rekisteriselosteessa lukee?',
+			'Käsitteleekö sivusto henkilötietoja?',
+			'Käyttääkö sivusto evästeitä?',
+			'Voinko peruuttaa uutiskirjeen tilaamisen?',
+			'Mitä maksutapoja on käytössä?',
+			'Mitkä ovat toimitusehdot?',
+			'Voinko pyytää tietojeni poistamista?',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertTrue(
+				rytkoset_theme_chat_should_force_page_tool(
+					array(
+						array(
+							'role'    => 'user',
+							'content' => $query,
+						),
+					)
+				),
+				$query
+			);
+		}
+	}
+
+	public function test_stable_context_states_what_the_chat_does_with_data(): void {
+		$context = rytkoset_theme_chat_get_stable_site_context();
+
+		// Malli väitti devissä, ettei chatti käsittele henkilötietoja lainkaan.
+		$this->assertStringContainsString( 'IP-osoitetta käsitellään lyhytaikaisesti', $context );
+		$this->assertStringContainsString( 'Älä siis väitä, ettei chatti käsittele lainkaan henkilötietoja', $context );
+
+		// Maksutapoja ei saa luetella muistista.
+		$this->assertStringContainsString( 'Älä luettele maksutapoja muistista', $context );
+		$this->assertStringContainsString( 'osamaksua', $context );
+	}
+
 	public function test_ordinary_support_question_keeps_automatic_tool_choice(): void {
 		$this->assertFalse(
 			rytkoset_theme_chat_should_force_page_tool(
@@ -636,9 +675,42 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 				)
 			)
 		);
+
+		// Tavallinen "tieto"-sana ilman omistusliitettä ei saa pakottaa lukua.
+		$this->assertFalse(
+			rytkoset_theme_chat_should_force_page_tool(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitä tietoa sivustolla on tapahtumista?',
+					),
+				)
+			)
+		);
 	}
 
 	// --- server-resolved public source ---------------------------------------
+
+	public function test_prefetched_source_block_binds_the_answer_to_its_own_url(): void {
+		// Devissä malli sai varmennetun Toimintakertomus-lähteen mutta viittasi
+		// toiseen sivustokartan osoitteeseen ja latisti täsmällisen päivämäärän.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Toimintakertomus' );
+		$page->post_content = '<p>Hallitus valittiin sukukokouksessa Pielavedellä 27.7.2019.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Milloin Pielaveden sukukokous pidettiin?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+		$this->assertStringContainsString( 'täsmälleen tässä annetussa muodossa', $context );
+		$this->assertStringContainsString( 'älä käytä sivustokartan tai muun lähteen osoitetta', $context );
+		$this->assertStringContainsString( 'Toista otteen päivämäärät', $context );
+	}
 
 	public function test_board_and_chair_queries_prefetch_the_public_board_page(): void {
 		$this->register_board_page(
