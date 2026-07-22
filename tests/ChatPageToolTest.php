@@ -609,7 +609,6 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			'Mitä rekisteriselosteessa lukee?',
 			'Käsitteleekö sivusto henkilötietoja?',
 			'Käyttääkö sivusto evästeitä?',
-			'Voinko peruuttaa uutiskirjeen tilaamisen?',
 			'Mitä maksutapoja on käytössä?',
 			'Mitkä ovat toimitusehdot?',
 			'Voinko pyytää tietojeni poistamista?',
@@ -617,6 +616,32 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 		foreach ( $queries as $query ) {
 			$this->assertTrue(
+				rytkoset_theme_chat_should_force_page_tool(
+					array(
+						array(
+							'role'    => 'user',
+							'content' => $query,
+						),
+					)
+				),
+				$query
+			);
+		}
+	}
+
+	public function test_newsletter_self_service_questions_do_not_force_a_page_read(): void {
+		// The subscribe / manage / cancel answer is in the stable context, so
+		// these must stay on automatic tool choice. Forcing them onto the
+		// tool_choice:any path made them intermittently time out into a 502.
+		$queries = array(
+			'Miten tilaan uutiskirjeen?',
+			'Miten perun uutiskirjeen tilaamisen?',
+			'Voinko peruuttaa uutiskirjeen tilaamisen?',
+			'Miten tilaan ja perun uutiskirjeen?',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertFalse(
 				rytkoset_theme_chat_should_force_page_tool(
 					array(
 						array(
