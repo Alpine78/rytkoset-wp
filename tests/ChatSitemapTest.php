@@ -25,6 +25,35 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( '- Sukututkimus: https://rytkoset.test/?p=21', $sitemap );
 	}
 
+	public function test_sitemap_lists_published_events_before_pages_with_ids(): void {
+		rytkoset_test_register_post( 20, 'page', 'Jäsenyys' );
+		rytkoset_test_register_post( 30, 'rytkoset_event', 'Sukukokous Tampereella' );
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		$this->assertStringContainsString(
+			'- Sukukokous Tampereella (tapahtuma): https://rytkoset.test/?p=30 (sivu-id: 30)',
+			$sitemap
+		);
+
+		// Merkkiraja katkaisee lohkon lopun, joten tapahtumat eivät saa jäädä
+		// sivulistan taakse.
+		$this->assertLessThan( strpos( $sitemap, '- Jäsenyys:' ), strpos( $sitemap, '(tapahtuma)' ) );
+	}
+
+	public function test_sitemap_omits_draft_and_password_protected_events(): void {
+		$draft              = rytkoset_test_register_post( 30, 'rytkoset_event', 'Luonnostapahtuma' );
+		$draft->post_status = 'draft';
+
+		$protected                = rytkoset_test_register_post( 31, 'rytkoset_event', 'Suojattu tapahtuma' );
+		$protected->post_password = 'salasana';
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		$this->assertStringNotContainsString( 'Luonnostapahtuma', $sitemap );
+		$this->assertStringNotContainsString( 'Suojattu tapahtuma', $sitemap );
+	}
+
 	public function test_sitemap_includes_public_page_hints_for_tool_selection(): void {
 		$page               = rytkoset_test_register_post( 21, 'page', 'Sukututkimus' );
 		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen. Julkaisun yhteydessä mainitaan monia paikkoja ja tutkimuksia ennen pastori Teuvo Rönkön selvitystä. Sukukirjan toimitti Antero Rytkönen työryhmineen. Pitkäaikaisella puheenjohtajalla Marja-Liisa Patrikaisella oli merkittävä rooli.</p>';
