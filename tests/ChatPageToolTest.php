@@ -614,6 +614,89 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
+	public function test_board_query_survives_capitalized_command_words_and_typos(): void {
+		$this->register_board_page(
+			'<h2>Hallitus 2023–2026</h2><ul><li>Antti Rytkönen, puheenjohtaja</li><li>Mauri Rytkönen, jäsen</li></ul>'
+		);
+
+		$queries = array(
+			'Luettele hallituksen jäsenet.',
+			'Luettele sukuseuran hallituksen jäsenet.',
+			'Ketkä kuuluvat hallitukseen?',
+			'Näytä hallituksen kokoonpano.',
+			'Keitö kuuluu hallitukseen?',
+		);
+
+		foreach ( $queries as $query ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $query,
+					),
+				)
+			);
+
+			$this->assertStringContainsString( 'Mauri Rytkönen, jäsen', $context, $query );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=81', $context, $query );
+		}
+	}
+
+	public function test_named_search_terms_drop_command_words_but_keep_place_names(): void {
+		$this->assertSame( array(), rytkoset_theme_chat_get_named_search_terms( 'Luettele hallituksen jäsenet.' ) );
+		$this->assertSame( array(), rytkoset_theme_chat_get_named_search_terms( 'Ketkä kuuluvat hallitukseen?' ) );
+
+		// A sentence-initial proper name must still be searchable.
+		$this->assertSame(
+			array( 'Tampereen' ),
+			rytkoset_theme_chat_get_named_search_terms( 'Tampereen sukukokous, milloin se pidetään?' )
+		);
+	}
+
+	public function test_indefinite_pronoun_question_is_not_a_person_query(): void {
+		$question = 'Voiko kuka tahansa liittyä sukuseuran jäseneksi?';
+
+		$this->assertSame( array(), rytkoset_theme_chat_get_person_search_terms( $question ) );
+		$this->assertFalse(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $question,
+					),
+				)
+			)
+		);
+
+		// A real person question still routes to the verified person path.
+		$this->assertSame(
+			array( 'Antti', 'Rytkönen' ),
+			rytkoset_theme_chat_get_person_search_terms( 'Kuka on Antti Rytkönen?' )
+		);
+	}
+
+	public function test_library_question_is_not_a_publication_query(): void {
+		$question = 'Saako sitä kirjastosta?';
+
+		$this->assertSame( array(), rytkoset_theme_chat_get_publication_search_terms( $question ) );
+		$this->assertFalse(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $question,
+					),
+				)
+			)
+		);
+
+		// A publication title question keeps its disambiguation terms.
+		$this->assertNotSame(
+			array(),
+			rytkoset_theme_chat_get_publication_search_terms( 'Voinko ostaa kirjan Rytkösiä sukupolvesta toiseen?' )
+		);
+	}
+
 	public function test_unique_person_first_name_prefetches_source_for_inflected_surname(): void {
 		$page               = rytkoset_test_register_post( 70, 'page', 'Sukukirjat' );
 		$page->post_content = '<p>Kirjan kuvittaja oli Teuvo Rönkkö Kuopiosta.</p>';
