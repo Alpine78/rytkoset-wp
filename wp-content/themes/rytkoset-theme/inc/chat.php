@@ -2910,7 +2910,18 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 		// Privacy, data-protection and shop-terms questions are answered on a
 		// published page, but the model tended to reply "en tiedä" without
 		// reading it. Stems cover the ordinary Finnish inflections.
-		if ( preg_match( '/\b(?:tietosuoj[\p{L}-]*|rekisteriselost[\p{L}-]*|henkilötie[\p{L}-]*|eväste[\p{L}-]*|uutiskirje[\p{L}-]*|maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $latest_user_message ) ) {
+		//
+		// Newsletter questions are deliberately NOT forced here: the subscribe /
+		// manage / cancel self-service answer already lives in the stable site
+		// context, so the model answers it directly. Forcing them onto the
+		// tool_choice:any path made the common "Miten perun uutiskirjeen?" /
+		// "Miten tilaan uutiskirjeen?" questions intermittently exceed the 20 s
+		// wp_remote_post timeout and return a 502 (the retry-without-forcing path
+		// only covers an invalid tool response, not a network timeout). A
+		// newsletter *privacy/retention* question worded with "tietosuoja",
+		// "henkilötieto" or a possessive "tietoni" still routes through the
+		// patterns above/below.
+		if ( preg_match( '/\b(?:tietosuoj[\p{L}-]*|rekisteriselost[\p{L}-]*|henkilötie[\p{L}-]*|eväste[\p{L}-]*|maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $latest_user_message ) ) {
 			return true;
 		}
 

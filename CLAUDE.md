@@ -224,7 +224,12 @@ cited an unrelated page for a fact the verified excerpt supplied precisely.
 `rytkoset_theme_chat_should_force_page_tool()` also forces a page read for
 privacy and shop-terms concepts and for data-subject phrasings carrying a
 possessive suffix (`tietojani`), since those questions were answered "en tiedä"
-even though the answer sits on a sitemap-listed page. A dynamically built sitemap
+even though the answer sits on a sitemap-listed page. Newsletter (`uutiskirje`)
+questions are deliberately NOT forced — the subscribe/manage/cancel answer is in
+the stable context, and forcing them onto the slow `tool_choice: any` path made
+`Miten tilaan/perun uutiskirjeen?` intermittently exceed the 20 s timeout and
+502 (the retry-without-forcing path covers only an invalid tool response, not a
+network timeout). A dynamically built sitemap
 block (`rytkoset_theme_chat_get_sitemap_context()`) additionally lists all
 published pages and the event/album archives with real permalinks. The prompt
 now explicitly limits factual answers to the supplied prompt sources (stable
