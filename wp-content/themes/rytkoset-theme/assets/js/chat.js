@@ -39,11 +39,20 @@
     // Keskusteluhistoria + paneelin auki-tila välilehtikohtaisessa
     // sessionStoragessa (#498). Ei localStoragea eikä keksejä; storage-virheissä
     // pudotaan muistinvaraiseen toimintaan (sivulataus nollaa keskustelun).
-    var STORAGE_KEY = 'rytkosetChat.v1';
+    var LEGACY_STORAGE_KEY = 'rytkosetChat.v1';
+    var STORAGE_KEY = 'rytkosetChat.v2';
     var MAX_STORED_MESSAGES = 40;
     var history = [];
     var isSending = false;
     var typingEl = null;
+
+    // Do not migrate the previous history: it may contain a malformed model
+    // response. Remove only the chat key and leave unrelated session data intact.
+    try {
+      window.sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+    } catch (e) {
+      // Storage may be unavailable; the in-memory fallback still works.
+    }
 
     /**
      * Lukee ja validoi tallennetun istunnon. Palauttaa null, jos storagea ei
@@ -87,6 +96,19 @@
         );
       } catch (e) {
         // Ei storagea: keskustelu elää vain muistissa.
+      }
+    }
+
+    /**
+     * Removes the current user turn after a failed request so it cannot be
+     * answered together with a later question. The visible transcript remains
+     * unchanged until the page is reloaded.
+     */
+    function rollbackFailedUserTurn(text) {
+      var latest = history.length ? history[history.length - 1] : null;
+      if (latest && latest.role === 'user' && latest.content === text) {
+        history.pop();
+        saveSession();
       }
     }
 
@@ -376,11 +398,13 @@
             appendMessage('assistant', result.data.reply, 'start');
           } else {
             var message = (result.data && result.data.message) || config.errorText;
+            rollbackFailedUserTurn(text);
             appendMessage('error', message, 'start');
           }
         })
         .catch(function () {
           hideTyping();
+          rollbackFailedUserTurn(text);
           appendMessage('error', config.errorText, 'start');
         })
         .then(function () {
