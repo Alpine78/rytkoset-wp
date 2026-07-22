@@ -92,7 +92,7 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_forced_plain_text_response_returns_safe_502(): void {
+	public function test_forced_plain_text_response_retries_without_forcing(): void {
 		$this->configure_chat_backend();
 		$this->queue_mistral_response(
 			array(
@@ -104,17 +104,43 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 				),
 			)
 		);
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array( 'content' => 'Vastaus tavallisella työkaluvalinnalla.' ),
+					),
+				),
+			)
+		);
 
 		$result = rytkoset_theme_chat_handle_request( $this->request( 'Mikä on hänen ammattinsa?' ) );
 
-		$this->assert_safe_upstream_error( $result, 'Mallin varmentamaton vastaus.' );
-		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'Vastaus tavallisella työkaluvalinnalla.', $result->get_data()['reply'] );
+
+		// The rejected first response must never reach the visitor.
+		$this->assertStringNotContainsString( 'varmentamaton', $result->get_data()['reply'] );
+
+		// Exactly one retry: forcing is dropped, so the second response is
+		// judged by the ordinary validation path.
+		$this->assertCount( 2, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$first  = json_decode( $GLOBALS['rytkoset_test_http_requests'][0]['args']['body'], true );
+		$second = json_decode( $GLOBALS['rytkoset_test_http_requests'][1]['args']['body'], true );
+		$this->assertSame( 'any', $first['tool_choice'] );
+		$this->assertArrayNotHasKey( 'tool_choice', $second );
+		$this->assertArrayHasKey( 'tools', $second );
+
+		// The failure stays visible on the dashboard even though it recovered.
 		$this->assertSame( 'forced_tool_missing', rytkoset_theme_chat_get_usage_stats()['last_error']['last_type'] );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_forced_malformed_tool_call_returns_safe_502(): void {
+	public function test_forced_malformed_tool_call_retries_without_forcing(): void {
 		$this->configure_chat_backend();
 		$this->queue_mistral_response(
 			array(
@@ -139,11 +165,60 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 			)
 		);
 
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array( 'content' => 'Vastaus toisella kierroksella.' ),
+					),
+				),
+			)
+		);
+
 		$result = rytkoset_theme_chat_handle_request( $this->request( 'Mikä on hänen ammattinsa?' ) );
 
-		$this->assert_safe_upstream_error( $result, 'call-invalid' );
-		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'Vastaus toisella kierroksella.', $result->get_data()['reply'] );
+
+		// A malformed sivu_id must not be executed as a page read.
+		$this->assertStringNotContainsString( 'call-invalid', $result->get_data()['reply'] );
+		$this->assertCount( 2, $GLOBALS['rytkoset_test_http_requests'] );
 		$this->assertSame( 'forced_tool_missing', rytkoset_theme_chat_get_usage_stats()['last_error']['last_type'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_failed_retry_after_forced_tool_still_returns_safe_502(): void {
+		$this->configure_chat_backend();
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array( 'content' => 'Mallin varmentamaton vastaus.' ),
+					),
+				),
+			)
+		);
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'length',
+						'message'       => array( 'content' => 'Katkennut mallivastaus.' ),
+					),
+				),
+			)
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Mikä on hänen ammattinsa?' ) );
+
+		// Dropping the forcing does not weaken the #604 response validation.
+		$this->assert_safe_upstream_error( $result, 'Katkennut mallivastaus.' );
+		$this->assertCount( 2, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertSame( 'invalid_finish_reason', rytkoset_theme_chat_get_usage_stats()['last_error']['last_type'] );
 	}
 
 	#[RunInSeparateProcess]

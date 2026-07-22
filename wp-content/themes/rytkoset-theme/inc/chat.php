@@ -932,6 +932,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		// kierrokseen (ei tool_calls-vastausta) täsmälleen kuten ennen työkalua.
 		$rounds_used = 0;
 		$body        = null;
+		// Loop-invariant: the page read targets its excerpt at this question.
+		$tool_query = rytkoset_theme_chat_get_latest_user_message( $messages );
 
 		while ( true ) {
 			$response = wp_remote_post(
@@ -972,17 +974,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 			$tool_calls = $tool_rounds_enabled ? rytkoset_theme_chat_extract_tool_calls( $body ) : array();
 
 			if ( ! rytkoset_theme_chat_forced_tool_response_is_valid( $force_page_tool, $rounds_used, $tool_calls ) ) {
-				rytkoset_theme_chat_log_error( 'Forced page read returned no valid tool call.' );
+				// The model occasionally answers a forced page read with plain
+				// text or a malformed call. Failing closed here turned a valid
+				// question into a technical error for the visitor, so drop the
+				// forcing and retry once on the ordinary automatic tool choice.
+				// Named fact questions never reach this point: they are already
+				// answered from a verified source or a safe deterministic reply.
+				rytkoset_theme_chat_log_error( 'Forced page read returned no valid tool call; retrying without forcing.' );
 				rytkoset_theme_chat_record_error_stat( 'forced_tool_missing' );
 
-				return rytkoset_theme_chat_upstream_error();
-			}
+				$force_page_tool = false;
+				unset( $payload['tool_choice'] );
 
-			if ( ! rytkoset_theme_chat_forced_tool_response_is_valid( $force_page_tool, $rounds_used, $tool_calls ) ) {
-				rytkoset_theme_chat_log_error( 'Forced page read returned no valid tool call.' );
-				rytkoset_theme_chat_record_error_stat( 'forced_tool_missing' );
-
-				return rytkoset_theme_chat_upstream_error();
+				continue;
 			}
 
 			if ( empty( $tool_calls ) || $rounds_used >= $max_rounds ) {
@@ -998,7 +1002,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 			foreach ( $tool_calls as $index => $tool_call ) {
 				// Kulusuoja: sivusisältö luetaan enintään kolmelle kutsulle per kierros.
 				if ( $index < 3 ) {
-					$content = rytkoset_theme_chat_run_page_tool( $tool_call['name'], $tool_call['arguments'] );
+					$content = rytkoset_theme_chat_run_page_tool( $tool_call['name'], $tool_call['arguments'], $tool_query );
 					rytkoset_theme_chat_record_tool_call_stat();
 				} else {
 					$content = 'Työkalukutsuja oli liikaa yhdellä kierroksella.';
@@ -1843,7 +1847,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stable_site_context' ) ) {
 			'- Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa: /kauppa/sukulehdet/rytkosten-sukulainen-nro-9/. Se on painettu lehti eikä digilehti — älä väitä sen olevan saatavilla digilehtenä, ellei ajantasainen tietolohko niin kerro. Ohjaa tuotteen sivulle ajantasaisen hinnan ja saatavuuden tarkistamiseksi.',
 			'- Sukuseuran hallitus kerrotaan sivulla /sukuseura/sukuseuran-hallitus/. Hallituskausi on 2023-2026. Hallitukseen kuuluvat: Esa Rytkönen (jäsen, Espoo / Maaninka), Mikko Rytkönen (suvun esimies, Runni), Antti Rytkönen (puheenjohtaja, Tampere), Eeli Rytkönen (Kinnulanlahti / Maaninka), Eeva-Liisa Ryhänen (jäsen, Helsinki), Ilkka Rytkönen (jäsen / rytkoset.net ylläpitäjä, Kuopio), Juha Rytkönen (jäsen, Maavesi / Joroinen), Mauri Rytkönen (jäsen, Helsinki), Tapani Rytkönen (sihteeri, Pieksämäki) ja Kimmo Tuulenkari (jäsen, Kajaani). Kun kysytään hallituksesta, käytä vain tätä listaa äläkä lisää muita nimiä.',
 			'- Maksuongelmissa ohjeista Oma tili -> Tilaukset vain ehdollisesti: jos tilauksella näkyy Maksa / yritä uudelleen -painike, maksua voi jatkaa ja valita kassalla toisen maksutavan; jos painiketta ei näy, ohjaa sähköpostiin.',
-			'- Kaupan käytettävissä olevat maksutavat, toimitusehdot ja peruuttamisoikeus kerrotaan Maksu- ja toimitusehdot -sivulla. Älä luettele maksutapoja muistista äläkä yleisenä listana: lue sivu työkalulla ja kerro vain siellä mainitut maksutavat. Erityisesti älä mainitse lasku- tai osamaksua, ellei sivu nimenomaisesti kerro niiden olevan käytössä.',
+			'- Kaupan maksutavat: maksut välittää Paytrail, ja käytettävissä olevat maksutavat näkyvät vasta kassalla. Sivusto ei luettele yksittäisiä maksutapoja millään sivulla, joten älä luettele niitä sinäkään: älä mainitse pankki-, mobiili-, kortti-, lasku- tai osamaksua äläkä muutakaan yksittäistä maksutapaa. Älä myöskään päättele maksutapoja sivun muista sanoista — esimerkiksi Paytrailin vakiotekstin "näkyy maksun saajana tiliotteella tai korttilaskulla" ei ole luettelo maksutavoista. Toimitusehdot ja peruuttamisoikeus kerrotaan Maksu- ja toimitusehdot -sivulla.',
+			'- Uutiskirjeen voi tilata sivuston alalaidan lomakkeella. Kirjautunut käyttäjä hallitsee tilaustaan kohdassa Oma tili -> Uutiskirje (/oma-tili/uutiskirje/), jossa tilauksen voi myös peruuttaa. Lisäksi jokaisen lähetetyn uutiskirjeen alalaidassa on peruutuslinkki. Älä siis ohjaa uutiskirjeen peruuttamista pelkästään sähköpostiin.',
 			'- Tukichatista itsestään: chattiin kirjoitetut viestit välitetään vastauksen tuottamista varten tekoälypalveluun EU-alueelle, ja vastauksen pohjaksi lähetetään sivuston julkaistua julkista sisältöä. Keskusteluja ei tallenneta palvelimelle vaan ne säilyvät selaimen istuntomuistissa, eikä chatti käytä evästeitä. Kävijän IP-osoitetta käsitellään lyhytaikaisesti viestimäärän rajoittamiseksi. Älä siis väitä, ettei chatti käsittele lainkaan henkilötietoja, äläkä anna yleistä turvallisuustakuuta. Kehota olemaan kirjoittamatta arkaluonteisia tietoja ja ohjaa tarkemmat tietosuojakysymykset tietosuojaselosteeseen.',
 		);
 
@@ -2236,6 +2241,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_page_tool_is_enabled' ) ) {
 
 /**
  * Palauttaa työkalun palauttaman sivusisällön merkkirajan (#501, kulusuoja).
+ *
+ * Raja pysyy 5000 merkissä, mutta se käytetään nyt eri tavalla: ylirajan
+ * menevästä sivusta lähetetään kysymykseen pisteytetty ote sivun alun sijaan
+ * (`rytkoset_theme_chat_get_page_tool_excerpt()`). Sivuston keskeisimmät
+ * viitesivut ovat rajaa selvästi pidempiä — tietosuojaseloste noin 17 000 ja
+ * maksu- ja toimitusehdot noin 9 800 merkkiä — joten vanha alkukatkaisu jätti
+ * vastauksen säännönmukaisesti pois. Rajan nostoa kokeiltiin, mutta se ei ole
+ * oikea korjaus: 8000 merkin hyötykuorma ylitti 20 sekunnin HTTP-timeoutin
+ * `mistral-medium-latest`-mallilla, ja pisteytetty ote löytää saman vastauksen
+ * jo noin 3000 merkillä.
  *
  * @return int
  */
@@ -3219,6 +3234,242 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_error_text' ) ) {
 }
 
 /**
+ * Returns the notice appended to a page-tool result that is only an excerpt.
+ *
+ * Truncation used to be a silent `mb_substr()`, so the model believed it had
+ * read the whole page and answered "en tiedä" — or invented an answer — for
+ * content that sat past the cut. Saying so explicitly keeps the honest
+ * fallback available to it.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_excerpt_notice' ) ) {
+	function rytkoset_theme_chat_get_page_tool_excerpt_notice() {
+		return '(Tämä on ote sivusta, ei koko sivu. Jos vastausta ei ole tässä otteessa, kerro ettet löytänyt sitä äläkä päättele sitä itse.)';
+	}
+}
+
+/**
+ * Extracts content words from a question for page-excerpt matching.
+ *
+ * Unlike the prefetch path's proper-name terms, an ordinary support question
+ * ("Missä maissa tietojani käsitellään?") carries no capitalized name. Words
+ * of five letters or more, minus the common Finnish question and filler words,
+ * are enough to locate the right part of a long page.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string> Content terms, at most six.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_query_terms' ) ) {
+	function rytkoset_theme_chat_get_page_query_terms( $message ) {
+		if ( ! preg_match_all( '/(?<!\p{L})[\p{L}][\p{L}-]{4,}(?!\p{L})/u', (string) $message, $matches ) ) {
+			return array();
+		}
+
+		// Question and filler words appear on every page and would select
+		// arbitrary lines instead of the ones the visitor asked about.
+		$ignored = array(
+			'ketkä',
+			'kuinka',
+			'kuka',
+			'liittyy',
+			'mikä',
+			'milloin',
+			'minkä',
+			'minulla',
+			'missä',
+			'mistä',
+			'mitkä',
+			'mitäs',
+			'miten',
+			'noudattaako',
+			'olemassa',
+			'onko',
+			'saako',
+			'sivusto',
+			'sivustolla',
+			'sivuston',
+			'sukuseura',
+			'sukuseuran',
+			'tarkoittaa',
+			'voiko',
+			'voinko',
+			'yhdistys',
+			'yhdistyksen',
+		);
+		$terms   = array();
+
+		foreach ( $matches[0] as $term ) {
+			if ( in_array( mb_strtolower( $term ), $ignored, true ) ) {
+				continue;
+			}
+
+			$terms[] = $term;
+		}
+
+		return array_slice( array_values( array_unique( $terms ) ), 0, 6 );
+	}
+}
+
+/**
+ * Counts stem matches of a search term in a single line of text.
+ *
+ * @param string $text Line of plain text.
+ * @param string $term Search term.
+ * @return int Number of matches.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_count_term_hits' ) ) {
+	function rytkoset_theme_chat_count_term_hits( $text, $term ) {
+		$term = trim( (string) $term );
+
+		if ( '' === $term ) {
+			return 0;
+		}
+
+		$stem = mb_strlen( $term ) < 4 ? $term : mb_substr( $term, 0, 5 );
+
+		return (int) preg_match_all(
+			'/(?<!\p{L})' . preg_quote( $stem, '/' ) . '[\p{L}-]*(?!\p{L})/ui',
+			(string) $text
+		);
+	}
+}
+
+/**
+ * Selects the most informative lines of a long page within a character budget.
+ *
+ * Selecting matches in document order fills the budget from the top of the
+ * page, which loses a late answer whenever a question term is common on that
+ * page: on the privacy statement `tieto*` matches 24% of all lines, so the
+ * transfer section near the end never travelled. Lines are therefore ranked by
+ * how many distinct question terms they carry (then by occurrences), and only
+ * the selected lines are restored to document order for readability.
+ *
+ * @param string            $text       Plain page text.
+ * @param array<int,string> $terms      Question terms.
+ * @param int               $max_length Character budget.
+ * @return string Excerpt, or an empty string when nothing matched.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_scored_page_excerpt' ) ) {
+	function rytkoset_theme_chat_get_scored_page_excerpt( $text, $terms, $max_length ) {
+		$lines      = preg_split( '/\R/u', (string) $text );
+		$max_length = max( 1, (int) $max_length );
+
+		if ( ! is_array( $lines ) || empty( $terms ) ) {
+			return '';
+		}
+
+		$scored = array();
+
+		foreach ( $lines as $index => $line ) {
+			if ( '' === trim( $line ) ) {
+				continue;
+			}
+
+			$distinct = 0;
+			$total    = 0;
+
+			foreach ( $terms as $term ) {
+				$hits = rytkoset_theme_chat_count_term_hits( $line, $term );
+
+				if ( $hits > 0 ) {
+					++$distinct;
+					$total += $hits;
+				}
+			}
+
+			if ( $distinct > 0 ) {
+				$scored[] = array(
+					'index'    => $index,
+					'distinct' => $distinct,
+					'total'    => $total,
+				);
+			}
+		}
+
+		if ( empty( $scored ) ) {
+			return '';
+		}
+
+		usort(
+			$scored,
+			static function ( $a, $b ) {
+				return array( $b['distinct'], $b['total'], $a['index'] )
+					<=> array( $a['distinct'], $a['total'], $b['index'] );
+			}
+		);
+
+		$last     = count( $lines ) - 1;
+		$selected = array();
+		$length   = 0;
+
+		foreach ( $scored as $row ) {
+			// One line of context on each side keeps a matched sentence readable.
+			foreach ( range( max( 0, $row['index'] - 1 ), min( $last, $row['index'] + 1 ) ) as $index ) {
+				$line = trim( (string) $lines[ $index ] );
+
+				if ( '' === $line || isset( $selected[ $index ] ) ) {
+					continue;
+				}
+
+				if ( $length + mb_strlen( $line ) + 1 > $max_length ) {
+					break 2;
+				}
+
+				$selected[ $index ] = $line;
+				$length            += mb_strlen( $line ) + 1;
+			}
+		}
+
+		if ( empty( $selected ) ) {
+			return '';
+		}
+
+		ksort( $selected );
+
+		return rytkoset_theme_chat_truncate( implode( "\n", $selected ), $max_length );
+	}
+}
+
+/**
+ * Builds the page text sent to the model, as an excerpt when the page is long.
+ *
+ * A page within the limit is returned unchanged. A longer page is reduced to
+ * the lines matching the question (with their immediate context) so the answer
+ * is not lost to a head-of-page cut; a question with no usable terms, or one
+ * matching nothing, falls back to the previous head truncation. Either way the
+ * result is marked as an excerpt.
+ *
+ * @param string $text       Plain page text.
+ * @param string $query      Latest user message.
+ * @param int    $max_length Character budget.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_excerpt' ) ) {
+	function rytkoset_theme_chat_get_page_tool_excerpt( $text, $query, $max_length ) {
+		$text       = (string) $text;
+		$max_length = max( 1, (int) $max_length );
+
+		if ( mb_strlen( $text ) <= $max_length ) {
+			return $text;
+		}
+
+		$notice = rytkoset_theme_chat_get_page_tool_excerpt_notice();
+		$budget = max( 1, $max_length - mb_strlen( $notice ) - 2 );
+		$terms  = rytkoset_theme_chat_get_page_query_terms( $query );
+		// Finnish inflects heavily ("uutiskirjeen" vs. "uutiskirje"), so terms
+		// are matched by stem.
+		$excerpt = rytkoset_theme_chat_get_scored_page_excerpt( $text, $terms, $budget );
+
+		if ( '' === $excerpt ) {
+			$excerpt = rytkoset_theme_chat_truncate( $text, $budget );
+		}
+
+		return $excerpt . "\n\n" . $notice;
+	}
+}
+
+/**
  * Hakee ja validoi työkalun pyytämän sivun sisällön (#501).
  *
  * Vuotosuoja: vain julkaistut, julkiset sivut kelpaavat. Jäsenille rajatut
@@ -3227,11 +3478,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_error_text' ) ) {
  * jäsenmuurin ohitusreittinä edes kirjautuneelle jäsenelle. Fail-closed:
  * jos jäsensivumoduulia ei ole ladattu, mitään sivua ei palauteta.
  *
- * @param int $page_id Sivun id.
+ * @param int    $page_id Sivun id.
+ * @param string $query   Uusin käyttäjäviesti otteen kohdistamiseen.
  * @return string Sivun tekstisisältö otsikolla ja osoitteella, tai virheteksti.
  */
 if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
-	function rytkoset_theme_chat_resolve_page_tool_result( $page_id ) {
+	function rytkoset_theme_chat_resolve_page_tool_result( $page_id, $query = '' ) {
 		$post = rytkoset_theme_chat_get_public_source_post( $page_id, rytkoset_theme_chat_get_page_tool_post_types() );
 
 		if ( ! $post instanceof WP_Post ) {
@@ -3249,7 +3501,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
 		$label = 'rytkoset_event' === $post->post_type ? 'Tapahtuma' : 'Sivu';
 		$head  = $label . ': ' . $title . ( is_string( $url ) && '' !== $url ? ' (' . $url . ')' : '' );
 
-		return rytkoset_theme_chat_truncate( $head . "\n\n" . $text, rytkoset_theme_chat_get_page_tool_max_length() );
+		// The heading is part of the budget, so a long page is reduced against
+		// what is left after it rather than losing the source URL to the cut.
+		$max_length = rytkoset_theme_chat_get_page_tool_max_length();
+		$budget     = max( 1, $max_length - mb_strlen( $head ) - 2 );
+		$result     = $head . "\n\n" . rytkoset_theme_chat_get_page_tool_excerpt( $text, $query, $budget );
+
+		// The budget math already keeps the result within the limit; this is the
+		// cost guard's hard ceiling for filter values too small to hold the head
+		// and the excerpt notice.
+		return rytkoset_theme_chat_truncate( $result, $max_length );
 	}
 }
 
@@ -3258,15 +3519,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
  *
  * @param string $name      Kutsutun työkalun nimi.
  * @param mixed  $arguments Työkalukutsun argumentit.
+ * @param string $query     Uusin käyttäjäviesti otteen kohdistamiseen.
  * @return string
  */
 if ( ! function_exists( 'rytkoset_theme_chat_run_page_tool' ) ) {
-	function rytkoset_theme_chat_run_page_tool( $name, $arguments ) {
+	function rytkoset_theme_chat_run_page_tool( $name, $arguments, $query = '' ) {
 		if ( 'lue_sivu' !== (string) $name ) {
 			return 'Tuntematon työkalu.';
 		}
 
-		return rytkoset_theme_chat_resolve_page_tool_result( rytkoset_theme_chat_parse_page_tool_args( $arguments ) );
+		return rytkoset_theme_chat_resolve_page_tool_result(
+			rytkoset_theme_chat_parse_page_tool_args( $arguments ),
+			$query
+		);
 	}
 }
 
@@ -3306,6 +3571,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Tulkitse seurantakysymyksen pronomini tai muu viittaus (esimerkiksi hän tai hänen) viimeisimmän yksiselitteisen keskustelukontekstin perusteella. Jos viittaus on epäselvä, pyydä täsmennys äläkä arvaa.\n";
 		$prompt .= "- Älä korvaa käyttäjän kysymää käsitettä samankaltaisella käsitteellä. Hallituskausi, toimintakausi ja tilikausi ovat eri asioita. Jos kysytyn käsitteen täsmällinen tieto ei ole jo lähteissä, lue sopiva sivu työkalulla.\n";
 		$prompt .= "- Kun käyttäjä kysyy henkilön ammattia, tehtävää tai roolia, käytä lähteessä henkilölle nimenomaisesti annettua nimikettä äläkä yleistä tai päättele sitä.\n";
+		$prompt .= "- Kun et löydä kysytystä henkilöstä tietoa, käytä nimeä vastauksessa perusmuodossa äläkä taivuta sitä, jottei nimi vääristy. Jos annetussa lähteessä on lähes sama nimi kuin kysytty, mainitse lähteen nimi ja kysy, tarkoittiko käyttäjä häntä — älä pelkästään ohjaa lähdesivulle.\n";
+		$prompt .= "- Suomessa henkilö nimetään usein myös järjestyksessä \"Sukunimen genetiivi + etunimi\": esimerkiksi \"Virtasen Matti\" tarkoittaa samaa henkilöä kuin \"Matti Virtanen\". Tunnista tällainen kysymys samaksi henkilöksi ja vastaa lähteen perusteella normaalisti. Sukunimen taivutettu muoto voi poiketa kirjoitusasultaan perusmuodosta (Virtanen -> Virtasen), ja myös lähteessä nimi voi esiintyä taivutettuna, joten vertaa nimen vartaloa äläkä vaadi täsmälleen samaa kirjoitusasua.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";
 		$prompt .= '- Älä pyydä äläkä käsittele arkaluontoisia tietoja (salasanat, maksutiedot).';
 

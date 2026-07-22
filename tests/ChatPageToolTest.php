@@ -637,9 +637,15 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'IP-osoitetta käsitellään lyhytaikaisesti', $context );
 		$this->assertStringContainsString( 'Älä siis väitä, ettei chatti käsittele lainkaan henkilötietoja', $context );
 
-		// Maksutapoja ei saa luetella muistista.
-		$this->assertStringContainsString( 'Älä luettele maksutapoja muistista', $context );
+		// Maksutapoja ei saa luetella eikä päätellä sivun muista sanoista: tuotanto
+		// vastasi "lasku- ja osamaksutapoja", vaikka niitä ei ole millään sivulla.
+		$this->assertStringContainsString( 'Sivusto ei luettele yksittäisiä maksutapoja', $context );
 		$this->assertStringContainsString( 'osamaksua', $context );
+		$this->assertStringContainsString( 'korttilaskulla', $context );
+
+		// Uutiskirjeen peruutusta ei saa ohjata pelkkään sähköpostiin.
+		$this->assertStringContainsString( '/oma-tili/uutiskirje/', $context );
+		$this->assertStringContainsString( 'peruutuslinkki', $context );
 	}
 
 	public function test_ordinary_support_question_keeps_automatic_tool_choice(): void {
@@ -1056,6 +1062,15 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 	// --- system prompt wiring ---------------------------------------------------
 
+	public function test_system_prompt_explains_finnish_surname_first_name_order(): void {
+		$prompt = rytkoset_theme_chat_get_system_prompt();
+
+		// "Röngön Teuvo" is the same person as the source page's "Teuvo Rönkkö";
+		// without this the model answered "en tiedä" despite a verified source.
+		$this->assertStringContainsString( 'Sukunimen genetiivi + etunimi', $prompt );
+		$this->assertStringContainsString( 'vertaa nimen vartaloa', $prompt );
+	}
+
 	public function test_system_prompt_includes_tool_instructions_when_enabled(): void {
 		$prompt = rytkoset_theme_chat_get_system_prompt();
 
@@ -1110,7 +1125,115 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_max_length_defaults_to_5000(): void {
+		// The budget is unchanged; what changed is that a longer page now spends
+		// it on the question-matched lines instead of the top of the page.
 		$this->assertSame( 5000, rytkoset_theme_chat_get_page_tool_max_length() );
+	}
+
+	public function test_scored_excerpt_prefers_lines_matching_more_terms(): void {
+		$text = "Alussa mainitaan tietosuoja lyhyesti.\n"
+			. str_repeat( "Välissä puhutaan tietosuojasta yleisesti.\n", 40 )
+			. "Lopussa kerrotaan, että tietojen käsittely tapahtuu Suomessa.\n";
+
+		$result = rytkoset_theme_chat_get_scored_page_excerpt(
+			$text,
+			rytkoset_theme_chat_get_page_query_terms( 'Missä maissa tietojani käsitellään?' ),
+			400
+		);
+
+		// The two-term line sits last but must still win the budget.
+		$this->assertStringContainsString( 'käsittely tapahtuu Suomessa', $result );
+	}
+
+	public function test_scored_excerpt_keeps_document_order(): void {
+		$text = "Ensin uutiskirje mainitaan.\nVälissä muuta.\nLopuksi uutiskirjeen peruutus.";
+
+		$result = rytkoset_theme_chat_get_scored_page_excerpt(
+			$text,
+			rytkoset_theme_chat_get_page_query_terms( 'Voinko peruuttaa uutiskirjeen tilaamisen?' ),
+			5000
+		);
+
+		$this->assertLessThan(
+			mb_strpos( $result, 'Lopuksi uutiskirjeen peruutus' ),
+			mb_strpos( $result, 'Ensin uutiskirje mainitaan' )
+		);
+	}
+
+	public function test_scored_excerpt_returns_empty_without_terms_or_matches(): void {
+		$this->assertSame( '', rytkoset_theme_chat_get_scored_page_excerpt( 'Tekstiä.', array(), 5000 ) );
+		$this->assertSame( '', rytkoset_theme_chat_get_scored_page_excerpt( 'Tekstiä.', array( 'uutiskirje' ), 5000 ) );
+	}
+
+	// --- long-page excerpt for the read tool -----------------------------------
+
+	public function test_page_query_terms_drop_question_and_filler_words(): void {
+		$this->assertSame(
+			array( 'maissa', 'tietojani', 'käsitellään' ),
+			rytkoset_theme_chat_get_page_query_terms( 'Missä maissa tietojani käsitellään?' )
+		);
+
+		$this->assertSame(
+			array( 'peruuttaa', 'uutiskirjeen', 'tilaamisen' ),
+			rytkoset_theme_chat_get_page_query_terms( 'Voinko peruuttaa uutiskirjeen tilaamisen?' )
+		);
+	}
+
+	public function test_page_query_terms_ignore_short_words_and_cap_at_six(): void {
+		$this->assertSame( array(), rytkoset_theme_chat_get_page_query_terms( 'Onko se nyt jo ohi?' ) );
+		$this->assertCount(
+			6,
+			rytkoset_theme_chat_get_page_query_terms(
+				'jäsenyys tapahtumat albumit digilehdet sukututkimus verkkokauppa foorumi uutiskirje'
+			)
+		);
+	}
+
+	public function test_page_within_limit_is_returned_unchanged(): void {
+		$text = "Ensimmäinen rivi.\nToinen rivi.";
+
+		$this->assertSame( $text, rytkoset_theme_chat_get_page_tool_excerpt( $text, 'Mitä rivillä lukee?', 5000 ) );
+	}
+
+	public function test_long_page_returns_the_part_matching_the_question(): void {
+		// The answer sits far past the old head-of-page cut, exactly like the
+		// privacy statement's country line did in production.
+		$text = str_repeat( "Täytettä ilman vastausta.\n", 200 )
+			. "Käsittely tapahtuu Euroopan unionin alueella.\n"
+			. str_repeat( "Lisää täytettä.\n", 200 );
+
+		$result = rytkoset_theme_chat_get_page_tool_excerpt( $text, 'Missä maissa tietojani käsitellään?', 1500 );
+
+		$this->assertStringContainsString( 'Käsittely tapahtuu Euroopan unionin alueella.', $result );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $result );
+		$this->assertLessThanOrEqual( 1500, mb_strlen( $result ) );
+	}
+
+	public function test_long_page_without_matching_terms_falls_back_to_head(): void {
+		$text = 'Alku. ' . str_repeat( 'x', 3000 );
+
+		$result = rytkoset_theme_chat_get_page_tool_excerpt( $text, 'Onko se nyt jo ohi?', 900 );
+
+		$this->assertStringStartsWith( 'Alku.', $result );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $result );
+		$this->assertLessThanOrEqual( 900, mb_strlen( $result ) );
+	}
+
+	public function test_resolve_marks_a_long_page_as_an_excerpt(): void {
+		$page               = rytkoset_test_register_post( 20, 'page', 'Tietosuoja' );
+		$page->post_content = '<p>' . str_repeat( 'Täytettä. ', 200 )
+			. 'Käsittely tapahtuu Euroopan unionin alueella.</p>';
+
+		$filter = static fn() => 900;
+		add_filter( 'rytkoset_theme_chat_page_tool_max_length', $filter );
+
+		$result = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Missä maissa tietojani käsitellään?' );
+
+		remove_filter( 'rytkoset_theme_chat_page_tool_max_length', $filter );
+
+		$this->assertStringContainsString( 'Sivu: Tietosuoja', $result );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $result );
+		$this->assertLessThanOrEqual( 900, mb_strlen( $result ) );
 	}
 
 	// --- tool-call usage stats (#472) -------------------------------------------
