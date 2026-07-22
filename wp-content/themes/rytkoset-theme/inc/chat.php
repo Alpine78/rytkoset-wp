@@ -866,6 +866,17 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		$tool_rounds_enabled = $tool_enabled && '' === $prefetched_source;
 		$system_prompt       = rytkoset_theme_chat_get_system_prompt();
 
+		// A named fact question with no verified public source must not be sent
+		// through the fragile forced-tool path or answered from model memory.
+		if ( $tool_enabled && '' === $prefetched_source && rytkoset_theme_chat_is_named_source_query( $messages ) ) {
+			rytkoset_theme_chat_record_message_sent_stat();
+
+			return new WP_REST_Response(
+				rytkoset_theme_chat_build_response_body( rytkoset_theme_chat_get_named_source_fallback_reply() ),
+				200
+			);
+		}
+
 		if ( '' !== $prefetched_source ) {
 			$system_prompt .= "\n\n" . $prefetched_source;
 		}
@@ -2201,22 +2212,35 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_latest_user_message' ) ) {
 }
 
 /**
- * Extracts proper-name terms from a person question.
+ * Extracts proper-name terms from a named fact question.
  *
  * @param string $message Latest user message.
- * @return array<int,string> Name terms in question order.
+ * @return array<int,string> Search terms in question order.
  */
-if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
-	function rytkoset_theme_chat_get_person_search_terms( $message ) {
-		if ( ! preg_match( '/\b(?:kuka|kenen|ketä|kerro)\b/ui', (string) $message ) ) {
-			return array();
-		}
-
+if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
+	function rytkoset_theme_chat_get_named_search_terms( $message ) {
 		if ( ! preg_match_all( '/\b[A-ZÅÄÖ][\p{Ll}]{2,}(?:-[A-ZÅÄÖ][\p{Ll}]{2,})?\b/u', (string) $message, $matches ) ) {
 			return array();
 		}
 
-		$ignored = array( 'kuka', 'kenen', 'ketä', 'kerro', 'mikä', 'mitä', 'sukuseuran', 'rytkösten' );
+		$ignored = array(
+			'entä',
+			'kenen',
+			'kerro',
+			'ketä',
+			'keitä',
+			'keistä',
+			'kuka',
+			'mikä',
+			'milloin',
+			'missä',
+			'miten',
+			'mitä',
+			'onko',
+			'rytkösten',
+			'sukuseuran',
+			'voinko',
+		);
 		$terms   = array();
 
 		foreach ( $matches[0] as $term ) {
@@ -2227,7 +2251,96 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
 			$terms[] = $term;
 		}
 
-		return array_slice( array_values( array_unique( $terms ) ), 0, 3 );
+		return array_slice( array_values( array_unique( $terms ) ), 0, 4 );
+	}
+}
+
+/**
+ * Extracts proper-name terms only when the message asks about a person.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string> Person-name terms in question order.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
+	function rytkoset_theme_chat_get_person_search_terms( $message ) {
+		if ( ! preg_match( '/\b(?:kuka|kenen|ketä|kerro)\b/ui', (string) $message ) ) {
+			return array();
+		}
+
+		return rytkoset_theme_chat_get_named_search_terms( $message );
+	}
+}
+
+/**
+ * Extracts long title words from a publication question for disambiguation.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string> Significant publication-title terms.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_publication_search_terms' ) ) {
+	function rytkoset_theme_chat_get_publication_search_terms( $message ) {
+		if ( ! preg_match( '/\b(?:kirj[\p{L}-]*|teos[\p{L}-]*)\b/ui', (string) $message ) ) {
+			return array();
+		}
+
+		if ( ! preg_match_all( '/\b[\p{L}][\p{L}-]{4,}\b/u', (string) $message, $matches ) ) {
+			return array();
+		}
+
+		$ignored = array( 'kirja', 'kirjaa', 'kirjan', 'ostaa', 'teoksen', 'teosta', 'voinko' );
+		$terms   = array();
+
+		foreach ( $matches[0] as $term ) {
+			if ( in_array( mb_strtolower( $term ), $ignored, true ) ) {
+				continue;
+			}
+
+			$terms[] = $term;
+		}
+
+		return array_slice( array_values( array_unique( $terms ) ), 0, 6 );
+	}
+}
+
+/**
+ * Checks whether a question names a public-source subject that must be verified.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_named_source_query' ) ) {
+	function rytkoset_theme_chat_is_named_source_query( $messages ) {
+		$message = rytkoset_theme_chat_get_latest_user_message( $messages );
+
+		if ( '' === $message ) {
+			return false;
+		}
+
+		if ( preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message ) ) {
+			return true;
+		}
+
+		if ( ! empty( rytkoset_theme_chat_get_person_search_terms( $message ) ) ) {
+			return true;
+		}
+
+		if ( ! empty( rytkoset_theme_chat_get_publication_search_terms( $message ) ) ) {
+			return true;
+		}
+
+		return (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message )
+			&& ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
+	}
+}
+
+/**
+ * Returns a safe deterministic answer when no named public source was verified.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_named_source_fallback_reply' ) ) {
+	function rytkoset_theme_chat_get_named_source_fallback_reply() {
+		return 'En löytänyt tähän varmennettua vastausta chatin käytettävissä olevista Rytkösten sukuseuran julkaistuista julkisista lähteistä. Voin auttaa Rytkösten sukuseuraan liittyvissä kysymyksissä.';
 	}
 }
 
@@ -2251,15 +2364,69 @@ if ( ! function_exists( 'rytkoset_theme_chat_text_contains_term' ) ) {
 }
 
 /**
+ * Checks whether plain text contains a word starting with a bounded term stem.
+ *
+ * @param string $text       Plain text.
+ * @param string $term       Inflected search term.
+ * @param int    $stem_length Maximum stem length.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_text_contains_term_stem' ) ) {
+	function rytkoset_theme_chat_text_contains_term_stem( $text, $term, $stem_length = 5 ) {
+		$term = trim( (string) $term );
+
+		if ( mb_strlen( $term ) < 4 ) {
+			return rytkoset_theme_chat_text_contains_term( $text, $term );
+		}
+
+		$stem = mb_substr( $term, 0, max( 4, (int) $stem_length ) );
+
+		return (bool) preg_match( '/(?<!\p{L})' . preg_quote( $stem, '/' ) . '[\p{L}-]*(?!\p{L})/ui', (string) $text );
+	}
+}
+
+/**
+ * Requires a meeting topic and a place stem within the same text line.
+ *
+ * @param string            $text  Plain source text.
+ * @param array<int,string> $terms Place terms from the question.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_text_has_meeting_place_context' ) ) {
+	function rytkoset_theme_chat_text_has_meeting_place_context( $text, $terms ) {
+		$lines = preg_split( '/\R/u', (string) $text );
+
+		if ( ! is_array( $lines ) ) {
+			return false;
+		}
+
+		foreach ( $lines as $line ) {
+			if ( ! preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $line ) ) {
+				continue;
+			}
+
+			foreach ( (array) $terms as $term ) {
+				if ( rytkoset_theme_chat_text_contains_term_stem( $line, $term ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+}
+
+/**
  * Extracts the matching lines and their immediate context from a page.
  *
  * @param string            $text       Plain page text.
  * @param array<int,string> $terms      Search terms.
  * @param int               $max_length Maximum excerpt length.
+ * @param bool              $stem_match Whether terms are matched by a short word stem.
  * @return string
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_matching_page_excerpt' ) ) {
-	function rytkoset_theme_chat_get_matching_page_excerpt( $text, $terms, $max_length ) {
+	function rytkoset_theme_chat_get_matching_page_excerpt( $text, $terms, $max_length, $stem_match = false ) {
 		$lines = preg_split( '/\R/u', (string) $text );
 
 		if ( ! is_array( $lines ) ) {
@@ -2272,7 +2439,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_matching_page_excerpt' ) ) {
 			$matches = false;
 
 			foreach ( (array) $terms as $term ) {
-				if ( rytkoset_theme_chat_text_contains_term( $line, $term ) ) {
+				$term_matches = $stem_match
+					? rytkoset_theme_chat_text_contains_term_stem( $line, $term )
+					: rytkoset_theme_chat_text_contains_term( $line, $term );
+
+				if ( $term_matches ) {
 					$matches = true;
 					break;
 				}
@@ -2298,7 +2469,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_matching_page_excerpt' ) ) {
 }
 
 /**
- * Builds a bounded, access-checked source context for board and person queries.
+ * Builds a bounded, access-checked source context for named fact questions.
  *
  * This avoids a fragile forced function-call round when WordPress can resolve
  * the public source itself. Ambiguous or unavailable matches return an empty
@@ -2309,11 +2480,22 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_matching_page_excerpt' ) ) {
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 	function rytkoset_theme_chat_get_prefetched_public_source( $messages ) {
-		$message     = rytkoset_theme_chat_get_latest_user_message( $messages );
-		$board_query = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
-		$name_terms  = rytkoset_theme_chat_get_person_search_terms( $message );
+		$message           = rytkoset_theme_chat_get_latest_user_message( $messages );
+		$board_query       = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
+		$meeting_query     = (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message );
+		$person_terms      = rytkoset_theme_chat_get_person_search_terms( $message );
+		$search_terms      = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
+		$publication_terms = rytkoset_theme_chat_get_publication_search_terms( $message );
 
-		if ( ! $board_query && empty( $name_terms ) ) {
+		if ( ! empty( $publication_terms ) ) {
+			$search_terms = array_values(
+				array_unique(
+					array_merge( $search_terms, $publication_terms )
+				)
+			);
+		}
+
+		if ( ! $board_query && empty( $search_terms ) ) {
 			return '';
 		}
 
@@ -2323,9 +2505,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 
 		if ( $board_page instanceof WP_Post ) {
 			$board_text     = rytkoset_theme_chat_extract_page_text( (string) $board_page->post_content );
-			$board_has_name = ! empty( $name_terms );
+			$board_has_name = ! empty( $person_terms );
 
-			foreach ( $name_terms as $term ) {
+			foreach ( $person_terms as $term ) {
 				if ( ! rytkoset_theme_chat_text_contains_term( $board_text, $term ) ) {
 					$board_has_name = false;
 					break;
@@ -2340,32 +2522,50 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			}
 		}
 
-		if ( empty( $candidates ) && ! empty( $name_terms ) ) {
-			$max_pages  = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
-			$page_ids   = get_posts(
-				array(
-					'post_type'   => 'page',
-					'post_status' => 'publish',
-					'numberposts' => $max_pages,
-					'fields'      => 'ids',
-					'orderby'     => 'menu_order title',
-					'order'       => 'ASC',
-				)
-			);
+		if ( empty( $candidates ) && ! empty( $search_terms ) ) {
+			$max_pages    = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
+			$source_types = $meeting_query ? array( 'rytkoset_event', 'page' ) : array( 'page' );
+			$page_ids     = array();
+
+			foreach ( $source_types as $source_type ) {
+				$page_ids = array_merge(
+					$page_ids,
+					(array) get_posts(
+						array(
+							'post_type'   => $source_type,
+							'post_status' => 'publish',
+							'numberposts' => $max_pages,
+							'fields'      => 'ids',
+							'orderby'     => 'menu_order title',
+							'order'       => 'ASC',
+						)
+					)
+				);
+			}
+
+			$page_ids   = array_slice( array_values( array_unique( array_map( 'intval', $page_ids ) ) ), 0, $max_pages );
 			$best_score = 0;
 
 			foreach ( (array) $page_ids as $page_id ) {
-				$page = rytkoset_theme_chat_get_public_page( (int) $page_id );
+				$page = rytkoset_theme_chat_get_public_source_post( (int) $page_id, $source_types );
 
 				if ( ! $page instanceof WP_Post ) {
 					continue;
 				}
 
-				$text  = rytkoset_theme_chat_extract_page_text( (string) $page->post_content );
+				$text  = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
 				$score = 0;
 
-				foreach ( $name_terms as $term ) {
-					if ( rytkoset_theme_chat_text_contains_term( $text, $term ) ) {
+				if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms ) ) {
+					continue;
+				}
+
+				foreach ( $search_terms as $term ) {
+					$matches = $meeting_query
+						? rytkoset_theme_chat_text_contains_term_stem( $text, $term )
+						: rytkoset_theme_chat_text_contains_term( $text, $term );
+
+					if ( $matches ) {
 						++$score;
 					}
 				}
@@ -2386,32 +2586,38 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			}
 		}
 
-		// Only an unambiguous public page is trusted as server-resolved context.
-		if ( 1 !== count( $candidates ) ) {
+		// Person and publication questions require one unambiguous page. A meeting
+		// may have both an event page and its directly related transport page.
+		$candidate_count = count( $candidates );
+
+		if ( 1 > $candidate_count || ( ! $meeting_query && 1 !== $candidate_count ) || ( $meeting_query && 2 < $candidate_count ) ) {
 			return '';
 		}
 
-		$page = $candidates[0]['post'];
-		$text = $candidates[0]['text'];
-		$url  = get_permalink( $page->ID );
+		$max_length    = max( 800, min( 5000, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_length', 3000 ) ) );
+		$excerpt_max   = max( 400, (int) floor( ( $max_length - 500 ) / $candidate_count ) );
+		$source_terms  = $meeting_query ? array_merge( $search_terms, array( 'sukukokous' ) ) : $search_terms;
+		$source_blocks = array();
 
-		if ( ! is_string( $url ) || '' === trim( $url ) ) {
-			return '';
+		foreach ( $candidates as $candidate ) {
+			$page    = $candidate['post'];
+			$text    = $candidate['text'];
+			$url     = get_permalink( $page->ID );
+			$excerpt = $board_query && empty( $search_terms )
+				? rytkoset_theme_chat_truncate( $text, $excerpt_max )
+				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query );
+
+			if ( ! is_string( $url ) || '' === trim( $url ) || '' === $excerpt ) {
+				return '';
+			}
+
+			$source_blocks[] = 'Sivu: ' . trim( (string) get_the_title( $page->ID ) ) . "\n"
+				. 'Lähde: ' . trim( $url ) . "\n\n"
+				. $excerpt;
 		}
 
-		$max_length = max( 800, min( 5000, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_length', 3000 ) ) );
-		$excerpt    = $board_query && empty( $name_terms )
-			? rytkoset_theme_chat_truncate( $text, $max_length )
-			: rytkoset_theme_chat_get_matching_page_excerpt( $text, $name_terms, $max_length );
-
-		if ( '' === $excerpt ) {
-			return '';
-		}
-
-		return "Palvelin on lukenut ja varmistanut seuraavan julkisen lähteen. Vastaa vain uusimpaan käyttäjäkysymykseen tämän lähdeotteen perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos ote ei riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen lähteen osoite.\n\n"
-			. 'Sivu: ' . trim( (string) get_the_title( $page->ID ) ) . "\n"
-			. 'Lähde: ' . trim( $url ) . "\n\n"
-			. $excerpt;
+		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos otteet eivät riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite.\n\n"
+			. implode( "\n\n---\n\n", $source_blocks );
 	}
 }
 
@@ -2462,8 +2668,12 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 			return true;
 		}
 
-		if ( preg_match( '/\b(?:kuka|kenen|ketä|toimitti|kokosi|kirjoitti|laati|selvitti)\b/ui', $latest_user_message ) ) {
+		if ( preg_match( '/\b(?:toimitti|kokosi|kirjoitti|laati|selvitti)\b/ui', $latest_user_message ) ) {
 			return true;
+		}
+
+		if ( preg_match( '/\b(?:kuka|kenen|ketä)\b/ui', $latest_user_message ) ) {
+			return ! empty( rytkoset_theme_chat_get_person_search_terms( $latest_user_message ) );
 		}
 
 		// Elliptical follow-ups and rule-specific concepts need a fresh page read;
@@ -2476,9 +2686,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 			return true;
 		}
 
-		// A capitalized term after the sentence-opening word is usually a person,
-		// publication, or rare name form that needs page content for an answer.
-		return (bool) preg_match( '/\s[A-ZÅÄÖ][\p{L}]{3,}(?:-[A-ZÅÄÖ][\p{L}]{2,})?\b/u', $latest_user_message );
+		return rytkoset_theme_chat_is_named_source_query( $messages );
 	}
 }
 
@@ -2681,6 +2889,44 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_public_page' ) ) {
 		}
 
 		if ( ! function_exists( 'rytkoset_theme_page_is_members_only' ) || rytkoset_theme_page_is_members_only( $post ) ) {
+			return null;
+		}
+
+		return $post;
+	}
+}
+
+/**
+ * Resolves an allowed public source post for the server-side source prefetch.
+ *
+ * Pages reuse the full members-only gate. Events have no members-only feature,
+ * but must still be published and passwordless before their raw content is sent
+ * to the model.
+ *
+ * @param int               $post_id       Post ID.
+ * @param array<int,string> $allowed_types Allowed public post types.
+ * @return WP_Post|null Public source post, or null when access is not verified.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_public_source_post' ) ) {
+	function rytkoset_theme_chat_get_public_source_post( $post_id, $allowed_types ) {
+		$post_id       = (int) $post_id;
+		$allowed_types = array_values( array_intersect( array( 'page', 'rytkoset_event' ), (array) $allowed_types ) );
+
+		if ( $post_id < 1 || empty( $allowed_types ) ) {
+			return null;
+		}
+
+		$post = get_post( $post_id );
+
+		if ( ! $post instanceof WP_Post || ! in_array( $post->post_type, $allowed_types, true ) ) {
+			return null;
+		}
+
+		if ( 'page' === $post->post_type ) {
+			return rytkoset_theme_chat_get_public_page( $post_id );
+		}
+
+		if ( 'publish' !== get_post_status( $post ) || '' !== trim( (string) $post->post_password ) ) {
 			return null;
 		}
 
