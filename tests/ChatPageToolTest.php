@@ -346,6 +346,29 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
 	}
 
+	public function test_resolve_returns_public_event_content_with_event_label(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$event->post_content = '<p>Ohjelma alkaa klo 11.30 ja buffet tarjoillaan klo 13.</p>';
+
+		$result = rytkoset_theme_chat_resolve_page_tool_result( 20 );
+
+		$this->assertStringContainsString( 'Tapahtuma: Sukukokous Tampereella (https://rytkoset.test/?p=20)', $result );
+		$this->assertStringContainsString( 'buffet tarjoillaan klo 13', $result );
+	}
+
+	public function test_resolve_rejects_draft_and_password_protected_event(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Salainen tapahtuma' );
+		$event->post_content = '<p>Salainen ohjelma.</p>';
+		$event->post_status  = 'draft';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+
+		$event->post_status   = 'publish';
+		$event->post_password = 'salasana';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+	}
+
 	public function test_resolve_rejects_password_protected_page(): void {
 		$page                = rytkoset_test_register_post( 20, 'page', 'Suojattu' );
 		$page->post_content  = '<p>Suojattu sisältö.</p>';

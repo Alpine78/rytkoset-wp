@@ -2027,6 +2027,55 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 			}
 		}
 
+		// Sivu-id:t vain kun lue_sivu-työkalu on käytössä (#501) — muuten lohko pysyy entisellään.
+		$include_ids = rytkoset_theme_chat_page_tool_is_enabled();
+
+		/**
+		 * Suodattaa sivustokarttaan listattavien tapahtumien enimmäismäärän.
+		 *
+		 * @param int $max_events Tapahtumien enimmäismäärä.
+		 */
+		$max_events = max( 0, (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_events', 20 ) );
+
+		// Tapahtumat listataan ennen sivuja, koska lohkon merkkiraja katkaisee
+		// lopun: tapahtumia on vähän, ja niiden ohjelma-, aikataulu- ja
+		// tarjoilutiedot ovat vain tapahtuman omalla sivulla.
+		$event_ids = $max_events > 0
+			? (array) get_posts(
+				array(
+					'post_type'   => 'rytkoset_event',
+					'post_status' => 'publish',
+					'numberposts' => $max_events,
+					'fields'      => 'ids',
+					'orderby'     => 'date',
+					'order'       => 'DESC',
+				)
+			)
+			: array();
+
+		foreach ( $event_ids as $event_id ) {
+			$event = rytkoset_theme_chat_get_public_source_post( (int) $event_id, array( 'rytkoset_event' ) );
+
+			if ( ! $event instanceof WP_Post ) {
+				continue;
+			}
+
+			$title = trim( (string) get_the_title( $event->ID ) );
+			$url   = get_permalink( $event->ID );
+
+			if ( '' === $title || ! is_string( $url ) || '' === $url ) {
+				continue;
+			}
+
+			$line = '- ' . $title . ' (tapahtuma): ' . $url;
+
+			if ( $include_ids ) {
+				$line .= ' (sivu-id: ' . $event->ID . ')';
+			}
+
+			$lines[] = $line;
+		}
+
 		/**
 		 * Suodattaa sivustokarttaan listattavien sivujen enimmäismäärän.
 		 *
@@ -2046,9 +2095,6 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 		);
 
 		$page_count = 0;
-
-		// Sivu-id:t vain kun lue_sivu-työkalu on käytössä (#501) — muuten lohko pysyy entisellään.
-		$include_ids = rytkoset_theme_chat_page_tool_is_enabled();
 
 		foreach ( (array) $page_ids as $page_id ) {
 			if ( $page_count >= $max_pages ) {
@@ -2095,6 +2141,22 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 		$max_length = (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_length', 6000 );
 
 		return rytkoset_theme_chat_truncate( implode( "\n", $lines ), max( 1, $max_length ) );
+	}
+}
+
+/**
+ * Returns the post types the lue_sivu tool and the sitemap may expose.
+ *
+ * Event bodies carry the programme, schedule and catering details that no page
+ * duplicates, so they must be selectable and readable. Each type keeps its own
+ * access gate in rytkoset_theme_chat_get_public_source_post(): pages run the
+ * full members-only check, events must be published and passwordless.
+ *
+ * @return array<int,string>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_post_types' ) ) {
+	function rytkoset_theme_chat_get_page_tool_post_types() {
+		return array( 'page', 'rytkoset_event' );
 	}
 }
 
@@ -3030,7 +3092,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_error_text' ) ) {
  */
 if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
 	function rytkoset_theme_chat_resolve_page_tool_result( $page_id ) {
-		$post = rytkoset_theme_chat_get_public_page( $page_id );
+		$post = rytkoset_theme_chat_get_public_source_post( $page_id, rytkoset_theme_chat_get_page_tool_post_types() );
 
 		if ( ! $post instanceof WP_Post ) {
 			return rytkoset_theme_chat_get_page_tool_error_text();
@@ -3044,7 +3106,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
 
 		$title = trim( (string) get_the_title( $post->ID ) );
 		$url   = get_permalink( $post->ID );
-		$head  = 'Sivu: ' . $title . ( is_string( $url ) && '' !== $url ? ' (' . $url . ')' : '' );
+		$label = 'rytkoset_event' === $post->post_type ? 'Tapahtuma' : 'Sivu';
+		$head  = $label . ': ' . $title . ( is_string( $url ) && '' !== $url ? ' (' . $url . ')' : '' );
 
 		return rytkoset_theme_chat_truncate( $head . "\n\n" . $text, rytkoset_theme_chat_get_page_tool_max_length() );
 	}
@@ -3094,6 +3157,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
 		$prompt .= "- Älä täydennä puuttuvia kohtia yleisellä tiedolla, oletuksilla, vanhoilla verkkosivumalleilla tai WordPressin tavanomaisella toiminnalla.\n";
 		$prompt .= "- Älä keksi tietoa. Jos et tiedä vastausta, et löydä sitä lähteistä tai kysymys ei liity yhdistykseen, kerro se rehellisesti.\n";
+		$prompt .= "- Arvioi jokainen kysymys itsenäisesti annettujen lähteiden perusteella. Älä kopioi aiemman vastauksen kieltäytymismuotoilua uuteen kysymykseen: aiempi kieltäytyminen ei kerro mitään uuden kysymyksen vastauksesta.\n";
+		$prompt .= "- Älä sano samassa vastauksessa sekä ettet löytänyt tietoa että mitä lähde asiasta kertoo. Jos löydät vastauksen lähteestä, vastaa suoraan ilman kieltäytymisaloitusta.\n";
 		$prompt .= "- Älä koskaan esitä vuosilukua, päivämäärää, hintaa tai lukumäärää, jota ei ole annetuissa lähteissä — älä myöskään arvaa tai päättele sellaista. Jos tarkkaa lukua ei löydy lähteistä, kerro ettet tiedä sitä.\n";
 		$prompt .= "- Älä arvaa tulevia suunnitelmia, henkilöitä, julkaisujen saatavuutta, tuotteiden ostettavuutta, käyttöoikeuksia tai yksittäisen tilauksen tilaa.\n";
 		$prompt .= "- Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa, toista vain lähteessä annetut nimet ja roolit. Älä täydennä listaa oletetuilla nimillä.\n";
@@ -3122,7 +3187,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
 		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos käyttäjä jatkaa aiempaa henkilöä koskevaa kysymystä pronominilla tai muulla viittauksella, käytä aiemman kysymyksen nimeä saman sivun valintaan ja lue sivu uudelleen tarvittaessa. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos käyttäjä jatkaa aiempaa henkilöä koskevaa kysymystä pronominilla tai muulla viittauksella, käytä aiemman kysymyksen nimeä saman sivun valintaan ja lue sivu uudelleen tarvittaessa. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä. Sivustokartassa on myös tapahtumasivut (merkintä \"(tapahtuma)\"), ja ne luetaan samalla työkalulla. Tapahtuman ohjelma, aikataulu, tarjoilut ja käytännön ohjeet ovat vain tapahtuman omalla sivulla, joten lue se työkalulla ennen kuin vastaat, ettet tiedä tapahtuman sisältöä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).
