@@ -54,6 +54,34 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringNotContainsString( 'Suojattu tapahtuma', $sitemap );
 	}
 
+	public function test_sitemap_lists_published_albums_after_pages_with_ids(): void {
+		rytkoset_test_register_post( 20, 'page', 'Jäsenyys' );
+		rytkoset_test_register_post( 40, 'gallery_album', '60-vuotissukujuhla Iisalmessa' );
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		$this->assertStringContainsString(
+			'- 60-vuotissukujuhla Iisalmessa (albumi): https://rytkoset.test/?p=40 (sivu-id: 40)',
+			$sitemap
+		);
+
+		// Sivut ovat ydintietoa, joten merkkirajan katkaisu osuu albumeihin.
+		$this->assertGreaterThan( strpos( $sitemap, '- Jäsenyys:' ), strpos( $sitemap, '(albumi)' ) );
+	}
+
+	public function test_sitemap_omits_draft_and_password_protected_albums(): void {
+		$draft              = rytkoset_test_register_post( 40, 'gallery_album', 'Luonnosalbumi' );
+		$draft->post_status = 'draft';
+
+		$protected                = rytkoset_test_register_post( 41, 'gallery_album', 'Suojattu albumi' );
+		$protected->post_password = 'salasana';
+
+		$sitemap = rytkoset_theme_chat_get_sitemap_context();
+
+		$this->assertStringNotContainsString( 'Luonnosalbumi', $sitemap );
+		$this->assertStringNotContainsString( 'Suojattu albumi', $sitemap );
+	}
+
 	public function test_sitemap_includes_public_page_hints_for_tool_selection(): void {
 		$page               = rytkoset_test_register_post( 21, 'page', 'Sukututkimus' );
 		$page->post_content = '<h2>Nimen alkuperä ja suvun levinneisyys</h2><p>Rytkönen-nimen on esitetty palautuvan vanhaan germaaniseen nimeen Hrodgaer, jonka muotoja ovat Rutger, Rötger ja Rodhger.</p><h2>Sukututkimuksen julkaisuja</h2><p>Laajimmat tiedot kokosi diplomi-insinööri Arvo Korpela. Työ pohjautui rovasti Taavi Kilven selvitykseen. Julkaisun yhteydessä mainitaan monia paikkoja ja tutkimuksia ennen pastori Teuvo Rönkön selvitystä. Sukukirjan toimitti Antero Rytkönen työryhmineen. Pitkäaikaisella puheenjohtajalla Marja-Liisa Patrikaisella oli merkittävä rooli.</p>';

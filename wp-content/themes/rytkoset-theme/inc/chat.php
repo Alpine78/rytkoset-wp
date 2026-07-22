@@ -871,8 +871,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		if ( $tool_enabled && '' === $prefetched_source && rytkoset_theme_chat_is_named_source_query( $messages ) ) {
 			rytkoset_theme_chat_record_message_sent_stat();
 
+			// The visitor gets the site's own search for the name terms we could
+			// not verify, so a dead end still has one concrete next step.
+			$search_phrase = implode(
+				' ',
+				rytkoset_theme_chat_get_named_search_terms( rytkoset_theme_chat_get_latest_user_message( $messages ) )
+			);
+
 			return new WP_REST_Response(
-				rytkoset_theme_chat_build_response_body( rytkoset_theme_chat_get_named_source_fallback_reply() ),
+				rytkoset_theme_chat_build_response_body( rytkoset_theme_chat_get_named_source_fallback_reply( $search_phrase ) ),
 				200
 			);
 		}
@@ -2129,6 +2136,52 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
 			++$page_count;
 		}
 
+		/**
+		 * Suodattaa sivustokarttaan listattavien albumien enimmäismäärän.
+		 *
+		 * @param int $max_albums Albumien enimmäismäärä.
+		 */
+		$max_albums = max( 0, (int) apply_filters( 'rytkoset_theme_chat_sitemap_max_albums', 15 ) );
+
+		// Albumit viimeisenä: sivut ovat ydintietoa, eikä merkkirajan katkaisu saa
+		// syödä niitä. Jos albumirivit katkeavat, palvelimen lähde-esihaku löytää
+		// albumin silti — se ei käytä sivustokarttaa.
+		$album_ids = $max_albums > 0
+			? (array) get_posts(
+				array(
+					'post_type'   => 'gallery_album',
+					'post_status' => 'publish',
+					'numberposts' => $max_albums,
+					'fields'      => 'ids',
+					'orderby'     => 'date',
+					'order'       => 'DESC',
+				)
+			)
+			: array();
+
+		foreach ( $album_ids as $album_id ) {
+			$album = rytkoset_theme_chat_get_public_source_post( (int) $album_id, array( 'gallery_album' ) );
+
+			if ( ! $album instanceof WP_Post ) {
+				continue;
+			}
+
+			$title = trim( (string) get_the_title( $album->ID ) );
+			$url   = get_permalink( $album->ID );
+
+			if ( '' === $title || ! is_string( $url ) || '' === $url ) {
+				continue;
+			}
+
+			$line = '- ' . $title . ' (albumi): ' . $url;
+
+			if ( $include_ids ) {
+				$line .= ' (sivu-id: ' . $album->ID . ')';
+			}
+
+			$lines[] = $line;
+		}
+
 		if ( empty( $lines ) ) {
 			return '';
 		}
@@ -2156,7 +2209,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_page_tool_post_types' ) ) {
 	function rytkoset_theme_chat_get_page_tool_post_types() {
-		return array( 'page', 'rytkoset_event' );
+		return array( 'page', 'rytkoset_event', 'gallery_album' );
 	}
 }
 
@@ -2409,13 +2462,45 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_named_source_query' ) ) {
 }
 
 /**
+ * Builds the site's own search URL for a search phrase.
+ *
+ * WordPress search reaches content the chat cannot read as a source, so it is a
+ * useful last step for the visitor. An empty phrase returns an empty string so
+ * no useless bare search link is ever offered.
+ *
+ * @param string $phrase Search phrase.
+ * @return string Search URL, or an empty string.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_site_search_url' ) ) {
+	function rytkoset_theme_chat_get_site_search_url( $phrase ) {
+		$phrase = trim( (string) $phrase );
+
+		if ( '' === $phrase ) {
+			return '';
+		}
+
+		$home = rtrim( (string) home_url(), '/' );
+
+		return $home . '/?s=' . rawurlencode( $phrase );
+	}
+}
+
+/**
  * Returns a safe deterministic answer when no named public source was verified.
  *
+ * @param string $search_phrase Optional phrase for a site-search suggestion.
  * @return string
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_named_source_fallback_reply' ) ) {
-	function rytkoset_theme_chat_get_named_source_fallback_reply() {
-		return 'En löytänyt tähän varmennettua vastausta chatin käytettävissä olevista Rytkösten sukuseuran julkaistuista julkisista lähteistä. Voin auttaa Rytkösten sukuseuraan liittyvissä kysymyksissä.';
+	function rytkoset_theme_chat_get_named_source_fallback_reply( $search_phrase = '' ) {
+		$reply      = 'En löytänyt tähän varmennettua vastausta chatin käytettävissä olevista Rytkösten sukuseuran julkaistuista julkisista lähteistä. Voin auttaa Rytkösten sukuseuraan liittyvissä kysymyksissä.';
+		$search_url = rytkoset_theme_chat_get_site_search_url( $search_phrase );
+
+		if ( '' !== $search_url ) {
+			$reply .= "\n\nVoit myös kokeilla sivuston omaa hakua: " . $search_url;
+		}
+
+		return $reply;
 	}
 }
 
@@ -2544,6 +2629,28 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_matching_page_excerpt' ) ) {
 }
 
 /**
+ * Checks whether a source set is usable, i.e. unambiguous enough to send.
+ *
+ * Person and publication questions require exactly one source. A meeting may
+ * legitimately have both an event page and its directly related transport page.
+ *
+ * @param int  $count         Number of candidate sources.
+ * @param bool $meeting_query Whether the question is a meeting question.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) ) {
+	function rytkoset_theme_chat_prefetch_candidates_are_usable( $count, $meeting_query ) {
+		$count = (int) $count;
+
+		if ( 1 > $count ) {
+			return false;
+		}
+
+		return $meeting_query ? 3 > $count : 1 === $count;
+	}
+}
+
+/**
  * Builds a bounded, access-checked source context for named fact questions.
  *
  * This avoids a fragile forced function-call round when WordPress can resolve
@@ -2603,74 +2710,91 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		}
 
 		if ( empty( $candidates ) && ! empty( $search_terms ) ) {
-			$max_pages    = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
-			$source_types = $meeting_query ? array( 'rytkoset_event', 'page' ) : array( 'page' );
-			$page_ids     = array();
+			$max_pages = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
 
-			foreach ( $source_types as $source_type ) {
-				$page_ids = array_merge(
-					$page_ids,
-					(array) get_posts(
-						array(
-							'post_type'   => $source_type,
-							'post_status' => 'publish',
-							'numberposts' => $max_pages,
-							'fields'      => 'ids',
-							'orderby'     => 'menu_order title',
-							'order'       => 'ASC',
+			// Pages (and events for a meeting) stay authoritative and are searched
+			// first; albums are only searched when that found nothing. An album
+			// mention must never make an already-resolvable page question
+			// ambiguous, and each tier gets the full budget of its own.
+			$source_tiers = $meeting_query
+				? array( array( 'rytkoset_event', 'page' ), array( 'gallery_album' ) )
+				: array( array( 'page' ), array( 'gallery_album' ) );
+
+			foreach ( $source_tiers as $source_types ) {
+				$page_ids = array();
+
+				foreach ( $source_types as $source_type ) {
+					$page_ids = array_merge(
+						$page_ids,
+						(array) get_posts(
+							array(
+								'post_type'   => $source_type,
+								'post_status' => 'publish',
+								'numberposts' => $max_pages,
+								'fields'      => 'ids',
+								'orderby'     => 'menu_order title',
+								'order'       => 'ASC',
+							)
 						)
-					)
-				);
-			}
-
-			$page_ids   = array_slice( array_values( array_unique( array_map( 'intval', $page_ids ) ) ), 0, $max_pages );
-			$best_score = 0;
-
-			foreach ( (array) $page_ids as $page_id ) {
-				$page = rytkoset_theme_chat_get_public_source_post( (int) $page_id, $source_types );
-
-				if ( ! $page instanceof WP_Post ) {
-					continue;
+					);
 				}
 
-				$text  = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
-				$score = 0;
+				$page_ids   = array_slice( array_values( array_unique( array_map( 'intval', $page_ids ) ) ), 0, $max_pages );
+				$best_score = 0;
 
-				if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms ) ) {
-					continue;
-				}
+				foreach ( (array) $page_ids as $page_id ) {
+					$page = rytkoset_theme_chat_get_public_source_post( (int) $page_id, $source_types );
 
-				foreach ( $search_terms as $term ) {
-					$matches = $meeting_query
-						? rytkoset_theme_chat_text_contains_term_stem( $text, $term )
-						: rytkoset_theme_chat_text_contains_term( $text, $term );
-
-					if ( $matches ) {
-						++$score;
+					if ( ! $page instanceof WP_Post ) {
+						continue;
 					}
+
+					$text  = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
+					$score = 0;
+
+					if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms ) ) {
+						continue;
+					}
+
+					foreach ( $search_terms as $term ) {
+						$matches = $meeting_query
+							? rytkoset_theme_chat_text_contains_term_stem( $text, $term )
+							: rytkoset_theme_chat_text_contains_term( $text, $term );
+
+						if ( $matches ) {
+							++$score;
+						}
+					}
+
+					if ( 0 === $score || $score < $best_score ) {
+						continue;
+					}
+
+					if ( $score > $best_score ) {
+						$candidates = array();
+						$best_score = $score;
+					}
+
+					$candidates[] = array(
+						'post' => $page,
+						'text' => $text,
+					);
 				}
 
-				if ( 0 === $score || $score < $best_score ) {
-					continue;
+				if ( rytkoset_theme_chat_prefetch_candidates_are_usable( count( $candidates ), $meeting_query ) ) {
+					break;
 				}
 
-				if ( $score > $best_score ) {
-					$candidates = array();
-					$best_score = $score;
-				}
-
-				$candidates[] = array(
-					'post' => $page,
-					'text' => $text,
-				);
+				// An ambiguous tier is noise, not an answer: a surname alone
+				// matches many pages. Drop it and let the next tier try, so a
+				// name that only a single album verifies is still found.
+				$candidates = array();
 			}
 		}
 
-		// Person and publication questions require one unambiguous page. A meeting
-		// may have both an event page and its directly related transport page.
 		$candidate_count = count( $candidates );
 
-		if ( 1 > $candidate_count || ( ! $meeting_query && 1 !== $candidate_count ) || ( $meeting_query && 2 < $candidate_count ) ) {
+		if ( ! rytkoset_theme_chat_prefetch_candidates_are_usable( $candidate_count, $meeting_query ) ) {
 			return '';
 		}
 
@@ -2979,9 +3103,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_public_page' ) ) {
 /**
  * Resolves an allowed public source post for the server-side source prefetch.
  *
- * Pages reuse the full members-only gate. Events have no members-only feature,
- * but must still be published and passwordless before their raw content is sent
- * to the model.
+ * Pages reuse the full members-only gate. Events and gallery albums have no
+ * members-only feature, but must still be published and passwordless before
+ * their raw content is sent to the model.
  *
  * @param int               $post_id       Post ID.
  * @param array<int,string> $allowed_types Allowed public post types.
@@ -2990,7 +3114,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_public_page' ) ) {
 if ( ! function_exists( 'rytkoset_theme_chat_get_public_source_post' ) ) {
 	function rytkoset_theme_chat_get_public_source_post( $post_id, $allowed_types ) {
 		$post_id       = (int) $post_id;
-		$allowed_types = array_values( array_intersect( array( 'page', 'rytkoset_event' ), (array) $allowed_types ) );
+		$allowed_types = array_values( array_intersect( array( 'page', 'rytkoset_event', 'gallery_album' ), (array) $allowed_types ) );
 
 		if ( $post_id < 1 || empty( $allowed_types ) ) {
 			return null;
@@ -3157,6 +3281,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Käytä faktoihin vain tässä system-promptissa annettuja lähteitä: ajantasainen sivustolta koottu tieto, pysyvä sivustokonteksti ja ylläpitäjän tietopohja.\n";
 		$prompt .= "- Älä täydennä puuttuvia kohtia yleisellä tiedolla, oletuksilla, vanhoilla verkkosivumalleilla tai WordPressin tavanomaisella toiminnalla.\n";
 		$prompt .= "- Älä keksi tietoa. Jos et tiedä vastausta, et löydä sitä lähteistä tai kysymys ei liity yhdistykseen, kerro se rehellisesti.\n";
+		$prompt .= "- Jos et löydä vastausta lähteistä etkä sivun lukutyökalulla, voit lopuksi ehdottaa sivuston omaa hakua osoitteessa {$home_url}/?s=hakusana ja korvata hakusanan käyttäjän aiheella. Älä käytä hakuehdotusta silloin, kun vastaus löytyy lähteistä, äläkä sen sijaan että lukisit sopivan sivun työkalulla.\n";
 		$prompt .= "- Arvioi jokainen kysymys itsenäisesti annettujen lähteiden perusteella. Älä kopioi aiemman vastauksen kieltäytymismuotoilua uuteen kysymykseen: aiempi kieltäytyminen ei kerro mitään uuden kysymyksen vastauksesta.\n";
 		$prompt .= "- Älä sano samassa vastauksessa sekä ettet löytänyt tietoa että mitä lähde asiasta kertoo. Jos löydät vastauksen lähteestä, vastaa suoraan ilman kieltäytymisaloitusta.\n";
 		$prompt .= "- Älä koskaan esitä vuosilukua, päivämäärää, hintaa tai lukumäärää, jota ei ole annetuissa lähteissä — älä myöskään arvaa tai päättele sellaista. Jos tarkkaa lukua ei löydy lähteistä, kerro ettet tiedä sitä.\n";
@@ -3187,7 +3312,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		// työkalun kokonaan käyttämättä (17 viestiä, 0 työkalukutsua) ja jopa
 		// väittämään, ettei sivulla näkyvää nimeä mainita sivustolla.
 		if ( rytkoset_theme_chat_page_tool_is_enabled() ) {
-			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos käyttäjä jatkaa aiempaa henkilöä koskevaa kysymystä pronominilla tai muulla viittauksella, käytä aiemman kysymyksen nimeä saman sivun valintaan ja lue sivu uudelleen tarvittaessa. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä. Sivustokartassa on myös tapahtumasivut (merkintä \"(tapahtuma)\"), ja ne luetaan samalla työkalulla. Tapahtuman ohjelma, aikataulu, tarjoilut ja käytännön ohjeet ovat vain tapahtuman omalla sivulla, joten lue se työkalulla ennen kuin vastaat, ettet tiedä tapahtuman sisältöä.";
+			$prompt .= "\n\nSivun lukutyökalu: käytössäsi on lue_sivu-työkalu, joka palauttaa sivustokartassa listatun sivun tekstisisällön (anna parametriksi sivustokartan \"(sivu-id: N)\" -merkinnän numero). Sivustokartan aiheita-kohdat ovat vain hakuvihjeitä oikean sivun valintaan; älä vastaa faktakysymykseen niiden perusteella vaan lue sivu työkalulla. Työkalulla haettu sivusisältö on sallittu lähde siinä missä muutkin tämän promptin lähteet. Kun kysymys koskee sukuseuraa tai sivuston sisältöä eikä vastaus ole jo annetuissa lähteissä, kutsu ensin lue_sivu-työkalua otsikoltaan tai aiheiltaan sopivimmalle sivustokartan sivulle ennen kuin vastaat, ettet tiedä — työkalun kokeileminen ei ole kiellettyä arvaamista, vaan oikea tapa välttää arvaus. Jos käyttäjä jatkaa aiempaa henkilöä koskevaa kysymystä pronominilla tai muulla viittauksella, käytä aiemman kysymyksen nimeä saman sivun valintaan ja lue sivu uudelleen tarvittaessa. Jos ensimmäiseltä tarkistamaltasi sivulta ei löydy vastausta, kokeile vielä toista aiheeseen sopivaa sivustokartan sivua ennen kuin toteat, ettet tiedä — yksi tarkistettu sivu ei riitä osoittamaan, ettei tietoa ole sivustolla. Älä kuitenkaan käytä työkalua, kun vastaus on jo annetuissa lähteissä. Älä koskaan väitä, ettei jotakin asiaa, nimeä tai tietoa mainita koko sivustolla, ellet ole tarkistanut useampaa aiheeseen sopivaa sivua työkalulla. Jos vastausta ei löydy työkalullakaan, kerro rehellisesti ettet tiedä. Sivustokartassa on myös tapahtumasivut (merkintä \"(tapahtuma)\") ja albumisivut (merkintä \"(albumi)\"), ja ne luetaan samalla työkalulla. Tapahtuman ohjelma, aikataulu, tarjoilut ja käytännön ohjeet ovat vain tapahtuman omalla sivulla, joten lue se työkalulla ennen kuin vastaat, ettet tiedä tapahtuman sisältöä. Albumin kuvausteksti kertoo, mitä tilaisuudessa tapahtui ja ketkä siellä esiintyivät, joten lue albumi työkalulla, kun kysymys koskee menneen tilaisuuden ohjelmaa, ajankohtaa tai siellä mainittuja henkilöitä. Albumien videoista tiedät vain, että albumilla voi olla videoita — videoiden sisältöä tai otsikoita ei ole missään lähteessä, joten älä kuvaile niitä.";
 		}
 
 		// Ylläpitäjän Customizeriin syöttämä tietopohja (#414).

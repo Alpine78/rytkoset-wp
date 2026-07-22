@@ -369,6 +369,29 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
 	}
 
+	public function test_resolve_returns_public_album_content(): void {
+		$album               = rytkoset_test_register_post( 20, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$album->post_content = '<p>Juhlaohjelmassa oli The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
+
+		$result = rytkoset_theme_chat_resolve_page_tool_result( 20 );
+
+		$this->assertStringContainsString( 'Sanna Björkman', $result );
+		$this->assertStringContainsString( 'https://rytkoset.test/?p=20', $result );
+	}
+
+	public function test_resolve_rejects_draft_and_password_protected_album(): void {
+		$album               = rytkoset_test_register_post( 20, 'gallery_album', 'Salainen albumi' );
+		$album->post_content = '<p>Salainen kuvaus.</p>';
+		$album->post_status  = 'draft';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+
+		$album->post_status   = 'publish';
+		$album->post_password = 'salasana';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+	}
+
 	public function test_resolve_rejects_password_protected_page(): void {
 		$page                = rytkoset_test_register_post( 20, 'page', 'Suojattu' );
 		$page->post_content  = '<p>Suojattu sisältö.</p>';
@@ -735,6 +758,99 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'Teuvo Rönkkö Kuopiosta', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_person_found_only_in_album_prefetches_the_album(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$page->post_content = '<p>Sukukirjan toimitti Antero Rytkönen työryhmineen.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa' );
+		$album->post_content = '<p>Ohjelmassa oli The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kuka on Sanna Björkman?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Sanna Björkman', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_page_source_wins_over_album_mentioning_the_same_person(): void {
+		// Albumit ovat vain varapolku: sivulta löytyvä henkilö ei saa muuttua
+		// moniselitteiseksi siksi, että sama nimi mainitaan albumin kuvauksessa.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$page->post_content = '<p>Pitkäaikaisella puheenjohtajalla Marja-Liisa Patrikaisella oli merkittävä rooli.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Ohjelmassa oli Marja-Liisa Patrikaisen Rytköshistoriikki.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kerro Marja-Liisa Patrikaisesta.',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_ambiguous_page_tier_falls_through_to_a_verifying_album(): void {
+		// Pelkkä sukunimi osuu moneen sivuun. Se on kohinaa, ei vastaus, joten
+		// haun on jatkuttava albumeihin, jotka varmentavat koko nimen.
+		$first               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$first->post_content = '<p>Esa Rytkönen toimi puheenjohtajana.</p>';
+
+		$second               = rytkoset_test_register_post( 71, 'page', 'Sukututkimus' );
+		$second->post_content = '<p>Antero Rytkönen toimitti sukukirjan.</p>';
+
+		$album               = rytkoset_test_register_post( 72, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Musisoinnista vastasi Pasi Rytkönen.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kuka on Pasi Rytkönen?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=72', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_prefetch_candidate_counts_stay_unambiguous_per_query_type(): void {
+		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 0, false ) );
+		$this->assertTrue( rytkoset_theme_chat_prefetch_candidates_are_usable( 1, false ) );
+		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 2, false ) );
+
+		// Sukukokouksella voi olla tapahtuma- ja kuljetussivu.
+		$this->assertTrue( rytkoset_theme_chat_prefetch_candidates_are_usable( 2, true ) );
+		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 3, true ) );
+	}
+
+	public function test_named_source_fallback_offers_site_search_for_the_named_terms(): void {
+		$this->assertSame(
+			'https://rytkoset.test/?s=Sanna%20Bj%C3%B6rkman',
+			rytkoset_theme_chat_get_site_search_url( 'Sanna Björkman' )
+		);
+		$this->assertSame( '', rytkoset_theme_chat_get_site_search_url( '   ' ) );
+
+		$reply = rytkoset_theme_chat_get_named_source_fallback_reply( 'Sanna Björkman' );
+
+		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', $reply );
+		$this->assertStringContainsString( 'https://rytkoset.test/?s=Sanna%20Bj%C3%B6rkman', $reply );
+
+		// Ilman hakusanaa vastaus pysyy entisellään ilman tyhjää hakulinkkiä.
+		$this->assertStringNotContainsString( '?s=', rytkoset_theme_chat_get_named_source_fallback_reply() );
 	}
 
 	public function test_publication_title_terms_prefetch_one_public_page(): void {

@@ -186,6 +186,8 @@ Sukututkimusta varten ylläpidetään erillistä sukututkimusrekisteriä. Sen re
 
 Sivustolla on tekoälyavusteinen tukichatti, joka vastaa sukuseuraa ja sivuston käyttöä koskeviin kysymyksiin. Chattiin kirjoittamasi viestit lähetetään käsiteltäviksi palveluntarjoajalle Mistral AI SAS (Ranska), joka tuottaa vastaukset tekoälymallilla. Käsittely tapahtuu Euroopan unionin alueella.
 
+Viestisi lisäksi Mistral AI:lle välitetään vastauksen pohjaksi sivuston omaa **julkaistua ja julkista sisältöä**: sivujen, tapahtumien ja kuva-albumien tekstejä sekä sivuston perustietoja, kuten sukuseuran hallituksen kokoonpano. Nämä tiedot ovat jo julkisesti luettavissa sivustolla. Vain jäsenille rajattua, salasanalla suojattua tai julkaisematonta sisältöä ei koskaan välitetä.
+
 Sivusto ei tallenna chat-keskusteluja: keskustelu säilyy vain selaimesi muistissa istunnon ajan ja katoaa, kun suljet sivun. Chatti ei käytä evästeitä. Väärinkäytön ja kulujen hallitsemiseksi sivusto käsittelee kävijän IP-osoitetta lyhytaikaisesti viestimäärän rajoittamiseksi; IP-osoitetta ei yhdistetä keskustelujen sisältöön eikä luovuteta Mistral AI:lle.
 
 Sivuston ylläpitäjä näkee wp-adminissa ainoastaan koontitietoa chatin käytöstä: lähetettyjen viestien ja rate limit -osumien kokonaismäärät ja viimeisimmät ajankohdat sekä mahdollisen viimeisimmän tekoälypalvelun virheen ajankohdan ja tyypin. Näissä luvuissa ei ole mukana yksittäisiä keskusteluja, IP-osoitteita eikä viestien sisältöä, eivätkä ne siten ole henkilötietoa.
