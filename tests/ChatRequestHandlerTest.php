@@ -78,6 +78,20 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_named_query_without_public_source_returns_safe_reply_without_mistral(): void {
+		$this->configure_chat_backend();
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Kuka on Ruotsin presidentti?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'chatin käytettävissä olevista', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( 'presidentti on', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_forced_plain_text_response_returns_safe_502(): void {
 		$this->configure_chat_backend();
 		$this->queue_mistral_response(
@@ -91,7 +105,7 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 			)
 		);
 
-		$result = rytkoset_theme_chat_handle_request( $this->request( 'Kuka on Teuvo Rönkkö?' ) );
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Mikä on hänen ammattinsa?' ) );
 
 		$this->assert_safe_upstream_error( $result, 'Mallin varmentamaton vastaus.' );
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
@@ -125,7 +139,7 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 			)
 		);
 
-		$result = rytkoset_theme_chat_handle_request( $this->request( 'Kuka on Teuvo Rönkkö?' ) );
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Mikä on hänen ammattinsa?' ) );
 
 		$this->assert_safe_upstream_error( $result, 'call-invalid' );
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );

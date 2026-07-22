@@ -568,6 +568,28 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 				)
 			)
 		);
+
+		$this->assertFalse(
+			rytkoset_theme_chat_should_force_page_tool(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Onko Tampereen tapahtumassa ruokaa?',
+					),
+				)
+			)
+		);
+
+		$this->assertFalse(
+			rytkoset_theme_chat_should_force_page_tool(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Kuka voi liittyä jäseneksi?',
+					),
+				)
+			)
+		);
 	}
 
 	// --- server-resolved public source ---------------------------------------
@@ -607,6 +629,77 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'Teuvo Rönkkö Kuopiosta', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_publication_title_terms_prefetch_one_public_page(): void {
+		$general               = rytkoset_test_register_post( 69, 'page', 'Sukuseura' );
+		$general->post_content = '<p>Rytkösiä on julkaistu monissa teoksissa.</p>';
+		$research               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$research->post_content = '<p>Sukukirja Rytkösiä sukupolvesta toiseen ilmestyi vuonna 2006 ja on loppuunmyyty.</p>';
+
+		foreach ( array( 'Voinko ostaa kirjan Rytkösiä sukupolvesta toiseen?', 'Kuka toimitti kirjan Rytkösiä sukupolvesta toiseen?' ) as $query ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $query,
+					),
+				)
+			);
+
+			$this->assertStringContainsString( 'on loppuunmyyty', $context, $query );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context, $query );
+			$this->assertStringNotContainsString( 'https://rytkoset.test/?p=69', $context, $query );
+		}
+	}
+
+	public function test_meeting_prefetch_requires_place_and_topic_in_same_line(): void {
+		$unrelated               = rytkoset_test_register_post( 69, 'page', 'Hallituksen tiedot' );
+		$unrelated->post_content = '<p>Antti, Tampere</p><p>Seuraava sukukokous päätetään myöhemmin.</p>';
+
+		$main               = rytkoset_test_register_post( 70, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$main->post_content = '<p>Rytkösten sukukokous Tampereella pidetään 29.8.2026.</p>';
+		$transport               = rytkoset_test_register_post( 71, 'rytkoset_event', 'Yhteiskuljetus Tampereen sukukokoukseen' );
+		$transport->post_content = '<p>Kuljetus palvelee Tampereen sukukokousta.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Milloin Tampereen sukukokous pidettiin?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=69', $context );
+	}
+
+	public function test_meeting_without_same_line_source_uses_named_fallback_path(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Hallituksen tiedot' );
+		$page->post_content = '<p>Mauri, Helsinki</p><p>Sukukokous pidetään joka kolmas vuosi.</p>';
+		$messages           = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Milloin Helsingin sukukokous pidetään?',
+			),
+		);
+
+		$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ) );
+		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
+		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', rytkoset_theme_chat_get_named_source_fallback_reply() );
+	}
+
+	public function test_public_source_post_rejects_restricted_event(): void {
+		$event                = rytkoset_test_register_post( 70, 'rytkoset_event', 'Salainen tapahtuma' );
+		$event->post_password = 'salasana';
+
+		$this->assertNull( rytkoset_theme_chat_get_public_source_post( 70, array( 'page', 'rytkoset_event' ) ) );
+
+		$event->post_password = '';
+		$event->post_status   = 'draft';
+		$this->assertNull( rytkoset_theme_chat_get_public_source_post( 70, array( 'page', 'rytkoset_event' ) ) );
 	}
 
 	public function test_ambiguous_or_restricted_person_source_does_not_bypass_tool_path(): void {
