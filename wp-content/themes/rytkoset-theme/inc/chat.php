@@ -2363,21 +2363,18 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_latest_user_message' ) ) {
 }
 
 /**
- * Extracts proper-name terms from a named fact question.
+ * Returns question/command words that must never be treated as a proper name.
  *
- * @param string $message Latest user message.
- * @return array<int,string> Search terms in question order.
+ * Sentence-initial question, command and generic photo words are capitalized
+ * like proper names. None of these collide with a Finnish personal or place
+ * name, so ignoring them cannot drop a real search term. Shared by the
+ * capitalized and lowercase name-term extractors so the list stays in sync.
+ *
+ * @return array<int,string> Lowercase ignore words.
  */
-if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
-	function rytkoset_theme_chat_get_named_search_terms( $message ) {
-		if ( ! preg_match_all( '/\b[A-ZÅÄÖ][\p{Ll}]{2,}(?:-[A-ZÅÄÖ][\p{Ll}]{2,})?\b/u', (string) $message, $matches ) ) {
-			return array();
-		}
-
-		// Sentence-initial question, command and generic photo words are
-		// capitalized like proper names. None of these collide with a Finnish
-		// personal or place name, so ignoring them cannot drop a real search term.
-		$ignored = array(
+if ( ! function_exists( 'rytkoset_theme_chat_get_named_term_ignore_list' ) ) {
+	function rytkoset_theme_chat_get_named_term_ignore_list() {
+		return array(
 			'albumi',
 			'albumia',
 			'albumissa',
@@ -2418,10 +2415,89 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			'valokuva',
 			'valokuvia',
 		);
+	}
+}
+
+/**
+ * Extracts proper-name terms from a named fact question.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string> Search terms in question order.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
+	function rytkoset_theme_chat_get_named_search_terms( $message ) {
+		if ( ! preg_match_all( '/\b[A-ZÅÄÖ][\p{Ll}]{2,}(?:-[A-ZÅÄÖ][\p{Ll}]{2,})?\b/u', (string) $message, $matches ) ) {
+			return array();
+		}
+
+		$ignored = rytkoset_theme_chat_get_named_term_ignore_list();
 		$terms   = array();
 
 		foreach ( $matches[0] as $term ) {
 			if ( in_array( mb_strtolower( $term ), $ignored, true ) ) {
+				continue;
+			}
+
+			$terms[] = $term;
+		}
+
+		return array_slice( array_values( array_unique( $terms ) ), 0, 4 );
+	}
+}
+
+/**
+ * Extracts a lowercase place-name candidate for a meeting question when the
+ * ordinary capitalized extraction found nothing.
+ *
+ * Many visitors write questions entirely in lowercase, so requiring a capital
+ * letter (rytkoset_theme_chat_get_named_search_terms()) drops a real place
+ * name such as "runnilla" and sends the question down the unverified general
+ * answer path instead of the verified meeting-source prefetch. This narrow
+ * fallback only runs for meeting questions whose ordinary extraction is
+ * empty, so it cannot affect person, publication or photo questions. Its
+ * candidates still have to pass through the existing case-insensitive
+ * same-line stem match and unambiguous-candidate requirement in
+ * rytkoset_theme_chat_get_prefetched_public_source() — this only widens which
+ * words may enter that verification, it does not weaken it.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string> Lowercase place-term candidates.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_lowercase_meeting_place_terms' ) ) {
+	function rytkoset_theme_chat_get_lowercase_meeting_place_terms( $message ) {
+		if ( ! preg_match_all( '/\b\p{Ll}{4,}\b/u', (string) $message, $matches ) ) {
+			return array();
+		}
+
+		// The meeting-topic stem and the history/scheduling verbs are always
+		// present in a message reaching this fallback (it only runs for meeting
+		// questions), so they are excluded here to avoid noise — neither is
+		// ever a place name.
+		$ignored = array_merge(
+			rytkoset_theme_chat_get_named_term_ignore_list(),
+			array(
+				'ollut',
+				'oli',
+				'olivat',
+				'ovat',
+				'pidetty',
+				'pidettiin',
+				'pidetään',
+				'pidetäänkö',
+				'sukukokous',
+				'sukukokousta',
+				'sukukokouksia',
+				'sukukokoukset',
+				'sukujuhla',
+				'sukujuhlaa',
+				'sukujuhlia',
+				'sukujuhlat',
+			)
+		);
+		$terms   = array();
+
+		foreach ( $matches[0] as $term ) {
+			if ( in_array( $term, $ignored, true ) ) {
 				continue;
 			}
 
@@ -2525,6 +2601,47 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_meeting_query' ) ) {
 }
 
 /**
+ * Checks whether a text line describes the association's founding meeting.
+ *
+ * The founding meeting (18.8.1963, Runni) was a genuine sukukokous, but the
+ * source text calls it "perustava kokous" and never uses the words
+ * "sukukokous" or "sukujuhla" — so it does not match
+ * rytkoset_theme_chat_is_meeting_query() on its own. This narrow, separate
+ * check lets a history-phrased question (see
+ * rytkoset_theme_chat_is_meeting_history_query()) use it as a source line,
+ * without loosening the general meeting-topic match to any bare "kokous"
+ * mention, which would risk matching unrelated meetings such as a board
+ * meeting.
+ *
+ * @param string $line Plain source text line.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_line_is_founding_meeting' ) ) {
+	function rytkoset_theme_chat_line_is_founding_meeting( $line ) {
+		return (bool) preg_match( '/\bperustav[\p{L}]*\s+kokou[\p{L}]*\b/ui', (string) $line );
+	}
+}
+
+/**
+ * Checks whether a meeting question asks about the past rather than the next
+ * or currently scheduled occurrence.
+ *
+ * "Onko Runnilla ollut sukukokousta?" and "Milloin ... pidettiin?" ask about
+ * history and may use the founding meeting as a source. "Milloin pidetään
+ * ...?" asks about the next occurrence and must not reuse a one-time
+ * historical date as if it answered a forward-looking question — reusing it
+ * there was the actual #618 bug this distinction preserves.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_meeting_history_query' ) ) {
+	function rytkoset_theme_chat_is_meeting_history_query( $message ) {
+		return (bool) preg_match( '/\b(?:ollut|pidettiin|pidetty)\b/ui', (string) $message );
+	}
+}
+
+/**
  * Checks whether a question asks how a named person relates to the association.
  *
  * Patterns like "Liittyykö X ...", "Miten X liittyy ..." and "Mikä on X:n yhteys
@@ -2582,8 +2699,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_named_source_query' ) ) {
 			return ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
 		}
 
-		return rytkoset_theme_chat_is_meeting_query( $message )
-			&& ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
+		if ( ! rytkoset_theme_chat_is_meeting_query( $message ) ) {
+			return false;
+		}
+
+		// A lowercase place term (rytkoset_theme_chat_get_lowercase_meeting_place_terms())
+		// also counts here, so an all-lowercase meeting question that fails to
+		// verify gets the deterministic "no source found" reply rather than
+		// silently falling through to an unverified general answer.
+		return ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) )
+			|| ! empty( rytkoset_theme_chat_get_lowercase_meeting_place_terms( $message ) );
 	}
 }
 
@@ -2696,12 +2821,18 @@ if ( ! function_exists( 'rytkoset_theme_chat_text_contains_term_stem' ) ) {
 /**
  * Requires a meeting topic and a place stem within the same text line.
  *
- * @param string            $text  Plain source text.
- * @param array<int,string> $terms Place terms from the question.
+ * @param string            $text                    Plain source text.
+ * @param array<int,string> $terms                   Place terms from the question.
+ * @param bool              $accept_founding_meeting Also accept a line describing
+ *                                                    the association's founding
+ *                                                    meeting as a meeting topic
+ *                                                    (only for history-phrased
+ *                                                    questions; see
+ *                                                    rytkoset_theme_chat_is_meeting_history_query()).
  * @return bool
  */
 if ( ! function_exists( 'rytkoset_theme_chat_text_has_meeting_place_context' ) ) {
-	function rytkoset_theme_chat_text_has_meeting_place_context( $text, $terms ) {
+	function rytkoset_theme_chat_text_has_meeting_place_context( $text, $terms, $accept_founding_meeting = false ) {
 		$lines = preg_split( '/\R/u', (string) $text );
 
 		if ( ! is_array( $lines ) ) {
@@ -2709,7 +2840,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_text_has_meeting_place_context' ) )
 		}
 
 		foreach ( $lines as $line ) {
-			if ( ! rytkoset_theme_chat_is_meeting_query( $line ) ) {
+			$is_topic_line = rytkoset_theme_chat_is_meeting_query( $line )
+				|| ( $accept_founding_meeting && rytkoset_theme_chat_line_is_founding_meeting( $line ) );
+
+			if ( ! $is_topic_line ) {
 				continue;
 			}
 
@@ -3322,10 +3456,20 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		$board_query           = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
 		$photo_query           = rytkoset_theme_chat_is_photo_query( $message );
 		$meeting_query         = ! $photo_query && rytkoset_theme_chat_is_meeting_query( $message );
+		$meeting_history_query = $meeting_query && rytkoset_theme_chat_is_meeting_history_query( $message );
 		$person_relation_query = ! $photo_query && ! $meeting_query && rytkoset_theme_chat_is_person_relation_query( $message );
 		$person_terms          = rytkoset_theme_chat_get_person_search_terms( $message );
 		$search_terms          = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
 		$publication_terms     = rytkoset_theme_chat_get_publication_search_terms( $message );
+
+		// A meeting question written entirely in lowercase ("milloin runnin
+		// sukujuhlat ovat?") has no capitalized place term to extract. Fall back
+		// to a lowercase candidate rather than losing verification entirely; the
+		// candidate still has to pass the same-line stem match and unambiguous
+		// checks below.
+		if ( $meeting_query && empty( $search_terms ) ) {
+			$search_terms = rytkoset_theme_chat_get_lowercase_meeting_place_terms( $message );
+		}
 
 		if ( ! empty( $publication_terms ) ) {
 			$search_terms = array_values(
@@ -3413,7 +3557,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 					$score       = 0;
 					$distinctive = 0;
 
-					if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms ) ) {
+					if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms, $meeting_history_query ) ) {
 						continue;
 					}
 

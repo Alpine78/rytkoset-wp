@@ -210,6 +210,97 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_runni_history_question_uses_the_founding_meeting_as_source(): void {
+		// The founding meeting genuinely was a sukukokous, so a history-phrased
+		// question ("has there been") may now use it as a verified source,
+		// unlike the future-phrased question in the previous test.
+		$this->configure_chat_backend();
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array(
+							'content' => "Kyllä, Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.\n\nLähde: https://rytkoset.test/?p=70",
+						),
+					),
+				),
+			)
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Onko Runnilla ollut sukukokousta?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( '18.8.1963', $result->get_data()['reply'] );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$payload = json_decode( $GLOBALS['rytkoset_test_http_requests'][0]['args']['body'], true );
+		$this->assertIsArray( $payload );
+		$this->assertSame( 'none', $payload['tool_choice'] );
+		$this->assertStringContainsString( 'perustava kokous', $payload['messages'][0]['content'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_lowercase_runni_history_question_uses_the_founding_meeting_as_source(): void {
+		// Same as the previous test, but written entirely in lowercase — many
+		// visitors do not capitalize proper names, and the answer must not
+		// depend on it.
+		$this->configure_chat_backend();
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array(
+							'content' => "Kyllä, Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.\n\nLähde: https://rytkoset.test/?p=70",
+						),
+					),
+				),
+			)
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'onko runnilla ollut sukukokousta?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( '18.8.1963', $result->get_data()['reply'] );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$payload = json_decode( $GLOBALS['rytkoset_test_http_requests'][0]['args']['body'], true );
+		$this->assertIsArray( $payload );
+		$this->assertSame( 'none', $payload['tool_choice'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_lowercase_future_runni_party_gets_the_same_safe_reply_as_capitalized(): void {
+		// Consistency regression: a lowercase "next occurrence" question must
+		// fail exactly like its capitalized counterpart
+		// (test_future_runni_family_party_does_not_use_the_1963_foundation_meeting)
+		// rather than silently falling through to an unverified Mistral answer
+		// just because the place name was not capitalized.
+		$this->configure_chat_backend();
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'milloin runnin sukujuhlat ovat?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'En löytänyt tähän varmennettua vastausta', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( '18.8.1963', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( 'perustava kokous', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_photo_query_without_matching_album_ignores_history_page_and_bypasses_mistral(): void {
 		$this->configure_chat_backend();
 		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
