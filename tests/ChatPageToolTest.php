@@ -1290,6 +1290,37 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'Sanna Björkman', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+		$this->assertStringContainsString( 'Kysymys "Kuka on Nimi?" ei vaadi täydellistä elämäkertaa', $context );
+		$this->assertStringContainsString( 'vastaus "en löytänyt tietoa" on väärä ja kielletty', $context );
+	}
+
+	public function test_wordpress_search_finds_named_album_outside_catalogue_limit(): void {
+		for ( $index = 1; $index <= 5; ++$index ) {
+			$album               = rytkoset_test_register_post( 100 + $index, 'gallery_album', sprintf( 'A-albumi %02d', $index ) );
+			$album->post_content = '<p>Muu julkinen albumi ilman kysyttyä henkilöä.</p>';
+		}
+
+		$target               = rytkoset_test_register_post( 200, 'gallery_album', 'Z-albumi Iisalmen 60-vuotissukujuhlasta' );
+		$target->post_content = '<p>Juhlaohjelmassa oli kirjailija Antti Heikkisen puhe.</p>';
+		$limit                = static fn() => 3;
+
+		add_filter( 'rytkoset_theme_chat_prefetch_max_pages', $limit );
+
+		try {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Kuka on Antti Heikkinen?',
+					),
+				)
+			);
+		} finally {
+			remove_filter( 'rytkoset_theme_chat_prefetch_max_pages', $limit );
+		}
+
+		$this->assertStringContainsString( 'kirjailija Antti Heikkisen puhe', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=200', $context );
 	}
 
 	public function test_photo_query_does_not_use_an_event_history_page_as_album_evidence(): void {
