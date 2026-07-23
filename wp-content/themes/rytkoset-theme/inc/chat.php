@@ -2392,12 +2392,20 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			'kuva',
 			'kuvat',
 			'kuvia',
+			// Sentence-initial relation verbs ("Liittyykö X ...") are captured like
+			// proper names but never name a person or place.
+			'liittyi',
+			'liittyikö',
+			'liittyivät',
+			'liittyy',
+			'liittyykö',
 			'listaa',
 			'löytyykö',
 			'luettele',
 			'mikä',
 			'milloin',
 			'missä',
+			'mistä',
 			'miten',
 			'mitä',
 			'näytä',
@@ -2510,6 +2518,30 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_meeting_query' ) ) {
 }
 
 /**
+ * Checks whether a question asks how a named person relates to the association.
+ *
+ * Patterns like "Liittyykö X ...", "Miten X liittyy ..." and "Mikä on X:n yhteys
+ * ..." are person questions even without a "kuka" cue. They must reach the
+ * verified source path so an upcoming speaker or performer named on an event
+ * page resolves to that event instead of being missed or hallucinated onto an
+ * unrelated album. Only the third-person "relates" forms match: the first-person
+ * "liityn"/"liittyä" (how do I join) is answered from the stable membership
+ * context and must not be treated as a person question.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_person_relation_query' ) ) {
+	function rytkoset_theme_chat_is_person_relation_query( $message ) {
+		if ( ! preg_match( '/\bliittyy(?:kö)?\b|\bliittyi(?:vät|kö)?\b|\byhteys\b|\byhteydess\p{L}*/ui', (string) $message ) ) {
+			return false;
+		}
+
+		return ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
+	}
+}
+
+/**
  * Checks whether a question names a public-source subject that must be verified.
  *
  * @param array<int,array{role:string,content:string}> $messages Prepared history.
@@ -2524,6 +2556,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_named_source_query' ) ) {
 		}
 
 		if ( preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message ) ) {
+			return true;
+		}
+
+		if ( rytkoset_theme_chat_is_person_relation_query( $message ) ) {
 			return true;
 		}
 
@@ -2752,6 +2788,25 @@ if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) )
 		}
 
 		return $meeting_query ? 3 > $count : 1 === $count;
+	}
+}
+
+/**
+ * Checks whether a search term is the association's own family surname.
+ *
+ * "Rytkönen" and its inflections (Rytköset, Rytkösiä, Rytkösen, …) appear on
+ * nearly every published source, so a match on the family name alone is not a
+ * distinctive verification and must not select a source — otherwise a generic
+ * question such as "Mistä Rytkönen-nimi on peräisin?" binds to the lone album
+ * merely because the page tier is ambiguous. Rytkölä-style place names
+ * (Rytkö + l…) are intentionally not matched: they are distinctive.
+ *
+ * @param string $term Search term.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_term_is_family_name' ) ) {
+	function rytkoset_theme_chat_term_is_family_name( $term ) {
+		return (bool) preg_match( '/^rytkö(?:nen|s)/ui', trim( (string) $term ) );
 	}
 }
 
@@ -3250,12 +3305,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			return $event_catering_source;
 		}
 
-		$board_query       = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
-		$photo_query       = rytkoset_theme_chat_is_photo_query( $message );
-		$meeting_query     = ! $photo_query && rytkoset_theme_chat_is_meeting_query( $message );
-		$person_terms      = rytkoset_theme_chat_get_person_search_terms( $message );
-		$search_terms      = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
-		$publication_terms = rytkoset_theme_chat_get_publication_search_terms( $message );
+		$board_query           = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
+		$photo_query           = rytkoset_theme_chat_is_photo_query( $message );
+		$meeting_query         = ! $photo_query && rytkoset_theme_chat_is_meeting_query( $message );
+		$person_relation_query = ! $photo_query && ! $meeting_query && rytkoset_theme_chat_is_person_relation_query( $message );
+		$person_terms          = rytkoset_theme_chat_get_person_search_terms( $message );
+		$search_terms          = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
+		$publication_terms     = rytkoset_theme_chat_get_publication_search_terms( $message );
 
 		if ( ! empty( $publication_terms ) ) {
 			$search_terms = array_values(
@@ -3308,6 +3364,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 				$source_tiers = array( array( 'gallery_album' ) );
 			} elseif ( $meeting_query ) {
 				$source_tiers = array( array( 'rytkoset_event', 'page' ), array( 'gallery_album' ) );
+			} elseif ( $person_relation_query ) {
+				// A person may be named on an event page as an upcoming speaker or
+				// performer, not only on ordinary pages and albums. Search events
+				// alongside pages so e.g. a Tampere 2026 performer resolves to the
+				// verified event source instead of being missed or hallucinated
+				// onto an unrelated album.
+				$source_tiers = array( array( 'page', 'rytkoset_event' ), array( 'gallery_album' ) );
 			} else {
 				$source_tiers = array( array( 'page' ), array( 'gallery_album' ) );
 			}
@@ -3332,24 +3395,37 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 						continue;
 					}
 
-					$text  = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
-					$score = 0;
+					$text        = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
+					$score       = 0;
+					$distinctive = 0;
 
 					if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms ) ) {
 						continue;
 					}
 
 					foreach ( $search_terms as $term ) {
-						$matches = $meeting_query || $photo_query
+						// Finnish inflects surnames ("Heikkinen" -> "Heikkisen"), so a
+						// relation question must stem-match its name terms too, or the
+						// full-name match loses to a common first name and turns
+						// ambiguous.
+						$matches = $meeting_query || $photo_query || $person_relation_query
 							? rytkoset_theme_chat_text_contains_term_stem( $text, $term )
 							: rytkoset_theme_chat_text_contains_term( $text, $term );
 
 						if ( $matches ) {
 							++$score;
+
+							if ( ! rytkoset_theme_chat_term_is_family_name( $term ) ) {
+								++$distinctive;
+							}
 						}
 					}
 
-					if ( 0 === $score || $score < $best_score ) {
+					// A match on the ubiquitous family surname alone is not a
+					// distinctive verification (it appears on nearly every source), so
+					// it must not select one — this stops a generic surname question
+					// from binding to the lone album fallback.
+					if ( 0 === $score || 0 === $distinctive || $score < $best_score ) {
 						continue;
 					}
 
@@ -3392,7 +3468,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			$url     = get_permalink( $page->ID );
 			$excerpt = ! empty( $candidate['whole'] )
 				? rytkoset_theme_chat_truncate( $text, $excerpt_max )
-				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query || $photo_query );
+				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query || $photo_query || $person_relation_query );
 
 			if ( ! is_string( $url ) || '' === trim( $url ) || '' === $excerpt ) {
 				return '';
