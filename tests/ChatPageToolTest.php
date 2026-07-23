@@ -1294,6 +1294,54 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'vastaus "en löytänyt tietoa" on väärä ja kielletty', $context );
 	}
 
+	public function test_person_relation_follow_ups_use_album_and_explicit_source_contract(): void {
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa' );
+		$album->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe, Jaana Luttisen esitelmä sekä The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
+		$cases               = array(
+			array(
+				'name'            => 'Antti Heikkinen',
+				'first_question'  => 'Onko Antti Heikkisestä mainintaa?',
+				'source_fact'     => 'kirjailija Antti Heikkisen puhe',
+			),
+			array(
+				'name'            => 'Jaana Luttinen',
+				'first_question'  => 'Onko Jaana Luttisesta mainintaa?',
+				'source_fact'     => 'Jaana Luttisen esitelmä',
+			),
+			array(
+				'name'            => 'Sanna Björkman',
+				'first_question'  => 'Onko Sanna Björkmanista mainintaa?',
+				'source_fact'     => 'Sanna Björkman',
+			),
+		);
+
+		foreach ( $cases as $case ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $case['first_question'],
+					),
+					array(
+						'role'    => 'assistant',
+						'content' => $case['source_fact'] . "\n\nLähde: https://rytkoset.test/?p=71",
+					),
+					array(
+						'role'    => 'user',
+						'content' => 'Miten ' . $case['name'] . ' liittyy sukuseuraan?',
+					),
+				)
+			);
+
+			$this->assertStringContainsString( $case['source_fact'], $context, $case['name'] );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context, $case['name'] );
+			$this->assertStringContainsString( 'Kysymys "Miten Nimi liittyy sukuseuraan?"', $context, $case['name'] );
+			$this->assertStringContainsString( 'eikä välttämättä jäsenyyttä tai virallista tehtävää', $context, $case['name'] );
+			$this->assertStringContainsString( 'älä kiellä henkilön yhteyttä sukuseuraan', $context, $case['name'] );
+			$this->assertStringContainsString( 'Aiempi vastaus tai kieltäytyminen ei saa ohittaa uusimman lähdeotteen tietoa', $context, $case['name'] );
+		}
+	}
+
 	public function test_wordpress_search_finds_named_album_outside_catalogue_limit(): void {
 		for ( $index = 1; $index <= 5; ++$index ) {
 			$album               = rytkoset_test_register_post( 100 + $index, 'gallery_album', sprintf( 'A-albumi %02d', $index ) );
