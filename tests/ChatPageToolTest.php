@@ -773,6 +773,10 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			'Mitä maksutapoja on käytössä?',
 			'Mitkä ovat toimitusehdot?',
 			'Voinko pyytää tietojeni poistamista?',
+			'pääseekö 14-vuotias nuorisojäseneksi?',
+			'kauan postitettavaa paitaa joutuu oottelemaan?',
+			'oon 12, voinko tilata uutiskirjeen ihan ite?',
+			'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?',
 		);
 
 		foreach ( $queries as $query ) {
@@ -820,16 +824,25 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_concept_source_path_maps_each_concept_to_its_page(): void {
 		$cases = array(
-			'Mitä maksutapoja on käytössä?'        => 'kauppa/maksu-ja-toimitusehdot',
-			'Mitkä ovat toimitusehdot?'            => 'kauppa/maksu-ja-toimitusehdot',
-			'Onko minulla peruuttamisoikeus?'      => 'kauppa/maksu-ja-toimitusehdot',
-			'Voinko perua tilaukseni?'             => 'kauppa/maksu-ja-toimitusehdot',
-			'Käsitteleekö sivusto henkilötietoja?' => 'tietosuoja',
-			'Käyttääkö sivusto evästeitä?'         => 'tietosuoja',
-			'Mitä tietosuojaselosteessa lukee?'    => 'tietosuoja',
-			'Missä maissa tietojani käsitellään?'  => 'tietosuoja',
-			'Voinko pyytää tietojeni poistamista?' => 'tietosuoja',
-			'Mitä rekisteriselosteessa lukee?'     => 'sukuseura/rekisteriseloste',
+			'Mitä maksutapoja on käytössä?'                => 'kauppa/maksu-ja-toimitusehdot',
+			'Mitkä ovat toimitusehdot?'                    => 'kauppa/maksu-ja-toimitusehdot',
+			'Onko minulla peruuttamisoikeus?'              => 'kauppa/maksu-ja-toimitusehdot',
+			'Voinko perua tilaukseni?'                     => 'kauppa/maksu-ja-toimitusehdot',
+			'Käsitteleekö sivusto henkilötietoja?'         => 'tietosuoja',
+			'Käyttääkö sivusto evästeitä?'                 => 'tietosuoja',
+			'Mitä tietosuojaselosteessa lukee?'            => 'tietosuoja',
+			'Missä maissa tietojani käsitellään?'          => 'tietosuoja',
+			'Voinko pyytää tietojeni poistamista?'         => 'tietosuoja',
+			'Mitä rekisteriselosteessa lukee?'             => 'sukuseura/rekisteriseloste',
+			'pääseekö 14-vuotias nuorisojäseneksi?'        => 'sukuseura/saannot',
+			'voiko 14v liittyä nuoriso jaseneksi?'         => 'sukuseura/saannot',
+			'mikä on nuorisojäsenyyden ikäraja?'           => 'sukuseura/saannot',
+			'kauan postitettavaa paitaa joutuu oottelemaan?' => 'kauppa/maksu-ja-toimitusehdot',
+			'kauanko postitetavaa tuotetta saa ootella?'   => 'kauppa/maksu-ja-toimitusehdot',
+			'oon 12, voinko tilata uutiskirjeen ihan ite?' => 'tietosuoja',
+			'olen 12v, saanko tilata uutis kirjeen itse?'  => 'tietosuoja',
+			'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?' => 'tietosuoja',
+			'kauanko ruokarajotteita säilytetään?'         => 'tietosuoja',
 		);
 
 		foreach ( $cases as $query => $expected ) {
@@ -843,6 +856,10 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			'Kuka on puheenjohtaja?',
 			'Paljonko jäsenmaksu on?',
 			'Miten perun uutiskirjeen?',
+			'Onko jäsenmaksu 14 euroa?',
+			'Paljonko nuorisojäsenyys maksaa?',
+			'Kauanko bussikuljetus sukujuhlaan kestää?',
+			'Milloin digilehti toimitetaan?',
 			'',
 		);
 
@@ -875,6 +892,82 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=61', $context );
 		$this->assertStringContainsString( 'täsmälleen tässä annetussa muodossa', $context );
 		$this->assertStringContainsString( rytkoset_theme_chat_get_concept_source_notice(), $context );
+	}
+
+	public function test_issue_627_prefetches_the_four_verified_source_sections(): void {
+		$this->register_rules_page(
+			'<h2>4. Jäsenet</h2>'
+			. '<p>Sukuseuran jäsenten alle 15-vuotiaat lapset voivat liittyä nuorisojäseniksi. Sukuhallitus hyväksyy varsinaiset jäsenet ja nuorisojäsenet.</p>'
+			. '<h2>5. Jäsenen eroaminen ja erottaminen</h2><p>Tämä ei kuulu nuorisojäsenyyden vastaukseen.</p>'
+		);
+		$this->register_payment_terms_page(
+			'<h2>Toimitus</h2>'
+			. '<p>Postitettavat tuotteet käsitellään 1–3 arkipäivässä. Postin arvioitu kuljetusaika lähettämisestä on 2–5 arkipäivää.</p>'
+			. '<h2>Digitaaliset tuotteet</h2><p>Digitaalinen tuote avataan käyttöön.</p>'
+		);
+		$this->register_privacy_page(
+			'<h2>Alaikäisen suostumus</h2>'
+			. '<p>Alle 13-vuotias ei voi itse antaa pätevää suostumusta. Huoltajan pitää tehdä tai hyväksyä uutiskirjeen tilaaminen.</p>'
+			. '<h2>Mitä henkilötietoja keräämme ja miksi</h2>'
+			. '<h3>Tapahtumailmoittautumiset</h3>'
+			. '<p>Ilmoittautumisessa voidaan antaa ruokarajoitteet. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.</p>'
+			. '<h3>Käyttäjätilit</h3><p>Tilin tiedot eivät kuulu tähän vastaukseen.</p>'
+			. '<h2>Kuinka kauan säilytämme tietoja</h2>'
+			. '<p>Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.</p>'
+		);
+
+		$youth_context     = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'pääseekö 14-vuotias nuorisojäseneksi?',
+				),
+			)
+		);
+		$delivery_context  = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'kauan postitettavaa paitaa joutuu oottelemaan?',
+				),
+			)
+		);
+		$minor_context     = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'oon 12, voinko tilata uutiskirjeen ihan ite?',
+				),
+			)
+		);
+		$retention_context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'alle 15-vuotiaat lapset voivat liittyä nuorisojäseniksi', $youth_context );
+		$this->assertStringContainsString( 'Sukuhallitus hyväksyy varsinaiset jäsenet ja nuorisojäsenet', $youth_context );
+		$this->assertStringContainsString( 'jäsenen lasta, täsmällistä ikärajaa', $youth_context );
+		$this->assertStringNotContainsString( 'Tämä ei kuulu nuorisojäsenyyden vastaukseen', $youth_context );
+
+		$this->assertStringContainsString( 'käsitellään 1–3 arkipäivässä', $delivery_context );
+		$this->assertStringContainsString( 'kuljetusaika lähettämisestä on 2–5 arkipäivää', $delivery_context );
+		$this->assertStringContainsString( 'erottele lähteen käsittelyaika', $delivery_context );
+		$this->assertStringNotContainsString( 'Digitaalinen tuote avataan käyttöön', $delivery_context );
+
+		$this->assertStringContainsString( 'Alle 13-vuotias ei voi itse antaa pätevää suostumusta', $minor_context );
+		$this->assertStringContainsString( 'Huoltajan pitää tehdä tai hyväksyä', $minor_context );
+		$this->assertStringContainsString( 'huoltajan pitää tehdä tai hyväksyä tilaus', $minor_context );
+
+		$this->assertStringContainsString( 'Ilmoittautumisessa voidaan antaa ruokarajoitteet', $retention_context );
+		$this->assertStringContainsString( 'kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn', $retention_context );
+		$this->assertStringContainsString( 'viimeistään 12 kuukauden kuluttua tapahtumasta', $retention_context );
+		$this->assertStringContainsString( 'tapahtumasta laskettavaa täsmällistä enimmäisaikaa', $retention_context );
+		$this->assertStringNotContainsString( 'Tilin tiedot eivät kuulu tähän vastaukseen', $retention_context );
 	}
 
 	public function test_concept_prefetch_returns_register_description_source(): void {

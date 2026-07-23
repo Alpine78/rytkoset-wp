@@ -114,6 +114,90 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_issue_627_questions_use_one_verified_completion_each(): void {
+		$this->configure_chat_backend();
+		$this->register_rules_page(
+			'<h2>4. Jäsenet</h2>'
+			. '<p>Sukuseuran jäsenten alle 15-vuotiaat lapset voivat liittyä nuorisojäseniksi. Sukuhallitus hyväksyy varsinaiset jäsenet ja nuorisojäsenet.</p>'
+			. '<h2>5. Jäsenen eroaminen ja erottaminen</h2><p>Seuraava sääntökohta.</p>'
+		);
+		$this->register_payment_terms_page(
+			'<h2>Toimitus</h2>'
+			. '<p>Postitettavat tuotteet käsitellään 1–3 arkipäivässä. Postin arvioitu kuljetusaika lähettämisestä on 2–5 arkipäivää.</p>'
+			. '<h2>Digitaaliset tuotteet</h2><p>Digitaalinen toimitus.</p>'
+		);
+		$this->register_privacy_page(
+			'<h2>Alaikäisen suostumus</h2>'
+			. '<p>Alle 13-vuotias ei voi itse antaa pätevää suostumusta. Huoltajan pitää tehdä tai hyväksyä uutiskirjeen tilaaminen.</p>'
+			. '<h2>Mitä henkilötietoja keräämme ja miksi</h2>'
+			. '<h3>Tapahtumailmoittautumiset</h3>'
+			. '<p>Ilmoittautumisessa voidaan antaa ruokarajoitteet. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.</p>'
+			. '<h3>Käyttäjätilit</h3><p>Muu tietosuojakohta.</p>'
+			. '<h2>Kuinka kauan säilytämme tietoja</h2>'
+			. '<p>Tapahtumailmoittautumiset poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.</p>'
+		);
+
+		$responses = array(
+			"14-vuotias jäsenen lapsi voi liittyä nuorisojäseneksi sukuhallituksen hyväksynnällä.\n\nLähde: https://rytkoset.test/?p=91",
+			"Postitettavan tuotteen käsittely kestää 1–3 arkipäivää ja Postin kuljetus lähettämisestä arviolta 2–5 arkipäivää.\n\nLähde: https://rytkoset.test/?p=61",
+			"Et voi 12-vuotiaana tilata uutiskirjettä pätevästi aivan itse, vaan huoltajan pitää tehdä tai hyväksyä tilaus.\n\nLähde: https://rytkoset.test/?p=62",
+			"Ruokarajoitteet poistetaan tai anonymisoidaan, kun niitä ei enää tarvita jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.\n\nLähde: https://rytkoset.test/?p=62",
+		);
+
+		foreach ( $responses as $response ) {
+			$this->queue_mistral_response(
+				array(
+					'choices' => array(
+						array(
+							'finish_reason' => 'stop',
+							'message'       => array( 'content' => $response ),
+						),
+					),
+				)
+			);
+		}
+
+		$queries = array(
+			'pääseekö 14-vuotias nuorisojäseneksi?',
+			'kauan postitettavaa paitaa joutuu oottelemaan?',
+			'oon 12, voinko tilata uutiskirjeen ihan ite?',
+			'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?',
+		);
+
+		foreach ( $queries as $index => $query ) {
+			$result = rytkoset_theme_chat_handle_request( $this->request( $query ) );
+
+			$this->assertInstanceOf( WP_REST_Response::class, $result, $query );
+			$this->assertSame( 200, $result->get_status(), $query );
+			$this->assertSame( $responses[ $index ], $result->get_data()['reply'], $query );
+		}
+
+		$this->assertCount( 4, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$payloads = array_map(
+			static function ( $request ) {
+				return json_decode( $request['args']['body'], true );
+			},
+			$GLOBALS['rytkoset_test_http_requests']
+		);
+
+		foreach ( $payloads as $payload ) {
+			$this->assertIsArray( $payload );
+			$this->assertSame( 'none', $payload['tool_choice'] );
+		}
+
+		$this->assertStringContainsString( 'alle 15-vuotiaat lapset', $payloads[0]['messages'][0]['content'] );
+		$this->assertStringContainsString( 'Sukuhallitus hyväksyy', $payloads[0]['messages'][0]['content'] );
+		$this->assertStringContainsString( '1–3 arkipäivässä', $payloads[1]['messages'][0]['content'] );
+		$this->assertStringContainsString( '2–5 arkipäivää', $payloads[1]['messages'][0]['content'] );
+		$this->assertStringContainsString( 'Alle 13-vuotias ei voi itse antaa pätevää suostumusta', $payloads[2]['messages'][0]['content'] );
+		$this->assertStringContainsString( 'Huoltajan pitää tehdä tai hyväksyä', $payloads[2]['messages'][0]['content'] );
+		$this->assertStringContainsString( 'ruokarajoitteet', $payloads[3]['messages'][0]['content'] );
+		$this->assertStringContainsString( 'viimeistään 12 kuukauden kuluttua tapahtumasta', $payloads[3]['messages'][0]['content'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_order_cancellation_uses_verified_account_guest_and_handling_sections(): void {
 		$this->configure_chat_backend();
 		$this->register_payment_terms_page(
@@ -622,6 +706,12 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 		$page               = rytkoset_test_register_post( 61, 'page', 'Maksu- ja toimitusehdot', 60 );
 		$page->post_name    = 'maksu-ja-toimitusehdot';
+		$page->post_content = $content;
+	}
+
+	private function register_privacy_page( string $content ): void {
+		$page               = rytkoset_test_register_post( 62, 'page', 'Tietosuojaseloste' );
+		$page->post_name    = 'tietosuoja';
 		$page->post_content = $content;
 	}
 
