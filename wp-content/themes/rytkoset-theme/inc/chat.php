@@ -2740,6 +2740,100 @@ if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) )
 }
 
 /**
+ * Returns a bounded candidate ID list with WordPress search matches first.
+ *
+ * The relevance search lets an exact name match enter the candidate set even
+ * when it would fall outside the alphabetically browsed source limit. The
+ * existing catalogue query remains as a fallback for Finnish inflections that
+ * WordPress search may not match. Callers must still verify publication access
+ * and the actual terms from the source text before using any returned post.
+ *
+ * @param string            $source_type Public source post type.
+ * @param array<int,string> $search_terms Verified terms from the user message.
+ * @param int               $max_results Maximum number of candidate IDs.
+ * @return array<int,int>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_prefetch_candidate_ids' ) ) {
+	function rytkoset_theme_chat_get_prefetch_candidate_ids( $source_type, $search_terms, $max_results ) {
+		$source_type  = (string) $source_type;
+		$max_results  = max( 1, (int) $max_results );
+		$search_terms = array_values(
+			array_filter(
+				array_unique(
+					array_map(
+						static function ( $term ) {
+							return trim( (string) $term );
+						},
+						(array) $search_terms
+					)
+				)
+			)
+		);
+		$search       = trim( implode( ' ', $search_terms ) );
+		$search_ids   = array();
+
+		if ( '' !== $search ) {
+			$search_ids = (array) get_posts(
+				array(
+					'post_type'   => $source_type,
+					'post_status' => 'publish',
+					'numberposts' => $max_results,
+					'fields'      => 'ids',
+					's'           => $search,
+					'orderby'     => 'relevance',
+					'order'       => 'DESC',
+				)
+			);
+
+			// Core search has no Finnish stemming: "Antti Heikkinen" does not
+			// match source text containing "Antti Heikkisen". If the complete
+			// name found nothing, seed candidates with its bounded name parts.
+			// The caller still requires an unambiguous source and independently
+			// scores the actual text, so a first-name hit alone is never trusted.
+			if ( empty( $search_ids ) && count( $search_terms ) > 1 ) {
+				foreach ( $search_terms as $search_term ) {
+					$search_ids = array_merge(
+						$search_ids,
+						(array) get_posts(
+							array(
+								'post_type'   => $source_type,
+								'post_status' => 'publish',
+								'numberposts' => $max_results,
+								'fields'      => 'ids',
+								's'           => $search_term,
+								'orderby'     => 'relevance',
+								'order'       => 'DESC',
+							)
+						)
+					);
+				}
+			}
+		}
+
+		$catalogue_ids = (array) get_posts(
+			array(
+				'post_type'   => $source_type,
+				'post_status' => 'publish',
+				'numberposts' => $max_results,
+				'fields'      => 'ids',
+				'orderby'     => 'menu_order title',
+				'order'       => 'ASC',
+			)
+		);
+
+		return array_slice(
+			array_values(
+				array_unique(
+					array_map( 'intval', array_merge( $search_ids, $catalogue_ids ) )
+				)
+			),
+			0,
+			$max_results
+		);
+	}
+}
+
+/**
  * Wraps one or more verified source blocks in the shared prefetch instruction.
  *
  * The wrapper binds the answer to the given excerpts and their own URL and
@@ -2758,7 +2852,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_build_prefetched_source_context' ) 
 			return '';
 		}
 
-		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Jos otteet eivät riitä, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
+		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Kysymys \"Kuka on Nimi?\" ei vaadi täydellistä elämäkertaa: lähteessä mainittu ammatti, rooli, puhe, esitelmä, esiintyminen tai muu teko on riittävä vastaus. Kerro kysytystä henkilöstä tai asiasta kaikki otteessa annetut tiedot suoraan. Jos kysytty nimi esiintyy otteessa, vastaus \"en löytänyt tietoa\" on väärä ja kielletty. Vain jos otteet eivät sisällä kysytystä henkilöstä tai asiasta mitään vastaavaa tietoa, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
 			. implode( "\n\n---\n\n", $source_blocks );
 	}
 }
@@ -3179,16 +3273,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 				foreach ( $source_types as $source_type ) {
 					$page_ids = array_merge(
 						$page_ids,
-						(array) get_posts(
-							array(
-								'post_type'   => $source_type,
-								'post_status' => 'publish',
-								'numberposts' => $max_pages,
-								'fields'      => 'ids',
-								'orderby'     => 'menu_order title',
-								'order'       => 'ASC',
-							)
-						)
+						rytkoset_theme_chat_get_prefetch_candidate_ids( $source_type, $search_terms, $max_pages )
 					);
 				}
 
