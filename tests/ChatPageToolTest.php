@@ -1821,6 +1821,143 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', rytkoset_theme_chat_get_named_source_fallback_reply() );
 	}
 
+	public function test_founding_meeting_line_detection(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_line_is_founding_meeting( 'Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.' )
+		);
+		$this->assertTrue( rytkoset_theme_chat_line_is_founding_meeting( 'Perustavan kokouksen pöytäkirja on arkistoitu.' ) );
+
+		// A bare "kokous" mention, e.g. a board meeting, must not count.
+		$this->assertFalse( rytkoset_theme_chat_line_is_founding_meeting( 'Hallituksen kokous pidettiin etänä.' ) );
+		$this->assertFalse( rytkoset_theme_chat_line_is_founding_meeting( 'Seuraava sukukokous päätetään myöhemmin.' ) );
+	}
+
+	public function test_meeting_history_query_detection(): void {
+		foreach (
+			array(
+				'Onko Runnilla ollut sukukokousta?',
+				'Onko Runnilla ollut sukujuhlia?',
+				'Milloin Runnin sukukokous pidettiin?',
+				'Onko Runnilla pidetty sukukokousta?',
+			) as $query
+		) {
+			$this->assertTrue( rytkoset_theme_chat_is_meeting_history_query( $query ), $query );
+		}
+
+		// "pidetään" (is/will be held) asks about the next occurrence, not history.
+		foreach (
+			array(
+				'Milloin pidetään Runnin sukujuhla?',
+				'Milloin seuraava sukukokous pidetään?',
+			) as $query
+		) {
+			$this->assertFalse( rytkoset_theme_chat_is_meeting_history_query( $query ), $query );
+		}
+	}
+
+	public function test_meeting_place_context_accepts_founding_meeting_only_for_history_questions(): void {
+		$text = 'Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.';
+
+		// Without the flag, a founding-meeting line never counts as a meeting
+		// topic (the pre-existing #618 behavior for non-history phrasings).
+		$this->assertFalse( rytkoset_theme_chat_text_has_meeting_place_context( $text, array( 'Runnilla' ) ) );
+		$this->assertFalse( rytkoset_theme_chat_text_has_meeting_place_context( $text, array( 'Runnilla' ), false ) );
+
+		// A history-phrased question may accept it.
+		$this->assertTrue( rytkoset_theme_chat_text_has_meeting_place_context( $text, array( 'Runnilla' ), true ) );
+	}
+
+	public function test_runni_history_question_resolves_to_the_founding_meeting(): void {
+		// The founding meeting genuinely was a sukukokous, so a history-phrased
+		// question about Runni may now use it, unlike a "when is it held" style
+		// question about the next occurrence (see the next test).
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko Runnilla ollut sukukokousta?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( '18.8.1963', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_runni_next_occurrence_question_still_ignores_the_founding_meeting(): void {
+		// Regression: even with the founding meeting now resolvable for history
+		// questions, "Milloin pidetään ...?" must not reuse the 1963 date, or a
+		// forward-looking question would be answered with a misleading old date.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Milloin pidetään Runnin sukujuhla?',
+				),
+			)
+		);
+
+		$this->assertSame( '', $context );
+	}
+
+	public function test_lowercase_meeting_place_term_extraction(): void {
+		// A meeting question written entirely in lowercase still yields a place
+		// candidate, since many visitors do not capitalize proper names.
+		$this->assertSame(
+			array( 'runnilla' ),
+			rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'onko runnilla ollut sukukokousta?' )
+		);
+		$this->assertSame(
+			array( 'runnin' ),
+			rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'milloin runnin sukujuhlat ovat?' )
+		);
+
+		// The meeting-topic stem, history/scheduling verbs and the shared
+		// question-word ignore list must never become "place" candidates.
+		$this->assertSame( array(), rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'onko sukukokousta ollut?' ) );
+		$this->assertSame( array(), rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'milloin sukujuhlat pidetään?' ) );
+	}
+
+	public function test_lowercase_meeting_question_is_still_a_named_source_query(): void {
+		// Without capitalization, get_named_search_terms() alone would miss the
+		// place term entirely; the lowercase fallback keeps this a verification-
+		// requiring question so it fails safely instead of falling through to an
+		// unverified general answer.
+		$this->assertTrue(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'onko runnilla ollut sukukokousta?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_lowercase_runni_history_question_resolves_to_the_founding_meeting(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'onko runnilla ollut sukukokousta?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( '18.8.1963', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+	}
+
 	public function test_public_source_post_rejects_restricted_event(): void {
 		$event                = rytkoset_test_register_post( 70, 'rytkoset_event', 'Salainen tapahtuma' );
 		$event->post_password = 'salasana';
