@@ -3077,6 +3077,105 @@ if ( ! function_exists( 'rytkoset_theme_chat_build_prefetched_source_context' ) 
 }
 
 /**
+ * Checks whether a question asks about youth membership eligibility.
+ *
+ * The youth-member term still needs an eligibility, age or joining cue. A
+ * generic membership/joining term needs an under-15 age marker, so unrelated
+ * membership questions keep their existing path.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_youth_membership_query' ) ) {
+	function rytkoset_theme_chat_is_youth_membership_query( $message ) {
+		$message          = (string) $message;
+		$has_youth_member = (bool) preg_match( '/\bnuoriso[\s-]*j[äa]sen[\p{L}-]*\b/ui', $message );
+		$has_age_marker   = (bool) preg_match( '/\balle\s+15(?:\s*-\s*vuot[\p{L}-]*)?\b/ui', $message )
+			|| (bool) preg_match( '/\b(?:[0-9]|1[0-4])\s*-?\s*v(?:\.|uot[\p{L}-]*)?\b/ui', $message );
+
+		if (
+			$has_youth_member
+			&& (
+				$has_age_marker
+				|| preg_match( '/\b(?:p[äa][äa]s[\p{L}-]*|liitty[\p{L}-]*|voiko|saako|ik[äa]raj[\p{L}-]*)\b/ui', $message )
+			)
+		) {
+			return true;
+		}
+
+		if ( ! preg_match( '/\b(?:j[äa]sen[\p{L}-]*|liitty[\p{L}-]*)\b/ui', $message ) ) {
+			return false;
+		}
+
+		return $has_age_marker;
+	}
+}
+
+/**
+ * Checks whether a question asks how long a physical delivery takes.
+ *
+ * Requiring both a time/wait expression and a physical shipment term keeps
+ * event transport and digital-delivery questions out of the shop-terms path.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_physical_delivery_time_query' ) ) {
+	function rytkoset_theme_chat_is_physical_delivery_time_query( $message ) {
+		$message               = (string) $message;
+		$has_time              = (bool) preg_match(
+			'/\b(?:kauan(?:ko)?|milloin|odot[\p{L}-]*|oot+el[\p{L}-]*|kest[\p{L}-]*|toimitusai[\p{L}-]*)\b/ui',
+			$message
+		)
+			|| (bool) preg_match( '/\bkuinka\s+pitk[\p{L}-]*\b/ui', $message );
+		$has_physical_shipment = (bool) preg_match(
+			'/\b(?:postit[\p{L}-]*|pait[\p{L}-]*|t-pait[\p{L}-]*|paket[\p{L}-]*|fyysis[\p{L}-]*|tuot(?:e|t)[\p{L}-]*)\b/ui',
+			$message
+		);
+
+		return $has_time && $has_physical_shipment;
+	}
+}
+
+/**
+ * Checks whether an under-13 user asks to subscribe to the newsletter.
+ *
+ * The age gate is intentionally tied to the newsletter term. Ordinary
+ * newsletter self-service questions stay in the stable-context path.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_minor_newsletter_consent_query' ) ) {
+	function rytkoset_theme_chat_is_minor_newsletter_consent_query( $message ) {
+		$message = (string) $message;
+
+		if ( ! preg_match( '/\buutis[\s-]*kirj[\p{L}-]*\b/ui', $message ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '/\balle\s+13(?:\s*-\s*vuot[\p{L}-]*)?\b/ui', $message )
+			|| (bool) preg_match( '/\b(?:[0-9]|1[0-2])\s*-?\s*v(?:\.|uot[\p{L}-]*)?\b/ui', $message )
+			|| (bool) preg_match( '/\b(?:olen|oon)\s+(?:[0-9]|1[0-2])\b/ui', $message );
+	}
+}
+
+/**
+ * Checks whether a question asks about food-restriction data retention.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_food_restriction_retention_query' ) ) {
+	function rytkoset_theme_chat_is_food_restriction_retention_query( $message ) {
+		$message = (string) $message;
+
+		return (bool) preg_match( '/\bruoka[\s-]*(?:rajoit|rajot)[\p{L}-]*\b/ui', $message )
+			&& (bool) preg_match( '/\b(?:kauan(?:ko)?|s[äa]ily[\p{L}-]*|poist[\p{L}-]*|anonymis[\p{L}-]*)\b/ui', $message );
+	}
+}
+
+/**
  * Maps a concept question to the path of the public page that answers it.
  *
  * Payment/delivery terms, the privacy statement and the genealogy register
@@ -3103,12 +3202,24 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_path' ) ) {
 			return 'sukuseura/rekisteriseloste';
 		}
 
+		if ( rytkoset_theme_chat_is_youth_membership_query( $message ) ) {
+			return 'sukuseura/saannot';
+		}
+
 		// Payment, delivery, withdrawal-right and order-cancellation questions.
 		if (
 			preg_match( '/\b(?:maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $message )
 			|| rytkoset_theme_chat_is_order_cancellation_query( $message )
+			|| rytkoset_theme_chat_is_physical_delivery_time_query( $message )
 		) {
 			return 'kauppa/maksu-ja-toimitusehdot';
+		}
+
+		if (
+			rytkoset_theme_chat_is_minor_newsletter_consent_query( $message )
+			|| rytkoset_theme_chat_is_food_restriction_retention_query( $message )
+		) {
+			return 'tietosuoja';
 		}
 
 		// Data-protection questions, including the data subject's own data in any
@@ -3159,7 +3270,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_headings' ) ) {
 		$message = (string) $message;
 		$path    = (string) $path;
 
+		if ( 'sukuseura/saannot' === $path && rytkoset_theme_chat_is_youth_membership_query( $message ) ) {
+			return array( '4. Jäsenet' );
+		}
+
 		if ( 'kauppa/maksu-ja-toimitusehdot' === $path ) {
+			if ( rytkoset_theme_chat_is_physical_delivery_time_query( $message ) ) {
+				return array( 'Toimitus' );
+			}
+
 			if ( preg_match( '/\bmaksutap[\p{L}-]*\b/ui', $message ) ) {
 				return array( 'Maksutavat', 'Maksupalvelutarjoaja' );
 			}
@@ -3184,6 +3303,14 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_headings' ) ) {
 		}
 
 		if ( 'tietosuoja' === $path ) {
+			if ( rytkoset_theme_chat_is_minor_newsletter_consent_query( $message ) ) {
+				return array( 'Alaikäisen suostumus' );
+			}
+
+			if ( rytkoset_theme_chat_is_food_restriction_retention_query( $message ) ) {
+				return array( 'Tapahtumailmoittautumiset', 'Kuinka kauan säilytämme tietoja' );
+			}
+
 			if ( preg_match( '/\beväste[\p{L}-]*\b/ui', $message ) ) {
 				return array( 'Evästeet' );
 			}
@@ -3349,6 +3476,42 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_notice' ) ) {
 }
 
 /**
+ * Returns a narrow answer instruction for concepts with critical qualifiers.
+ *
+ * @param string $message Latest user message.
+ * @param string $path    Resolved concept page path.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_instruction' ) ) {
+	function rytkoset_theme_chat_get_concept_source_instruction( $message, $path ) {
+		if ( rytkoset_theme_chat_is_order_cancellation_query( $message ) ) {
+			return '(Tilauksen peruuttamista koskevassa vastauksessa kerro sekä käyttäjätilillä tehdyn että ilman käyttäjätiliä tehdyn tilauksen itsepalvelupolku. Mainitse myös maksamattoman peruuttamiskelpoisen tilauksen välitön peruutus ja muiden pyyntöjen manuaalinen käsittely. Älä väitä, että painike tai linkki näkyy aina.)';
+		}
+
+		if ( 'sukuseura/saannot' === $path && rytkoset_theme_chat_is_youth_membership_query( $message ) ) {
+			return '(Nuorisojäsenyyttä koskevassa vastauksessa säilytä lähteen jäsenen lasta, täsmällistä ikärajaa ja sukuhallituksen hyväksyntää koskevat rajaukset.)';
+		}
+
+		if (
+			'kauppa/maksu-ja-toimitusehdot' === $path
+			&& rytkoset_theme_chat_is_physical_delivery_time_query( $message )
+		) {
+			return '(Fyysisen tuotteen toimitusaikaa koskevassa vastauksessa erottele lähteen käsittelyaika ja lähettämisen jälkeinen Postin arvioitu kuljetusaika.)';
+		}
+
+		if ( 'tietosuoja' === $path && rytkoset_theme_chat_is_minor_newsletter_consent_query( $message ) ) {
+			return '(Alaikäisen uutiskirjetilausta koskevassa vastauksessa kerro suoraan lähteen täsmällinen ikäraja, jonka alittava käyttäjä ei voi itse antaa pätevää suostumusta, sekä se, että huoltajan pitää tehdä tai hyväksyä tilaus.)';
+		}
+
+		if ( 'tietosuoja' === $path && rytkoset_theme_chat_is_food_restriction_retention_query( $message ) ) {
+			return '(Ruokarajoitteiden säilytystä koskevassa vastauksessa kerro lähteen tarpeen päättymistä, poistamista tai anonymisointia sekä tapahtumasta laskettavaa täsmällistä enimmäisaikaa koskevat rajaukset.)';
+		}
+
+		return '';
+	}
+}
+
+/**
  * Builds a verified, complete-section source context for a concept question.
  *
  * The page goes through the same access gate as every other prefetch source, so
@@ -3390,9 +3553,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source' ) ) {
 		// answer. The page-tool budget remains the hard cost cap.
 		$max_length  = rytkoset_theme_chat_get_page_tool_max_length();
 		$notice      = rytkoset_theme_chat_get_concept_source_notice();
-		$instruction = rytkoset_theme_chat_is_order_cancellation_query( $message )
-			? '(Tilauksen peruuttamista koskevassa vastauksessa kerro sekä käyttäjätilillä tehdyn että ilman käyttäjätiliä tehdyn tilauksen itsepalvelupolku. Mainitse myös maksamattoman peruuttamiskelpoisen tilauksen välitön peruutus ja muiden pyyntöjen manuaalinen käsittely. Älä väitä, että painike tai linkki näkyy aina.)'
-			: '';
+		$instruction = rytkoset_theme_chat_get_concept_source_instruction( $message, $path );
 		$budget      = max( 400, $max_length - mb_strlen( $head ) - mb_strlen( $notice ) - mb_strlen( $instruction ) - 6 );
 		$headings    = rytkoset_theme_chat_get_concept_source_headings( $message, $path );
 		$excerpt     = rytkoset_theme_chat_get_concept_heading_sections( (string) $page->post_content, $headings, $budget );
