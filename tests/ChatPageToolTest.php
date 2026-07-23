@@ -1303,6 +1303,52 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
+	public function test_kirj_stem_verbs_are_not_publication_queries(): void {
+		// "kirj"-stem verbs and a letter must not route to the publication
+		// source path. The name-signing question belongs to the rules page, not
+		// to a work-title search, so it must not be misrouted here (#622).
+		foreach (
+			array(
+				'Kuka saa kirjoittaa yhdistyksen nimen?',
+				'Miten kirjaudun sisään?',
+				'Sain kirjeen postissa.',
+				'kirjoittaa',
+				'kirjaudun',
+				'kirje',
+			) as $question
+		) {
+			$this->assertSame(
+				array(),
+				rytkoset_theme_chat_get_publication_search_terms( $question ),
+				$question
+			);
+		}
+
+		// A document ("asiakirja") is not a publication title either.
+		$this->assertSame(
+			array(),
+			rytkoset_theme_chat_get_publication_search_terms( 'Missä ovat yhdistyksen asiakirjat?' )
+		);
+	}
+
+	public function test_genuine_book_references_are_publication_queries(): void {
+		// Real book/work references still resolve to the publication path,
+		// including the "sukukirja" compound (#622).
+		foreach (
+			array(
+				'Onko kirja vielä myynnissä?',
+				'Onko sukukirja vielä myynnissä?',
+				'Onko teos vielä myynnissä?',
+			) as $question
+		) {
+			$this->assertNotSame(
+				array(),
+				rytkoset_theme_chat_get_publication_search_terms( $question ),
+				$question
+			);
+		}
+	}
+
 	public function test_photo_query_detection_excludes_unrelated_kuva_words(): void {
 		$this->assertTrue( rytkoset_theme_chat_is_photo_query( 'Onko Runnin sukujuhlista kuvia?' ) );
 		$this->assertTrue( rytkoset_theme_chat_is_photo_query( 'Löytyykö tapahtumasta valokuvia tai albumia?' ) );

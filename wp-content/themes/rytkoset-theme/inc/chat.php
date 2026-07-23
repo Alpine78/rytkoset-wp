@@ -2458,9 +2458,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_person_search_terms' ) ) {
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_publication_search_terms' ) ) {
 	function rytkoset_theme_chat_get_publication_search_terms( $message ) {
-		// "kirjasto" and its inflections are about borrowing, not about a
-		// publication title, and must not trigger the publication source path.
-		if ( ! preg_match( '/\b(?:kirj(?!asto)[\p{L}-]*|teos[\p{L}-]*)\b/ui', (string) $message ) ) {
+		// Only a genuine book/work reference may trigger the publication source
+		// path. "kirja"/"sukukirja"/"teos" and their inflections qualify, but
+		// several "kirj"-stem words do not and would otherwise bind an answer to
+		// the wrong verified source: "kirjasto" (borrowing, not a title),
+		// "kirjoittaa"/"kirjoita" (a writing verb), "kirjaudun" (a login verb)
+		// and "kirje" (a letter). The optional "suku" prefix lets the compound
+		// "sukukirja" match without letting an unrelated compound such as
+		// "asiakirja" (document) match, since the leading word boundary still
+		// applies before the whole match.
+		if ( ! preg_match( '/\b(?:(?:suku)?kirj(?!asto|oitt|aud|e)[\p{L}-]*|teos[\p{L}-]*)\b/ui', (string) $message ) ) {
 			return array();
 		}
 
