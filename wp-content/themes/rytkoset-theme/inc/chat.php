@@ -2405,6 +2405,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			'mikä',
 			'milloin',
 			'missä',
+			'mistä',
 			'miten',
 			'mitä',
 			'näytä',
@@ -2787,6 +2788,25 @@ if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) )
 		}
 
 		return $meeting_query ? 3 > $count : 1 === $count;
+	}
+}
+
+/**
+ * Checks whether a search term is the association's own family surname.
+ *
+ * "Rytkönen" and its inflections (Rytköset, Rytkösiä, Rytkösen, …) appear on
+ * nearly every published source, so a match on the family name alone is not a
+ * distinctive verification and must not select a source — otherwise a generic
+ * question such as "Mistä Rytkönen-nimi on peräisin?" binds to the lone album
+ * merely because the page tier is ambiguous. Rytkölä-style place names
+ * (Rytkö + l…) are intentionally not matched: they are distinctive.
+ *
+ * @param string $term Search term.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_term_is_family_name' ) ) {
+	function rytkoset_theme_chat_term_is_family_name( $term ) {
+		return (bool) preg_match( '/^rytkö(?:nen|s)/ui', trim( (string) $term ) );
 	}
 }
 
@@ -3375,8 +3395,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 						continue;
 					}
 
-					$text  = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
-					$score = 0;
+					$text        = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
+					$score       = 0;
+					$distinctive = 0;
 
 					if ( $meeting_query && ! rytkoset_theme_chat_text_has_meeting_place_context( $text, $search_terms ) ) {
 						continue;
@@ -3393,10 +3414,18 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 
 						if ( $matches ) {
 							++$score;
+
+							if ( ! rytkoset_theme_chat_term_is_family_name( $term ) ) {
+								++$distinctive;
+							}
 						}
 					}
 
-					if ( 0 === $score || $score < $best_score ) {
+					// A match on the ubiquitous family surname alone is not a
+					// distinctive verification (it appears on nearly every source), so
+					// it must not select one — this stops a generic surname question
+					// from binding to the lone album fallback.
+					if ( 0 === $score || 0 === $distinctive || $score < $best_score ) {
 						continue;
 					}
 

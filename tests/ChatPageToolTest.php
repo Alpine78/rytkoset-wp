@@ -1618,6 +1618,72 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=70', $context );
 	}
 
+	public function test_family_name_term_detection(): void {
+		foreach ( array( 'Rytkönen', 'Rytköset', 'Rytkösiä', 'Rytkösen', 'Rytkösten' ) as $name ) {
+			$this->assertTrue( rytkoset_theme_chat_term_is_family_name( $name ), $name );
+		}
+
+		// Distinctive place and person names must not be treated as the family name.
+		foreach ( array( 'Rytkölä', 'Rytkölänranta', 'Viljo', 'Björkman', 'Piilahti' ) as $name ) {
+			$this->assertFalse( rytkoset_theme_chat_term_is_family_name( $name ), $name );
+		}
+
+		// The question word "Mistä" is dropped like "Missä"; the surname stays.
+		$this->assertSame(
+			array( 'Rytkönen' ),
+			rytkoset_theme_chat_get_named_search_terms( 'Mistä Rytkönen-nimi on peräisin?' )
+		);
+	}
+
+	public function test_family_surname_alone_does_not_select_the_lone_album(): void {
+		// Regression (#618, BUG A): a bare common family surname matched many
+		// pages (ambiguous, dropped) while the lone album trivially passed the
+		// unambiguous check and bound the answer to an irrelevant album. The
+		// family name alone is not a distinctive verification, so nothing is
+		// selected and the question falls through to the normal tool path.
+		$page1               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$page1->post_content = '<p>Rytkönen-nimi palautuu vanhaan germaaniseen nimeen Hrodgaer.</p>';
+
+		$page2               = rytkoset_test_register_post( 71, 'page', 'Sukuseura' );
+		$page2->post_content = '<p>Rytkönen on suku, joka on levinnyt eri puolille Suomea.</p>';
+
+		$album               = rytkoset_test_register_post( 72, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Ohjelmassa oli Pasi Rytkönen.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mistä Rytkönen-nimi on peräisin?',
+				),
+			)
+		);
+
+		$this->assertSame( '', $context );
+	}
+
+	public function test_distinctive_single_name_still_resolves_to_the_album(): void {
+		// The family-name gate must not block a genuinely distinctive single-name
+		// album match: a performer named only in an album still resolves.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkönen on suku, joka on levinnyt eri puolille Suomea.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Musisoinnista vastasi Sanna Björkman.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kuka on Björkman?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Sanna Björkman', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+	}
+
 	public function test_prefetch_candidate_counts_stay_unambiguous_per_query_type(): void {
 		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 0, false ) );
 		$this->assertTrue( rytkoset_theme_chat_prefetch_candidates_are_usable( 1, false ) );
