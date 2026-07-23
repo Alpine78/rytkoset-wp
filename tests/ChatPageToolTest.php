@@ -1665,12 +1665,19 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_family_name_term_detection(): void {
-		foreach ( array( 'Rytkönen', 'Rytköset', 'Rytkösiä', 'Rytkösen', 'Rytkösten' ) as $name ) {
+		foreach ( array( 'Rytkönen', 'Rytköset', 'Rytkösiä', 'Rytkösen', 'Rytkösten', 'Rytköstä', 'Rytkösille', 'Rytkösineen' ) as $name ) {
 			$this->assertTrue( rytkoset_theme_chat_term_is_family_name( $name ), $name );
 		}
 
 		// Distinctive place and person names must not be treated as the family name.
 		foreach ( array( 'Rytkölä', 'Rytkölänranta', 'Viljo', 'Björkman', 'Piilahti' ) as $name ) {
+			$this->assertFalse( rytkoset_theme_chat_term_is_family_name( $name ), $name );
+		}
+
+		// A distinctive compound where "Rytkös" is only a prefix of a longer noun
+		// must stay distinctive so its lone verifying source is not dropped: the
+		// case ending after "Rytkös" starts with a vowel or "t", never "h".
+		foreach ( array( 'Rytköshistoriikki', 'Rytkösseura' ) as $name ) {
 			$this->assertFalse( rytkoset_theme_chat_term_is_family_name( $name ), $name );
 		}
 
@@ -1727,6 +1734,29 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		);
 
 		$this->assertStringContainsString( 'Sanna Björkman', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_distinctive_rytkos_compound_resolves_to_the_album(): void {
+		// A distinctive "Rytkös"-prefixed compound term ("Rytköshistoriikki") must
+		// not be treated as the ubiquitous family surname, or its single verifying
+		// album is dropped for lacking a distinctive term and the answer is lost.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseura perustettiin vuonna 1963.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Juhlaohjelmassa oli Marja-Liisa Patrikaisen Rytköshistoriikki.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mikä on Rytköshistoriikki?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Rytköshistoriikki', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
 	}
 
