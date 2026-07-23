@@ -1356,19 +1356,19 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$album->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe, Jaana Luttisen esitelmä sekä The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
 		$cases               = array(
 			array(
-				'name'            => 'Antti Heikkinen',
-				'first_question'  => 'Onko Antti Heikkisestä mainintaa?',
-				'source_fact'     => 'kirjailija Antti Heikkisen puhe',
+				'name'           => 'Antti Heikkinen',
+				'first_question' => 'Onko Antti Heikkisestä mainintaa?',
+				'source_fact'    => 'kirjailija Antti Heikkisen puhe',
 			),
 			array(
-				'name'            => 'Jaana Luttinen',
-				'first_question'  => 'Onko Jaana Luttisesta mainintaa?',
-				'source_fact'     => 'Jaana Luttisen esitelmä',
+				'name'           => 'Jaana Luttinen',
+				'first_question' => 'Onko Jaana Luttisesta mainintaa?',
+				'source_fact'    => 'Jaana Luttisen esitelmä',
 			),
 			array(
-				'name'            => 'Sanna Björkman',
-				'first_question'  => 'Onko Sanna Björkmanista mainintaa?',
-				'source_fact'     => 'Sanna Björkman',
+				'name'           => 'Sanna Björkman',
+				'first_question' => 'Onko Sanna Björkmanista mainintaa?',
+				'source_fact'    => 'Sanna Björkman',
 			),
 		);
 
@@ -1397,6 +1397,113 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			$this->assertStringContainsString( 'älä kiellä henkilön yhteyttä sukuseuraan', $context, $case['name'] );
 			$this->assertStringContainsString( 'Aiempi vastaus tai kieltäytyminen ei saa ohittaa uusimman lähdeotteen tietoa', $context, $case['name'] );
 		}
+	}
+
+	public function test_person_relation_query_detection(): void {
+		$this->assertTrue( rytkoset_theme_chat_is_person_relation_query( 'Liittyykö Anne Kauppala jotenkin toimintaan?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_person_relation_query( 'Miten Antti Heikkinen liittyy sukuseuraan?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_person_relation_query( 'Mikä on Maarit Tastulan yhteys sukuseuraan?' ) );
+
+		// Joining ("liityn"/"liittyä"), unnamed relation and indefinite-pronoun
+		// questions must not route to the verified person path.
+		$this->assertFalse( rytkoset_theme_chat_is_person_relation_query( 'Miten liityn sukuseuraan?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_person_relation_query( 'Voiko kuka tahansa liittyä sukuseuran jäseneksi?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_person_relation_query( 'Liittyykö uutiskirje jäsenyyteen?' ) );
+
+		// The sentence-initial relation verb must never become a search term.
+		$this->assertSame(
+			array( 'Anne', 'Kauppala' ),
+			rytkoset_theme_chat_get_named_search_terms( 'Liittyykö Anne Kauppala jotenkin toimintaan?' )
+		);
+	}
+
+	public function test_person_relation_question_is_a_named_source_query(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Liittyykö Anne Kauppala jotenkin toimintaan?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_person_relation_query_prefetches_a_speaker_named_only_on_an_event(): void {
+		// A Tampere 2026 speaker/performer appears only on the event page, never
+		// on an ordinary page or album, so the person path must search events.
+		$event               = rytkoset_test_register_post( 40, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content = '<p>Professori Anne Kauppala pitää esityksen Aino Acktén urasta.</p>'
+			. '<p>Toimittaja Maarit Tastulan puheenvuoro käsittelee siirtolaisuutta.</p>';
+
+		$cases = array(
+			'Liittyykö Anne Kauppala jotenkin toimintaan?' => 'Anne Kauppala',
+			'Liittyykö Tastulan Maarit jotenkin toimintaan?' => 'Maarit Tastulan puheenvuoro',
+			'Miten Aino Ackté liittyy sukuseuraan?'        => 'Aino Acktén',
+		);
+
+		foreach ( $cases as $question => $fact ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $question,
+					),
+				)
+			);
+
+			$this->assertStringContainsString( $fact, $context, $question );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=40', $context, $question );
+		}
+	}
+
+	public function test_person_relation_query_does_not_borrow_an_unrelated_album(): void {
+		// Regression: "Maarit Tastula" was hallucinated onto the Iisalmi album,
+		// which never names her — she belongs only to the Tampere event. The
+		// verified event source must win and the album must not appear.
+		$album               = rytkoset_test_register_post( 41, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$album->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe ja Jaana Luttisen esitelmä.</p>';
+
+		$event               = rytkoset_test_register_post( 42, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content = '<p>Toimittaja Maarit Tastulan puheenvuoro käsittelee siirtolaisuutta.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Liittyykö Tastulan Maarit jotenkin toimintaan?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Maarit Tastulan puheenvuoro', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=42', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=41', $context );
+	}
+
+	public function test_person_relation_query_resolves_inflected_surname_from_album(): void {
+		// Finnish inflects the surname ("Heikkinen" -> "Heikkisen"), so the
+		// person path must stem-match; otherwise the full name loses to the
+		// common first name among several albums and turns ambiguous.
+		$other               = rytkoset_test_register_post( 50, 'gallery_album', 'Antti Rytkösen muistoalbumi' );
+		$other->post_content = '<p>Kuvia Antti Rytkösen elämästä.</p>';
+
+		$target               = rytkoset_test_register_post( 51, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$target->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Miten Antti Heikkinen liittyy sukuseuraan?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'kirjailija Antti Heikkisen puhe', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=51', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=50', $context );
 	}
 
 	public function test_wordpress_search_finds_named_album_outside_catalogue_limit(): void {
