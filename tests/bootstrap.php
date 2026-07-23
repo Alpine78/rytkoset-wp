@@ -1417,15 +1417,16 @@ function wpautop( $text ) {
 }
 
 // ---------------------------------------------------------------------------
-// Minimal get_posts(): supports post_type, post_parent, fields=ids, meta_key/value and an
-// OR/AND meta_query, with menu_order-then-title ordering. Enough for the magazine reverse
-// product lookups and article listing.
+// Minimal get_posts(): supports post_type, post_parent, fields=ids, search, meta_key/value
+// and an OR/AND meta_query, with menu_order-then-title ordering. Enough for the magazine
+// reverse product lookups, article listing and chat source candidate search.
 // ---------------------------------------------------------------------------
 
 function get_posts( $args = array() ) {
 	$type   = $args['post_type'] ?? 'post';
 	$fields = $args['fields'] ?? '';
 	$parent = array_key_exists( 'post_parent', $args ) ? (int) $args['post_parent'] : null;
+	$search = trim( (string) ( $args['s'] ?? '' ) );
 
 	$matches = array();
 
@@ -1447,6 +1448,17 @@ function get_posts( $args = array() ) {
 			continue;
 		}
 
+		if ( '' !== $search ) {
+			$haystack     = mb_strtolower( $post->post_title . "\n" . $post->post_content );
+			$search_terms = preg_split( '/\s+/u', mb_strtolower( $search ) );
+
+			foreach ( array_filter( (array) $search_terms ) as $search_term ) {
+				if ( false === mb_strpos( $haystack, $search_term ) ) {
+					continue 2;
+				}
+			}
+		}
+
 		$matches[] = $post;
 	}
 
@@ -1459,8 +1471,10 @@ function get_posts( $args = array() ) {
 		}
 	);
 
-	if ( isset( $args['posts_per_page'] ) && (int) $args['posts_per_page'] > 0 ) {
-		$matches = array_slice( $matches, 0, (int) $args['posts_per_page'] );
+	$limit = isset( $args['numberposts'] ) ? (int) $args['numberposts'] : (int) ( $args['posts_per_page'] ?? 0 );
+
+	if ( $limit > 0 ) {
+		$matches = array_slice( $matches, 0, $limit );
 	}
 
 	if ( 'ids' === $fields ) {

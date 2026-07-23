@@ -60,6 +60,54 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		return $page;
 	}
 
+	/**
+	 * Registers the public payment/delivery terms page (#614 concept prefetch).
+	 *
+	 * @param string $content Page content.
+	 * @return WP_Post Payment terms page.
+	 */
+	private function register_payment_terms_page( string $content ): WP_Post {
+		$parent            = rytkoset_test_register_post( 60, 'page', 'Kauppa' );
+		$parent->post_name = 'kauppa';
+
+		$page               = rytkoset_test_register_post( 61, 'page', 'Maksu- ja toimitusehdot', 60 );
+		$page->post_name    = 'maksu-ja-toimitusehdot';
+		$page->post_content = $content;
+
+		return $page;
+	}
+
+	/**
+	 * Registers the public privacy-statement page (#614 concept prefetch).
+	 *
+	 * @param string $content Page content.
+	 * @return WP_Post Privacy statement page.
+	 */
+	private function register_privacy_page( string $content ): WP_Post {
+		$page               = rytkoset_test_register_post( 62, 'page', 'Tietosuojaseloste' );
+		$page->post_name    = 'tietosuoja';
+		$page->post_content = $content;
+
+		return $page;
+	}
+
+	/**
+	 * Registers the public genealogy-register description page (#614).
+	 *
+	 * @param string $content Page content.
+	 * @return WP_Post Register description page.
+	 */
+	private function register_register_description_page( string $content ): WP_Post {
+		$parent            = rytkoset_test_register_post( 63, 'page', 'Sukuseura' );
+		$parent->post_name = 'sukuseura';
+
+		$page               = rytkoset_test_register_post( 64, 'page', 'Rekisteriseloste', 63 );
+		$page->post_name    = 'rekisteriseloste';
+		$page->post_content = $content;
+
+		return $page;
+	}
+
 	// --- rytkoset_theme_chat_extract_tool_calls() -----------------------------
 
 	public function test_extract_tool_calls_returns_parsed_calls(): void {
@@ -346,6 +394,162 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
 	}
 
+	public function test_resolve_returns_public_event_content_with_event_label(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$event->post_content = '<p>Ohjelma alkaa klo 11.30 ja buffet tarjoillaan klo 13.</p>';
+
+		$result = rytkoset_theme_chat_resolve_page_tool_result( 20 );
+
+		$this->assertStringContainsString( 'Tapahtuma: Sukukokous Tampereella (https://rytkoset.test/?p=20)', $result );
+		$this->assertStringContainsString( 'buffet tarjoillaan klo 13', $result );
+	}
+
+	public function test_event_catering_queries_return_the_complete_matching_real_content_section(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$event->post_content = '<p>Ohjelmassa on yhdessäoloa ja musiikkia.</p>'
+			. '<h2>Juhlan aikana</h2><p>Tilaisuudessa on vastaanottotiski ja käsiohjelmia.</p>'
+			. '<h2>Ilmoittautuminen</h2>'
+			. '<p>Kassalla kysytään osallistujien nimet sekä mahdolliset ruokarajoitteet ja allergiat.</p>'
+			. '<p>Osallistumismaksu sisältää lauantain buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä kokouksen ajaksi.</p>'
+			. '<p>Ilmoittautuminen ja maksu tulee tehdä viimeistään 30.7.2026.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2>'
+			. '<p>Halukkaille järjestetään perjantaina 28.8. buffet-illallinen noin klo 20. Hinta on noin 30 € ja se maksetaan paikan päällä.</p>'
+			. '<p>Pöytävarauksen vuoksi illalliselle ilmoittaudutaan etukäteen.</p>'
+			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2>'
+			. '<p>Ilmoita nimet, ruokarajoitteet ja allergiat sekä buffet kyllä/ei.</p>'
+			. '<p>Kirjoita tilisiirron viestikenttään osallistujien nimet ja buffet kyllä/ei.</p>';
+
+		$catering = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko siellä ruokaa tai kahvia?' );
+		$generic  = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko sukujuhlissa tarjolla ruokaa?' );
+		$dinner   = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko illallista tarjolla?' );
+		$typo     = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Entä illalista?' );
+
+		$this->assertTrue( rytkoset_theme_chat_is_event_catering_query( 'Onko illallista tarjolla?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_event_catering_query( 'Entä illalista?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_event_catering_query( 'Mitä ohjelmaa illalla on?' ) );
+
+		$this->assertStringContainsString( 'buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä', $catering );
+		$this->assertStringContainsString( 'Ilmoittautuminen ja maksu tulee tehdä viimeistään 30.7.2026', $catering );
+		$this->assertStringNotContainsString( 'vastaanottotiski', $catering );
+		$this->assertStringNotContainsString( 'Perjantain buffet-illallinen', $catering );
+		$this->assertSame( $catering, $generic );
+		$this->assertNotContains( 'sukujuhlissa', rytkoset_theme_chat_get_event_catering_terms( 'Onko sukujuhlissa tarjolla ruokaa?' ) );
+		$this->assertNotContains( 'tarjolla', rytkoset_theme_chat_get_event_catering_terms( 'Onko sukujuhlissa tarjolla ruokaa?' ) );
+
+		$this->assertStringContainsString( 'perjantaina 28.8. buffet-illallinen noin klo 20', $dinner );
+		$this->assertStringContainsString( 'Hinta on noin 30 € ja se maksetaan paikan päällä', $dinner );
+		$this->assertStringContainsString( 'illalliselle ilmoittaudutaan etukäteen', $dinner );
+		$this->assertStringNotContainsString( 'vastaanottotiski', $dinner );
+		$this->assertStringNotContainsString( 'ruokarajoitteet', $dinner );
+		$this->assertSame( $dinner, $typo );
+	}
+
+	public function test_event_catering_followup_prefetches_the_event_from_its_verified_history_url(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content = '<p>Ohjelmassa on yhdessäoloa ja musiikkia.</p>'
+			. '<h2>Juhlan aikana</h2><p>Tilaisuudessa on vastaanottotiski.</p>'
+			. '<h2>Ilmoittautuminen</h2><p>Maksu sisältää buffetlounaan ja kahvia.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2>'
+			. '<p>Illallinen järjestetään perjantaina noin klo 20 ja maksetaan paikan päällä.</p>';
+		$messages            = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Milloin Tampereen sukukokous pidetään?',
+			),
+			array(
+				'role'    => 'assistant',
+				'content' => 'Se pidetään 29.8.2026. https://rytkoset.test/?p=20',
+			),
+			array(
+				'role'    => 'user',
+				'content' => 'Entä illalista?',
+			),
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source( $messages );
+
+		$this->assertStringContainsString( 'Perjantain buffet-illallinen', $context );
+		$this->assertStringContainsString( 'perjantaina noin klo 20 ja maksetaan paikan päällä', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=20', $context );
+		$this->assertStringNotContainsString( 'vastaanottotiski', $context );
+	}
+
+	public function test_generic_catering_question_prefetches_one_unambiguous_event(): void {
+		$transport               = rytkoset_test_register_post( 19, 'rytkoset_event', 'Yhteiskuljetus Tampereen sukukokoukseen ja juhlaan' );
+		$transport->post_content = '<h2>Paluu lauantaina</h2><p>Kyyti lähtee sukujuhlan jälkeen takaisin.</p>';
+		$event                   = rytkoset_test_register_post( 20, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content     = '<h2>Ilmoittautuminen</h2>'
+			. '<p>Osallistumismaksu sisältää lauantain buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä kokouksen ajaksi.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2><p>Illallinen järjestetään perjantaina.</p>'
+			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2><p>Ilmoita ruokarajoitteet ja buffet kyllä/ei.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko sukujuhlissa tarjolla ruokaa?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=20', $context );
+		$this->assertStringNotContainsString( 'Kyyti lähtee sukujuhlan jälkeen', $context );
+		$this->assertStringNotContainsString( 'Ilmoittautuminen ilman verkkokauppaa', $context );
+		$this->assertStringNotContainsString( 'Perjantain buffet-illallinen', $context );
+	}
+
+	public function test_event_history_url_matching_rejects_longer_id_prefixes(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_text_contains_exact_url(
+				'Katso https://rytkoset.test/?p=20.',
+				'https://rytkoset.test/?p=20'
+			)
+		);
+		$this->assertFalse(
+			rytkoset_theme_chat_text_contains_exact_url(
+				'Katso https://rytkoset.test/?p=20.',
+				'https://rytkoset.test/?p=2'
+			)
+		);
+	}
+
+	public function test_resolve_rejects_draft_and_password_protected_event(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Salainen tapahtuma' );
+		$event->post_content = '<p>Salainen ohjelma.</p>';
+		$event->post_status  = 'draft';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+
+		$event->post_status   = 'publish';
+		$event->post_password = 'salasana';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+	}
+
+	public function test_resolve_returns_public_album_content(): void {
+		$album               = rytkoset_test_register_post( 20, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$album->post_content = '<p>Juhlaohjelmassa oli The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
+
+		$result = rytkoset_theme_chat_resolve_page_tool_result( 20 );
+
+		$this->assertStringContainsString( 'Sanna Björkman', $result );
+		$this->assertStringContainsString( 'https://rytkoset.test/?p=20', $result );
+	}
+
+	public function test_resolve_rejects_draft_and_password_protected_album(): void {
+		$album               = rytkoset_test_register_post( 20, 'gallery_album', 'Salainen albumi' );
+		$album->post_content = '<p>Salainen kuvaus.</p>';
+		$album->post_status  = 'draft';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+
+		$album->post_status   = 'publish';
+		$album->post_password = 'salasana';
+
+		$this->assertSame( rytkoset_theme_chat_get_page_tool_error_text(), rytkoset_theme_chat_resolve_page_tool_result( 20 ) );
+	}
+
 	public function test_resolve_rejects_password_protected_page(): void {
 		$page                = rytkoset_test_register_post( 20, 'page', 'Suojattu' );
 		$page->post_content  = '<p>Suojattu sisältö.</p>';
@@ -433,7 +637,7 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	// --- forced initial tool choice ---------------------------------------------
 
 	public function test_forced_initial_tool_response_rejects_plain_text_and_invalid_calls(): void {
-		$plain_text_body = $this->response_body(
+		$plain_text_body     = $this->response_body(
 			array(
 				'role'    => 'assistant',
 				'content' => 'Vastaus lukematta sivua.',
@@ -557,6 +761,468 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
+	public function test_privacy_and_shop_terms_questions_do_not_force_a_page_read(): void {
+		// #614: these concepts are resolved by the server-side concept prefetch
+		// (rytkoset_theme_chat_get_concept_source), so they must no longer take
+		// the slow, timeout-prone tool_choice:any path.
+		$queries = array(
+			'Missä maissa tietojani käsitellään?',
+			'Mitä rekisteriselosteessa lukee?',
+			'Käsitteleekö sivusto henkilötietoja?',
+			'Käyttääkö sivusto evästeitä?',
+			'Mitä maksutapoja on käytössä?',
+			'Mitkä ovat toimitusehdot?',
+			'Voinko pyytää tietojeni poistamista?',
+			'pääseekö 14-vuotias nuorisojäseneksi?',
+			'kauan postitettavaa paitaa joutuu oottelemaan?',
+			'oon 12, voinko tilata uutiskirjeen ihan ite?',
+			'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertFalse(
+				rytkoset_theme_chat_should_force_page_tool(
+					array(
+						array(
+							'role'    => 'user',
+							'content' => $query,
+						),
+					)
+				),
+				$query
+			);
+		}
+	}
+
+	public function test_newsletter_self_service_questions_do_not_force_a_page_read(): void {
+		// The subscribe / manage / cancel answer is in the stable context, so
+		// these must stay on automatic tool choice. Forcing them onto the
+		// tool_choice:any path made them intermittently time out into a 502.
+		$queries = array(
+			'Miten tilaan uutiskirjeen?',
+			'Miten perun uutiskirjeen tilaamisen?',
+			'Voinko peruuttaa uutiskirjeen tilaamisen?',
+			'Miten tilaan ja perun uutiskirjeen?',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertFalse(
+				rytkoset_theme_chat_should_force_page_tool(
+					array(
+						array(
+							'role'    => 'user',
+							'content' => $query,
+						),
+					)
+				),
+				$query
+			);
+		}
+	}
+
+	// --- rytkoset_theme_chat_get_concept_source_path() (#614) -----------------
+
+	public function test_concept_source_path_maps_each_concept_to_its_page(): void {
+		$cases = array(
+			'Mitä maksutapoja on käytössä?'                => 'kauppa/maksu-ja-toimitusehdot',
+			'Mitkä ovat toimitusehdot?'                    => 'kauppa/maksu-ja-toimitusehdot',
+			'Onko minulla peruuttamisoikeus?'              => 'kauppa/maksu-ja-toimitusehdot',
+			'Voinko perua tilaukseni?'                     => 'kauppa/maksu-ja-toimitusehdot',
+			'Käsitteleekö sivusto henkilötietoja?'         => 'tietosuoja',
+			'Käyttääkö sivusto evästeitä?'                 => 'tietosuoja',
+			'Mitä tietosuojaselosteessa lukee?'            => 'tietosuoja',
+			'Missä maissa tietojani käsitellään?'          => 'tietosuoja',
+			'Voinko pyytää tietojeni poistamista?'         => 'tietosuoja',
+			'Mitä rekisteriselosteessa lukee?'             => 'sukuseura/rekisteriseloste',
+			'pääseekö 14-vuotias nuorisojäseneksi?'        => 'sukuseura/saannot',
+			'voiko 14v liittyä nuoriso jaseneksi?'         => 'sukuseura/saannot',
+			'mikä on nuorisojäsenyyden ikäraja?'           => 'sukuseura/saannot',
+			'kauan postitettavaa paitaa joutuu oottelemaan?' => 'kauppa/maksu-ja-toimitusehdot',
+			'kauanko postitetavaa tuotetta saa ootella?'   => 'kauppa/maksu-ja-toimitusehdot',
+			'oon 12, voinko tilata uutiskirjeen ihan ite?' => 'tietosuoja',
+			'olen 12v, saanko tilata uutis kirjeen itse?'  => 'tietosuoja',
+			'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?' => 'tietosuoja',
+			'kauanko ruokarajotteita säilytetään?'         => 'tietosuoja',
+		);
+
+		foreach ( $cases as $query => $expected ) {
+			$this->assertSame( $expected, rytkoset_theme_chat_get_concept_source_path( $query ), $query );
+		}
+	}
+
+	public function test_concept_source_path_ignores_unrelated_questions(): void {
+		$queries = array(
+			'Milloin seuraava sukukokous pidetään?',
+			'Kuka on puheenjohtaja?',
+			'Paljonko jäsenmaksu on?',
+			'Miten perun uutiskirjeen?',
+			'Onko jäsenmaksu 14 euroa?',
+			'Paljonko nuorisojäsenyys maksaa?',
+			'Kauanko bussikuljetus sukujuhlaan kestää?',
+			'Milloin digilehti toimitetaan?',
+			'',
+		);
+
+		foreach ( $queries as $query ) {
+			$this->assertSame( '', rytkoset_theme_chat_get_concept_source_path( $query ), $query );
+		}
+	}
+
+	// --- concept source prefetch via get_prefetched_public_source() (#614) ----
+
+	public function test_concept_prefetch_returns_verified_payment_terms_source(): void {
+		$this->register_payment_terms_page(
+			'<h2>Maksutavat</h2><p>Maksut välittää Paytrail. Käytettävissä olevat maksutavat näkyvät kassalla.</p>'
+			. '<h2>Maksupalvelutarjoaja</h2><p>Maksunvälityspalvelun toteuttajana ja maksupalveluntarjoajana toimii Paytrail Oyj.</p>'
+			. '<h2>Toimitus</h2><p>Postitettavat tuotteet käsitellään 1–3 arkipäivässä.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä maksutapoja on käytössä?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Maksut välittää Paytrail', $context );
+		$this->assertStringContainsString( 'maksupalveluntarjoajana toimii Paytrail Oyj', $context );
+		$this->assertStringNotContainsString( 'Postitettavat tuotteet', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=61', $context );
+		$this->assertStringContainsString( 'täsmälleen tässä annetussa muodossa', $context );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_concept_source_notice(), $context );
+	}
+
+	public function test_issue_627_prefetches_the_four_verified_source_sections(): void {
+		$this->register_rules_page(
+			'<h2>4. Jäsenet</h2>'
+			. '<p>Sukuseuran jäsenten alle 15-vuotiaat lapset voivat liittyä nuorisojäseniksi. Sukuhallitus hyväksyy varsinaiset jäsenet ja nuorisojäsenet.</p>'
+			. '<h2>5. Jäsenen eroaminen ja erottaminen</h2><p>Tämä ei kuulu nuorisojäsenyyden vastaukseen.</p>'
+		);
+		$this->register_payment_terms_page(
+			'<h2>Toimitus</h2>'
+			. '<p>Postitettavat tuotteet käsitellään 1–3 arkipäivässä. Postin arvioitu kuljetusaika lähettämisestä on 2–5 arkipäivää.</p>'
+			. '<h2>Digitaaliset tuotteet</h2><p>Digitaalinen tuote avataan käyttöön.</p>'
+		);
+		$this->register_privacy_page(
+			'<h2>Alaikäisen suostumus</h2>'
+			. '<p>Alle 13-vuotias ei voi itse antaa pätevää suostumusta. Huoltajan pitää tehdä tai hyväksyä uutiskirjeen tilaaminen.</p>'
+			. '<h2>Mitä henkilötietoja keräämme ja miksi</h2>'
+			. '<h3>Tapahtumailmoittautumiset</h3>'
+			. '<p>Ilmoittautumisessa voidaan antaa ruokarajoitteet. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta.</p>'
+			. '<h3>Käyttäjätilit</h3><p>Tilin tiedot eivät kuulu tähän vastaukseen.</p>'
+			. '<h2>Kuinka kauan säilytämme tietoja</h2>'
+			. '<p>Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta.</p>'
+		);
+
+		$youth_context     = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'pääseekö 14-vuotias nuorisojäseneksi?',
+				),
+			)
+		);
+		$delivery_context  = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'kauan postitettavaa paitaa joutuu oottelemaan?',
+				),
+			)
+		);
+		$minor_context     = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'oon 12, voinko tilata uutiskirjeen ihan ite?',
+				),
+			)
+		);
+		$retention_context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'kauanko tapahtumassa annetut ruokarajoitteet säilytetään?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'alle 15-vuotiaat lapset voivat liittyä nuorisojäseniksi', $youth_context );
+		$this->assertStringContainsString( 'Sukuhallitus hyväksyy varsinaiset jäsenet ja nuorisojäsenet', $youth_context );
+		$this->assertStringContainsString( 'jäsenen lasta, täsmällistä ikärajaa', $youth_context );
+		$this->assertStringNotContainsString( 'Tämä ei kuulu nuorisojäsenyyden vastaukseen', $youth_context );
+
+		$this->assertStringContainsString( 'käsitellään 1–3 arkipäivässä', $delivery_context );
+		$this->assertStringContainsString( 'kuljetusaika lähettämisestä on 2–5 arkipäivää', $delivery_context );
+		$this->assertStringContainsString( 'erottele lähteen käsittelyaika', $delivery_context );
+		$this->assertStringNotContainsString( 'Digitaalinen tuote avataan käyttöön', $delivery_context );
+
+		$this->assertStringContainsString( 'Alle 13-vuotias ei voi itse antaa pätevää suostumusta', $minor_context );
+		$this->assertStringContainsString( 'Huoltajan pitää tehdä tai hyväksyä', $minor_context );
+		$this->assertStringContainsString( 'huoltajan pitää tehdä tai hyväksyä tilaus', $minor_context );
+
+		$this->assertStringContainsString( 'Ilmoittautumisessa voidaan antaa ruokarajoitteet', $retention_context );
+		$this->assertStringContainsString( 'kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn', $retention_context );
+		$this->assertStringContainsString( 'viimeistään 12 kuukauden kuluttua tapahtumasta', $retention_context );
+		$this->assertStringContainsString( 'tapahtumasta laskettavaa täsmällistä enimmäisaikaa', $retention_context );
+		$this->assertStringNotContainsString( 'Tilin tiedot eivät kuulu tähän vastaukseen', $retention_context );
+	}
+
+	public function test_concept_prefetch_returns_register_description_source(): void {
+		$this->register_register_description_page(
+			'<h2>Rekisterin tarkoitus</h2><p>Rekisteriä käytetään sukututkimukseen.</p>'
+			. '<h2>Rekisterin tietosisältö</h2><p>Rekisteri sisältää sukututkimustietoja.</p>'
+			. '<h2>Rekisterin säilytys ja käyttöoikeudet</h2><p>Tietoja säilytetään suojatusti.</p>'
+			. '<h2>Rekisteröidyn oikeudet</h2><p>Rekisteröidyllä on tarkastusoikeus.</p>'
+			. '<h2>Tietojen siirto EU/ETA-alueen ulkopuolelle</h2><p>Tietoja ei siirretä.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä rekisteriselosteessa lukee?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Rekisteriä käytetään sukututkimukseen', $context );
+		$this->assertStringContainsString( 'Rekisteröidyllä on tarkastusoikeus', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=64', $context );
+	}
+
+	public function test_concept_prefetch_returns_the_complete_real_country_section(): void {
+		$this->register_privacy_page(
+			'<h2>Kuinka kauan säilytämme tietoja</h2><p>Tilaustietoja säilytetään kirjanpitolain mukaisesti.</p>'
+			. '<h2>Kenelle jaamme tietojasi</h2><ul>'
+			. '<li><strong>Hosting</strong>: Domainhotelli (palvelinlokit, varmuuskopiot)</li>'
+			. '<li><strong>Maksunvälitys</strong>: Paytrail Oyj (Suomi)</li>'
+			. '<li><strong>Upotettu media</strong>: YouTube / Google</li>'
+			. '<li><strong>Tekoälyavusteinen tukichatti</strong>: Mistral AI SAS (Ranska/EU)</li>'
+			. '<li><strong>Profiilikuvat</strong>: Gravatar / Automattic</li></ul>'
+			. '<h2>Mihin lähetämme tietosi</h2>'
+			. '<p>Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välittämiseksi tarvittavia tietoja. Tukichatin käsittelijä Mistral AI toimii EU-alueella.</p>'
+			. '<p>Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.</p>'
+			. '<p>Kun olet kirjautunut sivustolle ja Gravatar-avatarit ovat käytössä, sähköpostiosoitteestasi muodostettu tiiviste lähetetään Gravatar-palvelulle profiilikuvan olemassaolon tarkistamista varten. Gravatar-palvelua ylläpitää Automattic, joka voi käsitellä tietoja myös EU/ETA-alueen ulkopuolella.</p>'
+			. '<h2>Automaattinen päätöksenteko ja profilointi</h2><p>Sivustolla ei tehdä automaattista päätöksentekoa.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Missä maissa tietojani käsitellään?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Sivuston palvelin sijaitsee Suomessa', $context );
+		$this->assertStringContainsString( 'Paytrail Oyj (Suomi)', $context );
+		$this->assertStringContainsString( 'Mistral AI SAS (Ranska/EU)', $context );
+		$this->assertStringContainsString( 'YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella', $context );
+		$this->assertStringContainsString( 'Gravatar-palvelua ylläpitää Automattic', $context );
+		$this->assertStringNotContainsString( 'Tilaustietoja säilytetään', $context );
+		$this->assertStringNotContainsString( 'automaattista päätöksentekoa', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=62', $context );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_concept_source_notice(), $context );
+	}
+
+	public function test_concept_prefetch_returns_the_complete_real_cookie_section(): void {
+		$this->register_privacy_page(
+			'<h3>Sisältöön upotettu media</h3><p>Sivustolla voi olla YouTube-videoita.</p>'
+			. '<h2>Evästeet</h2><p>Sivusto käyttää välttämättömiä evästeitä:</p><ul>'
+			. '<li><strong>WordPress</strong> asettaa kirjautumis- ja istuntoevästeitä kirjautuneille käyttäjille.</li>'
+			. '<li><strong>WooCommerce</strong> asettaa ostoskorin ja istunnon toimintaan tarvittavat evästeet.</li>'
+			. '<li><strong>YouTube-upotukset</strong> näytetään privacy-enhanced -tilassa.</li>'
+			. '<li><strong>LiteSpeed Cache</strong> voi tallentaa sivuista välimuistikopioita.</li></ul>'
+			. '<p>Sivustolla ei käytetä analytiikka- tai markkinointievästeitä.</p>'
+			. '<h2>Kenelle jaamme tietojasi</h2><p>Profiilikuvia varten käytetään Gravataria.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Käyttääkö sivusto evästeitä?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'WordPress asettaa kirjautumis- ja istuntoevästeitä', $context );
+		$this->assertStringContainsString( 'WooCommerce asettaa ostoskorin', $context );
+		$this->assertStringContainsString( 'YouTube-upotukset näytetään privacy-enhanced -tilassa', $context );
+		$this->assertStringContainsString( 'LiteSpeed Cache voi tallentaa', $context );
+		$this->assertStringContainsString( 'ei käytetä analytiikka- tai markkinointievästeitä', $context );
+		$this->assertStringNotContainsString( 'Profiilikuvia varten käytetään Gravataria', $context );
+	}
+
+	public function test_concept_prefetch_returns_real_product_specific_withdrawal_periods(): void {
+		$this->register_payment_terms_page(
+			'<h2>Toimitus</h2><p>Fyysiset tuotteet toimitetaan asiakkaan antamaan osoitteeseen.</p>'
+			. '<h2>Digitaaliset tuotteet</h2><p>Digitaalisiin tuotteisiin sovelletaan 14 vuorokauden peruuttamisoikeutta, joka lasketaan sopimuksen tekemisestä, ellei tuotteen yhteydessä erikseen pyydetä suostumusta sisällön välittömään toimittamiseen.</p>'
+			. '<h2>Tapahtumamaksut</h2><p>Koska tapahtuma järjestetään määrättynä ajankohtana, tapahtumamaksuun ei sovelleta peruuttamisoikeutta.</p>'
+			. '<h2>Peruuttaminen ja palautukset</h2>'
+			. '<p>Fyysisen tuotteen palautuksesta on ilmoitettava 14 vuorokauden kuluessa tuotteen vastaanottamisesta.</p>'
+			. '<p>Jäsenmaksuihin sovelletaan samaa 14 päivän peruuttamisoikeutta kuin muihinkin etämyynnissä myytäviin tuotteisiin. Tapahtumamaksuihin ei sovelleta peruuttamisoikeutta yllä kuvatun mukaisesti. Digitaalisten tuotteiden peruuttamisoikeus on kuvattu edellä kohdassa "Digitaaliset tuotteet".</p>'
+			. '<h2>Peruuttamisohje</h2><p>Tämä ohje koskee tuotteita, joihin sovelletaan peruuttamisoikeutta.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko minulla peruuttamisoikeus?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Digitaalisiin tuotteisiin sovelletaan 14 vuorokauden peruuttamisoikeutta', $context );
+		$this->assertStringContainsString( 'tapahtumamaksuun ei sovelleta peruuttamisoikeutta', $context );
+		$this->assertStringContainsString( '14 vuorokauden kuluessa tuotteen vastaanottamisesta', $context );
+		$this->assertStringContainsString( 'Jäsenmaksuihin sovelletaan samaa 14 päivän peruuttamisoikeutta', $context );
+		$this->assertStringNotContainsString( 'Tämä ohje koskee tuotteita', $context );
+	}
+
+	public function test_order_cancellation_prefetch_includes_account_guest_and_handling_paths(): void {
+		$this->register_payment_terms_page(
+			'<h2>Digitaaliset tuotteet</h2><p>Digitaalisen sisällön oikeus voi päättyä nimenomaisella suostumuksella.</p>'
+			. '<h2>Tapahtumamaksut</h2><p>Määräaikaiseen tapahtumamaksuun ei sovelleta peruuttamisoikeutta.</p>'
+			. '<h2>Peruuttaminen ja palautukset</h2>'
+			. '<p>Käyttäjätilillä toiminto löytyy kohdasta Oma tili → Tilaukset. Ilman käyttäjätiliä tehdyn tilauksen henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa.</p>'
+			. '<p>Maksamaton tilaus peruuntuu heti, jos kaikki tuotteet kuuluvat peruuttamisoikeuden piiriin; muut pyynnöt käsitellään manuaalisesti.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Voinko perua tilaukseni?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Oma tili → Tilaukset', $context );
+		$this->assertStringContainsString( 'henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa', $context );
+		$this->assertStringContainsString( 'muut pyynnöt käsitellään manuaalisesti', $context );
+		$this->assertStringContainsString( 'kerro sekä käyttäjätilillä tehdyn että ilman käyttäjätiliä tehdyn tilauksen itsepalvelupolku', $context );
+		$this->assertStringContainsString( 'Älä väitä, että painike tai linkki näkyy aina', $context );
+	}
+
+	public function test_concept_prefetch_fails_closed_when_an_expected_heading_is_missing(): void {
+		$this->register_payment_terms_page(
+			'<h2>Maksutavat</h2><p>Maksut välittää Paytrail.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä maksutapoja on käytössä?',
+				),
+			)
+		);
+
+		$this->assertSame( '', $context );
+	}
+
+	public function test_concept_prefetch_skips_members_only_page(): void {
+		$page = $this->register_privacy_page( '<p>Tietojani käsitellään EU-maissa.</p>' );
+		update_post_meta( $page->ID, '_rytkoset_members_only', 'yes' );
+
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Missä maissa tietojani käsitellään?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_concept_prefetch_skips_draft_and_password_protected_pages(): void {
+		$draft              = $this->register_payment_terms_page( '<p>Maksut välittää Paytrail.</p>' );
+		$draft->post_status = 'draft';
+
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitä maksutapoja on käytössä?',
+					),
+				)
+			)
+		);
+
+		$draft->post_status   = 'publish';
+		$draft->post_password = 'salasana';
+
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitä maksutapoja on käytössä?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_concept_prefetch_is_empty_when_the_page_is_missing(): void {
+		// The request handler converts this empty source into a deterministic
+		// response without calling the model.
+		$this->assertSame(
+			'',
+			rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitkä ovat toimitusehdot?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_stable_context_states_what_the_chat_does_with_data(): void {
+		$context = rytkoset_theme_chat_get_stable_site_context();
+
+		// Malli väitti devissä, ettei chatti käsittele henkilötietoja lainkaan.
+		$this->assertStringContainsString( 'IP-osoitetta käsitellään lyhytaikaisesti', $context );
+		$this->assertStringContainsString( 'Älä siis väitä, ettei chatti käsittele lainkaan henkilötietoja', $context );
+
+		// Maksutapoja ei saa luetella eikä päätellä sivun muista sanoista: tuotanto
+		// vastasi "lasku- ja osamaksutapoja", vaikka niitä ei ole millään sivulla.
+		$this->assertStringContainsString( 'Sivusto ei luettele yksittäisiä maksutapoja', $context );
+		$this->assertStringContainsString( 'osamaksua', $context );
+		$this->assertStringContainsString( 'korttilaskulla', $context );
+
+		// Uutiskirjeen peruutusta ei saa ohjata pelkkään sähköpostiin.
+		$this->assertStringContainsString( '/oma-tili/uutiskirje/', $context );
+		$this->assertStringContainsString( 'peruutuslinkki', $context );
+	}
+
+	public function test_stable_context_blocks_invented_resignation_procedure(): void {
+		$context = rytkoset_theme_chat_get_stable_site_context();
+
+		// Tuotannossa `Miten eroan sukuseurasta?` sai keksityn vastauksen: kassan
+		// "ei jatkoa" -valinta, jäsenyyden poisto Oma tililtä ja automaattinen
+		// päättyminen maksamatta jättämällä. Mitään näistä ei ole olemassa, eikä
+		// sivustolla kuvata vapaaehtoisen eroamisen menettelyä lainkaan.
+		$this->assertStringContainsString( 'ei kuvata vapaaehtoisen eroamisen menettelyä', $context );
+		$this->assertStringContainsString( 'Oma tililtä ei voi lopettaa omaa jäsenyyttä', $context );
+		$this->assertStringContainsString( 'perhejäsenten poisto koskee vain perhejäsenrivejä', $context );
+		$this->assertStringContainsString( 'älä väitä jäsenyyden päättyvän automaattisesti', $context );
+	}
+
 	public function test_ordinary_support_question_keeps_automatic_tool_choice(): void {
 		$this->assertFalse(
 			rytkoset_theme_chat_should_force_page_tool(
@@ -590,9 +1256,42 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 				)
 			)
 		);
+
+		// Tavallinen "tieto"-sana ilman omistusliitettä ei saa pakottaa lukua.
+		$this->assertFalse(
+			rytkoset_theme_chat_should_force_page_tool(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Mitä tietoa sivustolla on tapahtumista?',
+					),
+				)
+			)
+		);
 	}
 
 	// --- server-resolved public source ---------------------------------------
+
+	public function test_prefetched_source_block_binds_the_answer_to_its_own_url(): void {
+		// Devissä malli sai varmennetun Toimintakertomus-lähteen mutta viittasi
+		// toiseen sivustokartan osoitteeseen ja latisti täsmällisen päivämäärän.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Toimintakertomus' );
+		$page->post_content = '<p>Hallitus valittiin sukukokouksessa Pielavedellä 27.7.2019.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Milloin Pielaveden sukukokous pidettiin?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+		$this->assertStringContainsString( 'täsmälleen tässä annetussa muodossa', $context );
+		$this->assertStringContainsString( 'älä käytä sivustokartan tai muun lähteen osoitetta', $context );
+		$this->assertStringContainsString( 'Toista otteen päivämäärät', $context );
+	}
 
 	public function test_board_and_chair_queries_prefetch_the_public_board_page(): void {
 		$this->register_board_page(
@@ -614,6 +1313,144 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
+	public function test_board_query_survives_capitalized_command_words_and_typos(): void {
+		$this->register_board_page(
+			'<h2>Hallitus 2023–2026</h2><ul><li>Antti Rytkönen, puheenjohtaja</li><li>Mauri Rytkönen, jäsen</li></ul>'
+		);
+
+		$queries = array(
+			'Luettele hallituksen jäsenet.',
+			'Luettele sukuseuran hallituksen jäsenet.',
+			'Ketkä kuuluvat hallitukseen?',
+			'Näytä hallituksen kokoonpano.',
+			'Keitö kuuluu hallitukseen?',
+		);
+
+		foreach ( $queries as $query ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $query,
+					),
+				)
+			);
+
+			$this->assertStringContainsString( 'Mauri Rytkönen, jäsen', $context, $query );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=81', $context, $query );
+		}
+	}
+
+	public function test_named_search_terms_drop_command_words_but_keep_place_names(): void {
+		$this->assertSame( array(), rytkoset_theme_chat_get_named_search_terms( 'Luettele hallituksen jäsenet.' ) );
+		$this->assertSame( array(), rytkoset_theme_chat_get_named_search_terms( 'Ketkä kuuluvat hallitukseen?' ) );
+
+		// A sentence-initial proper name must still be searchable.
+		$this->assertSame(
+			array( 'Tampereen' ),
+			rytkoset_theme_chat_get_named_search_terms( 'Tampereen sukukokous, milloin se pidetään?' )
+		);
+	}
+
+	public function test_indefinite_pronoun_question_is_not_a_person_query(): void {
+		$question = 'Voiko kuka tahansa liittyä sukuseuran jäseneksi?';
+
+		$this->assertSame( array(), rytkoset_theme_chat_get_person_search_terms( $question ) );
+		$this->assertFalse(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $question,
+					),
+				)
+			)
+		);
+
+		// A real person question still routes to the verified person path.
+		$this->assertSame(
+			array( 'Antti', 'Rytkönen' ),
+			rytkoset_theme_chat_get_person_search_terms( 'Kuka on Antti Rytkönen?' )
+		);
+	}
+
+	public function test_library_question_is_not_a_publication_query(): void {
+		$question = 'Saako sitä kirjastosta?';
+
+		$this->assertSame( array(), rytkoset_theme_chat_get_publication_search_terms( $question ) );
+		$this->assertFalse(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $question,
+					),
+				)
+			)
+		);
+
+		// A publication title question keeps its disambiguation terms.
+		$this->assertNotSame(
+			array(),
+			rytkoset_theme_chat_get_publication_search_terms( 'Voinko ostaa kirjan Rytkösiä sukupolvesta toiseen?' )
+		);
+	}
+
+	public function test_kirj_stem_verbs_are_not_publication_queries(): void {
+		// "kirj"-stem verbs and a letter must not route to the publication
+		// source path. The name-signing question belongs to the rules page, not
+		// to a work-title search, so it must not be misrouted here (#622).
+		foreach (
+			array(
+				'Kuka saa kirjoittaa yhdistyksen nimen?',
+				'Miten kirjaudun sisään?',
+				'Sain kirjeen postissa.',
+				'kirjoittaa',
+				'kirjaudun',
+				'kirje',
+			) as $question
+		) {
+			$this->assertSame(
+				array(),
+				rytkoset_theme_chat_get_publication_search_terms( $question ),
+				$question
+			);
+		}
+
+		// A document ("asiakirja") is not a publication title either.
+		$this->assertSame(
+			array(),
+			rytkoset_theme_chat_get_publication_search_terms( 'Missä ovat yhdistyksen asiakirjat?' )
+		);
+	}
+
+	public function test_genuine_book_references_are_publication_queries(): void {
+		// Real book/work references still resolve to the publication path,
+		// including the "sukukirja" compound (#622).
+		foreach (
+			array(
+				'Onko kirja vielä myynnissä?',
+				'Onko sukukirja vielä myynnissä?',
+				'Onko teos vielä myynnissä?',
+			) as $question
+		) {
+			$this->assertNotSame(
+				array(),
+				rytkoset_theme_chat_get_publication_search_terms( $question ),
+				$question
+			);
+		}
+	}
+
+	public function test_photo_query_detection_excludes_unrelated_kuva_words(): void {
+		$this->assertTrue( rytkoset_theme_chat_is_photo_query( 'Onko Runnin sukujuhlista kuvia?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_photo_query( 'Löytyykö tapahtumasta valokuvia tai albumia?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_photo_query( 'Kuka oli kirjan kuvittaja?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_photo_query( 'Missä on tapahtuman kuvaus?' ) );
+		$this->assertSame( array( 'Runnin' ), rytkoset_theme_chat_get_named_search_terms( 'Löytyykö Runnin juhlista kuvia?' ) );
+		$this->assertSame( array(), rytkoset_theme_chat_get_named_search_terms( 'Löytyykö albumia tai valokuvia?' ) );
+	}
+
 	public function test_unique_person_first_name_prefetches_source_for_inflected_surname(): void {
 		$page               = rytkoset_test_register_post( 70, 'page', 'Sukukirjat' );
 		$page->post_content = '<p>Kirjan kuvittaja oli Teuvo Rönkkö Kuopiosta.</p>';
@@ -631,9 +1468,420 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
 	}
 
+	public function test_person_found_only_in_album_prefetches_the_album(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$page->post_content = '<p>Sukukirjan toimitti Antero Rytkönen työryhmineen.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa' );
+		$album->post_content = '<p>Ohjelmassa oli The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kuka on Sanna Björkman?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Sanna Björkman', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+		$this->assertStringContainsString( 'Kysymys "Kuka on Nimi?" ei vaadi täydellistä elämäkertaa', $context );
+		$this->assertStringContainsString( 'vastaus "en löytänyt tietoa" on väärä ja kielletty', $context );
+	}
+
+	public function test_person_relation_follow_ups_use_album_and_explicit_source_contract(): void {
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa' );
+		$album->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe, Jaana Luttisen esitelmä sekä The Lovematchesin (Sanna Björkman ja Pasi Rytkönen) musisointia.</p>';
+		$cases               = array(
+			array(
+				'name'           => 'Antti Heikkinen',
+				'first_question' => 'Onko Antti Heikkisestä mainintaa?',
+				'source_fact'    => 'kirjailija Antti Heikkisen puhe',
+			),
+			array(
+				'name'           => 'Jaana Luttinen',
+				'first_question' => 'Onko Jaana Luttisesta mainintaa?',
+				'source_fact'    => 'Jaana Luttisen esitelmä',
+			),
+			array(
+				'name'           => 'Sanna Björkman',
+				'first_question' => 'Onko Sanna Björkmanista mainintaa?',
+				'source_fact'    => 'Sanna Björkman',
+			),
+		);
+
+		foreach ( $cases as $case ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $case['first_question'],
+					),
+					array(
+						'role'    => 'assistant',
+						'content' => $case['source_fact'] . "\n\nLähde: https://rytkoset.test/?p=71",
+					),
+					array(
+						'role'    => 'user',
+						'content' => 'Miten ' . $case['name'] . ' liittyy sukuseuraan?',
+					),
+				)
+			);
+
+			$this->assertStringContainsString( $case['source_fact'], $context, $case['name'] );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context, $case['name'] );
+			$this->assertStringContainsString( 'Kysymys "Miten Nimi liittyy sukuseuraan?"', $context, $case['name'] );
+			$this->assertStringContainsString( 'eikä välttämättä jäsenyyttä tai virallista tehtävää', $context, $case['name'] );
+			$this->assertStringContainsString( 'älä kiellä henkilön yhteyttä sukuseuraan', $context, $case['name'] );
+			$this->assertStringContainsString( 'Aiempi vastaus tai kieltäytyminen ei saa ohittaa uusimman lähdeotteen tietoa', $context, $case['name'] );
+		}
+	}
+
+	public function test_person_relation_query_detection(): void {
+		$this->assertTrue( rytkoset_theme_chat_is_person_relation_query( 'Liittyykö Anne Kauppala jotenkin toimintaan?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_person_relation_query( 'Miten Antti Heikkinen liittyy sukuseuraan?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_person_relation_query( 'Mikä on Maarit Tastulan yhteys sukuseuraan?' ) );
+
+		// Joining ("liityn"/"liittyä"), unnamed relation and indefinite-pronoun
+		// questions must not route to the verified person path.
+		$this->assertFalse( rytkoset_theme_chat_is_person_relation_query( 'Miten liityn sukuseuraan?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_person_relation_query( 'Voiko kuka tahansa liittyä sukuseuran jäseneksi?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_person_relation_query( 'Liittyykö uutiskirje jäsenyyteen?' ) );
+
+		// The sentence-initial relation verb must never become a search term.
+		$this->assertSame(
+			array( 'Anne', 'Kauppala' ),
+			rytkoset_theme_chat_get_named_search_terms( 'Liittyykö Anne Kauppala jotenkin toimintaan?' )
+		);
+	}
+
+	public function test_person_relation_question_is_a_named_source_query(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Liittyykö Anne Kauppala jotenkin toimintaan?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_person_relation_query_prefetches_a_speaker_named_only_on_an_event(): void {
+		// A Tampere 2026 speaker/performer appears only on the event page, never
+		// on an ordinary page or album, so the person path must search events.
+		$event               = rytkoset_test_register_post( 40, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content = '<p>Professori Anne Kauppala pitää esityksen Aino Acktén urasta.</p>'
+			. '<p>Toimittaja Maarit Tastulan puheenvuoro käsittelee siirtolaisuutta.</p>';
+
+		$cases = array(
+			'Liittyykö Anne Kauppala jotenkin toimintaan?' => 'Anne Kauppala',
+			'Liittyykö Tastulan Maarit jotenkin toimintaan?' => 'Maarit Tastulan puheenvuoro',
+			'Miten Aino Ackté liittyy sukuseuraan?'        => 'Aino Acktén',
+		);
+
+		foreach ( $cases as $question => $fact ) {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => $question,
+					),
+				)
+			);
+
+			$this->assertStringContainsString( $fact, $context, $question );
+			$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=40', $context, $question );
+		}
+	}
+
+	public function test_person_relation_query_does_not_borrow_an_unrelated_album(): void {
+		// Regression: "Maarit Tastula" was hallucinated onto the Iisalmi album,
+		// which never names her — she belongs only to the Tampere event. The
+		// verified event source must win and the album must not appear.
+		$album               = rytkoset_test_register_post( 41, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$album->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe ja Jaana Luttisen esitelmä.</p>';
+
+		$event               = rytkoset_test_register_post( 42, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content = '<p>Toimittaja Maarit Tastulan puheenvuoro käsittelee siirtolaisuutta.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Liittyykö Tastulan Maarit jotenkin toimintaan?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Maarit Tastulan puheenvuoro', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=42', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=41', $context );
+	}
+
+	public function test_person_relation_query_resolves_inflected_surname_from_album(): void {
+		// Finnish inflects the surname ("Heikkinen" -> "Heikkisen"), so the
+		// person path must stem-match; otherwise the full name loses to the
+		// common first name among several albums and turns ambiguous.
+		$other               = rytkoset_test_register_post( 50, 'gallery_album', 'Antti Rytkösen muistoalbumi' );
+		$other->post_content = '<p>Kuvia Antti Rytkösen elämästä.</p>';
+
+		$target               = rytkoset_test_register_post( 51, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$target->post_content = '<p>Ohjelmassa oli kirjailija Antti Heikkisen puhe.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Miten Antti Heikkinen liittyy sukuseuraan?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'kirjailija Antti Heikkisen puhe', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=51', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=50', $context );
+	}
+
+	public function test_wordpress_search_finds_named_album_outside_catalogue_limit(): void {
+		for ( $index = 1; $index <= 5; ++$index ) {
+			$album               = rytkoset_test_register_post( 100 + $index, 'gallery_album', sprintf( 'A-albumi %02d', $index ) );
+			$album->post_content = '<p>Muu julkinen albumi ilman kysyttyä henkilöä.</p>';
+		}
+
+		$target               = rytkoset_test_register_post( 200, 'gallery_album', 'Z-albumi Iisalmen 60-vuotissukujuhlasta' );
+		$target->post_content = '<p>Juhlaohjelmassa oli kirjailija Antti Heikkisen puhe.</p>';
+		$limit                = static fn() => 3;
+
+		add_filter( 'rytkoset_theme_chat_prefetch_max_pages', $limit );
+
+		try {
+			$context = rytkoset_theme_chat_get_prefetched_public_source(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'Kuka on Antti Heikkinen?',
+					),
+				)
+			);
+		} finally {
+			remove_filter( 'rytkoset_theme_chat_prefetch_max_pages', $limit );
+		}
+
+		$this->assertStringContainsString( 'kirjailija Antti Heikkisen puhe', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=200', $context );
+	}
+
+	public function test_photo_query_does_not_use_an_event_history_page_as_album_evidence(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Perustava kokous pidettiin Runnin Terveyskylpylällä 18.8.1963.</p>';
+		rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$messages = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Onko Runnin sukujuhlista kuvia?',
+			),
+		);
+
+		$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ) );
+		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
+		$this->assertStringContainsString( 'julkaistua kuva-albumia', rytkoset_theme_chat_get_photo_source_fallback_reply( 'Runnin' ) );
+	}
+
+	public function test_photo_query_prefetches_only_the_matching_album(): void {
+		$page                = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content  = '<p>Sukujuhla järjestettiin Iisalmen kulttuurikeskuksella.</p>';
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$album->post_content = '<p>Albumi sisältää kuvia juhlapäivästä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko Iisalmen sukujuhlista kuvia?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Albumi: 60-vuotissukujuhla Iisalmessa 19.8.2023', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_page_source_wins_over_album_mentioning_the_same_person(): void {
+		// Albumit ovat vain varapolku: sivulta löytyvä henkilö ei saa muuttua
+		// moniselitteiseksi siksi, että sama nimi mainitaan albumin kuvauksessa.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$page->post_content = '<p>Pitkäaikaisella puheenjohtajalla Marja-Liisa Patrikaisella oli merkittävä rooli.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Ohjelmassa oli Marja-Liisa Patrikaisen Rytköshistoriikki.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kerro Marja-Liisa Patrikaisesta.',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_ambiguous_page_tier_falls_through_to_a_verifying_album(): void {
+		// Pelkkä sukunimi osuu moneen sivuun. Se on kohinaa, ei vastaus, joten
+		// haun on jatkuttava albumeihin, jotka varmentavat koko nimen.
+		$first               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$first->post_content = '<p>Esa Rytkönen toimi puheenjohtajana.</p>';
+
+		$second               = rytkoset_test_register_post( 71, 'page', 'Sukututkimus' );
+		$second->post_content = '<p>Antero Rytkönen toimitti sukukirjan.</p>';
+
+		$album               = rytkoset_test_register_post( 72, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Musisoinnista vastasi Pasi Rytkönen.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kuka on Pasi Rytkönen?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=72', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_family_name_term_detection(): void {
+		foreach ( array( 'Rytkönen', 'Rytköset', 'Rytkösiä', 'Rytkösen', 'Rytkösten', 'Rytköstä', 'Rytkösille', 'Rytkösineen' ) as $name ) {
+			$this->assertTrue( rytkoset_theme_chat_term_is_family_name( $name ), $name );
+		}
+
+		// Distinctive place and person names must not be treated as the family name.
+		foreach ( array( 'Rytkölä', 'Rytkölänranta', 'Viljo', 'Björkman', 'Piilahti' ) as $name ) {
+			$this->assertFalse( rytkoset_theme_chat_term_is_family_name( $name ), $name );
+		}
+
+		// A distinctive compound where "Rytkös" is only a prefix of a longer noun
+		// must stay distinctive so its lone verifying source is not dropped: the
+		// case ending after "Rytkös" starts with a vowel or "t", never "h".
+		foreach ( array( 'Rytköshistoriikki', 'Rytkösseura' ) as $name ) {
+			$this->assertFalse( rytkoset_theme_chat_term_is_family_name( $name ), $name );
+		}
+
+		// The question word "Mistä" is dropped like "Missä"; the surname stays.
+		$this->assertSame(
+			array( 'Rytkönen' ),
+			rytkoset_theme_chat_get_named_search_terms( 'Mistä Rytkönen-nimi on peräisin?' )
+		);
+	}
+
+	public function test_family_surname_alone_does_not_select_the_lone_album(): void {
+		// Regression (#618, BUG A): a bare common family surname matched many
+		// pages (ambiguous, dropped) while the lone album trivially passed the
+		// unambiguous check and bound the answer to an irrelevant album. The
+		// family name alone is not a distinctive verification, so nothing is
+		// selected and the question falls through to the normal tool path.
+		$page1               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
+		$page1->post_content = '<p>Rytkönen-nimi palautuu vanhaan germaaniseen nimeen Hrodgaer.</p>';
+
+		$page2               = rytkoset_test_register_post( 71, 'page', 'Sukuseura' );
+		$page2->post_content = '<p>Rytkönen on suku, joka on levinnyt eri puolille Suomea.</p>';
+
+		$album               = rytkoset_test_register_post( 72, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Ohjelmassa oli Pasi Rytkönen.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mistä Rytkönen-nimi on peräisin?',
+				),
+			)
+		);
+
+		$this->assertSame( '', $context );
+	}
+
+	public function test_distinctive_single_name_still_resolves_to_the_album(): void {
+		// The family-name gate must not block a genuinely distinctive single-name
+		// album match: a performer named only in an album still resolves.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkönen on suku, joka on levinnyt eri puolille Suomea.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Musisoinnista vastasi Sanna Björkman.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Kuka on Björkman?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Sanna Björkman', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_distinctive_rytkos_compound_resolves_to_the_album(): void {
+		// A distinctive "Rytkös"-prefixed compound term ("Rytköshistoriikki") must
+		// not be treated as the ubiquitous family surname, or its single verifying
+		// album is dropped for lacking a distinctive term and the answer is lost.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseura perustettiin vuonna 1963.</p>';
+
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla' );
+		$album->post_content = '<p>Juhlaohjelmassa oli Marja-Liisa Patrikaisen Rytköshistoriikki.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mikä on Rytköshistoriikki?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Rytköshistoriikki', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_prefetch_candidate_counts_stay_unambiguous_per_query_type(): void {
+		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 0, false ) );
+		$this->assertTrue( rytkoset_theme_chat_prefetch_candidates_are_usable( 1, false ) );
+		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 2, false ) );
+
+		// Sukukokouksella voi olla tapahtuma- ja kuljetussivu.
+		$this->assertTrue( rytkoset_theme_chat_prefetch_candidates_are_usable( 2, true ) );
+		$this->assertFalse( rytkoset_theme_chat_prefetch_candidates_are_usable( 3, true ) );
+	}
+
+	public function test_named_source_fallback_offers_site_search_for_the_named_terms(): void {
+		$this->assertSame(
+			'https://rytkoset.test/?s=Sanna%20Bj%C3%B6rkman',
+			rytkoset_theme_chat_get_site_search_url( 'Sanna Björkman' )
+		);
+		$this->assertSame( '', rytkoset_theme_chat_get_site_search_url( '   ' ) );
+
+		$reply = rytkoset_theme_chat_get_named_source_fallback_reply( 'Sanna Björkman' );
+
+		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', $reply );
+		$this->assertStringContainsString( 'https://rytkoset.test/?s=Sanna%20Bj%C3%B6rkman', $reply );
+
+		// Ilman hakusanaa vastaus pysyy entisellään ilman tyhjää hakulinkkiä.
+		$this->assertStringNotContainsString( '?s=', rytkoset_theme_chat_get_named_source_fallback_reply() );
+	}
+
 	public function test_publication_title_terms_prefetch_one_public_page(): void {
-		$general               = rytkoset_test_register_post( 69, 'page', 'Sukuseura' );
-		$general->post_content = '<p>Rytkösiä on julkaistu monissa teoksissa.</p>';
+		$general                = rytkoset_test_register_post( 69, 'page', 'Sukuseura' );
+		$general->post_content  = '<p>Rytkösiä on julkaistu monissa teoksissa.</p>';
 		$research               = rytkoset_test_register_post( 70, 'page', 'Sukututkimus' );
 		$research->post_content = '<p>Sukukirja Rytkösiä sukupolvesta toiseen ilmestyi vuonna 2006 ja on loppuunmyyty.</p>';
 
@@ -657,8 +1905,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$unrelated               = rytkoset_test_register_post( 69, 'page', 'Hallituksen tiedot' );
 		$unrelated->post_content = '<p>Antti, Tampere</p><p>Seuraava sukukokous päätetään myöhemmin.</p>';
 
-		$main               = rytkoset_test_register_post( 70, 'rytkoset_event', 'Sukukokous Tampereella' );
-		$main->post_content = '<p>Rytkösten sukukokous Tampereella pidetään 29.8.2026.</p>';
+		$main                    = rytkoset_test_register_post( 70, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$main->post_content      = '<p>Rytkösten sukukokous Tampereella pidetään 29.8.2026.</p>';
 		$transport               = rytkoset_test_register_post( 71, 'rytkoset_event', 'Yhteiskuljetus Tampereen sukukokoukseen' );
 		$transport->post_content = '<p>Kuljetus palvelee Tampereen sukukokousta.</p>';
 
@@ -679,16 +1927,158 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	public function test_meeting_without_same_line_source_uses_named_fallback_path(): void {
 		$page               = rytkoset_test_register_post( 70, 'page', 'Hallituksen tiedot' );
 		$page->post_content = '<p>Mauri, Helsinki</p><p>Sukukokous pidetään joka kolmas vuosi.</p>';
-		$messages           = array(
+
+		foreach ( array( 'Milloin Helsingin sukukokous pidetään?', 'Milloin pidetään Runnin sukujuhla?' ) as $query ) {
+			$messages = array(
+				array(
+					'role'    => 'user',
+					'content' => $query,
+				),
+			);
+
+			$this->assertTrue( rytkoset_theme_chat_is_meeting_query( $query ), $query );
+			$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ), $query );
+			$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ), $query );
+		}
+
+		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', rytkoset_theme_chat_get_named_source_fallback_reply() );
+	}
+
+	public function test_founding_meeting_line_detection(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_line_is_founding_meeting( 'Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.' )
+		);
+		$this->assertTrue( rytkoset_theme_chat_line_is_founding_meeting( 'Perustavan kokouksen pöytäkirja on arkistoitu.' ) );
+
+		// A bare "kokous" mention, e.g. a board meeting, must not count.
+		$this->assertFalse( rytkoset_theme_chat_line_is_founding_meeting( 'Hallituksen kokous pidettiin etänä.' ) );
+		$this->assertFalse( rytkoset_theme_chat_line_is_founding_meeting( 'Seuraava sukukokous päätetään myöhemmin.' ) );
+	}
+
+	public function test_meeting_history_query_detection(): void {
+		foreach (
 			array(
-				'role'    => 'user',
-				'content' => 'Milloin Helsingin sukukokous pidetään?',
-			),
+				'Onko Runnilla ollut sukukokousta?',
+				'Onko Runnilla ollut sukujuhlia?',
+				'Milloin Runnin sukukokous pidettiin?',
+				'Onko Runnilla pidetty sukukokousta?',
+			) as $query
+		) {
+			$this->assertTrue( rytkoset_theme_chat_is_meeting_history_query( $query ), $query );
+		}
+
+		// "pidetään" (is/will be held) asks about the next occurrence, not history.
+		foreach (
+			array(
+				'Milloin pidetään Runnin sukujuhla?',
+				'Milloin seuraava sukukokous pidetään?',
+			) as $query
+		) {
+			$this->assertFalse( rytkoset_theme_chat_is_meeting_history_query( $query ), $query );
+		}
+	}
+
+	public function test_meeting_place_context_accepts_founding_meeting_only_for_history_questions(): void {
+		$text = 'Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.';
+
+		// Without the flag, a founding-meeting line never counts as a meeting
+		// topic (the pre-existing #618 behavior for non-history phrasings).
+		$this->assertFalse( rytkoset_theme_chat_text_has_meeting_place_context( $text, array( 'Runnilla' ) ) );
+		$this->assertFalse( rytkoset_theme_chat_text_has_meeting_place_context( $text, array( 'Runnilla' ), false ) );
+
+		// A history-phrased question may accept it.
+		$this->assertTrue( rytkoset_theme_chat_text_has_meeting_place_context( $text, array( 'Runnilla' ), true ) );
+	}
+
+	public function test_runni_history_question_resolves_to_the_founding_meeting(): void {
+		// The founding meeting genuinely was a sukukokous, so a history-phrased
+		// question about Runni may now use it, unlike a "when is it held" style
+		// question about the next occurrence (see the next test).
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko Runnilla ollut sukukokousta?',
+				),
+			)
 		);
 
-		$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ) );
-		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
-		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', rytkoset_theme_chat_get_named_source_fallback_reply() );
+		$this->assertStringContainsString( '18.8.1963', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
+	}
+
+	public function test_runni_next_occurrence_question_still_ignores_the_founding_meeting(): void {
+		// Regression: even with the founding meeting now resolvable for history
+		// questions, "Milloin pidetään ...?" must not reuse the 1963 date, or a
+		// forward-looking question would be answered with a misleading old date.
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Milloin pidetään Runnin sukujuhla?',
+				),
+			)
+		);
+
+		$this->assertSame( '', $context );
+	}
+
+	public function test_lowercase_meeting_place_term_extraction(): void {
+		// A meeting question written entirely in lowercase still yields a place
+		// candidate, since many visitors do not capitalize proper names.
+		$this->assertSame(
+			array( 'runnilla' ),
+			rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'onko runnilla ollut sukukokousta?' )
+		);
+		$this->assertSame(
+			array( 'runnin' ),
+			rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'milloin runnin sukujuhlat ovat?' )
+		);
+
+		// The meeting-topic stem, history/scheduling verbs and the shared
+		// question-word ignore list must never become "place" candidates.
+		$this->assertSame( array(), rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'onko sukukokousta ollut?' ) );
+		$this->assertSame( array(), rytkoset_theme_chat_get_lowercase_meeting_place_terms( 'milloin sukujuhlat pidetään?' ) );
+	}
+
+	public function test_lowercase_meeting_question_is_still_a_named_source_query(): void {
+		// Without capitalization, get_named_search_terms() alone would miss the
+		// place term entirely; the lowercase fallback keeps this a verification-
+		// requiring question so it fails safely instead of falling through to an
+		// unverified general answer.
+		$this->assertTrue(
+			rytkoset_theme_chat_is_named_source_query(
+				array(
+					array(
+						'role'    => 'user',
+						'content' => 'onko runnilla ollut sukukokousta?',
+					),
+				)
+			)
+		);
+	}
+
+	public function test_lowercase_runni_history_question_resolves_to_the_founding_meeting(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'onko runnilla ollut sukukokousta?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( '18.8.1963', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=70', $context );
 	}
 
 	public function test_public_source_post_rejects_restricted_event(): void {
@@ -704,8 +2094,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_ambiguous_or_restricted_person_source_does_not_bypass_tool_path(): void {
 		$first                = rytkoset_test_register_post( 70, 'page', 'Ensimmäinen' );
-		$first->post_content = '<p>Teuvo mainitaan tällä sivulla.</p>';
-		$second                = rytkoset_test_register_post( 71, 'page', 'Toinen' );
+		$first->post_content  = '<p>Teuvo mainitaan tällä sivulla.</p>';
+		$second               = rytkoset_test_register_post( 71, 'page', 'Toinen' );
 		$second->post_content = '<p>Teuvo mainitaan myös tällä sivulla.</p>';
 
 		$messages = array(
@@ -762,6 +2152,15 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 	// --- system prompt wiring ---------------------------------------------------
 
+	public function test_system_prompt_explains_finnish_surname_first_name_order(): void {
+		$prompt = rytkoset_theme_chat_get_system_prompt();
+
+		// "Röngön Teuvo" is the same person as the source page's "Teuvo Rönkkö";
+		// without this the model answered "en tiedä" despite a verified source.
+		$this->assertStringContainsString( 'Sukunimen genetiivi + etunimi', $prompt );
+		$this->assertStringContainsString( 'vertaa nimen vartaloa', $prompt );
+	}
+
 	public function test_system_prompt_includes_tool_instructions_when_enabled(): void {
 		$prompt = rytkoset_theme_chat_get_system_prompt();
 
@@ -816,7 +2215,120 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_max_length_defaults_to_5000(): void {
+		// The budget is unchanged; what changed is that a longer page now spends
+		// it on the question-matched lines instead of the top of the page.
 		$this->assertSame( 5000, rytkoset_theme_chat_get_page_tool_max_length() );
+	}
+
+	public function test_scored_excerpt_prefers_lines_matching_more_terms(): void {
+		$text = "Alussa mainitaan tietosuoja lyhyesti.\n"
+			. str_repeat( "Välissä puhutaan tietosuojasta yleisesti.\n", 40 )
+			. "Lopussa kerrotaan, että tietojen käsittely tapahtuu Suomessa.\n";
+
+		$result = rytkoset_theme_chat_get_scored_page_excerpt(
+			$text,
+			rytkoset_theme_chat_get_page_query_terms( 'Missä maissa tietojani käsitellään?' ),
+			400
+		);
+
+		// The two-term line sits last but must still win the budget.
+		$this->assertStringContainsString( 'käsittely tapahtuu Suomessa', $result );
+	}
+
+	public function test_scored_excerpt_keeps_document_order(): void {
+		$text = "Ensin uutiskirje mainitaan.\nVälissä muuta.\nLopuksi uutiskirjeen peruutus.";
+
+		$result = rytkoset_theme_chat_get_scored_page_excerpt(
+			$text,
+			rytkoset_theme_chat_get_page_query_terms( 'Voinko peruuttaa uutiskirjeen tilaamisen?' ),
+			5000
+		);
+
+		$this->assertLessThan(
+			mb_strpos( $result, 'Lopuksi uutiskirjeen peruutus' ),
+			mb_strpos( $result, 'Ensin uutiskirje mainitaan' )
+		);
+	}
+
+	public function test_scored_excerpt_returns_empty_without_terms_or_matches(): void {
+		$this->assertSame( '', rytkoset_theme_chat_get_scored_page_excerpt( 'Tekstiä.', array(), 5000 ) );
+		$this->assertSame( '', rytkoset_theme_chat_get_scored_page_excerpt( 'Tekstiä.', array( 'uutiskirje' ), 5000 ) );
+	}
+
+	// --- long-page excerpt for the read tool -----------------------------------
+
+	public function test_page_query_terms_drop_question_and_filler_words(): void {
+		$this->assertSame(
+			array( 'maissa', 'tietojani', 'käsitellään' ),
+			rytkoset_theme_chat_get_page_query_terms( 'Missä maissa tietojani käsitellään?' )
+		);
+
+		$this->assertSame(
+			array( 'peruuttaa', 'uutiskirjeen', 'tilaamisen' ),
+			rytkoset_theme_chat_get_page_query_terms( 'Voinko peruuttaa uutiskirjeen tilaamisen?' )
+		);
+
+		$this->assertSame(
+			array( 'ruokaa', 'kahvia' ),
+			rytkoset_theme_chat_get_page_query_terms( 'Onko siellä ruokaa tai kahvia?' )
+		);
+	}
+
+	public function test_page_query_terms_ignore_short_words_and_cap_at_six(): void {
+		$this->assertSame( array(), rytkoset_theme_chat_get_page_query_terms( 'Onko se nyt jo ohi?' ) );
+		$this->assertCount(
+			6,
+			rytkoset_theme_chat_get_page_query_terms(
+				'jäsenyys tapahtumat albumit digilehdet sukututkimus verkkokauppa foorumi uutiskirje'
+			)
+		);
+	}
+
+	public function test_page_within_limit_is_returned_unchanged(): void {
+		$text = "Ensimmäinen rivi.\nToinen rivi.";
+
+		$this->assertSame( $text, rytkoset_theme_chat_get_page_tool_excerpt( $text, 'Mitä rivillä lukee?', 5000 ) );
+	}
+
+	public function test_long_page_returns_the_part_matching_the_question(): void {
+		// The answer sits far past the old head-of-page cut, exactly like the
+		// privacy statement's country line did in production.
+		$text = str_repeat( "Täytettä ilman vastausta.\n", 200 )
+			. "Käsittely tapahtuu Euroopan unionin alueella.\n"
+			. str_repeat( "Lisää täytettä.\n", 200 );
+
+		$result = rytkoset_theme_chat_get_page_tool_excerpt( $text, 'Missä maissa tietojani käsitellään?', 1500 );
+
+		$this->assertStringContainsString( 'Käsittely tapahtuu Euroopan unionin alueella.', $result );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $result );
+		$this->assertLessThanOrEqual( 1500, mb_strlen( $result ) );
+	}
+
+	public function test_long_page_without_matching_terms_falls_back_to_head(): void {
+		$text = 'Alku. ' . str_repeat( 'x', 3000 );
+
+		$result = rytkoset_theme_chat_get_page_tool_excerpt( $text, 'Onko se nyt jo ohi?', 900 );
+
+		$this->assertStringStartsWith( 'Alku.', $result );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $result );
+		$this->assertLessThanOrEqual( 900, mb_strlen( $result ) );
+	}
+
+	public function test_resolve_marks_a_long_page_as_an_excerpt(): void {
+		$page               = rytkoset_test_register_post( 20, 'page', 'Tietosuoja' );
+		$page->post_content = '<p>' . str_repeat( 'Täytettä. ', 200 )
+			. 'Käsittely tapahtuu Euroopan unionin alueella.</p>';
+
+		$filter = static fn() => 900;
+		add_filter( 'rytkoset_theme_chat_page_tool_max_length', $filter );
+
+		$result = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Missä maissa tietojani käsitellään?' );
+
+		remove_filter( 'rytkoset_theme_chat_page_tool_max_length', $filter );
+
+		$this->assertStringContainsString( 'Sivu: Tietosuoja', $result );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $result );
+		$this->assertLessThanOrEqual( 900, mb_strlen( $result ) );
 	}
 
 	// --- tool-call usage stats (#472) -------------------------------------------
