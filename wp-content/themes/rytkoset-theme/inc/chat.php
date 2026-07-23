@@ -861,10 +861,25 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		}
 
 		// 5. Payload: system-prompt + rajattu historia (+ sivun lukutyökalu, #501).
+		$latest_user_message = rytkoset_theme_chat_get_latest_user_message( $messages );
+		$concept_matched     = '' !== rytkoset_theme_chat_get_concept_source_path( $latest_user_message );
 		$tool_enabled        = rytkoset_theme_chat_page_tool_is_enabled();
 		$prefetched_source   = $tool_enabled ? rytkoset_theme_chat_get_prefetched_public_source( $messages ) : '';
 		$tool_rounds_enabled = $tool_enabled && '' === $prefetched_source;
 		$system_prompt       = rytkoset_theme_chat_get_system_prompt();
+
+		// Known privacy and commerce concepts must never fall back to model
+		// memory. If their expected public page or complete source section cannot
+		// be verified, return a deterministic visitor-facing reply without an API
+		// call. This also covers an intentionally disabled page tool.
+		if ( $concept_matched && '' === $prefetched_source ) {
+			rytkoset_theme_chat_record_message_sent_stat();
+
+			return new WP_REST_Response(
+				rytkoset_theme_chat_build_response_body( rytkoset_theme_chat_get_concept_source_fallback_reply() ),
+				200
+			);
+		}
 
 		// A named fact question with no verified public source must not be sent
 		// through the fragile forced-tool path or answered from model memory.
@@ -873,13 +888,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 			// The visitor gets the site's own search for the name terms we could
 			// not verify, so a dead end still has one concrete next step.
-			$search_phrase = implode(
+			$search_phrase  = implode(
 				' ',
 				rytkoset_theme_chat_get_named_search_terms( rytkoset_theme_chat_get_latest_user_message( $messages ) )
 			);
+			$fallback_reply = rytkoset_theme_chat_is_photo_query( $latest_user_message )
+				? rytkoset_theme_chat_get_photo_source_fallback_reply( $search_phrase )
+				: rytkoset_theme_chat_get_named_source_fallback_reply( $search_phrase );
 
 			return new WP_REST_Response(
-				rytkoset_theme_chat_build_response_body( rytkoset_theme_chat_get_named_source_fallback_reply( $search_phrase ) ),
+				rytkoset_theme_chat_build_response_body( $fallback_reply ),
 				200
 			);
 		}
@@ -2356,10 +2374,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			return array();
 		}
 
-		// Sentence-initial question and command words are capitalized like proper
-		// names. None of these collide with a Finnish personal or place name, so
-		// ignoring them cannot drop a real search term.
+		// Sentence-initial question, command and generic photo words are
+		// capitalized like proper names. None of these collide with a Finnish
+		// personal or place name, so ignoring them cannot drop a real search term.
 		$ignored = array(
+			'albumi',
+			'albumia',
+			'albumissa',
 			'entä',
 			'kenen',
 			'kerro',
@@ -2368,7 +2389,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			'keistä',
 			'ketkä',
 			'kuka',
+			'kuva',
+			'kuvat',
+			'kuvia',
 			'listaa',
+			'löytyykö',
 			'luettele',
 			'mikä',
 			'milloin',
@@ -2382,6 +2407,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_search_terms' ) ) {
 			'sukuseuran',
 			'voiko',
 			'voinko',
+			'valokuva',
+			'valokuvia',
 		);
 		$terms   = array();
 
@@ -2449,6 +2476,24 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_publication_search_terms' ) ) {
 }
 
 /**
+ * Checks whether the message explicitly asks about photos or an album.
+ *
+ * The bounded kuva forms intentionally exclude unrelated words such as
+ * "kuvittaja" and "kuvaus". Valokuva and album are safe word stems.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_photo_query' ) ) {
+	function rytkoset_theme_chat_is_photo_query( $message ) {
+		return (bool) preg_match(
+			'/\b(?:kuv(?:a|aa|an|assa|asta|at|ia|ien|iin|issa|ista|illa|ilta|ille)|valokuv[\p{L}-]*|album[\p{L}-]*)\b/ui',
+			(string) $message
+		);
+	}
+}
+
+/**
  * Checks whether a question names a public-source subject that must be verified.
  *
  * @param array<int,array{role:string,content:string}> $messages Prepared history.
@@ -2472,6 +2517,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_named_source_query' ) ) {
 
 		if ( ! empty( rytkoset_theme_chat_get_publication_search_terms( $message ) ) ) {
 			return true;
+		}
+
+		if ( rytkoset_theme_chat_is_photo_query( $message ) ) {
+			return ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
 		}
 
 		return (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message )
@@ -2512,6 +2561,28 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_site_search_url' ) ) {
 if ( ! function_exists( 'rytkoset_theme_chat_get_named_source_fallback_reply' ) ) {
 	function rytkoset_theme_chat_get_named_source_fallback_reply( $search_phrase = '' ) {
 		$reply      = 'En löytänyt tähän varmennettua vastausta chatin käytettävissä olevista Rytkösten sukuseuran julkaistuista julkisista lähteistä. Voin auttaa Rytkösten sukuseuraan liittyvissä kysymyksissä.';
+		$search_url = rytkoset_theme_chat_get_site_search_url( $search_phrase );
+
+		if ( '' !== $search_url ) {
+			$reply .= "\n\nVoit myös kokeilla sivuston omaa hakua: " . $search_url;
+		}
+
+		return $reply;
+	}
+}
+
+/**
+ * Returns a deterministic answer when no matching public album was verified.
+ *
+ * The wording describes only the sources searched by the chat. It does not
+ * claim that private or unpublished photos cannot exist.
+ *
+ * @param string $search_phrase Optional phrase for a site-search suggestion.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_photo_source_fallback_reply' ) ) {
+	function rytkoset_theme_chat_get_photo_source_fallback_reply( $search_phrase = '' ) {
+		$reply      = 'En löytänyt kysytystä tilaisuudesta julkaistua kuva-albumia chatin käytettävissä olevista Rytkösten sukuseuran julkisista lähteistä.';
 		$search_url = rytkoset_theme_chat_get_site_search_url( $search_phrase );
 
 		if ( '' !== $search_url ) {
@@ -2739,15 +2810,217 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_path' ) ) {
 }
 
 /**
- * Builds a verified, question-scored source context for a concept question.
+ * Returns the complete heading sections required for a known concept question.
+ *
+ * These headings mirror the maintained public pages. A narrow sub-concept gets
+ * one authoritative section; a broad question gets a bounded set of complete
+ * sections. The source builder fails closed unless every expected heading
+ * exists and fits, so an editor rename cannot silently send an incomplete or
+ * unrelated page fragment.
+ *
+ * @param string $message Latest user message.
+ * @param string $path    Known concept page path.
+ * @return array<int,string> Heading titles in source order.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_headings' ) ) {
+	function rytkoset_theme_chat_get_concept_source_headings( $message, $path ) {
+		$message = (string) $message;
+		$path    = (string) $path;
+
+		if ( 'kauppa/maksu-ja-toimitusehdot' === $path ) {
+			if ( preg_match( '/\bmaksutap[\p{L}-]*\b/ui', $message ) ) {
+				return array( 'Maksutavat', 'Maksupalvelutarjoaja' );
+			}
+
+			if ( preg_match( '/\bperuuttamisoike[\p{L}-]*\b/ui', $message ) ) {
+				return array( 'Digitaaliset tuotteet', 'Tapahtumamaksut', 'Peruuttaminen ja palautukset' );
+			}
+
+			return array(
+				'Tuotteet ja hinnat',
+				'Maksutavat',
+				'Maksupalvelutarjoaja',
+				'Toimitus',
+				'Digitaaliset tuotteet',
+				'Jäsenmaksut',
+				'Tapahtumamaksut',
+				'Peruuttaminen ja palautukset',
+			);
+		}
+
+		if ( 'tietosuoja' === $path ) {
+			if ( preg_match( '/\beväste[\p{L}-]*\b/ui', $message ) ) {
+				return array( 'Evästeet' );
+			}
+
+			if ( preg_match( '/\b(?:maissa|maihin|maiden|siir[\p{L}-]*|lähet[\p{L}-]*|ulkopuol[\p{L}-]*|EU|ETA)\b/ui', $message ) ) {
+				return array( 'Kenelle jaamme tietojasi', 'Mihin lähetämme tietosi' );
+			}
+
+			if ( preg_match( '/\b(?:säily[\p{L}-]*|kauanko)\b/ui', $message ) ) {
+				return array( 'Kuinka kauan säilytämme tietoja' );
+			}
+
+			if ( preg_match( '/\b(?:poist[\p{L}-]*|oikeu[\p{L}-]*|oikais[\p{L}-]*|rajoit[\p{L}-]*|vastust[\p{L}-]*|suostum[\p{L}-]*)\b/ui', $message ) ) {
+				return array( 'Mitä oikeuksia sinulla on tietoihisi' );
+			}
+
+			if ( preg_match( '/\b(?:chat[\p{L}-]*|tekoäly[\p{L}-]*)\b/ui', $message ) ) {
+				return array( 'AI-tukichatti', 'Mihin lähetämme tietosi' );
+			}
+
+			return array(
+				'Käsittelyn oikeusperusteet',
+				'Kenelle jaamme tietojasi',
+				'Mitä oikeuksia sinulla on tietoihisi',
+				'Mihin lähetämme tietosi',
+			);
+		}
+
+		if ( 'sukuseura/rekisteriseloste' === $path ) {
+			if ( preg_match( '/\b(?:siir[\p{L}-]*|EU|ETA|ulkopuol[\p{L}-]*)\b/ui', $message ) ) {
+				return array( 'Tietojen siirto EU/ETA-alueen ulkopuolelle' );
+			}
+
+			return array(
+				'Rekisterin tarkoitus',
+				'Rekisterin tietosisältö',
+				'Rekisterin säilytys ja käyttöoikeudet',
+				'Rekisteröidyn oikeudet',
+				'Tietojen siirto EU/ETA-alueen ulkopuolelle',
+			);
+		}
+
+		return array();
+	}
+}
+
+/**
+ * Normalizes a heading for exact comparisons across punctuation and spacing.
+ *
+ * @param string $heading Heading text.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_normalize_source_heading' ) ) {
+	function rytkoset_theme_chat_normalize_source_heading( $heading ) {
+		$heading = mb_strtolower( wp_specialchars_decode( wp_strip_all_tags( (string) $heading ), ENT_QUOTES ) );
+		$heading = preg_replace( '/[^\p{L}\p{N}]+/u', ' ', $heading );
+
+		return trim( (string) $heading );
+	}
+}
+
+/**
+ * Extracts complete HTML heading sections, including nested subheadings.
+ *
+ * A section starts at one heading and ends before the next heading of the same
+ * or a higher level. This keeps a whole h2 section together with any h3 content
+ * beneath it while still allowing a specific h3 subsection to be selected.
+ *
+ * @param string $html Page HTML.
+ * @return array<int,array{heading:string,text:string}>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_extract_heading_sections' ) ) {
+	function rytkoset_theme_chat_extract_heading_sections( $html ) {
+		$html = (string) $html;
+
+		if ( ! preg_match_all( '/<h([1-6])\b[^>]*>(.*?)<\/h\1>/is', $html, $matches, PREG_OFFSET_CAPTURE ) ) {
+			return array();
+		}
+
+		$sections = array();
+		$count    = count( $matches[0] );
+
+		for ( $index = 0; $index < $count; ++$index ) {
+			$level = (int) $matches[1][ $index ][0];
+			$start = (int) $matches[0][ $index ][1];
+			$end   = strlen( $html );
+
+			for ( $next = $index + 1; $next < $count; ++$next ) {
+				if ( (int) $matches[1][ $next ][0] <= $level ) {
+					$end = (int) $matches[0][ $next ][1];
+					break;
+				}
+			}
+
+			$heading = rytkoset_theme_chat_extract_page_text( (string) $matches[2][ $index ][0] );
+			$text    = rytkoset_theme_chat_extract_page_text( substr( $html, $start, $end - $start ) );
+
+			if ( '' !== $heading && '' !== $text ) {
+				$sections[] = array(
+					'heading' => $heading,
+					'text'    => $text,
+				);
+			}
+		}
+
+		return $sections;
+	}
+}
+
+/**
+ * Selects complete expected heading sections within a hard character budget.
+ *
+ * @param string            $html             Page HTML.
+ * @param array<int,string> $expected_headings Expected exact heading titles.
+ * @param int               $max_length       Character budget.
+ * @return string Complete sections in the requested order, or an empty string.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_heading_sections' ) ) {
+	function rytkoset_theme_chat_get_concept_heading_sections( $html, $expected_headings, $max_length ) {
+		$available         = rytkoset_theme_chat_extract_heading_sections( $html );
+		$expected_headings = array_values( array_unique( array_map( 'strval', (array) $expected_headings ) ) );
+		$max_length        = max( 1, (int) $max_length );
+		$selected          = array();
+		$length            = 0;
+
+		foreach ( (array) $expected_headings as $expected_heading ) {
+			$normalized_expected = rytkoset_theme_chat_normalize_source_heading( $expected_heading );
+
+			foreach ( $available as $section ) {
+				if ( rytkoset_theme_chat_normalize_source_heading( $section['heading'] ) !== $normalized_expected ) {
+					continue;
+				}
+
+				$addition = mb_strlen( $section['text'] ) + ( empty( $selected ) ? 0 : 2 );
+				if ( $max_length < $length + $addition ) {
+					return '';
+				}
+
+				$selected[] = $section['text'];
+				$length    += $addition;
+
+				break;
+			}
+		}
+
+		if ( count( $selected ) !== count( $expected_headings ) ) {
+			return '';
+		}
+
+		return implode( "\n\n", $selected );
+	}
+}
+
+/**
+ * Returns the notice attached to selected complete source sections.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_notice' ) ) {
+	function rytkoset_theme_chat_get_concept_source_notice() {
+		return '(Lähdeote sisältää kysymykseen valitut kokonaiset otsikko-osiot, ei koko sivua. Jos vastausta ei ole näissä osioissa, kerro ettet löytänyt sitä äläkä päättele sitä itse. Kohdista jokainen ehto ja poikkeus vain siihen tahoon tai tuoteryhmään, jota lähdevirke koskee. Kun lähde käsittelee kysyttyä asiaa erikseen usealle taholle tai tuoteryhmälle, mainitse ne kaikki.)';
+	}
+}
+
+/**
+ * Builds a verified, complete-section source context for a concept question.
  *
  * The page goes through the same access gate as every other prefetch source, so
- * members-only, draft or password-protected content never travels. Long pages
- * (the privacy statement is ~17 000 characters) are reduced to the lines
- * matching the question with the ranked excerpt, so a late answer such as the
- * retention or transfer section is not lost to a head-of-page cut. An
- * unavailable page or an empty excerpt returns '' and lets the ordinary
- * automatic tool path take over.
+ * members-only, draft or password-protected content never travels. Known page
+ * headings select whole relevant sections, including their nested subheadings.
+ * An unavailable page, a missing expected heading or an over-budget section
+ * returns an empty string for the deterministic request-handler fallback.
  *
  * @param string $message Latest user message.
  * @return string Verified source context, or an empty string.
@@ -2767,32 +3040,46 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source' ) ) {
 			return '';
 		}
 
-		$text = rytkoset_theme_chat_extract_page_text( (string) $page->post_content );
-		$url  = get_permalink( $page->ID );
+		$url = get_permalink( $page->ID );
 
-		if ( '' === $text || ! is_string( $url ) || '' === trim( $url ) ) {
+		if ( ! is_string( $url ) || '' === trim( $url ) ) {
 			return '';
 		}
 
 		$head = 'Sivu: ' . trim( (string) get_the_title( $page->ID ) ) . "\n"
 			. 'Lähde: ' . trim( $url );
 
-		// This is a server-side read of one long page, so it gets the page tool's
-		// own budget rather than the narrower named-source prefetch budget, which
-		// is sized for short name excerpts from several candidate pages. The
-		// shared helper also marks a reduced result as an excerpt, so the model
-		// says it did not find the answer instead of inferring one. The privacy
-		// statement's transfer section is easily missed at a smaller budget.
+		// Concept pages have stable maintained headings. Send complete relevant
+		// sections instead of independently scored lines, because a partial legal
+		// or privacy section can lose a condition or exception and invert the
+		// answer. The page-tool budget remains the hard cost cap.
 		$max_length = rytkoset_theme_chat_get_page_tool_max_length();
-		$budget     = max( 400, $max_length - mb_strlen( $head ) - 2 );
-		$excerpt    = rytkoset_theme_chat_get_page_tool_excerpt( $text, $message, $budget );
+		$notice     = rytkoset_theme_chat_get_concept_source_notice();
+		$budget     = max( 400, $max_length - mb_strlen( $head ) - mb_strlen( $notice ) - 4 );
+		$headings   = rytkoset_theme_chat_get_concept_source_headings( $message, $path );
+		$excerpt    = rytkoset_theme_chat_get_concept_heading_sections( (string) $page->post_content, $headings, $budget );
 
 		if ( '' === trim( $excerpt ) ) {
 			return '';
 		}
 
 		return rytkoset_theme_chat_build_prefetched_source_context(
-			array( $head . "\n\n" . $excerpt )
+			array( $head . "\n\n" . $excerpt . "\n\n" . $notice )
+		);
+	}
+}
+
+/**
+ * Returns the deterministic reply for a missing known concept source.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_fallback_reply' ) ) {
+	function rytkoset_theme_chat_get_concept_source_fallback_reply() {
+		return sprintf(
+			/* translators: %s: Association contact email address. */
+			__( 'En pystynyt varmistamaan vastausta, koska tarvittavaa julkaistua julkista lähdesivua tai sen vastaavaa osiota ei löytynyt. Varmista asia sähköpostitse: %s.', 'rytkoset-theme' ),
+			rytkoset_theme_get_contact_email()
 		);
 	}
 }
@@ -2814,13 +3101,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		// Concept questions (payment/delivery terms, privacy statement, register
 		// description) resolve to one known long page; try that verified page
 		// first so they skip the slow, timeout-prone forced tool round (#614).
-		$concept_source = rytkoset_theme_chat_get_concept_source( $message );
-		if ( '' !== $concept_source ) {
-			return $concept_source;
+		$concept_path = rytkoset_theme_chat_get_concept_source_path( $message );
+		if ( '' !== $concept_path ) {
+			return rytkoset_theme_chat_get_concept_source( $message );
+		}
+
+		$event_catering_source = rytkoset_theme_chat_get_event_catering_source( $messages );
+		if ( '' !== $event_catering_source ) {
+			return $event_catering_source;
 		}
 
 		$board_query       = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
 		$meeting_query     = (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message );
+		$photo_query       = rytkoset_theme_chat_is_photo_query( $message );
 		$person_terms      = rytkoset_theme_chat_get_person_search_terms( $message );
 		$search_terms      = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
 		$publication_terms = rytkoset_theme_chat_get_publication_search_terms( $message );
@@ -2833,7 +3126,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			);
 		}
 
-		if ( ! $board_query && empty( $search_terms ) ) {
+		if ( ( $photo_query || ! $board_query ) && empty( $search_terms ) ) {
 			return '';
 		}
 
@@ -2841,7 +3134,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		$board_page = function_exists( 'get_page_by_path' ) ? get_page_by_path( 'sukuseura/sukuseuran-hallitus' ) : null;
 		$board_page = $board_page instanceof WP_Post ? rytkoset_theme_chat_get_public_page( $board_page->ID ) : null;
 
-		if ( $board_page instanceof WP_Post ) {
+		if ( ! $photo_query && $board_page instanceof WP_Post ) {
 			$board_text     = rytkoset_theme_chat_extract_page_text( (string) $board_page->post_content );
 			$board_has_name = ! empty( $person_terms );
 
@@ -2868,13 +3161,17 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		if ( empty( $candidates ) && ! empty( $search_terms ) ) {
 			$max_pages = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
 
-			// Pages (and events for a meeting) stay authoritative and are searched
-			// first; albums are only searched when that found nothing. An album
-			// mention must never make an already-resolvable page question
-			// ambiguous, and each tier gets the full budget of its own.
-			$source_tiers = $meeting_query
-				? array( array( 'rytkoset_event', 'page' ), array( 'gallery_album' ) )
-				: array( array( 'page' ), array( 'gallery_album' ) );
+			// A page mentioning an occasion proves only that it happened, not that
+			// photos exist. Explicit photo questions therefore accept only a
+			// matching published album. For other questions, pages (and events for
+			// a meeting) stay authoritative and albums remain the fallback tier.
+			if ( $photo_query ) {
+				$source_tiers = array( array( 'gallery_album' ) );
+			} elseif ( $meeting_query ) {
+				$source_tiers = array( array( 'rytkoset_event', 'page' ), array( 'gallery_album' ) );
+			} else {
+				$source_tiers = array( array( 'page' ), array( 'gallery_album' ) );
+			}
 
 			foreach ( $source_tiers as $source_types ) {
 				$page_ids = array();
@@ -2913,7 +3210,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 					}
 
 					foreach ( $search_terms as $term ) {
-						$matches = $meeting_query
+						$matches = $meeting_query || $photo_query
 							? rytkoset_theme_chat_text_contains_term_stem( $text, $term )
 							: rytkoset_theme_chat_text_contains_term( $text, $term );
 
@@ -2965,13 +3262,14 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			$url     = get_permalink( $page->ID );
 			$excerpt = ! empty( $candidate['whole'] )
 				? rytkoset_theme_chat_truncate( $text, $excerpt_max )
-				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query );
+				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query || $photo_query );
 
 			if ( ! is_string( $url ) || '' === trim( $url ) || '' === $excerpt ) {
 				return '';
 			}
 
-			$source_blocks[] = 'Sivu: ' . trim( (string) get_the_title( $page->ID ) ) . "\n"
+			$source_label    = 'gallery_album' === $page->post_type ? 'Albumi: ' : 'Sivu: ';
+			$source_blocks[] = $source_label . trim( (string) get_the_title( $page->ID ) ) . "\n"
 				. 'Lähde: ' . trim( $url ) . "\n\n"
 				. $excerpt;
 		}
@@ -3051,8 +3349,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_should_force_page_tool' ) ) {
 		// verifies and excerpts the exact page and answers in one ordinary
 		// tool_choice:none completion, avoiding the slow, timeout-prone
 		// tool_choice:any round that made these questions intermittently 502.
-		// When that prefetch cannot resolve the page the query simply falls back
-		// to Mistral's automatic tool choice, still without forcing.
+		// When that prefetch cannot resolve the page the handler returns its
+		// deterministic concept-source fallback without calling Mistral.
 		//
 		// Newsletter questions are likewise not forced: the subscribe / manage /
 		// cancel self-service answer already lives in the stable site context.
@@ -3425,6 +3723,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_page_query_terms' ) ) {
 			'sivusto',
 			'sivustolla',
 			'sivuston',
+			'siellä',
 			'sukuseura',
 			'sukuseuran',
 			'tarkoittaa',
@@ -3467,6 +3766,277 @@ if ( ! function_exists( 'rytkoset_theme_chat_count_term_hits' ) ) {
 		return (int) preg_match_all(
 			'/(?<!\p{L})' . preg_quote( $stem, '/' ) . '[\p{L}-]*(?!\p{L})/ui',
 			(string) $text
+		);
+	}
+}
+
+/**
+ * Checks whether a question asks about catering at an event.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_event_catering_query' ) ) {
+	function rytkoset_theme_chat_is_event_catering_query( $message ) {
+		return (bool) preg_match(
+			'/\b(?:aamiai[\p{L}-]*|ateri[\p{L}-]*|buffet[\p{L}-]*|illall?i[\p{L}-]*|juotav[\p{L}-]*|kahv[\p{L}-]*|louna[\p{L}-]*|ruo[\p{L}-]*|syö[\p{L}-]*|tarjoil[\p{L}-]*|tee(?:tä|n|llä|stä)?)\b/ui',
+			(string) $message
+		);
+	}
+}
+
+/**
+ * Returns semantic terms for selecting one complete event catering section.
+ *
+ * Fixed topic terms bridge ordinary wording such as "ruokaa" to source terms
+ * such as "buffetlounas". Other question terms retain useful day qualifiers.
+ *
+ * @param string $message Latest user message.
+ * @return array<int,string>
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_terms' ) ) {
+	function rytkoset_theme_chat_get_event_catering_terms( $message ) {
+		$message = (string) $message;
+		$terms   = rytkoset_theme_chat_get_page_query_terms( $message );
+
+		if ( preg_match( '/\billall?i[\p{L}-]*\b/ui', $message ) ) {
+			$terms = array_merge( $terms, array( 'illallinen', 'buffet' ) );
+		} else {
+			if ( preg_match( '/\b(?:aamiai[\p{L}-]*|ateri[\p{L}-]*|buffet[\p{L}-]*|louna[\p{L}-]*|ruo[\p{L}-]*|syö[\p{L}-]*)\b/ui', $message ) ) {
+				$terms = array_merge( $terms, array( 'ruoka', 'lounas', 'buffet', 'ateria' ) );
+			}
+
+			if ( preg_match( '/\b(?:juotav[\p{L}-]*|kahv[\p{L}-]*|tee(?:tä|n|llä|stä)?)\b/ui', $message ) ) {
+				$terms = array_merge( $terms, array( 'kahvi', 'tee', 'tarjoilu' ) );
+			}
+
+			if ( preg_match( '/\btarjoil[\p{L}-]*\b/ui', $message ) ) {
+				$terms = array_merge( $terms, array( 'ruoka', 'lounas', 'buffet', 'ateria', 'kahvi', 'tee' ) );
+			}
+		}
+
+		return array_values( array_unique( array_map( 'mb_strtolower', $terms ) ) );
+	}
+}
+
+/**
+ * Selects the complete event heading section that best answers a catering query.
+ *
+ * A heading match is weighted above a body-only mention, so an explicit dinner
+ * question selects "Perjantain buffet-illallinen" instead of a later generic
+ * registration section that merely repeats the word. The selected section is
+ * never cut; an unavailable or over-budget match falls back to the ordinary
+ * page-tool excerpt path.
+ *
+ * @param string $html       Raw event post content.
+ * @param string $query      Latest user message.
+ * @param int    $max_length Character budget.
+ * @return string Complete section with excerpt notice, or an empty string.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_section' ) ) {
+	function rytkoset_theme_chat_get_event_catering_section( $html, $query, $max_length ) {
+		if ( ! rytkoset_theme_chat_is_event_catering_query( $query ) ) {
+			return '';
+		}
+
+		$terms    = rytkoset_theme_chat_get_event_catering_terms( $query );
+		$sections = rytkoset_theme_chat_extract_heading_sections( (string) $html );
+		$scored   = array();
+
+		foreach ( $sections as $index => $section ) {
+			$distinct     = 0;
+			$total        = 0;
+			$heading_hits = 0;
+
+			foreach ( $terms as $term ) {
+				$term_heading_hits = rytkoset_theme_chat_count_term_hits( $section['heading'], $term );
+				$term_total_hits   = rytkoset_theme_chat_count_term_hits( $section['text'], $term );
+
+				if ( $term_total_hits > 0 ) {
+					++$distinct;
+					$total        += $term_total_hits + ( 3 * $term_heading_hits );
+					$heading_hits += $term_heading_hits;
+				}
+			}
+
+			if ( $distinct > 0 ) {
+				$scored[] = array(
+					'index'        => $index,
+					'distinct'     => $distinct,
+					'total'        => $total,
+					'heading_hits' => $heading_hits,
+					'text'         => $section['text'],
+				);
+			}
+		}
+
+		if ( empty( $scored ) ) {
+			return '';
+		}
+
+		usort(
+			$scored,
+			static function ( $a, $b ) {
+				return array( $b['distinct'], $b['heading_hits'], $b['total'], $a['index'] )
+					<=> array( $a['distinct'], $a['heading_hits'], $a['total'], $b['index'] );
+			}
+		);
+
+		$notice = rytkoset_theme_chat_get_page_tool_excerpt_notice();
+		$result = $scored[0]['text'] . "\n\n" . $notice;
+
+		return mb_strlen( $result ) <= max( 1, (int) $max_length ) ? $result : '';
+	}
+}
+
+/**
+ * Checks for one complete URL instead of accepting a longer URL prefix.
+ *
+ * @param string $text Text that may contain the URL.
+ * @param string $url  Exact URL to find.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_text_contains_exact_url' ) ) {
+	function rytkoset_theme_chat_text_contains_exact_url( $text, $url ) {
+		$url = trim( (string) $url );
+
+		if ( '' === $url ) {
+			return false;
+		}
+
+		return (bool) preg_match(
+			'~' . preg_quote( $url, '~' ) . '(?=$|[\s<>()\[\]{},;.!])~u',
+			(string) $text
+		);
+	}
+}
+
+/**
+ * Builds a verified event source for a catering question.
+ *
+ * Follow-up wording such as "Onko siellä..." carries no event name. The most
+ * recent history message may still contain one exact published event permalink;
+ * that is a deterministic reference and is preferred. A first-turn question
+ * may instead resolve one event whose title matches its proper-name terms and
+ * whose content has a matching catering section. Ambiguous matches fail closed.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return string Verified source context, or an empty string.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_source' ) ) {
+	function rytkoset_theme_chat_get_event_catering_source( $messages ) {
+		$query = rytkoset_theme_chat_get_latest_user_message( $messages );
+
+		if ( ! rytkoset_theme_chat_is_event_catering_query( $query ) ) {
+			return '';
+		}
+
+		$max_events = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
+		$event_ids  = (array) get_posts(
+			array(
+				'post_type'   => 'rytkoset_event',
+				'post_status' => 'publish',
+				'numberposts' => $max_events,
+				'fields'      => 'ids',
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+			)
+		);
+		$max_length = max( 800, min( 5000, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_length', 3000 ) ) );
+		$candidates = array();
+
+		foreach ( array_slice( array_values( array_unique( array_map( 'intval', $event_ids ) ) ), 0, $max_events ) as $event_id ) {
+			$event = rytkoset_theme_chat_get_public_source_post( $event_id, array( 'rytkoset_event' ) );
+
+			if ( ! $event instanceof WP_Post ) {
+				continue;
+			}
+
+			$url = get_permalink( $event->ID );
+			if ( ! is_string( $url ) || '' === trim( $url ) ) {
+				continue;
+			}
+
+			$head    = 'Tapahtuma: ' . trim( (string) get_the_title( $event->ID ) ) . "\n" . 'Lähde: ' . trim( $url );
+			$budget  = max( 1, $max_length - mb_strlen( $head ) - 2 );
+			$section = rytkoset_theme_chat_get_event_catering_section( (string) $event->post_content, $query, $budget );
+
+			if ( '' === $section ) {
+				continue;
+			}
+
+			$candidates[] = array(
+				'post'    => $event,
+				'url'     => trim( $url ),
+				'head'    => $head,
+				'section' => $section,
+			);
+		}
+
+		if ( empty( $candidates ) ) {
+			return '';
+		}
+
+		$selected = null;
+
+		// The newest history message with exactly one real event permalink binds
+		// an elliptical follow-up to that event without trusting a model-made URL.
+		foreach ( array_reverse( (array) $messages ) as $message ) {
+			$content = (string) ( $message['content'] ?? '' );
+			$matches = array();
+
+			foreach ( $candidates as $candidate ) {
+				if ( rytkoset_theme_chat_text_contains_exact_url( $content, $candidate['url'] ) ) {
+					$matches[] = $candidate;
+				}
+			}
+
+			if ( 1 === count( $matches ) ) {
+				$selected = $matches[0];
+				break;
+			}
+
+			if ( count( $matches ) > 1 ) {
+				return '';
+			}
+		}
+
+		if ( null === $selected ) {
+			$terms      = rytkoset_theme_chat_get_named_search_terms( $query );
+			$best_score = 0;
+			$best       = array();
+
+			foreach ( $candidates as $candidate ) {
+				$title = (string) get_the_title( $candidate['post']->ID );
+				$score = 0;
+
+				foreach ( $terms as $term ) {
+					if ( rytkoset_theme_chat_text_contains_term_stem( $title, $term ) ) {
+						++$score;
+					}
+				}
+
+				if ( 0 === $score || $score < $best_score ) {
+					continue;
+				}
+
+				if ( $score > $best_score ) {
+					$best       = array();
+					$best_score = $score;
+				}
+
+				$best[] = $candidate;
+			}
+
+			if ( 1 !== count( $best ) ) {
+				return '';
+			}
+
+			$selected = $best[0];
+		}
+
+		return rytkoset_theme_chat_build_prefetched_source_context(
+			array( $selected['head'] . "\n\n" . $selected['section'] )
 		);
 	}
 }
@@ -3641,7 +4211,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_resolve_page_tool_result' ) ) {
 		// what is left after it rather than losing the source URL to the cut.
 		$max_length = rytkoset_theme_chat_get_page_tool_max_length();
 		$budget     = max( 1, $max_length - mb_strlen( $head ) - 2 );
-		$result     = $head . "\n\n" . rytkoset_theme_chat_get_page_tool_excerpt( $text, $query, $budget );
+		$excerpt    = 'rytkoset_event' === $post->post_type
+			? rytkoset_theme_chat_get_event_catering_section( (string) $post->post_content, $query, $budget )
+			: '';
+
+		if ( '' === $excerpt ) {
+			$excerpt = rytkoset_theme_chat_get_page_tool_excerpt( $text, $query, $budget );
+		}
+
+		$result = $head . "\n\n" . $excerpt;
 
 		// The budget math already keeps the result within the limit; this is the
 		// cost guard's hard ceiling for filter values too small to hold the head

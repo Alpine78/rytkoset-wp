@@ -404,6 +404,85 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'buffet tarjoillaan klo 13', $result );
 	}
 
+	public function test_event_catering_queries_return_the_complete_matching_real_content_section(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Sukukokous Tampereella' );
+		$event->post_content = '<p>Ohjelmassa on yhdessäoloa ja musiikkia.</p>'
+			. '<h2>Juhlan aikana</h2><p>Tilaisuudessa on vastaanottotiski ja käsiohjelmia.</p>'
+			. '<h2>Ilmoittautuminen</h2>'
+			. '<p>Kassalla kysytään osallistujien nimet sekä mahdolliset ruokarajoitteet ja allergiat.</p>'
+			. '<p>Osallistumismaksu sisältää lauantain buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä kokouksen ajaksi.</p>'
+			. '<p>Ilmoittautuminen ja maksu tulee tehdä viimeistään 30.7.2026.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2>'
+			. '<p>Halukkaille järjestetään perjantaina 28.8. buffet-illallinen noin klo 20. Hinta on noin 30 € ja se maksetaan paikan päällä.</p>'
+			. '<p>Pöytävarauksen vuoksi illalliselle ilmoittaudutaan etukäteen.</p>'
+			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2><p>Ilmoita nimet ja buffet kyllä/ei.</p>';
+
+		$catering = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko siellä ruokaa tai kahvia?' );
+		$dinner   = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko illallista tarjolla?' );
+		$typo     = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Entä illalista?' );
+
+		$this->assertTrue( rytkoset_theme_chat_is_event_catering_query( 'Onko illallista tarjolla?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_event_catering_query( 'Entä illalista?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_event_catering_query( 'Mitä ohjelmaa illalla on?' ) );
+
+		$this->assertStringContainsString( 'buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä', $catering );
+		$this->assertStringContainsString( 'Ilmoittautuminen ja maksu tulee tehdä viimeistään 30.7.2026', $catering );
+		$this->assertStringNotContainsString( 'vastaanottotiski', $catering );
+		$this->assertStringNotContainsString( 'Perjantain buffet-illallinen', $catering );
+
+		$this->assertStringContainsString( 'perjantaina 28.8. buffet-illallinen noin klo 20', $dinner );
+		$this->assertStringContainsString( 'Hinta on noin 30 € ja se maksetaan paikan päällä', $dinner );
+		$this->assertStringContainsString( 'illalliselle ilmoittaudutaan etukäteen', $dinner );
+		$this->assertStringNotContainsString( 'vastaanottotiski', $dinner );
+		$this->assertStringNotContainsString( 'ruokarajoitteet', $dinner );
+		$this->assertSame( $dinner, $typo );
+	}
+
+	public function test_event_catering_followup_prefetches_the_event_from_its_verified_history_url(): void {
+		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content = '<p>Ohjelmassa on yhdessäoloa ja musiikkia.</p>'
+			. '<h2>Juhlan aikana</h2><p>Tilaisuudessa on vastaanottotiski.</p>'
+			. '<h2>Ilmoittautuminen</h2><p>Maksu sisältää buffetlounaan ja kahvia.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2>'
+			. '<p>Illallinen järjestetään perjantaina noin klo 20 ja maksetaan paikan päällä.</p>';
+		$messages            = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Milloin Tampereen sukukokous pidetään?',
+			),
+			array(
+				'role'    => 'assistant',
+				'content' => 'Se pidetään 29.8.2026. https://rytkoset.test/?p=20',
+			),
+			array(
+				'role'    => 'user',
+				'content' => 'Entä illalista?',
+			),
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source( $messages );
+
+		$this->assertStringContainsString( 'Perjantain buffet-illallinen', $context );
+		$this->assertStringContainsString( 'perjantaina noin klo 20 ja maksetaan paikan päällä', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=20', $context );
+		$this->assertStringNotContainsString( 'vastaanottotiski', $context );
+	}
+
+	public function test_event_history_url_matching_rejects_longer_id_prefixes(): void {
+		$this->assertTrue(
+			rytkoset_theme_chat_text_contains_exact_url(
+				'Katso https://rytkoset.test/?p=20.',
+				'https://rytkoset.test/?p=20'
+			)
+		);
+		$this->assertFalse(
+			rytkoset_theme_chat_text_contains_exact_url(
+				'Katso https://rytkoset.test/?p=20.',
+				'https://rytkoset.test/?p=2'
+			)
+		);
+	}
+
 	public function test_resolve_rejects_draft_and_password_protected_event(): void {
 		$event               = rytkoset_test_register_post( 20, 'rytkoset_event', 'Salainen tapahtuma' );
 		$event->post_content = '<p>Salainen ohjelma.</p>';
@@ -745,6 +824,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	public function test_concept_prefetch_returns_verified_payment_terms_source(): void {
 		$this->register_payment_terms_page(
 			'<h2>Maksutavat</h2><p>Maksut välittää Paytrail. Käytettävissä olevat maksutavat näkyvät kassalla.</p>'
+			. '<h2>Maksupalvelutarjoaja</h2><p>Maksunvälityspalvelun toteuttajana ja maksupalveluntarjoajana toimii Paytrail Oyj.</p>'
+			. '<h2>Toimitus</h2><p>Postitettavat tuotteet käsitellään 1–3 arkipäivässä.</p>'
 		);
 
 		$context = rytkoset_theme_chat_get_prefetched_public_source(
@@ -757,13 +838,20 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		);
 
 		$this->assertStringContainsString( 'Maksut välittää Paytrail', $context );
+		$this->assertStringContainsString( 'maksupalveluntarjoajana toimii Paytrail Oyj', $context );
+		$this->assertStringNotContainsString( 'Postitettavat tuotteet', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=61', $context );
 		$this->assertStringContainsString( 'täsmälleen tässä annetussa muodossa', $context );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_concept_source_notice(), $context );
 	}
 
 	public function test_concept_prefetch_returns_register_description_source(): void {
 		$this->register_register_description_page(
-			'<p>Rekisterinpitäjä on Rytkösten sukuseura ry. Rekisteri sisältää sukututkimustietoja.</p>'
+			'<h2>Rekisterin tarkoitus</h2><p>Rekisteriä käytetään sukututkimukseen.</p>'
+			. '<h2>Rekisterin tietosisältö</h2><p>Rekisteri sisältää sukututkimustietoja.</p>'
+			. '<h2>Rekisterin säilytys ja käyttöoikeudet</h2><p>Tietoja säilytetään suojatusti.</p>'
+			. '<h2>Rekisteröidyn oikeudet</h2><p>Rekisteröidyllä on tarkastusoikeus.</p>'
+			. '<h2>Tietojen siirto EU/ETA-alueen ulkopuolelle</h2><p>Tietoja ei siirretä.</p>'
 		);
 
 		$context = rytkoset_theme_chat_get_prefetched_public_source(
@@ -775,17 +863,26 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			)
 		);
 
-		$this->assertStringContainsString( 'Rekisterinpitäjä on Rytkösten sukuseura ry', $context );
+		$this->assertStringContainsString( 'Rekisteriä käytetään sukututkimukseen', $context );
+		$this->assertStringContainsString( 'Rekisteröidyllä on tarkastusoikeus', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=64', $context );
 	}
 
-	public function test_concept_prefetch_finds_a_late_privacy_section_on_a_long_page(): void {
-		// A long page with heavy "tieto" filler up top; the country/transfer
-		// answer sits near the end. A head-of-page cut would miss it, so this
-		// proves the ranked excerpt (not document order) is used.
-		$filler = str_repeat( "<p>Käsittelemme henkilötietoja huolellisesti ja tietoturvallisesti.</p>\n", 120 );
-		$answer = '<h2>Tietojen siirto</h2><p>Tietojani käsitellään ainoastaan EU- ja ETA-maissa.</p>';
-		$this->register_privacy_page( $filler . $answer );
+	public function test_concept_prefetch_returns_the_complete_real_country_section(): void {
+		$this->register_privacy_page(
+			'<h2>Kuinka kauan säilytämme tietoja</h2><p>Tilaustietoja säilytetään kirjanpitolain mukaisesti.</p>'
+			. '<h2>Kenelle jaamme tietojasi</h2><ul>'
+			. '<li><strong>Hosting</strong>: Domainhotelli (palvelinlokit, varmuuskopiot)</li>'
+			. '<li><strong>Maksunvälitys</strong>: Paytrail Oyj (Suomi)</li>'
+			. '<li><strong>Upotettu media</strong>: YouTube / Google</li>'
+			. '<li><strong>Tekoälyavusteinen tukichatti</strong>: Mistral AI SAS (Ranska/EU)</li>'
+			. '<li><strong>Profiilikuvat</strong>: Gravatar / Automattic</li></ul>'
+			. '<h2>Mihin lähetämme tietosi</h2>'
+			. '<p>Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välittämiseksi tarvittavia tietoja. Tukichatin käsittelijä Mistral AI toimii EU-alueella.</p>'
+			. '<p>Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.</p>'
+			. '<p>Kun olet kirjautunut sivustolle ja Gravatar-avatarit ovat käytössä, sähköpostiosoitteestasi muodostettu tiiviste lähetetään Gravatar-palvelulle profiilikuvan olemassaolon tarkistamista varten. Gravatar-palvelua ylläpitää Automattic, joka voi käsitellä tietoja myös EU/ETA-alueen ulkopuolella.</p>'
+			. '<h2>Automaattinen päätöksenteko ja profilointi</h2><p>Sivustolla ei tehdä automaattista päätöksentekoa.</p>'
+		);
 
 		$context = rytkoset_theme_chat_get_prefetched_public_source(
 			array(
@@ -796,27 +893,88 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			)
 		);
 
-		$this->assertStringContainsString( 'EU- ja ETA-maissa', $context );
+		$this->assertStringContainsString( 'Sivuston palvelin sijaitsee Suomessa', $context );
+		$this->assertStringContainsString( 'Paytrail Oyj (Suomi)', $context );
+		$this->assertStringContainsString( 'Mistral AI SAS (Ranska/EU)', $context );
+		$this->assertStringContainsString( 'YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella', $context );
+		$this->assertStringContainsString( 'Gravatar-palvelua ylläpitää Automattic', $context );
+		$this->assertStringNotContainsString( 'Tilaustietoja säilytetään', $context );
+		$this->assertStringNotContainsString( 'automaattista päätöksentekoa', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=62', $context );
-
-		// A reduced page must say so, or the model fills the gap by inference
-		// instead of admitting the excerpt did not carry the answer.
-		$this->assertStringContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $context );
+		$this->assertStringContainsString( rytkoset_theme_chat_get_concept_source_notice(), $context );
 	}
 
-	public function test_concept_prefetch_sends_a_short_page_whole_without_excerpt_notice(): void {
-		$this->register_register_description_page( '<p>Rekisterinpitäjä on Rytkösten sukuseura ry.</p>' );
+	public function test_concept_prefetch_returns_the_complete_real_cookie_section(): void {
+		$this->register_privacy_page(
+			'<h3>Sisältöön upotettu media</h3><p>Sivustolla voi olla YouTube-videoita.</p>'
+			. '<h2>Evästeet</h2><p>Sivusto käyttää välttämättömiä evästeitä:</p><ul>'
+			. '<li><strong>WordPress</strong> asettaa kirjautumis- ja istuntoevästeitä kirjautuneille käyttäjille.</li>'
+			. '<li><strong>WooCommerce</strong> asettaa ostoskorin ja istunnon toimintaan tarvittavat evästeet.</li>'
+			. '<li><strong>YouTube-upotukset</strong> näytetään privacy-enhanced -tilassa.</li>'
+			. '<li><strong>LiteSpeed Cache</strong> voi tallentaa sivuista välimuistikopioita.</li></ul>'
+			. '<p>Sivustolla ei käytetä analytiikka- tai markkinointievästeitä.</p>'
+			. '<h2>Kenelle jaamme tietojasi</h2><p>Profiilikuvia varten käytetään Gravataria.</p>'
+		);
 
 		$context = rytkoset_theme_chat_get_prefetched_public_source(
 			array(
 				array(
 					'role'    => 'user',
-					'content' => 'Mitä rekisteriselosteessa lukee?',
+					'content' => 'Käyttääkö sivusto evästeitä?',
 				),
 			)
 		);
 
-		$this->assertStringNotContainsString( rytkoset_theme_chat_get_page_tool_excerpt_notice(), $context );
+		$this->assertStringContainsString( 'WordPress asettaa kirjautumis- ja istuntoevästeitä', $context );
+		$this->assertStringContainsString( 'WooCommerce asettaa ostoskorin', $context );
+		$this->assertStringContainsString( 'YouTube-upotukset näytetään privacy-enhanced -tilassa', $context );
+		$this->assertStringContainsString( 'LiteSpeed Cache voi tallentaa', $context );
+		$this->assertStringContainsString( 'ei käytetä analytiikka- tai markkinointievästeitä', $context );
+		$this->assertStringNotContainsString( 'Profiilikuvia varten käytetään Gravataria', $context );
+	}
+
+	public function test_concept_prefetch_returns_real_product_specific_withdrawal_periods(): void {
+		$this->register_payment_terms_page(
+			'<h2>Toimitus</h2><p>Fyysiset tuotteet toimitetaan asiakkaan antamaan osoitteeseen.</p>'
+			. '<h2>Digitaaliset tuotteet</h2><p>Digitaalisiin tuotteisiin sovelletaan 14 vuorokauden peruuttamisoikeutta, joka lasketaan sopimuksen tekemisestä, ellei tuotteen yhteydessä erikseen pyydetä suostumusta sisällön välittömään toimittamiseen.</p>'
+			. '<h2>Tapahtumamaksut</h2><p>Koska tapahtuma järjestetään määrättynä ajankohtana, tapahtumamaksuun ei sovelleta peruuttamisoikeutta.</p>'
+			. '<h2>Peruuttaminen ja palautukset</h2>'
+			. '<p>Fyysisen tuotteen palautuksesta on ilmoitettava 14 vuorokauden kuluessa tuotteen vastaanottamisesta.</p>'
+			. '<p>Jäsenmaksuihin sovelletaan samaa 14 päivän peruuttamisoikeutta kuin muihinkin etämyynnissä myytäviin tuotteisiin. Tapahtumamaksuihin ei sovelleta peruuttamisoikeutta yllä kuvatun mukaisesti. Digitaalisten tuotteiden peruuttamisoikeus on kuvattu edellä kohdassa "Digitaaliset tuotteet".</p>'
+			. '<h2>Peruuttamisohje</h2><p>Tämä ohje koskee tuotteita, joihin sovelletaan peruuttamisoikeutta.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko minulla peruuttamisoikeus?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Digitaalisiin tuotteisiin sovelletaan 14 vuorokauden peruuttamisoikeutta', $context );
+		$this->assertStringContainsString( 'tapahtumamaksuun ei sovelleta peruuttamisoikeutta', $context );
+		$this->assertStringContainsString( '14 vuorokauden kuluessa tuotteen vastaanottamisesta', $context );
+		$this->assertStringContainsString( 'Jäsenmaksuihin sovelletaan samaa 14 päivän peruuttamisoikeutta', $context );
+		$this->assertStringNotContainsString( 'Tämä ohje koskee tuotteita', $context );
+	}
+
+	public function test_concept_prefetch_fails_closed_when_an_expected_heading_is_missing(): void {
+		$this->register_payment_terms_page(
+			'<h2>Maksutavat</h2><p>Maksut välittää Paytrail.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Mitä maksutapoja on käytössä?',
+				),
+			)
+		);
+
+		$this->assertSame( '', $context );
 	}
 
 	public function test_concept_prefetch_skips_members_only_page(): void {
@@ -869,8 +1027,8 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_concept_prefetch_is_empty_when_the_page_is_missing(): void {
-		// No concept page registered: the query falls back to the ordinary path
-		// (automatic tool choice) rather than forcing or inventing an answer.
+		// The request handler converts this empty source into a deterministic
+		// response without calling the model.
 		$this->assertSame(
 			'',
 			rytkoset_theme_chat_get_prefetched_public_source(
@@ -1088,6 +1246,15 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
+	public function test_photo_query_detection_excludes_unrelated_kuva_words(): void {
+		$this->assertTrue( rytkoset_theme_chat_is_photo_query( 'Onko Runnin sukujuhlista kuvia?' ) );
+		$this->assertTrue( rytkoset_theme_chat_is_photo_query( 'Löytyykö tapahtumasta valokuvia tai albumia?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_photo_query( 'Kuka oli kirjan kuvittaja?' ) );
+		$this->assertFalse( rytkoset_theme_chat_is_photo_query( 'Missä on tapahtuman kuvaus?' ) );
+		$this->assertSame( array( 'Runnin' ), rytkoset_theme_chat_get_named_search_terms( 'Löytyykö Runnin juhlista kuvia?' ) );
+		$this->assertSame( array(), rytkoset_theme_chat_get_named_search_terms( 'Löytyykö albumia tai valokuvia?' ) );
+	}
+
 	public function test_unique_person_first_name_prefetches_source_for_inflected_surname(): void {
 		$page               = rytkoset_test_register_post( 70, 'page', 'Sukukirjat' );
 		$page->post_content = '<p>Kirjan kuvittaja oli Teuvo Rönkkö Kuopiosta.</p>';
@@ -1123,6 +1290,42 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'Sanna Björkman', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+	}
+
+	public function test_photo_query_does_not_use_an_event_history_page_as_album_evidence(): void {
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Perustava kokous pidettiin Runnin Terveyskylpylällä 18.8.1963.</p>';
+		rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$messages = array(
+			array(
+				'role'    => 'user',
+				'content' => 'Onko Runnin sukujuhlista kuvia?',
+			),
+		);
+
+		$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ) );
+		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
+		$this->assertStringContainsString( 'julkaistua kuva-albumia', rytkoset_theme_chat_get_photo_source_fallback_reply( 'Runnin' ) );
+	}
+
+	public function test_photo_query_prefetches_only_the_matching_album(): void {
+		$page                = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content  = '<p>Sukujuhla järjestettiin Iisalmen kulttuurikeskuksella.</p>';
+		$album               = rytkoset_test_register_post( 71, 'gallery_album', '60-vuotissukujuhla Iisalmessa 19.8.2023' );
+		$album->post_content = '<p>Albumi sisältää kuvia juhlapäivästä.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko Iisalmen sukujuhlista kuvia?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Albumi: 60-vuotissukujuhla Iisalmessa 19.8.2023', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=71', $context );
+		$this->assertStringNotContainsString( 'https://rytkoset.test/?p=70', $context );
 	}
 
 	public function test_page_source_wins_over_album_mentioning_the_same_person(): void {
@@ -1443,6 +1646,11 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame(
 			array( 'peruuttaa', 'uutiskirjeen', 'tilaamisen' ),
 			rytkoset_theme_chat_get_page_query_terms( 'Voinko peruuttaa uutiskirjeen tilaamisen?' )
+		);
+
+		$this->assertSame(
+			array( 'ruokaa', 'kahvia' ),
+			rytkoset_theme_chat_get_page_query_terms( 'Onko siellä ruokaa tai kahvia?' )
 		);
 	}
 
