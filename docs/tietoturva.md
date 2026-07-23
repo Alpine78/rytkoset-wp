@@ -55,7 +55,34 @@ Sivustolla on avoin WordPress-rekisteröityminen (*Asetukset → Yleiset → Jä
 - **Honeypot-kenttä:** rekisteröitymislomakkeeseen (`register_form`) lisätään piilotettu tekstikenttä, jota ihminen ei näe (pois ruudulta, `aria-hidden`, `tabindex="-1"`). Lomakkeet automaattisesti täyttävät botit kirjoittavat siihen ja paljastuvat; rekisteröityminen hylätään `registration_errors`-suodattimessa.
 - **Estetyt sähköpostidomainit:** rekisteröityminen tunnetuilla uhkapeli-TLD:illä (`.casino`, `.bet`, `.poker`) estetään. Listaa voi laajentaa suodattimella `rytkoset_theme_blocked_registration_email_patterns` (vertailu domainin loppuosaan).
 
-> Tämä ei korvaa palvelintason kirjautumisrajoitusta. Jos roskarekisteröinnit jatkuvat suuressa mittakaavassa, harkitse CAPTCHAa tai rekisteröitymisen sulkemista kokonaan (WooCommercen tilin luonti kassalla on erillinen asetus ja säilyy).
+Tuotannossa havaittiin 23.7.2026 aktiivinen bottiaalto, joka ohitti honeypotin ja domain-estot. Rekisteröintiä ei voida sulkea sukujuhlien alla, joten suojauksen toisena kerroksena käytetään **Simple CAPTCHA with Cloudflare Turnstile** -lisäosaa. Lisäosa suorittaa selainhaasteen ja varmentaa kertakäyttöisen tunnisteen palvelimelta Cloudflaren Siteverify-rajapinnassa ennen kuin WordPress hyväksyy käyttäjän.
+
+#### Turnstilen tavoiteasetukset ja käyttöönottotarkistus
+
+| Asetus | Arvo |
+| --- | --- |
+| Cloudflare-widget | Managed, hostname `rytkoset.net` |
+| Pre-clearance | Pois käytöstä |
+| Theme | Auto |
+| Language | Auto Detect |
+| Disable Submit Button | Käytössä |
+| Advanced → Widget Size | Flexible (100 %) |
+| Advanced → Appearance Mode | Always |
+| Default WordPress Forms | Vain WordPress Register |
+| WooCommerce Forms / bbPress / muut integraatiot | Pois käytöstä |
+| Whitelist | Tyhjä, ellei ylläpidon testaukselle ole dokumentoitua tarvetta |
+| Failsafe | Pois käytöstä; varmennus epäonnistuu suljetusti |
+| Debug logging | Pois käytöstä |
+
+> **Tuotannon avoin tarkistus 23.7.2026 klo 19.09:** Turnstile renderöityi rekisteröintilomakkeessa, lähetyspainike oli lukittu ennen varmennusta eikä widgettiä ollut kirjautumisessa tai salasanan palautuksessa. Widgetin julkiset asetukset olivat Theme `auto`, Appearance `always` ja Size `normal`; Size pitää vaihtaa tavoitteen mukaiseen arvoon **Flexible (100 %)** ennen lopullista mobiilisavutestiä. Testissä ei havaittu `cf_clearance`-evästettä. Managed-tila, hostname `rytkoset.net` ja pre-clearance pois varmistetaan lisäksi Cloudflare-hallinnasta, koska niitä ei voi luotettavasti päätellä julkisesta HTML:stä.
+
+`assets/css/login.css` sovittaa `.cf-turnstile`-kääreen rekisteröintilomakkeen leveyteen ja ohittaa lisäosan `wp-login.php`:lle lisäämän negatiivisen inline-marginaalin. Cloudflaren Flexible-widgetin [dokumentoitu minimileveys on 300 px](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/#widget-sizes), joten kapeimmassa tuetussa 320 px näkymässä widget keskitetään koko rekisteröintikortin levyiseksi. Lisäosan omia tiedostoja ei muokata. Lisäosat eivät ole repossa, joten asennus ja API-avaimet ovat ympäristökohtaisia. Tuotanto- ja dev-ympäristöille käytetään eri widgettejä ja hostname-rajauksia; salaista avainta ei tallenneta versionhallintaan.
+
+Automaattisessa dev-testauksessa voi käyttää Cloudflaren dokumentoimia testiavaimia (`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA`), jotka hyväksyvät varmennuksen ennustettavasti kaikilla paikallisilla hosteilla. Testiavaimia ei saa siirtää tuotantoon.
+
+Debug-lokia ei pidetä päällä normaalikäytössä: lisäosan loki tallentaisi WordPressin asetuksiin enintään 50 viimeisimmän tarkistuksen ajan, onnistumisen, virhekoodin, IP-osoitteen ja sivupolun ilman aikaperusteista automaattipoistoa. Turnstilen tietosuojavaikutukset ja julkaistava teksti on dokumentoitu [`docs/tietosuoja.md`](tietosuoja.md):ssä ja sisäinen käsittelytoimi [`docs/tietosuoja-kasittelytoimet.md`](tietosuoja-kasittelytoimet.md):ssä.
+
+> Turnstile ei korvaa palvelintason kirjautumisrajoitusta. Jos hyökkäys siirtyy kirjautumiseen, salasanan palautukseen, WooCommerceen tai bbPressiin, suojaus arvioidaan kyseiselle lomakkeelle erikseen eikä integraatioita kytketä päälle varmuuden vuoksi.
 
 ### CSV-kaavainjektion esto (osallistujavienti)
 
@@ -95,6 +122,9 @@ Kirjautuneena ulos:
 - `https://dev.rytkoset.net/xmlrpc.php` (POST `system.listMethods`) → ei `pingback.ping`-metodia; todennetut metodit palauttavat virheen.
 - `curl -I https://dev.rytkoset.net/` → neljä tietoturvaotsaketta näkyvät; `X-Pingback` puuttuu.
 - Rekisteröityminen `.casino`-osoitteella → hylätään virheilmoituksella; honeypot-kentän täyttäminen (esim. devtoolsilla) → rekisteröityminen estyy. Tavallinen osoite ja tyhjä honeypot → rekisteröityminen onnistuu normaalisti.
+- Turnstile näkyy rekisteröintilomakkeen levyisenä ilman leikkautumista tai vaakavieritystä työpöydällä ja mobiilissa. Lähetyspainike vapautuu vasta onnistuneen haasteen jälkeen.
+- Puuttuva, epäonnistunut, vanhentunut tai jo käytetty Turnstile-tunniste ei luo käyttäjää. Onnistunut varmennus luo käyttäjän ja säilyttää vapaaehtoisen uutiskirjevalinnan.
+- Kirjautuminen, salasanan palautus, WooCommerce-kassa ja bbPress toimivat ennallaan ilman Turnstile-widgettiä.
 
 Kirjautuneena: wp-admin ja blokkieditori toimivat normaalisti.
 

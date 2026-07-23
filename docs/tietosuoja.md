@@ -8,9 +8,11 @@ Sivustolla on lisäksi erillinen sukututkimusrekisterin rekisteriseloste osoitte
 
 GDPR ja Suomen tietosuojalaki edellyttävät, että käyttäjille kerrotaan, mitä henkilötietoja sivusto kerää, miten niitä käytetään ja kuinka kauan niitä säilytetään. Lisäksi tietosuojaselosteen on oltava helposti löydettävissä — vakiintunut paikka on footer.
 
-Sivusto ei tällä hetkellä käytä analytiikka- tai markkinointievästeitä. WooCommerce asettaa kuitenkin ostoskoriin ja istuntoon liittyviä funktionaalisia evästeitä, jotka ovat välttämättömiä kaupan toiminnalle. Albumisivuilla voi olla YouTube-upotuksia, mutta teema käyttää YouTuben privacy-enhanced -upotusosoitetta (`youtube-nocookie.com`). Erillistä cookie consent -banneria ei tarvita niin kauan kuin sivusto ei käytä muita kuin välttämättömiä evästeitä tai seurantatekniikoita.
+Sivusto ei tällä hetkellä käytä analytiikka- tai markkinointievästeitä. WooCommerce asettaa kuitenkin ostoskoriin ja istuntoon liittyviä funktionaalisia evästeitä, jotka ovat välttämättömiä kaupan toiminnalle. Albumisivuilla voi olla YouTube-upotuksia, mutta teema käyttää YouTuben privacy-enhanced -upotusosoitetta (`youtube-nocookie.com`). Avoimen käyttäjärekisteröinnin bottisuojaksi valmisteltu Cloudflare Turnstile rajataan rekisteröintilomakkeeseen. Kun Cloudflare-hallinnasta on todennettu, että valinnainen pre-clearance on pois käytöstä, Turnstile ei tässä kokoonpanossa aseta `cf_clearance`-evästettä. Erillistä cookie consent -banneria ei tarvita niin kauan kuin sivusto ei käytä muita kuin välttämättömiä evästeitä tai seurantatekniikoita.
 
 > Jos sivustolle lisätään myöhemmin Google Analytics, Matomo, Facebook Pixel, muita kolmannen osapuolen upotuksia tai muita seurantatyökaluja, evästehallinta on arvioitava uudelleen omana tikettinään.
+
+> **Käyttöönoton tila 23.7.2026 klo 19.09:** Turnstile oli aktiivinen tuotannon rekisteröintilomakkeessa ja rajattu pois kirjautumisesta sekä salasanan palautuksesta. Julkisessa savutestissä ei havaittu `cf_clearance`-evästettä. Pre-clearance pois -asetus tarkistetaan vielä Cloudflare-hallinnasta ennen alla olevan tekstin julkaisemista.
 
 ## Sivun julkaisu WordPress-adminissa
 
@@ -38,7 +40,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 ## Vaikutustenarvioinnin tarpeen arviointi (sisäinen)
 
-Arvioitu 15.7.2026 tiketin #470 yhteydessä. Tämä on tietosuoja-asetuksen 35 artiklan mukaisen vaikutustenarvioinnin (DPIA) **tarvearvio**, ei varsinainen vaikutustenarviointi.
+Arvioitu 15.7.2026 tiketin #470 yhteydessä ja tarkistettu Turnstilen käyttöönoton yhteydessä 23.7.2026 (#629). Tämä on tietosuoja-asetuksen 35 artiklan mukaisen vaikutustenarvioinnin (DPIA) **tarvearvio**, ei varsinainen vaikutustenarviointi.
 
 Nykyisen, reposta todennettavan käsittelyn perusteella täysimittaista vaikutustenarviointia ei arvioida tarvittavan:
 
@@ -47,6 +49,7 @@ Nykyisen, reposta todennettavan käsittelyn perusteella täysimittaista vaikutus
 - tapahtumien vapaaehtoisissa ruokarajoite- ja lisätietokentissä voi olla terveydentilaa tai vakaumusta välillisesti kuvaavia tietoja, mutta käsittely ei ole reposta todettuna laajamittaista
 - lapset voivat olla perhejäsenyyden tai tapahtuman yhteydessä rekisteröityjä, mutta sivuston toimintoja ei ole suunnattu nimenomaisesti lasten järjestelmälliseen arviointiin tai seurantaan
 - AI-tukichatti käyttää uutta teknologiaa, mutta se ei tee henkilöpäätöksiä, profiloi käyttäjiä tai tallenna keskusteluja palvelimelle; henkilötietojen syöttäminen chattiin kielletään käyttöliittymässä.
+- Turnstile arvioi vain yksittäisen rekisteröintipyynnön bottiriskiä sivuston suojaamiseksi. Se ei tee jäsenyyttä, maksamista tai tapahtumaan osallistumista koskevia päätöksiä, ja virheellisesti estetty käyttäjä voi ottaa yhteyttä yhdistykseen.
 
 Arvio on tehtävä uudelleen ennen muutosta, joka lisää esimerkiksi laajamittaista erityisten henkilötietoryhmien käsittelyä, lapsille kohdennettua palvelua, profilointia, automaattisia henkilöpäätöksiä, järjestelmällistä seurantaa, uusia tietolähteiden yhdistelyjä tai uuden tekoälytoiminnon. Samalla tarkistetaan Tietosuojavaltuutetun toimiston ajantasainen luettelo käsittelytoimista, jotka edellyttävät vaikutustenarviointia.
 
@@ -56,7 +59,7 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 ## Suomenkielinen pohja (kopioitavaksi)
 
-> Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Paytrail-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika **on tarkistettava** ennen julkaisua.
+> Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Paytrail-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika sekä Turnstilen tuotantokäyttö ja pre-clearance-asetus **on tarkistettava** ennen julkaisua.
 
 > Sukututkimusrekisteri käsitellään erillisessä rekisteriselosteessa: `/sukuseura/rekisteriseloste/`.
 
@@ -66,7 +69,7 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 # Tietosuojaseloste
 
-Päivitetty: 20.7.2026
+Päivitetty: 23.7.2026
 
 ## Rekisterinpitäjä
 
@@ -89,6 +92,7 @@ Henkilötietojen käsittely perustuu käyttötarkoituksesta riippuen seuraaviin 
 - **Tapahtumailmoittautumiset**: käyttäjän suostumus sekä yhdistyksen oikeutettu etu järjestää tapahtumia ja hoitaa niihin liittyvää viestintää.
 - **Verkkokaupan tilaukset ja maksut**: sopimuksen täytäntöönpano sekä lakisääteiset kirjanpito- ja raportointivelvoitteet.
 - **Uutiskirje**: käyttäjän suostumus.
+- **Sivuston tietoturva ja väärinkäytön estäminen**: yhdistyksen oikeutettu etu suojata avointa käyttäjärekisteröintiä automatisoidulta väärinkäytöltä.
 - **Sähköpostiyhteydenotot**: yhdistyksen oikeutettu etu käsitellä ja vastata yhteydenottoihin.
 
 ## Mistä saamme henkilötiedot
@@ -108,6 +112,14 @@ Jos olet alle 13-vuotias, et voi tietosuojalain (1050/2018) 5 §:n mukaan itse a
 Kun rekisteröidyt sivustolle, tallennamme nimesi ja sähköpostiosoitteesi sekä mahdolliset profiilitiedot, jotka itse annat. Tietoja käytetään käyttäjätilin ylläpitoon, kirjautumiseen ja jäsenviestintään.
 
 Jos olet yhdistyksen jäsen, ylläpito voi jäsenrekisterin perusteella kytkeä jäsenyytesi käyttäjätiliisi, jotta saat sivuston jäsenedut käyttöösi. Jos sähköpostiosoitteellasi ei vielä ole käyttäjätiliä, osoitteeseen voidaan lähettää kertaluonteinen viesti, jossa kerrotaan tietojen olevan peräisin yhdistyksen jäsenrekisteristä ja ohjataan luomaan tili samalla osoitteella. Jäsenyyden kytkentää odottavat tiedot (sähköpostiosoite ja jäsenyyden tyyppi- ja voimassaolotiedot) säilytetään vain kytkentää varten, ja niiden poistoa voi pyytää rekisterinpitäjältä. Käsittelystä pidetään ylläpidon lokia (osoite, lopputulos, käsittelijä, aika).
+
+### Rekisteröinnin bottisuoja
+
+Avoin käyttäjärekisteröinti on suojattu Cloudflare Turnstile -palvelulla. Rekisteröintisivulla Cloudflare käsittelee botin ja ihmisen erottamiseksi teknisiä signaaleja, kuten IP-osoitetta, TLS-sormenjälkeä, selaimen User-Agent-tunnistetta sekä sivuston Turnstile-avainta ja siihen liittyvää alkuperää. Selain muodostaa tarkistuksesta kertakäyttöisen tunnisteen, jonka sivuston palvelin lähettää IP-osoitteen kanssa Cloudflaren Siteverify-rajapintaan ennen rekisteröinnin hyväksymistä.
+
+Cloudflare toimii sivuston suojaamiseksi käsittelemiensä signaalien osalta yhdistyksen henkilötietojen käsittelijänä. Cloudflare ilmoittaa käsittelevänsä samoja signaaleja myös itsenäisenä rekisterinpitäjänä Turnstilen botintunnistuksen kehittämiseksi oikeutetun etunsa perusteella. Tietoja ei käytetä yhdistyksen markkinointiin. Lisätietoja: [Cloudflare Turnstile Privacy Addendum](https://www.cloudflare.com/turnstile-privacy-policy/).
+
+Turnstilen pre-clearance on pois käytöstä, joten palvelun valinnaista `cf_clearance`-evästettä ei aseteta. Tarkistus voi silti estää automatisoiduksi arvioidun rekisteröinnin. Jos rekisteröinti estyy virheellisesti, ota yhteyttä osoitteeseen info@rytkoset.net.
 
 ### Tapahtumailmoittautumiset
 
@@ -206,6 +218,7 @@ Sivusto käyttää välttämättömiä evästeitä:
 - **WooCommerce** asettaa ostoskorin ja istunnon toimintaan tarvittavat evästeet (esim. `woocommerce_cart_hash`, `wp_woocommerce_session_*`).
 - **YouTube-upotukset** näytetään privacy-enhanced -tilassa (`youtube-nocookie.com`). Videoiden katsominen voi silti välittää tietoja YouTubelle.
 - **LiteSpeed Cache** voi tallentaa sivuista välimuistikopioita, jotta sivusto latautuu nopeammin. Välimuistitiedostot ovat väliaikaisia, eivätkä ne ole tarkoitettu ulkopuolisten käyttöön.
+- **Cloudflare Turnstile** käsittelee rekisteröintisivulla välttämättömiä teknisiä signaaleja ja kertakäyttöisen varmennustunnisteen bottien estämiseksi. Pre-clearance on pois käytöstä, joten valinnaista `cf_clearance`-evästettä ei aseteta.
 
 Sivustolla ei käytetä analytiikka- tai markkinointievästeitä. Voit estää evästeet selaimesi asetuksista, mutta tällöin osa sivuston toiminnoista (esimerkiksi kirjautuminen ja verkkokauppa) voi lakata toimimasta.
 
@@ -218,6 +231,7 @@ Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointit
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
 - **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
 - **Tekoälyavusteinen tukichatti**: Mistral AI SAS (Ranska/EU) — chattiin kirjoitettujen viestien käsittely vastausten tuottamiseksi
+- **Rekisteröinnin bottisuoja**: Cloudflare, Inc. — rekisteröintisivun teknisten signaalien ja varmennustunnisteen käsittely bottiliikenteen tunnistamiseksi
 - **Profiilikuvat**: Gravatar / Automattic — kirjautuneen käyttäjän sähköpostiosoitteesta muodostettu tiiviste välitetään Gravatarille profiilikuvan tarkistamista varten. Jos kuva löytyy, käyttäjän selain lataa sen Gravatarista. Gravataria ei käytetä kirjautumattomien kävijöiden, kommenttien tai foorumin avatareihin.
 
 Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on tehtävänsä perusteella tarve käsitellä tietoja, kuten sivuston ylläpitäjät, tapahtumien vastuuhenkilöt, verkkokaupan tilausten käsittelijät ja taloushallinnon vastuuhenkilöt.
@@ -256,9 +270,11 @@ Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitel
 
 Kun olet kirjautunut sivustolle ja Gravatar-avatarit ovat käytössä, sähköpostiosoitteestasi muodostettu tiiviste lähetetään Gravatar-palvelulle profiilikuvan olemassaolon tarkistamista varten. Jos kuva löytyy, selaimesi lataa kuvan Gravatarista. Gravatar-palvelua ylläpitää Automattic, joka voi käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä ja niissä kuvattujen suojatoimien mukaisesti.
 
+Cloudflare, Inc. on yhdysvaltalainen palveluntarjoaja ja Turnstile toimii maailmanlaajuisessa verkossa. Cloudflare voi käsitellä Turnstilen teknisiä signaaleja myös EU/ETA-alueen ulkopuolella omassa tietosuojaliitteessään ja tietojenkäsittelyehdoissaan kuvatuin suojatoimin.
+
 ## Automaattinen päätöksenteko ja profilointi
 
-Sivustolla ei tehdä automaattista päätöksentekoa tai profilointia, jolla olisi sinua koskevia oikeusvaikutuksia tai vastaavia merkittäviä vaikutuksia.
+Turnstile arvioi automaattisesti, vaikuttaako rekisteröintipyyntö ihmisen vai botin tekemältä, ja voi estää automatisoiduksi arvioidun pyynnön. Arvioinnilla ei ole sinua koskevia oikeusvaikutuksia tai vastaavia merkittäviä vaikutuksia, eikä sitä käytetä markkinointiprofilointiin. Muuta tällaista automaattista päätöksentekoa tai profilointia sivustolla ei tehdä.
 
 ## Tietoturvasta
 
@@ -277,3 +293,4 @@ Sivustolla käytetään LiteSpeed Cache -välimuistia suorituskyvyn parantamisee
 - Sisältöön (esim. tapahtumasivun tallenne tai blogikirjoitus) upotetut YouTube-videot: [`inc/youtube-privacy.php`](../wp-content/themes/rytkoset-theme/inc/youtube-privacy.php) — `embed_oembed_html`-suodatin kirjoittaa WordPressin oEmbed-upotusten iframe-osoitteen muotoon `www.youtube-nocookie.com/embed/…`, myös Gutenbergin upotuslohkolle ja postmetaan välimuistitetuille tuloksille. Suodatin muuttaa vain osoitteen isäntänimen, joten iframen `title`-attribuutti säilyy. Näin selosteen lupaus toteutuu sisältötyypistä riippumatta.
 - Footerin linkki tulee `footer`-valikosta ([`footer.php`](../wp-content/themes/rytkoset-theme/footer.php)) — ei vaadi koodimuutoksia.
 - AI-tukichatti: [`inc/chat.php`](../wp-content/themes/rytkoset-theme/inc/chat.php) — API-avain ja kävijän IP eivät koskaan välity Mistralille, keskusteluhistoria ei tallennu palvelimelle eikä selaimen pysyvään muistiin. Tekninen kuvaus ja kulusuojat: [`docs/chat.md`](chat.md).
+- Rekisteröinnin bottisuoja: ympäristökohtainen **Simple CAPTCHA with Cloudflare Turnstile** -lisäosa lisää widgetin WordPressin `register_form`-koukkuun ja varmentaa tunnisteen `registration_errors`-käsittelyssä. Lisäosa lähettää Siteverify-pyyntöön tunnisteen ja IP-osoitteen. Tuotantoasetukset ja debug-lokin tietosisältö: [`docs/tietoturva.md`](tietoturva.md).
