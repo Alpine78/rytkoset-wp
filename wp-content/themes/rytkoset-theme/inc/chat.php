@@ -2808,12 +2808,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_prefetch_candidates_are_usable' ) )
  * merely because the page tier is ambiguous. Rytkölä-style place names
  * (Rytkö + l…) are intentionally not matched: they are distinctive.
  *
+ * The "s" branch only accepts a surname case ending: after "Rytkös" comes a
+ * short grammatical suffix that starts with a vowel or "t" (Rytköse[n/t],
+ * Rytkös[t]en, Rytkösiä, Rytkösille …). A distinctive compound where "Rytkös"
+ * is only a prefix of a longer noun ("Rytköshistoriikki") starts with a
+ * consonant such as "h" and must stay distinctive, or the family-name gate
+ * would wrongly drop the single album that verifies it.
+ *
  * @param string $term Search term.
  * @return bool
  */
 if ( ! function_exists( 'rytkoset_theme_chat_term_is_family_name' ) ) {
 	function rytkoset_theme_chat_term_is_family_name( $term ) {
-		return (bool) preg_match( '/^rytkö(?:nen|s)/ui', trim( (string) $term ) );
+		return (bool) preg_match( '/^rytkö(?:nen|s[aeiouyäöt])/ui', trim( (string) $term ) );
 	}
 }
 
