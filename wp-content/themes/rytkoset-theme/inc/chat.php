@@ -2494,6 +2494,22 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_photo_query' ) ) {
 }
 
 /**
+ * Checks whether a question or source line concerns a family meeting or party.
+ *
+ * Visitors use sukukokous and sukujuhla interchangeably when asking about the
+ * same event. Both must use the verified place-and-event source path so an
+ * unrelated meeting mention cannot answer a party question.
+ *
+ * @param string $message Question or source line.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_meeting_query' ) ) {
+	function rytkoset_theme_chat_is_meeting_query( $message ) {
+		return (bool) preg_match( '/\b(?:sukukokou[\p{L}-]*|sukujuhl[\p{L}-]*)\b/ui', (string) $message );
+	}
+}
+
+/**
  * Checks whether a question names a public-source subject that must be verified.
  *
  * @param array<int,array{role:string,content:string}> $messages Prepared history.
@@ -2523,7 +2539,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_named_source_query' ) ) {
 			return ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
 		}
 
-		return (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message )
+		return rytkoset_theme_chat_is_meeting_query( $message )
 			&& ! empty( rytkoset_theme_chat_get_named_search_terms( $message ) );
 	}
 }
@@ -2650,7 +2666,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_text_has_meeting_place_context' ) )
 		}
 
 		foreach ( $lines as $line ) {
-			if ( ! preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $line ) ) {
+			if ( ! rytkoset_theme_chat_is_meeting_query( $line ) ) {
 				continue;
 			}
 
@@ -2884,8 +2900,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_path' ) ) {
 			return 'sukuseura/rekisteriseloste';
 		}
 
-		// Payment, delivery and withdrawal-right questions.
-		if ( preg_match( '/\b(?:maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $message ) ) {
+		// Payment, delivery, withdrawal-right and order-cancellation questions.
+		if (
+			preg_match( '/\b(?:maksutap[\p{L}-]*|toimitusehd[\p{L}-]*|peruuttamisoike[\p{L}-]*)\b/ui', $message )
+			|| rytkoset_theme_chat_is_order_cancellation_query( $message )
+		) {
 			return 'kauppa/maksu-ja-toimitusehdot';
 		}
 
@@ -2900,6 +2919,22 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_path' ) ) {
 		}
 
 		return '';
+	}
+}
+
+/**
+ * Checks whether a question asks how to cancel a store order.
+ *
+ * Requiring both a cancellation verb and an order/purchase term keeps
+ * newsletter cancellation and association resignation on their own paths.
+ *
+ * @param string $message Latest user message.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_is_order_cancellation_query' ) ) {
+	function rytkoset_theme_chat_is_order_cancellation_query( $message ) {
+		return (bool) preg_match( '/\b(?:peru(?:a|n|t|u|mme|tte|vat)|peruut[\p{L}-]*)\b/ui', (string) $message )
+			&& (bool) preg_match( '/\b(?:ost[\p{L}-]*|tilau[\p{L}-]*)\b/ui', (string) $message );
 	}
 }
 
@@ -2926,7 +2961,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source_headings' ) ) {
 				return array( 'Maksutavat', 'Maksupalvelutarjoaja' );
 			}
 
-			if ( preg_match( '/\bperuuttamisoike[\p{L}-]*\b/ui', $message ) ) {
+			if (
+				preg_match( '/\bperuuttamisoike[\p{L}-]*\b/ui', $message )
+				|| rytkoset_theme_chat_is_order_cancellation_query( $message )
+			) {
 				return array( 'Digitaaliset tuotteet', 'Tapahtumamaksut', 'Peruuttaminen ja palautukset' );
 			}
 
@@ -3147,19 +3185,26 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_concept_source' ) ) {
 		// sections instead of independently scored lines, because a partial legal
 		// or privacy section can lose a condition or exception and invert the
 		// answer. The page-tool budget remains the hard cost cap.
-		$max_length = rytkoset_theme_chat_get_page_tool_max_length();
-		$notice     = rytkoset_theme_chat_get_concept_source_notice();
-		$budget     = max( 400, $max_length - mb_strlen( $head ) - mb_strlen( $notice ) - 4 );
-		$headings   = rytkoset_theme_chat_get_concept_source_headings( $message, $path );
-		$excerpt    = rytkoset_theme_chat_get_concept_heading_sections( (string) $page->post_content, $headings, $budget );
+		$max_length  = rytkoset_theme_chat_get_page_tool_max_length();
+		$notice      = rytkoset_theme_chat_get_concept_source_notice();
+		$instruction = rytkoset_theme_chat_is_order_cancellation_query( $message )
+			? '(Tilauksen peruuttamista koskevassa vastauksessa kerro sekä käyttäjätilillä tehdyn että ilman käyttäjätiliä tehdyn tilauksen itsepalvelupolku. Mainitse myös maksamattoman peruuttamiskelpoisen tilauksen välitön peruutus ja muiden pyyntöjen manuaalinen käsittely. Älä väitä, että painike tai linkki näkyy aina.)'
+			: '';
+		$budget      = max( 400, $max_length - mb_strlen( $head ) - mb_strlen( $notice ) - mb_strlen( $instruction ) - 6 );
+		$headings    = rytkoset_theme_chat_get_concept_source_headings( $message, $path );
+		$excerpt     = rytkoset_theme_chat_get_concept_heading_sections( (string) $page->post_content, $headings, $budget );
 
 		if ( '' === trim( $excerpt ) ) {
 			return '';
 		}
 
-		return rytkoset_theme_chat_build_prefetched_source_context(
-			array( $head . "\n\n" . $excerpt . "\n\n" . $notice )
-		);
+		$source = $head . "\n\n" . $excerpt . "\n\n" . $notice;
+
+		if ( '' !== $instruction ) {
+			$source .= "\n\n" . $instruction;
+		}
+
+		return rytkoset_theme_chat_build_prefetched_source_context( array( $source ) );
 	}
 }
 
@@ -3206,8 +3251,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		}
 
 		$board_query       = (bool) preg_match( '/\b(?:hallitu[\p{L}-]*|puheenjohtaj[\p{L}-]*)\b/ui', $message );
-		$meeting_query     = (bool) preg_match( '/\bsukukokou[\p{L}-]*\b/ui', $message );
 		$photo_query       = rytkoset_theme_chat_is_photo_query( $message );
+		$meeting_query     = ! $photo_query && rytkoset_theme_chat_is_meeting_query( $message );
 		$person_terms      = rytkoset_theme_chat_get_person_search_terms( $message );
 		$search_terms      = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
 		$publication_terms = rytkoset_theme_chat_get_publication_search_terms( $message );
@@ -3338,7 +3383,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 
 		$max_length    = max( 800, min( 5000, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_length', 3000 ) ) );
 		$excerpt_max   = max( 400, (int) floor( ( $max_length - 500 ) / $candidate_count ) );
-		$source_terms  = $meeting_query ? array_merge( $search_terms, array( 'sukukokous' ) ) : $search_terms;
+		$source_terms  = $meeting_query ? array_merge( $search_terms, array( 'sukukokous', 'sukujuhla' ) ) : $search_terms;
 		$source_blocks = array();
 
 		foreach ( $candidates as $candidate ) {
@@ -3856,6 +3901,32 @@ if ( ! function_exists( 'rytkoset_theme_chat_count_term_hits' ) ) {
 }
 
 /**
+ * Counts a catering term also when it occurs inside a Finnish compound word.
+ *
+ * Catering details use forms such as "buffetlounas" and
+ * "iltapäiväkahvitarjoilu". The general page-excerpt matcher correctly
+ * requires word boundaries, but catering scoring must recognize these curated
+ * semantic terms inside compounds.
+ *
+ * @param string $text Text to inspect.
+ * @param string $term Curated catering term or day qualifier.
+ * @return int Number of matches.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_count_catering_term_hits' ) ) {
+	function rytkoset_theme_chat_count_catering_term_hits( $text, $term ) {
+		$term = trim( (string) $term );
+
+		if ( '' === $term ) {
+			return 0;
+		}
+
+		$stem = mb_strlen( $term ) < 4 ? $term : mb_substr( $term, 0, 5 );
+
+		return (int) preg_match_all( '/' . preg_quote( $stem, '/' ) . '[\p{L}-]*/ui', (string) $text );
+	}
+}
+
+/**
  * Checks whether a question asks about catering at an event.
  *
  * @param string $message Latest user message.
@@ -3882,7 +3953,21 @@ if ( ! function_exists( 'rytkoset_theme_chat_is_event_catering_query' ) ) {
 if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_terms' ) ) {
 	function rytkoset_theme_chat_get_event_catering_terms( $message ) {
 		$message = (string) $message;
-		$terms   = rytkoset_theme_chat_get_page_query_terms( $message );
+		$terms   = array();
+
+		// Keep only catering-relevant qualifiers from the original question.
+		// Generic event words such as "sukujuhlissa" used to make a transport
+		// or manual-registration section outrank the section that states what
+		// the participation fee actually includes.
+		if (
+			preg_match_all(
+				'/\b(?:maanantai[\p{L}-]*|tiistai[\p{L}-]*|keskiviik[\p{L}-]*|torstai[\p{L}-]*|perjantai[\p{L}-]*|lauantai[\p{L}-]*|sunnuntai[\p{L}-]*|aamupäiv[\p{L}-]*|iltapäiv[\p{L}-]*)\b/ui',
+				$message,
+				$qualifiers
+			)
+		) {
+			$terms = $qualifiers[0];
+		}
 
 		if ( preg_match( '/\billall?i[\p{L}-]*\b/ui', $message ) ) {
 			$terms = array_merge( $terms, array( 'illallinen', 'buffet' ) );
@@ -3934,8 +4019,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_section' ) ) {
 			$heading_hits = 0;
 
 			foreach ( $terms as $term ) {
-				$term_heading_hits = rytkoset_theme_chat_count_term_hits( $section['heading'], $term );
-				$term_total_hits   = rytkoset_theme_chat_count_term_hits( $section['text'], $term );
+				$term_heading_hits = rytkoset_theme_chat_count_catering_term_hits( $section['heading'], $term );
+				$term_total_hits   = rytkoset_theme_chat_count_catering_term_hits( $section['text'], $term );
 
 				if ( $term_total_hits > 0 ) {
 					++$distinct;
@@ -4091,7 +4176,19 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_source' ) ) {
 			$best_score = 0;
 			$best       = array();
 
+			if ( empty( $terms ) ) {
+				if ( 1 !== count( $candidates ) ) {
+					return '';
+				}
+
+				$selected = $candidates[0];
+			}
+
 			foreach ( $candidates as $candidate ) {
+				if ( null !== $selected ) {
+					break;
+				}
+
 				$title = (string) get_the_title( $candidate['post']->ID );
 				$score = 0;
 
@@ -4113,11 +4210,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_event_catering_source' ) ) {
 				$best[] = $candidate;
 			}
 
-			if ( 1 !== count( $best ) ) {
+			if ( null === $selected && 1 !== count( $best ) ) {
 				return '';
 			}
 
-			$selected = $best[0];
+			if ( null === $selected ) {
+				$selected = $best[0];
+			}
 		}
 
 		return rytkoset_theme_chat_build_prefetched_source_context(

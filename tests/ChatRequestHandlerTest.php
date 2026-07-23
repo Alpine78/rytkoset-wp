@@ -114,6 +114,44 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_order_cancellation_uses_verified_account_guest_and_handling_sections(): void {
+		$this->configure_chat_backend();
+		$this->register_payment_terms_page(
+			'<h2>Digitaaliset tuotteet</h2><p>Digitaalisen sisällön oikeus voi päättyä nimenomaisella suostumuksella.</p>'
+			. '<h2>Tapahtumamaksut</h2><p>Määräaikaiseen tapahtumamaksuun ei sovelleta peruuttamisoikeutta.</p>'
+			. '<h2>Peruuttaminen ja palautukset</h2>'
+			. '<p>Käyttäjätilillä toiminto löytyy kohdasta Oma tili → Tilaukset. Ilman käyttäjätiliä tehdyn tilauksen henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa.</p>'
+			. '<p>Maksamaton tilaus peruuntuu heti, jos kaikki tuotteet kuuluvat peruuttamisoikeuden piiriin; muut pyynnöt käsitellään manuaalisesti.</p>'
+		);
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array(
+							'content' => "Käyttäjätilin tilaus perutaan Oma tili -kohdasta ja vierastilaus vahvistusviestin linkistä. Muut pyynnöt käsitellään manuaalisesti.\n\nLähde: https://rytkoset.test/?p=61",
+						),
+					),
+				),
+			)
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Voinko perua tilaukseni?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$payload = json_decode( $GLOBALS['rytkoset_test_http_requests'][0]['args']['body'], true );
+		$this->assertSame( 'none', $payload['tool_choice'] );
+		$this->assertStringContainsString( 'Oma tili → Tilaukset', $payload['messages'][0]['content'] );
+		$this->assertStringContainsString( 'henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa', $payload['messages'][0]['content'] );
+		$this->assertStringContainsString( 'muut pyynnöt käsitellään manuaalisesti', $payload['messages'][0]['content'] );
+		$this->assertStringContainsString( 'Älä väitä, että painike tai linkki näkyy aina', $payload['messages'][0]['content'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_missing_concept_page_returns_deterministic_reply_without_mistral(): void {
 		$this->configure_chat_backend();
 		$this->queue_mistral_response(
@@ -149,6 +187,24 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 200, $result->get_status() );
 		$this->assertStringContainsString( 'chatin käytettävissä olevista', $result->get_data()['reply'] );
 		$this->assertStringNotContainsString( 'presidentti on', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_future_runni_family_party_does_not_use_the_1963_foundation_meeting(): void {
+		$this->configure_chat_backend();
+		$page               = rytkoset_test_register_post( 70, 'page', 'Sukuseura' );
+		$page->post_content = '<p>Rytkösten sukuseuran perustava kokous pidettiin 18.8.1963 Runnin Terveyskylpylällä.</p>';
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Milloin pidetään Runnin sukujuhla?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'En löytänyt tähän varmennettua vastausta', $result->get_data()['reply'] );
+		$this->assertStringContainsString( '?s=Runnin', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( '18.8.1963', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( 'perustava kokous', $result->get_data()['reply'] );
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
 	}
 
@@ -228,6 +284,44 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Perjantain buffet-illallinen', $payload['messages'][0]['content'] );
 		$this->assertStringContainsString( 'maksetaan paikan päällä', $payload['messages'][0]['content'] );
 		$this->assertStringNotContainsString( 'vastaanottotiski', $payload['messages'][0]['content'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_generic_event_catering_uses_the_complete_fee_inclusions_section(): void {
+		$this->configure_chat_backend();
+		$transport               = rytkoset_test_register_post( 19, 'rytkoset_event', 'Yhteiskuljetus Tampereen sukukokoukseen ja juhlaan' );
+		$transport->post_content = '<h2>Paluu lauantaina</h2><p>Kyyti lähtee sukujuhlan jälkeen takaisin.</p>';
+		$event                   = rytkoset_test_register_post( 20, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content     = '<h2>Ilmoittautuminen</h2>'
+			. '<p>Osallistumismaksu sisältää lauantain buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä kokouksen ajaksi.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2><p>Illallinen järjestetään perjantaina.</p>'
+			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2><p>Ilmoita ruokarajoitteet ja buffet kyllä/ei.</p>';
+		$this->queue_mistral_response(
+			array(
+				'choices' => array(
+					array(
+						'finish_reason' => 'stop',
+						'message'       => array(
+							'content' => "Osallistumismaksu sisältää buffetlounaan, iltapäiväkahvin sekä kahvia ja teetä.\n\nLähde: https://rytkoset.test/?p=20",
+						),
+					),
+				),
+			)
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Onko sukujuhlissa tarjolla ruokaa?' ) );
+
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$payload = json_decode( $GLOBALS['rytkoset_test_http_requests'][0]['args']['body'], true );
+		$this->assertSame( 'none', $payload['tool_choice'] );
+		$this->assertStringContainsString( 'buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä', $payload['messages'][0]['content'] );
+		$this->assertStringNotContainsString( 'Kyyti lähtee sukujuhlan jälkeen', $payload['messages'][0]['content'] );
+		$this->assertStringNotContainsString( 'Ilmoittautuminen ilman verkkokauppaa', $payload['messages'][0]['content'] );
+		$this->assertStringNotContainsString( 'Perjantain buffet-illallinen', $payload['messages'][0]['content'] );
 	}
 
 	#[RunInSeparateProcess]

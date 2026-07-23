@@ -415,9 +415,12 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			. '<h2>Perjantain buffet-illallinen</h2>'
 			. '<p>Halukkaille järjestetään perjantaina 28.8. buffet-illallinen noin klo 20. Hinta on noin 30 € ja se maksetaan paikan päällä.</p>'
 			. '<p>Pöytävarauksen vuoksi illalliselle ilmoittaudutaan etukäteen.</p>'
-			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2><p>Ilmoita nimet ja buffet kyllä/ei.</p>';
+			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2>'
+			. '<p>Ilmoita nimet, ruokarajoitteet ja allergiat sekä buffet kyllä/ei.</p>'
+			. '<p>Kirjoita tilisiirron viestikenttään osallistujien nimet ja buffet kyllä/ei.</p>';
 
 		$catering = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko siellä ruokaa tai kahvia?' );
+		$generic  = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko sukujuhlissa tarjolla ruokaa?' );
 		$dinner   = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Onko illallista tarjolla?' );
 		$typo     = rytkoset_theme_chat_resolve_page_tool_result( 20, 'Entä illalista?' );
 
@@ -429,6 +432,9 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Ilmoittautuminen ja maksu tulee tehdä viimeistään 30.7.2026', $catering );
 		$this->assertStringNotContainsString( 'vastaanottotiski', $catering );
 		$this->assertStringNotContainsString( 'Perjantain buffet-illallinen', $catering );
+		$this->assertSame( $catering, $generic );
+		$this->assertNotContains( 'sukujuhlissa', rytkoset_theme_chat_get_event_catering_terms( 'Onko sukujuhlissa tarjolla ruokaa?' ) );
+		$this->assertNotContains( 'tarjolla', rytkoset_theme_chat_get_event_catering_terms( 'Onko sukujuhlissa tarjolla ruokaa?' ) );
 
 		$this->assertStringContainsString( 'perjantaina 28.8. buffet-illallinen noin klo 20', $dinner );
 		$this->assertStringContainsString( 'Hinta on noin 30 € ja se maksetaan paikan päällä', $dinner );
@@ -466,6 +472,31 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'perjantaina noin klo 20 ja maksetaan paikan päällä', $context );
 		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=20', $context );
 		$this->assertStringNotContainsString( 'vastaanottotiski', $context );
+	}
+
+	public function test_generic_catering_question_prefetches_one_unambiguous_event(): void {
+		$transport               = rytkoset_test_register_post( 19, 'rytkoset_event', 'Yhteiskuljetus Tampereen sukukokoukseen ja juhlaan' );
+		$transport->post_content = '<h2>Paluu lauantaina</h2><p>Kyyti lähtee sukujuhlan jälkeen takaisin.</p>';
+		$event                   = rytkoset_test_register_post( 20, 'rytkoset_event', 'Rytkösten sukukokous ja -juhla Tampereella 29.8.2026' );
+		$event->post_content     = '<h2>Ilmoittautuminen</h2>'
+			. '<p>Osallistumismaksu sisältää lauantain buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä kokouksen ajaksi.</p>'
+			. '<h2>Perjantain buffet-illallinen</h2><p>Illallinen järjestetään perjantaina.</p>'
+			. '<h2>Ilmoittautuminen ilman verkkokauppaa</h2><p>Ilmoita ruokarajoitteet ja buffet kyllä/ei.</p>';
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Onko sukujuhlissa tarjolla ruokaa?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'buffetlounaan, iltapäiväkahvitarjoilun sekä kahvia/teetä', $context );
+		$this->assertStringContainsString( 'Lähde: https://rytkoset.test/?p=20', $context );
+		$this->assertStringNotContainsString( 'Kyyti lähtee sukujuhlan jälkeen', $context );
+		$this->assertStringNotContainsString( 'Ilmoittautuminen ilman verkkokauppaa', $context );
+		$this->assertStringNotContainsString( 'Perjantain buffet-illallinen', $context );
 	}
 
 	public function test_event_history_url_matching_rejects_longer_id_prefixes(): void {
@@ -792,6 +823,7 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 			'Mitä maksutapoja on käytössä?'        => 'kauppa/maksu-ja-toimitusehdot',
 			'Mitkä ovat toimitusehdot?'            => 'kauppa/maksu-ja-toimitusehdot',
 			'Onko minulla peruuttamisoikeus?'      => 'kauppa/maksu-ja-toimitusehdot',
+			'Voinko perua tilaukseni?'             => 'kauppa/maksu-ja-toimitusehdot',
 			'Käsitteleekö sivusto henkilötietoja?' => 'tietosuoja',
 			'Käyttääkö sivusto evästeitä?'         => 'tietosuoja',
 			'Mitä tietosuojaselosteessa lukee?'    => 'tietosuoja',
@@ -958,6 +990,31 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( '14 vuorokauden kuluessa tuotteen vastaanottamisesta', $context );
 		$this->assertStringContainsString( 'Jäsenmaksuihin sovelletaan samaa 14 päivän peruuttamisoikeutta', $context );
 		$this->assertStringNotContainsString( 'Tämä ohje koskee tuotteita', $context );
+	}
+
+	public function test_order_cancellation_prefetch_includes_account_guest_and_handling_paths(): void {
+		$this->register_payment_terms_page(
+			'<h2>Digitaaliset tuotteet</h2><p>Digitaalisen sisällön oikeus voi päättyä nimenomaisella suostumuksella.</p>'
+			. '<h2>Tapahtumamaksut</h2><p>Määräaikaiseen tapahtumamaksuun ei sovelleta peruuttamisoikeutta.</p>'
+			. '<h2>Peruuttaminen ja palautukset</h2>'
+			. '<p>Käyttäjätilillä toiminto löytyy kohdasta Oma tili → Tilaukset. Ilman käyttäjätiliä tehdyn tilauksen henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa.</p>'
+			. '<p>Maksamaton tilaus peruuntuu heti, jos kaikki tuotteet kuuluvat peruuttamisoikeuden piiriin; muut pyynnöt käsitellään manuaalisesti.</p>'
+		);
+
+		$context = rytkoset_theme_chat_get_prefetched_public_source(
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'Voinko perua tilaukseni?',
+				),
+			)
+		);
+
+		$this->assertStringContainsString( 'Oma tili → Tilaukset', $context );
+		$this->assertStringContainsString( 'henkilökohtainen Peruuta tilaus -linkki on tilausvahvistuksessa', $context );
+		$this->assertStringContainsString( 'muut pyynnöt käsitellään manuaalisesti', $context );
+		$this->assertStringContainsString( 'kerro sekä käyttäjätilillä tehdyn että ilman käyttäjätiliä tehdyn tilauksen itsepalvelupolku', $context );
+		$this->assertStringContainsString( 'Älä väitä, että painike tai linkki näkyy aina', $context );
 	}
 
 	public function test_concept_prefetch_fails_closed_when_an_expected_heading_is_missing(): void {
@@ -1528,15 +1585,20 @@ final class ChatPageToolTest extends Rytkoset_Theme_Test_Case {
 	public function test_meeting_without_same_line_source_uses_named_fallback_path(): void {
 		$page               = rytkoset_test_register_post( 70, 'page', 'Hallituksen tiedot' );
 		$page->post_content = '<p>Mauri, Helsinki</p><p>Sukukokous pidetään joka kolmas vuosi.</p>';
-		$messages           = array(
-			array(
-				'role'    => 'user',
-				'content' => 'Milloin Helsingin sukukokous pidetään?',
-			),
-		);
 
-		$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ) );
-		$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ) );
+		foreach ( array( 'Milloin Helsingin sukukokous pidetään?', 'Milloin pidetään Runnin sukujuhla?' ) as $query ) {
+			$messages = array(
+				array(
+					'role'    => 'user',
+					'content' => $query,
+				),
+			);
+
+			$this->assertTrue( rytkoset_theme_chat_is_meeting_query( $query ), $query );
+			$this->assertTrue( rytkoset_theme_chat_is_named_source_query( $messages ), $query );
+			$this->assertSame( '', rytkoset_theme_chat_get_prefetched_public_source( $messages ), $query );
+		}
+
 		$this->assertStringContainsString( 'julkaistuista julkisista lähteistä', rytkoset_theme_chat_get_named_source_fallback_reply() );
 	}
 
