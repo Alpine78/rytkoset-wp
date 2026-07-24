@@ -106,6 +106,11 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 			// Vanha englanninkielinen juuri (sivusto on suomenkielinen).
 			'en'                                       => home_url( '/' ),
 
+			// Legacy homepage aliases observed in the 404 monitor.
+			'fi'                                       => home_url( '/' ),
+			'etusivu'                                  => home_url( '/' ),
+			'index.html'                               => home_url( '/' ),
+
 			// Sukuseura-sivut.
 			'sukuseura/sukukokous'                     => home_url( '/tapahtumat/' ),
 			'sukuseura/sukukokous.html'                => home_url( '/tapahtumat/' ),
