@@ -123,6 +123,9 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 	public function test_exact_map_covers_recent_legacy_page_paths(): void {
 		$map = rytkoset_theme_get_legacy_redirect_exact_map();
 
+		$this->assertSame( 'https://rytkoset.test/', $map['fi'] );
+		$this->assertSame( 'https://rytkoset.test/', $map['etusivu'] );
+		$this->assertSame( 'https://rytkoset.test/', $map['index.html'] );
 		$this->assertSame( 'https://rytkoset.test/albumit/', $map['valokuvat&format=feed&Itemid=175&type=rss'] );
 		$this->assertSame( 'https://rytkoset.test/albumit/', $map['valokuvat&format=feed&Itemid=175'] );
 		$this->assertSame( 'https://rytkoset.test/albumit/', $map['kuvat'] );
