@@ -219,6 +219,7 @@ SEO-metatiedot, some-linkit ja Customizer-asetukset.
 
 Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 
+- `docs/hallituksen-paatettavat-asiat.md` - hallituksen päätettävät verkkosivustoasiat ja päätösrungot
 - `docs/design-system.md` - design-tokenit ja frontend-käytännöt
 - `docs/menu-structure.md` - päävalikon tavoiterakenne
 - `docs/comments.md` - blogin ja albumien kommentointi
