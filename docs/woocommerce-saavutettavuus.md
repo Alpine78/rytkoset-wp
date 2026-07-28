@@ -24,6 +24,8 @@ ARIA-merkinnät on tarkistettu erikseen.
 | Tampere 2026 -kassailmoitus | [`inc/woocommerce-tampere-2026.php:387`](../wp-content/themes/rytkoset-theme/inc/woocommerce-tampere-2026.php) | ✅ `role="note"` |
 | Jäsenrivit (nimi, sähköposti) + Lisää/Poista jäsen -painikkeet | [`assets/js/membership-checkout-rows.js`](../wp-content/themes/rytkoset-theme/assets/js/membership-checkout-rows.js) | ✅ Rekisteröity `woocommerce_register_additional_checkout_field`-API:lla; rivikohtaiset `aria-label`-tekstit poistopainikkeilla, `aria-live`-ilmoitukset lisäyksestä/poistosta, fokus siirtyy uuden rivin ensimmäiseen kenttään ja poiston jälkeen järkevään kontrolliin (#520) |
 | WooCommerce-painikkeiden fokus | [`assets/css/shop.css:200`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ `:focus-visible` korvaa default-outlinen `box-shadow: var(--shop-focus-ring)`-renkaalla |
+| Toimitustavan valinta **Lähetä/Nouto** (WC Blocks, näkyy kun nouto on käytössä) | [`assets/css/components.css`](../wp-content/themes/rytkoset-theme/assets/css/components.css) | ✅ Tummassa teemassa valittu vaihtoehto on täytetty sinisävyinen siru WC:n kovakoodatun `background: #fff` -taustan sijaan (#635); mitattu tekstikontrasti 9,14:1 valittuna ja 13,85:1 valitsemattomana, valinnan reunaviiva 4,90:1 |
+| Paytrailin maksutapalogot | [`assets/css/shop.css`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ Tummassa teemassa jokainen logoruutu saa valkoisen taustan (#635), koska logot ovat maksunvälittäjien omia kuvatiedostoja eikä niitä voi värjätä; ruudun kontrasti ympäröivään pintaan 17,74:1, valinnan reunaviiva 4,93:1. Lisäksi `:focus-visible`-rengas (3 px `--color-primary`), jota lisäosa ei itse tarjoa piilotetun radiopainikkeen takia |
 | Tuotearkiston tuoteruudukko | WooCommerce default | ✅ Käyttää WC:n omia templateja, joissa h2-otsikot ja kuvien alt |
 
 ## ARIA-merkinnöistä
@@ -40,6 +42,7 @@ korvaava ilmaisin on näkyvä ja kontrastiltaan riittävä (≥3:1).
 | WC Checkout Block (etunimi, sukunimi, osoite, jne.) | WooCommerce | Labelit ja virheviestit hoidetaan blockin sisällä |
 | Paytrailin maksutapavalitsin ja maksupalvelu | Paytrail | Lisäosa renderöi maksutaparyhmät kassalle; maksupalveluun siirtyvän osuuden saavutettavuus on Paytrailin vastuulla |
 | Paytrailin tallennetun kortin **Lisää uusi kortti** -painike | Paytrail + theme | Teema palauttaa lisäosan ohittaman flex-keskityksen; fokus tulee WooCommerce-painikkeiden yhteisestä `:focus-visible`-säännöstä (#530) |
+| Paytrailin maksutapalogojen tausta ja fokus | Paytrail + theme | Lisäosa olettaa vaalean sivupohjan: logoruudulla ei ole omaa taustaa ja piilotettu (`opacity: 0`) radiopainike jää ilman fokusrengasta. Teema korjaa molemmat omalla CSS:llä muuttamatta lisäosan tiedostoja (#635) |
 | AcyMailing-opt-in checkbox kassalla | Theme | Toteutettu samalla pattern-pohjalla kuin tapahtumailmoittautumisen opt-in |
 
 ## Testauksen rajoitteet
