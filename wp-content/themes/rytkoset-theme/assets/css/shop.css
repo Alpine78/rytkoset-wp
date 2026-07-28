@@ -1723,6 +1723,27 @@ body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block
   margin: 0;
 }
 
+/* Paytrail renders each payment method as an SVG logo inside a wrapper with no
+   background of its own, so the logos sit straight on the checkout surface.
+   That assumes a light page: several marks are plain black wordmarks (Siirto,
+   Walley) and become invisible on the dark theme, while thin coloured ones
+   (Ålandsbanken, OP Lasku) drop below AA (#635). The logo files are the
+   payment providers' own artwork and cannot be recoloured, so give every tile
+   the white backing the marks were drawn for — the same surface they already
+   get in the light theme. Applying it to the whole grid rather than the known
+   dark marks also covers providers Paytrail adds later. */
+:root[data-theme="dark"] .paytrail-woocommerce-payment-fields--list-item--wrapper {
+  background-color: #fff;
+}
+
+/* The provider radio is `opacity: 0` and the plugin styles only :checked and
+   :hover, so a keyboard user gets no focus indicator at all on these tiles.
+   Both themes need it, hence no dark-theme scope. */
+.paytrail-woocommerce-payment-fields--list-item--input:focus-visible + .paytrail-woocommerce-payment-fields--list-item--wrapper {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* The box-shadow above never shows on the TOP edge: every option has its own
    generated ::after divider bar (top: 0, height: 1px, a positioned child) —
    and a child's own box always paints after/above its parent's own inset

@@ -1009,6 +1009,27 @@
   color: var(--color-accent);
 }
 
+/* Shipping method toggle ("Lähetä" / "Nouto"), shown when local pickup is
+   enabled. WooCommerce marks the selected option with a hard-coded
+   `background: #fff` while the option text stays `currentColor` — in the dark
+   theme that is light text on white, measured at 1.07:1, so the selected
+   option practically disappears (#635). WooCommerce only avoids this inside
+   its own `.has-dark-controls` editor context, which never applies on the
+   frontend. Give the group a surface of its own and render the selected
+   option as a filled accent chip instead, matching the blue selection
+   language the radio controls below it already use. Both selectors repeat the
+   option class the way WooCommerce does so ours wins on specificity. */
+:root[data-theme="dark"] .wc-block-checkout__shipping-method .wc-block-checkout__shipping-method-container {
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border-neutral);
+}
+
+:root[data-theme="dark"] .wc-block-checkout__shipping-method-option.wc-block-checkout__shipping-method-option--selected {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-light);
+  color: var(--color-text-light);
+}
+
 /* =================================================================
    Share — "Jaa tapahtuma"
    Työpöytä (≥ 760 px): yksi vaakarivi.  Mobiili: pinottu kortti.
