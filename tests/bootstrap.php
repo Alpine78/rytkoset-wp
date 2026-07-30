@@ -1703,6 +1703,10 @@ function home_url( $path = '' ) {
 	return 'https://rytkoset.test' . $path;
 }
 
+function admin_url( $path = '', $scheme = 'admin' ) {
+	return 'https://rytkoset.test/wp-admin/' . ltrim( (string) $path, '/' );
+}
+
 function wp_get_attachment_caption( $attachment_id ) {
 	return (string) get_post_meta( (int) $attachment_id, '_wp_attachment_caption', true );
 }

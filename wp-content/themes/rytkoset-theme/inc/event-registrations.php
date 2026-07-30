@@ -726,6 +726,140 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
 }
 
 /**
+ * Notifies the event organizers about a new free event registration.
+ *
+ * Recipients come from the event's own organizer notification field — the same
+ * field the paid WooCommerce order path uses. An empty field means no email is
+ * sent; there is deliberately no admin-email fallback, so participant details
+ * never reach an address nobody configured for this purpose.
+ *
+ * The message carries only the event basics plus the participant's name and
+ * email. Diet restrictions, notes, the extra choice and the quantity stay in
+ * the admin views linked from the message.
+ *
+ * @param int $registration_id Registration post ID.
+ * @return bool Whether WordPress accepted the email for sending.
+ */
+function rytkoset_theme_send_event_registration_organizer_notification( $registration_id ) {
+	$registration_id = absint( $registration_id );
+
+	if ( $registration_id <= 0 || 'event_registration' !== get_post_type( $registration_id ) ) {
+		return false;
+	}
+
+	$event_id = absint( rytkoset_theme_get_event_registration_meta( $registration_id, 'event_id' ) );
+
+	if ( $event_id <= 0 || 'rytkoset_event' !== get_post_type( $event_id ) ) {
+		return false;
+	}
+
+	$recipients = rytkoset_theme_get_event_organizer_notification_recipients( $event_id );
+
+	if ( empty( $recipients ) ) {
+		return false;
+	}
+
+	$name  = trim( rytkoset_theme_get_event_registration_meta( $registration_id, 'name' ) );
+	$email = sanitize_email( rytkoset_theme_get_event_registration_meta( $registration_id, 'email' ) );
+
+	$event_title = get_the_title( $event_id );
+
+	if ( '' === $event_title ) {
+		$event_title = __( 'Tapahtuma', 'rytkoset-theme' );
+	}
+
+	$event_title_plain = wp_specialchars_decode( $event_title, ENT_QUOTES );
+	$subject           = sprintf(
+		/* translators: %s: event title. */
+		__( 'Uusi ilmoittautuminen: %s', 'rytkoset-theme' ),
+		$event_title_plain
+	);
+
+	$lines = array(
+		__( 'Tapahtumaan on tullut uusi ilmoittautuminen maksuttomalla lomakkeella.', 'rytkoset-theme' ),
+		__( 'Ilmoittautuminen odottaa käsittelyä, kunnes järjestäjä muuttaa sen tilan ylläpidossa.', 'rytkoset-theme' ),
+		'',
+		__( 'Tapahtuman tiedot:', 'rytkoset-theme' ),
+		sprintf(
+			/* translators: %s: event title. */
+			__( 'Tapahtuma: %s', 'rytkoset-theme' ),
+			$event_title_plain
+		),
+	);
+
+	$date     = rytkoset_theme_get_event_date_display( $event_id );
+	$time     = rytkoset_theme_get_event_time_display( $event_id );
+	$location = rytkoset_theme_get_event_location( $event_id );
+
+	if ( '' !== $date ) {
+		$lines[] = sprintf(
+			/* translators: %s: event date. */
+			__( 'Päivämäärä: %s', 'rytkoset-theme' ),
+			$date
+		);
+	}
+
+	if ( '' !== $time ) {
+		$lines[] = sprintf(
+			/* translators: %s: event time. */
+			__( 'Aika: %s', 'rytkoset-theme' ),
+			$time
+		);
+	}
+
+	if ( '' !== $location ) {
+		$lines[] = sprintf(
+			/* translators: %s: event location. */
+			__( 'Paikka: %s', 'rytkoset-theme' ),
+			$location
+		);
+	}
+
+	$not_given = __( 'Ei annettu', 'rytkoset-theme' );
+
+	$lines[] = '';
+	$lines[] = __( 'Ilmoittautujan tiedot:', 'rytkoset-theme' );
+	$lines[] = sprintf(
+		/* translators: %s: participant name. */
+		__( 'Nimi: %s', 'rytkoset-theme' ),
+		'' !== $name ? $name : $not_given
+	);
+	$lines[] = sprintf(
+		/* translators: %s: participant email address. */
+		__( 'Sähköposti: %s', 'rytkoset-theme' ),
+		'' !== $email ? $email : $not_given
+	);
+
+	$lines[] = '';
+	$lines[] = __( 'Katso loput tiedot ylläpidosta:', 'rytkoset-theme' );
+	// get_edit_post_link() is intentionally avoided: it bails on an edit_post
+	// capability check, and this email is sent from an anonymous admin-post
+	// request, so the link would silently disappear.
+	$lines[] = admin_url( 'post.php?post=' . $registration_id . '&action=edit' );
+	$lines[] = add_query_arg(
+		array(
+			'post_type' => 'rytkoset_event',
+			'page'      => 'rytkoset-event-participants',
+			'event_id'  => $event_id,
+		),
+		admin_url( 'edit.php' )
+	);
+
+	$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
+
+	if ( '' !== $email && is_email( $email ) ) {
+		$headers[] = 'Reply-To: ' . $email;
+	}
+
+	return wp_mail(
+		$recipients,
+		$subject,
+		implode( "\n", $lines ),
+		$headers
+	);
+}
+
+/**
  * Returns the client IP for the current request.
  *
  * Uses only `REMOTE_ADDR`; forwarded headers (`X-Forwarded-For` etc.) are not
@@ -943,6 +1077,10 @@ function rytkoset_theme_handle_event_registration_submission() {
 	}
 
 	rytkoset_theme_send_event_registration_receipt_email( $event_id, $name, $email, $choice_value, $quantity );
+
+	// Independent of the receipt above: a failed participant email must not
+	// suppress the organizer notification, or vice versa.
+	rytkoset_theme_send_event_registration_organizer_notification( $registration_id );
 
 	if ( ! empty( $_POST['registration_newsletter_opt_in'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['registration_newsletter_opt_in'] ) ) && function_exists( 'rytkoset_theme_subscribe_email_to_newsletter' ) ) {
 		$newsletter_result = rytkoset_theme_subscribe_email_to_newsletter( $email, 'event_registration', get_current_user_id() );
