@@ -29,6 +29,48 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		}
 	}
 
+	/**
+	 * Registers a free event registration with the given meta values.
+	 *
+	 * @param int                  $id        Registration post ID.
+	 * @param int                  $event_id  Event post ID.
+	 * @param array<string,string> $overrides Meta alias => value pairs.
+	 * @return void
+	 */
+	private function registration( int $id, int $event_id, array $overrides = array() ): void {
+		rytkoset_test_register_post( $id, 'event_registration', 'Maija Meikäläinen - Sukujuhla', 0 );
+
+		$keys   = rytkoset_theme_get_event_registration_meta_keys();
+		$values = array_merge(
+			array(
+				'event_id' => (string) $event_id,
+				'name'     => 'Maija Meikäläinen',
+				'email'    => 'maija@example.test',
+				'status'   => 'pending',
+			),
+			$overrides
+		);
+
+		foreach ( $values as $alias => $value ) {
+			update_post_meta( $id, $keys[ $alias ], $value );
+		}
+	}
+
+	/**
+	 * Sets the organizer notification recipients for an event.
+	 *
+	 * @param int    $event_id   Event post ID.
+	 * @param string $recipients Raw recipient list value.
+	 * @return void
+	 */
+	private function organizer_recipients( int $event_id, string $recipients ): void {
+		update_post_meta(
+			$event_id,
+			rytkoset_theme_get_event_organizer_notification_recipients_meta_key(),
+			$recipients
+		);
+	}
+
 	// --- build_event_registration_title -------------------------------------
 
 	public function test_title_combines_name_and_event(): void {
@@ -154,6 +196,9 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'Kuopio', get_post_meta( $registration_id, $meta_keys['choice'], true ) );
 		$this->assertSame( 10, get_post_meta( $registration_id, $meta_keys['quantity'], true ) );
 		$this->assertSame( 'pending', get_post_meta( $registration_id, $meta_keys['status'], true ) );
+		// Event 10 has no organizer notification recipients, so only the
+		// participant receipt is sent. See the organizer notification tests
+		// below for the two-mail case.
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
 		$this->assertStringContainsString( 'Lähtöpaikka: Kuopio', $GLOBALS['rytkoset_test_mails'][0]['message'] );
 		$this->assertStringContainsString( 'Matkustajia: 10', $GLOBALS['rytkoset_test_mails'][0]['message'] );
@@ -196,5 +241,115 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
 		$this->assertStringContainsString( 'Lähtöpaikka: Kuopio', $GLOBALS['rytkoset_test_mails'][0]['message'] );
 		$this->assertStringContainsString( 'Matkustajia: 2', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+	}
+
+	// --- organizer notification ----------------------------------------------
+
+	public function test_organizer_notification_is_skipped_without_configured_recipients(): void {
+		$this->event( 10 );
+		$this->registration( 500, 10 );
+
+		$this->assertFalse( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
+	}
+
+	public function test_organizer_notification_includes_event_and_participant_details(): void {
+		$this->event( 10 );
+		$this->organizer_recipients( 10, "jarjestaja@example.test\ntoinen@example.test" );
+
+		update_post_meta( 10, rytkoset_theme_get_event_date_meta_key(), '2026-08-29' );
+		update_post_meta( 10, rytkoset_theme_get_event_details_meta_keys()['location'], 'Tampere' );
+
+		$this->registration( 500, 10 );
+
+		$this->assertTrue( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+
+		$mail = $GLOBALS['rytkoset_test_mails'][0];
+
+		$this->assertSame( array( 'jarjestaja@example.test', 'toinen@example.test' ), $mail['to'] );
+		$this->assertStringContainsString( 'Uusi ilmoittautuminen: Sukujuhla', $mail['subject'] );
+		$this->assertStringContainsString( 'Tapahtuma: Sukujuhla', $mail['message'] );
+		$this->assertStringContainsString( 'Paikka: Tampere', $mail['message'] );
+		$this->assertStringContainsString( 'Nimi: Maija Meikäläinen', $mail['message'] );
+		$this->assertStringContainsString( 'Sähköposti: maija@example.test', $mail['message'] );
+		$this->assertContains( 'Reply-To: maija@example.test', $mail['headers'] );
+	}
+
+	public function test_organizer_notification_omits_participant_free_text_fields(): void {
+		$this->event( 10 );
+		$this->organizer_recipients( 10, 'jarjestaja@example.test' );
+		update_post_meta( 10, rytkoset_theme_get_event_choice_field_label_meta_key(), 'Lähtöpaikka' );
+
+		$this->registration(
+			500,
+			10,
+			array(
+				'diet'     => 'Laktoositon',
+				'notes'    => 'Tarvitsee apua bussiin noustessa.',
+				'choice'   => 'Kuopio',
+				'quantity' => '2',
+			)
+		);
+
+		$this->assertTrue( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+
+		$message = $GLOBALS['rytkoset_test_mails'][0]['message'];
+
+		$this->assertStringNotContainsString( 'Laktoositon', $message );
+		$this->assertStringNotContainsString( 'Tarvitsee apua bussiin noustessa.', $message );
+		$this->assertStringNotContainsString( 'Kuopio', $message );
+	}
+
+	public function test_organizer_notification_includes_admin_links(): void {
+		$this->event( 10 );
+		$this->organizer_recipients( 10, 'jarjestaja@example.test' );
+		$this->registration( 500, 10 );
+
+		$this->assertTrue( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+
+		$message = $GLOBALS['rytkoset_test_mails'][0]['message'];
+
+		$this->assertStringContainsString( 'post.php?post=500&action=edit', $message );
+		$this->assertStringContainsString( 'page=rytkoset-event-participants', $message );
+		$this->assertStringContainsString( 'event_id=10', $message );
+	}
+
+	public function test_organizer_notification_is_skipped_for_invalid_registration(): void {
+		$this->assertFalse( rytkoset_theme_send_event_registration_organizer_notification( 0 ) );
+
+		rytkoset_test_register_post( 20, 'page', 'Tavallinen sivu', 0 );
+		$this->organizer_recipients( 20, 'jarjestaja@example.test' );
+		$this->registration( 500, 20 );
+
+		$this->assertFalse( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
+	}
+
+	public function test_submission_sends_receipt_and_organizer_notification(): void {
+		$this->event( 10 );
+		$this->organizer_recipients( 10, 'jarjestaja@example.test' );
+
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.20';
+		$_POST                  = array(
+			'event_id'                                 => '10',
+			'website'                                  => '',
+			'rytkoset_event_registration_submit_nonce' => 'rytkoset_submit_event_registration',
+			'registration_name'                        => 'Maija Meikäläinen',
+			'registration_email'                       => 'maija@example.test',
+			'registration_gdpr_consent'                => '1',
+		);
+
+		try {
+			rytkoset_theme_handle_event_registration_submission();
+			$this->fail( 'Expected the submission handler to redirect after saving.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertStringContainsString( 'registration_status=success', $redirect->location );
+		}
+
+		$this->assertCount( 2, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertSame( 'maija@example.test', $GLOBALS['rytkoset_test_mails'][0]['to'] );
+		$this->assertSame( array( 'jarjestaja@example.test' ), $GLOBALS['rytkoset_test_mails'][1]['to'] );
+		$this->assertStringContainsString( 'Uusi ilmoittautuminen', $GLOBALS['rytkoset_test_mails'][1]['subject'] );
 	}
 }

@@ -52,6 +52,12 @@ Tampere 2026 -tilauksissa osallistujat puretaan edelleen checkoutin osallistujak
 - Puuttuvista vastaanottajista lisätään private order note.
 - Onnistuneen lähetyksen ajankohta ja käytetty vastaanottajalista tallennetaan tilauksen metaan tapahtumakohtaisesti.
 
+## Maksuttomat tapahtumat
+
+Sama tapahtuman `Järjestäjäilmoitukset`-vastaanottajakenttä laukaisee ilmoituksen myös maksuttoman lomakkeen ilmoittautumisista (#638), joten järjestäjät hallitaan yhdestä paikasta molemmille poluille. Polut ovat toisensa poissulkevia: maksuton lomake näkyy vain, kun tapahtuma on maksuton eikä siihen ole linkitetty maksutuotetta, ja tämän dokumentin tilausilmoitus vaatii nimenomaan maksutuotteen. Sama ilmoittautuminen ei siis voi tuottaa kahta ilmoitusta.
+
+Maksuttoman polun ilmoitus on dokumentoitu tiedostossa `docs/events.md`. Keskeisin ero: maksuttomalla polulla ei ole WooCommerce-tilausta eikä siten order note -audit trailia, joten lähetyksestä ei jää lokimerkintää.
+
 ## Debug local/dev-ympäristössä
 
 - Jos `wp_mail` epäonnistuu local- tai dev-ympäristössä, tilaukselle lisätään private order noteen myös debug-esikatselu.
