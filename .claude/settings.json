@@ -10,7 +10,15 @@
       "Bash(composer run lint)",
       "Bash(composer run test)",
       "Bash(git merge-tree *)",
-      "Bash(echo \"=== exit code: $? ===\")"
+      "Bash(echo \"=== exit code: $? ===\")",
+      "Bash(python3 -c ' *)",
+      "Bash(xargs -0 -n1 php -l)",
+      "Bash(vendor/bin/phpunit --filter EventRegistrationFormTest)",
+      "Bash(vendor/bin/phpunit)",
+      "Bash(vendor/bin/phpcs)",
+      "Bash(grep -n \"inc/event-registrations.php\\\\`\" CLAUDE.md)",
+      "Bash(grep -n \"_rytkoset_event_organizer_notification_recipients\\\\` — event-specific\" CLAUDE.md)",
+      "Bash(git stash *)"
     ]
   },
   "enabledPlugins": {

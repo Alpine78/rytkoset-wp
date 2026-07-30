@@ -1625,7 +1625,7 @@ function rytkoset_theme_render_event_organizer_notifications_metabox( $post ) {
 		class="widefat"
 	><?php echo esc_textarea( $value ); ?></textarea>
 	<p class="description">
-		<?php esc_html_e( 'Anna järjestäjäilmoitusten vastaanottajaosoitteet pilkuilla tai rivinvaihdoilla eroteltuna.', 'rytkoset-theme' ); ?>
+		<?php esc_html_e( 'Anna järjestäjäilmoitusten vastaanottajaosoitteet pilkuilla tai rivinvaihdoilla eroteltuna. Ilmoitus lähetetään sekä maksullisen tapahtuman tilauksista että maksuttoman lomakkeen ilmoittautumisista. Jos kenttä on tyhjä, ilmoitusta ei lähetetä.', 'rytkoset-theme' ); ?>
 	</p>
 	<?php
 }

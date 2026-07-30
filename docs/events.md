@@ -19,6 +19,7 @@ Tapahtumakokonaisuus on tässä vaiheessa kevyt MVP:
 - ilmaisten tapahtumien ilmoittautumisille on oma ei-julkinen `event_registration`-sisältötyyppi
 - maksuttomien tapahtumien sivulla voidaan näyttää ilmoittautumislomake, jonka tiedot tallentuvat ilmoittautumisiksi
 - maksuttoman tapahtumailmoittautumisen jälkeen ilmoittautujalle lähetetään kevyt kuittisähköposti
+- jos tapahtumalle on asetettu järjestäjäilmoitusten vastaanottajat, sama ilmoittautuminen lähettää heille erillisen ilmoituksen
 - maksullisen tapahtuman ilmoittautuminen ja maksaminen ohjataan WooCommerce-tuotteelle
 - osallistujat näkee tapahtumakohtaisesti `Tapahtumat > Osallistujat` -näkymästä, joka yhdistää ilmaiset ja maksulliset ilmoittautumiset
 - Tampere 2026 -tilausten moniosallistujatiedot normalisoidaan samaan osallistujanäkymään
@@ -73,7 +74,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Hintateksti        | `_rytkoset_event_price_text` | vapaa teksti, esim. `49 € / henkilö` | Julkinen hintatieto                       |
 | Ilmoittautumisen määräpäivä | `_rytkoset_event_registration_deadline` | `YYYY-MM-DD` | Maksuttoman tapahtuman lomakkeen sulkeminen |
 | Maksutuote         | `_rytkoset_event_product_id` | WooCommerce-tuotteen ID              | Linkki ilmoittautumis-/maksutuotteeseen   |
-| Järjestäjäilmoitusten vastaanottajat | `_rytkoset_event_organizer_notification_recipients` | sähköpostiosoitteet, yksi per rivi | Maksullisen tapahtuman tilausilmoitusten vastaanottajat |
+| Järjestäjäilmoitusten vastaanottajat | `_rytkoset_event_organizer_notification_recipients` | sähköpostiosoitteet, yksi per rivi | Järjestäjäilmoitusten vastaanottajat sekä maksullisen tapahtuman tilauksista että maksuttoman lomakkeen ilmoittautumisista; tyhjä kenttä = ei ilmoitusta |
 | Kysy ruokavalio | `_rytkoset_event_collect_diet` | puuttuva tai `no` | Puuttuva näyttää ruokavaliokentän ja mainitsee ruokarajoitteet GDPR-ilmoituksessa; `no` piilottaa kentän ja jättää ruokarajoitteet pois ilmoituksesta |
 | Näytä tapahtuma Googlen tapahtumahaussa | `_rytkoset_event_schema_enabled` | puuttuva tai `no` | Puuttuva tuottaa Event-rakennedatan; `no` jättää Event-rakennedatan pois |
 | Lisävalinta käytössä | `_rytkoset_event_choice_enabled` | `yes` tai puuttuva | Näyttää maksuttomalla lomakkeella pakollisen valintalistan |
@@ -109,7 +110,7 @@ Yksittäisellä tapahtumasivulla näytetään:
 
 - tapahtuman artikkelikuva ja otsikko
 - editoriin kirjoitettu sisältö
-- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi, siihen ei ole linkitetty maksutuotetta ja ilmoittautumisen määräpäivää ei ole ohitettu — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38) sekä tapahtumalle valitut lisävalinta-, määrä- ja ruokavaliokentät; onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32), ja ilmoittautujalle lähetetään tekstimuotoinen kuittisähköposti (#107)
+- maksuttoman tapahtuman ilmoittautumislomake, jos tapahtuma on merkitty maksuttomaksi, siihen ei ole linkitetty maksutuotetta ja ilmoittautumisen määräpäivää ei ole ohitettu — lomake sisältää GDPR-tietosuojatekstin ja pakollisen hyväksyntächeckboxin (#38) sekä tapahtumalle valitut lisävalinta-, määrä- ja ruokavaliokentät; onnistumisen jälkeen lomake korvataan vahvistusosiolla, joka näyttää tapahtuman tiedot (#32), ilmoittautujalle lähetetään tekstimuotoinen kuittisähköposti (#107) ja tapahtuman järjestäjäilmoitusten vastaanottajille oma ilmoitus (#638)
 - sivupalkin yhteenvetokortti, jos tapahtumalla on perustietoja tai maksutuote
 - jakopainikkeet
 
@@ -163,8 +164,13 @@ Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Men
    määritä `Ilmoittautumisen lisävalinta` -laatikossa kentän otsikko,
    vaihtoehdot ja/tai määräkenttä.
 10. Jos tapahtumaan liittyy maksu, valitse sivupalkin `Maksutuote`-laatikosta oikea WooCommerce-tuote.
-11. Julkaise tai päivitä tapahtuma.
-12. Tarkista julkinen tapahtumasivu ja tapahtuma-arkisto.
+11. Jos haluat sähköposti-ilmoituksen jokaisesta ilmoittautumisesta, täytä
+    sivupalkin `Järjestäjäilmoitukset`-laatikkoon vastuuhenkilöiden osoitteet.
+    Sama kenttä toimii sekä maksuttoman lomakkeen ilmoittautumisille että
+    maksullisen tapahtuman tilauksille; tyhjä kenttä tarkoittaa, ettei
+    ilmoituksia lähetetä lainkaan.
+12. Julkaise tai päivitä tapahtuma.
+13. Tarkista julkinen tapahtumasivu ja tapahtuma-arkisto.
 
 ### Suositeltu minimitieto
 
@@ -188,6 +194,17 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
 
 Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa honeypot-kentän, noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa. Onnistuneen maksuttoman ilmoittautumisen jälkeen ilmoittautujalle lähetetään `wp_mail()`-pohjainen tekstimuotoinen kuittisähköposti, jossa kerrotaan ilmoittautumisen vastaanotosta ja näytetään tapahtuman perustiedot.
+
+### Järjestäjäilmoitus maksuttomasta ilmoittautumisesta (#638)
+
+Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmoitus, jos tapahtuman `Järjestäjäilmoitukset`-laatikkoon on asetettu vastaanottajia. Käytössä on täsmälleen sama vastaanottajakenttä kuin maksullisten tapahtumien tilausilmoituksissa (`docs/woocommerce-tampere-2026-notifications.md`), joten järjestäjät hallitaan yhdestä paikasta tapahtuman muokkausnäkymässä.
+
+- **Tyhjä kenttä tarkoittaa, ettei ilmoitusta lähetetä.** Varaosoitetta ei ole tarkoituksella, jotta osallistujan henkilötiedot eivät koskaan päädy osoitteeseen, jota kukaan ei ole valinnut tähän käyttöön. Sama sääntö on voimassa maksullisella polulla.
+- Viesti sisältää tapahtuman perustiedot sekä ilmoittautujan nimen ja sähköpostiosoitteen. **Ruokarajoitteet, lisätieto, lisävalinta ja määrä jätetään tarkoituksella pois** — ne katsotaan ylläpidosta, jotta sähköpostilla liikkuu mahdollisimman vähän henkilötietoa.
+- Viestin lopussa on kaksi linkkiä: yksittäisen ilmoittautumisen muokkausnäkymä ja `Tapahtumat > Osallistujat` oikealla tapahtumalla valittuna.
+- Viestin `Reply-To` on ilmoittautujan osoite, joten järjestäjä voi vastata suoraan ilmoittautujalle.
+- Maksuttomalla polulla ei ole WooCommerce-tilauksen order note -lokia, joten onnistuneesta tai epäonnistuneesta lähetyksestä ei jää audit trailia. Jos ilmoituksia ei tule, tarkista ensin vastaanottajakenttä ja sen jälkeen palvelimen sähköpostinvälitys.
+- Ilmoitus lähetetään yhtenä `wp_mail()`-kutsuna riippumatta vastaanottajien määrästä. Kuittisähköposti ja järjestäjäilmoitus ovat toisistaan riippumattomia: kumpikaan ei estä toista.
 
 Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, mutta tapahtumaviittaus ja status säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
 
@@ -319,6 +336,7 @@ Tässä vaiheessa on toteutettu:
 - maksuttoman tapahtuman julkinen ilmoittautumislomake
 - maksuttoman tapahtuman ilmoittautumisen validointi ja frontend-tallennus
 - maksuttoman tapahtumailmoittautumisen kuittisähköposti ilmoittautujalle
+- maksuttoman tapahtumailmoittautumisen järjestäjäilmoitus tapahtuman vastuuhenkilöille
 - tapahtuman yksittäinen sivupohja
 - tapahtuma-arkisto, jossa on tulevat, menneet ja päivämäärättömät tapahtumat
 - tapahtumapäivän metakenttä
