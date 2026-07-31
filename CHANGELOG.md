@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Changed
+- `docs/hallituksen-paatettavat-asiat.md`: täydennetty maksunvälittäjä-kohta (#396) tikettiin kirjatuilla juurisyillä (rajat ylittävä pankkimaksu, RF-viitteen väliviivamuotoilu, korttimaksun tekninen ulkomaanmaksu) ja hylätyllä Stripe-vaihtoehdolla. Kohta päivitetty vastaamaan nykytilaa: Paytrail-kokeilu on jo käynnissä tuotannossa (#530), joten hallituksen päätettävä ei ole enää "kokeillaanko kotimaista" vaan jatketaanko sitä pysyvästi n. 220 €/v lisäkustannuksella vai palataanko Mollieen.
+
 ## [1.3.2] - 2026-07-30
 
 ### Added
