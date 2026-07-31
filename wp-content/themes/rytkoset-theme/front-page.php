@@ -56,11 +56,12 @@
 	</div>
 	<p class="home-feature__lead">
 	Suvun väki kokoontuu Tampereelle loppukesästä. Luvassa juhlaohjelmaa, sukukokous ja
-	yhteistä aikaa. Katso ohjelma ja ilmoittaudu mukaan vuoden 2026 sukujuhliin!
+	yhteistä aikaa. Ilmoittautumisaikaa sukujuhliin ja yhteiskyytiin on jatkettu
+	14.8.2026 saakka. Vielä ehdit mukaan!
 	</p>
 	<?php
-	// Hae osallistumismaksutuotteen osoite dynaamisesti SKU:lla, jottei se
-	// riipu WooCommercen kestolinkkirakenteesta (esim. /tuote/ vs /kauppa/%product_cat%/).
+	// Resolve the registration product by SKU so the URL does not depend on
+	// the configured WooCommerce permalink structure.
 	$rytkoset_tampere_sku        = function_exists( 'rytkoset_theme_get_tampere_2026_registration_sku' ) ? rytkoset_theme_get_tampere_2026_registration_sku() : '';
 	$rytkoset_tampere_product_id = ( '' !== $rytkoset_tampere_sku && function_exists( 'wc_get_product_id_by_sku' ) ) ? wc_get_product_id_by_sku( $rytkoset_tampere_sku ) : 0;
 	$rytkoset_tampere_url        = $rytkoset_tampere_product_id ? get_permalink( $rytkoset_tampere_product_id ) : home_url( '/kauppa/' );

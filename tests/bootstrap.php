@@ -265,6 +265,14 @@ class WC_Product {
 		return (bool) ( $this->meta['_is_purchasable'] ?? true );
 	}
 
+	public function backorders_allowed(): bool {
+		return (bool) ( $this->meta['_backorders_allowed'] ?? false );
+	}
+
+	public function is_in_stock(): bool {
+		return (bool) ( $this->meta['_is_in_stock'] ?? true );
+	}
+
 	public function get_attribute( string $name ): string {
 		return (string) ( $this->meta[ $name ] ?? '' );
 	}

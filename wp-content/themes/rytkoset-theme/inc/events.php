@@ -1870,6 +1870,17 @@ function rytkoset_theme_get_event_product_unavailability_message( $event_id ) {
 }
 
 /**
+ * Returns true when an event has an active linked-product registration path.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_is_event_product_registration_open( $event_id ) {
+	return '' !== rytkoset_theme_get_event_product_url( $event_id )
+		&& '' === rytkoset_theme_get_event_product_unavailability_message( $event_id );
+}
+
+/**
  * Renders the linked product CTA for an event.
  *
  * @param int $event_id Event post ID.

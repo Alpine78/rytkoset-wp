@@ -120,6 +120,24 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
+	public function test_exact_map_redirects_malformed_bus_event_paths_to_published_bus_event(): void {
+		$map    = rytkoset_theme_get_legacy_redirect_exact_map();
+		$target = 'https://rytkoset.test/tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/';
+
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Jos']
+		);
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätietoa']
+		);
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätiedot']
+		);
+	}
+
 	public function test_exact_map_covers_recent_legacy_page_paths(): void {
 		$map = rytkoset_theme_get_legacy_redirect_exact_map();
 

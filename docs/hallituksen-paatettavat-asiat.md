@@ -22,7 +22,7 @@ palveluntarjoaja-, kirjanpito- tai asiantuntijatiedot on tarkistettu.
 | Seuraava soveltuva kokous | Jäseneksi hyväksyminen ja jäsenen eroaminen | Miten verkkopalvelun käytäntö sovitetaan yhdistyksen rekisteröityihin sääntöihin | [#562](https://github.com/Alpine78/rytkoset-wp/issues/562) |
 | Ennen jäsenmaksujen muuttamista | Jäsenmaksun porrastus | Porrastetaanko maksu kesken jäsenkauden ja sallivatko säännöt sen | [#394](https://github.com/Alpine78/rytkoset-wp/issues/394) |
 | Ennen jäsenjulkaisun aloittamista | Jäsenedut ja jäsensisältö | Jäsenyyden lupaus, tarjottavat edut, julkaisurytmi, vastuut ja resurssit | [#597](https://github.com/Alpine78/rytkoset-wp/issues/597) |
-| Kun kustannusvertailu on valmis | Maksunvälittäjä | Jatketaanko nykyisellä ratkaisulla vai valitaanko kotimainen maksunvälittäjä | [#396](https://github.com/Alpine78/rytkoset-wp/issues/396) |
+| Kokeilukuukauden jälkeen | Maksunvälittäjä | Jatketaanko Paytrail-kokeilua pysyvästi (n. 220 €/v lisäkustannus) vai palataanko Mollieen | [#396](https://github.com/Alpine78/rytkoset-wp/issues/396), [#530](https://github.com/Alpine78/rytkoset-wp/issues/530) |
 | Ennen aineiston vastaanoton avaamista | Sukututkimusaineisto | Otetaanko aineistoa vastaan, mitä otetaan vastaan, kuka käsittelee ja kuinka kauan aineisto säilytetään | [#26](https://github.com/Alpine78/rytkoset-wp/issues/26) |
 | Seuraava soveltuva kokous | Sivuston jatkuvuus ja tietoturva | Varmuuskopioinnin, valvonnan ja tietoturvan vastuuhenkilöt, palvelut ja kuluraja | [#421](https://github.com/Alpine78/rytkoset-wp/issues/421), [#514](https://github.com/Alpine78/rytkoset-wp/issues/514), [#336](https://github.com/Alpine78/rytkoset-wp/issues/336) |
 
@@ -192,23 +192,60 @@ sivuihin, jäsenalennuksiin, digilehtiin ja jäsenviesteihin.
 
 ## 7. Maksunvälittäjä
 
-Nykyisten maksujen yhteydessä on ollut ulkomaisesta maksunvälityksestä
-johtuvia ongelmia. Kotimainen maksunvälittäjä voisi helpottaa
-verkkopankkimaksuja, mutta toisi kiinteitä kustannuksia.
+Kevään ja kesän 2026 maksukokemuksissa toistui kolme ongelmaa, joilla kaikilla
+on sama juurisyy: aiempi maksunvälittäjä Mollie on ulkomainen (Alankomaat), ja
+maksut selvitetään hollantilaisen vastaanottajan kautta. Tämä koski kaikkia
+maksutapoja, myös kortteja:
+
+1. **Rajat ylittävä pankkimaksu.** Osassa pankkeja (esim. POP Pankki) asiakkaan
+   piti hyväksyä ulkomaanmaksu erikseen ja valita maa ennen maksamista. Koski
+   sekä Tilisiirtoa että Pay by Bankia, koska molemmat kulkivat saman
+   ulkomaisen selvityksen kautta.
+2. **Viitenumeron muotoilu.** Mollie antoi RF-viitteen väliviivoilla
+   (esim. `RF98-1937-5848-0918`), joita suomalaiset pankit eivät hyväksy.
+   Mollie ei korjaa tätä omasta päästään, eikä sen lähettämää maksusähköpostia
+   voi muokata yhdistyksen puolelta.
+3. **Korttimaksukin oli tekninen ulkomaanmaksu**, koska kortti veloitettiin
+   Alankomaissa. Jos asiakkaan kortilla on maantieteellinen rajoitus (yleinen
+   turva-asetus, esim. vain Pohjoismaat ja Baltia), maksu saattoi torjuutua.
+
+Verkkosivuston koodissa lievennettiin ongelmia jo keväällä (maksutapajärjestys,
+korostettu ohjeteksti, RF-viitteen siistintä näytöllä), mutta kiertotie ei
+poistanut juurisyytä eikä ulottunut Mollien omaan sähköpostiin. Kotimainen
+harkinta tehtiin, koska se korjaisi kaikki kolme kerralla rakenteellisesti:
+pankkimaksu pysyy kotimaisena, viite ei mene asiakkaan käsin syötettäväksi, ja
+kotimainen kortin veloitus ei laukaise georajoitusta. Vaihtoehtoinen Stripe
+selvitettiin ja hylättiin, koska sillä ei ole suomalaisia verkkopankkipainikkeita
+eivätkä sen korttimaksutkaan olisi kotimaisia.
+
+Tämän selvityksen pohjalta tekninen ylläpito käynnisti Paytrailin (kotimainen
+maksunvälittäjä) kokeilun tuotannossa ainakin yhden kuukauden ajaksi ja kytki
+Mollien pois käytöstä toistaiseksi ilman koodin poistoa
+([#530](https://github.com/Alpine78/rytkoset-wp/issues/530), tuotantoon vienti
+todennettu 15.7.2026 mennessä). Päätettävä asia ei siis ole enää "kokeillaanko
+kotimaista", vaan jatketaanko sitä pysyvästi kustannuksesta huolimatta.
+Paytrailin kevyin paketti maksaa n. 14,90 €/kk + alv sekä 0,50 € + 3,25 % per
+tapahtuma; Mollie oli transaktiopohjainen ilman kuukausimaksua. Sukuseuran
+volyymillä ero on karkeasti 220 €/vuosi.
 
 ### Ennen päätöstä selvitettävä
 
-- Nykyisen maksunvälittäjän todellinen tuotantotila.
-- Kotimaisten vaihtoehtojen ajantasaiset hinnat ja sopimusehdot.
-- Arvio maksujen määrästä, keskeytyneistä maksuista ja käyttäjätuen tarpeesta.
-- Voidaanko vanha maksutapa poistaa vai tarvitaanko siirtymäaika.
+- Onko kokeilukuukauden aikana havaittu vähemmän keskeytyneitä maksuja tai
+  maksutukipyyntöjä kuin Mollien aikana.
+- Paytrailin ja muiden kotimaisten vaihtoehtojen (esim. Visma Pay, Checkout
+  Finland) ajantasaiset hinnat ja sopimusehdot pienelle yhdistykselle, jos
+  Paytrailista halutaan vielä vertailla.
+- Rinnakkaismalli (kortit Molliessa, verkkopankki kotimaisessa) ei poista
+  korttien rajat ylittävää luonnetta — kannattaako sitä silti harkita.
 
 ### Päätettävä
 
-- Jatketaanko nykyisellä maksunvälittäjällä?
-- Vaihdetaanko kotimaiseen palveluun vai pidetäänkö kaksi palvelua rinnakkain?
-- Mikä on hyväksyttävä vuosikustannus?
-- Kuka saa tehdä sopimuksen ja johtaa käyttöönoton?
+- Jatketaanko Paytraililla pysyvästi ja hyväksytäänkö sen n. 220 €/v
+  lisäkustannus, vai palataanko Mollieen?
+- Kuka saa tehdä lopullisen sopimuksen Paytrailin tai muun kotimaisen palvelun
+  kanssa?
+- Jos Mollieen ei enää palata: puretaanko sen kiertotiekoodi
+  (`inc/woocommerce-mollie.php`) kokonaan omana tikettinään?
 
 ## 8. Sukututkimusaineiston vastaanotto
 

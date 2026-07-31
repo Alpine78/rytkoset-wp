@@ -24,6 +24,11 @@ Oletusarvo:
 
 - `2026-07-30`
 
+Tampere 2026 -ilmoittautumista jatkettiin järjestelytoimikunnan päätöksellä
+14.8.2026 saakka. Paikallisen tuotteen tallennettu määräpäivä on siksi
+`2026-08-14`; koodin oletusarvoa ei muutettu, koska jatko on tapahtumakohtainen
+ylläpitopäätös.
+
 Määräpäivä tulkitaan päivän loppuun asti paikallisessa aikavyöhykkeessä.  
 Käytännössä ostopolku sulkeutuu vasta, kun siirrytään seuraavaan päivään.
 
@@ -52,6 +57,22 @@ Sama kapasiteettilogiikka toimii myös maksettujen tilausten kanssa ilman erilli
 - käyttäjälle näytetään viesti: `Ilmoittautuminen on täynnä.`
 
 Jos tuote on jo ostoskorissa tai kassalla, sama estologiikka pysäyttää etenemisen myös siellä.
+
+## Ilmoittautumisen päätyttyä
+
+Määräpäivä sulkee ostopolun automaattisesti, mutta tapahtuman jälkihoito
+tehdään erikseen:
+
+- aseta tuotteen kataloginäkyvyydeksi `Piilotettu`, jotta vanha
+  osallistumismaksu ei jää kaupan luetteloihin tai tuotehakuun
+- pidä tuote julkaistuna ja tapahtumaan linkitettynä, jotta aiemmat tilaukset
+  ja osallistujat säilyvät hallinnassa
+- päivitä tapahtumakuvaus ja muut markkinointipinnat kertomaan
+  ilmoittautumisen päättymisestä
+
+Tapahtuma-arkiston `Ilmoittautuminen avoinna` -merkki näytetään vain, kun
+linkitetty tuote on edelleen ostettavissa. Päättynyt ilmoittautuminen ei siis
+vaadi historiallisen tuotelinkin poistamista.
 
 ## Admin-tunnistettavuus
 
