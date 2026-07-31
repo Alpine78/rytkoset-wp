@@ -155,6 +155,13 @@ myöhemmin menneiden tapahtumien arkistoon, siirrä se luonnokseksi. Ohjaa sen
 aiempi julkinen osoite varsinaiseen tapahtumaan ja lisää toteutumatta jäämisen
 tieto varsinaisen tapahtuman kuvaukseen.
 
+Tampere 2026 -yhteiskuljetus on julkaistu omana maksuttomana tapahtumanaan.
+Järjestelytoimikunnan jatkopäätöksen mukainen ilmoittautumisen määräpäivä
+`2026-08-14` tallennetaan tapahtuman
+`_rytkoset_event_registration_deadline`-metaan. Sukujuhlan maksutuotteella on
+sama tallennettu määräpäivä, joten molemmat ilmoittautumispolut sulkeutuvat
+saman päivän jälkeen.
+
 ## Uuden tapahtuman luominen ylläpidossa
 
 1. Avaa WordPress-adminissa `Tapahtumat`.
