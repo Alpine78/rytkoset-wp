@@ -18,7 +18,8 @@
       "Bash(vendor/bin/phpcs)",
       "Bash(grep -n \"inc/event-registrations.php\\\\`\" CLAUDE.md)",
       "Bash(grep -n \"_rytkoset_event_organizer_notification_recipients\\\\` — event-specific\" CLAUDE.md)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(grep -E \"^64[0-3]$\")"
     ]
   },
   "enabledPlugins": {
