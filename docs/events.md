@@ -121,7 +121,8 @@ Yhteenvetokortissa näytetään täytetyt perustiedot:
 - paikka
 - hinta
 - ilmoittautumisen määräpäivä, jos sellainen voidaan päätellä tapahtumalta tai linkitetyltä tuotteelta ja tapahtumapäivä ei ole vielä mennyt; määräpäivän jälkeen mutta ennen tapahtumaa tekstinä on `Ilmoittautuminen päättyi`
-- `Ilmoittaudu ja maksa` -painike, jos tapahtumaan on linkitetty maksutuote
+- `Ilmoittaudu ja maksa` -painike, jos tapahtumaan on linkitetty
+  ostettavissa oleva maksutuote
 
 Jos linkitetyn WooCommerce-tuotteen ilmoittautuminen on päättynyt tai tuote ei muuten ole ostettavissa, tapahtumasivu näyttää tilaviestinä syyn eikä tarjoa aktiivista maksupainiketta.
 
@@ -142,6 +143,17 @@ Tapahtuma-arkistossa `/tapahtumat/` tapahtumat jaetaan kolmeen osioon:
 3. Päivämäärättömät tapahtumat
 
 Tulevat tapahtumat näytetään lähimmästä tulevasta tapahtumasta alkaen. Menneet tapahtumat näytetään uusimmasta vanhimpaan. Päivämäärätön tapahtuma jää näkyviin, mutta se siirtyy päivämäärättömien tapahtumien osioon.
+
+Maksutuotteeseen linkitetyn tapahtuman kortissa näytetään
+`Ilmoittautuminen avoinna` vain, kun linkitetty tuote on julkaistu ja
+ostettavissa. Tapahtuman voi siten pitää historiallista osallistujahallintaa
+varten tuotteeseen linkitettynä myös määräpäivän jälkeen ilman virheellistä
+avoimen ilmoittautumisen merkkiä.
+
+Jos erillinen aputapahtuma, kuten yhteiskuljetus, ei toteudu eikä sitä haluta
+myöhemmin menneiden tapahtumien arkistoon, siirrä se luonnokseksi. Ohjaa sen
+aiempi julkinen osoite varsinaiseen tapahtumaan ja lisää toteutumatta jäämisen
+tieto varsinaisen tapahtuman kuvaukseen.
 
 ## Uuden tapahtuman luominen ylläpidossa
 
