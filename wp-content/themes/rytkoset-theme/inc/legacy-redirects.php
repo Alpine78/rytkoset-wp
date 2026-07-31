@@ -130,17 +130,11 @@ if ( ! function_exists( 'rytkoset_theme_get_legacy_redirect_exact_map' ) ) {
 
 			// Tapahtumat: linkkejä, joiden perässä on vahingossa ylimääräinen sana.
 			'tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/Tervetuloa' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
-			// Toteutumaton yhteiskuljetus on poistettu julkisista tapahtumista
-			// (#645); sen osoitteet ohjataan sukujuhlatapahtuman ajantasaiseen
-			// tiedotteeseen.
-			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
-			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Jos' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
-			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätietoa' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
-			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätiedot' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
-			// Vanha maksullinen bussituote korvattiin #450:n maksuttomalla
-			// ilmoittautumisella; yhteiskuljetuksen peruunnuttua myös sen
-			// osoite ohjataan sukujuhlatapahtumaan.
-			'kauppa/tapahtumat/bussikyyti-tampereen-sukujuhliin-savo-tampere-savo' => home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ),
+			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Jos' => home_url( '/tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/' ),
+			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätietoa' => home_url( '/tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/' ),
+			'tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätiedot' => home_url( '/tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/' ),
+			// Vanha maksullinen bussituote, korvattu #450:n ilmaisella ilmoittautumisella.
+			'kauppa/tapahtumat/bussikyyti-tampereen-sukujuhliin-savo-tampere-savo' => home_url( '/tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/' ),
 
 			// Maksutuotteet (sama tuote on yhä myynnissä samalla tunnisteella).
 			'tuote/tampere-2026-osallistumismaksu'     => home_url( '/kauppa/tapahtumat/tampere-2026-osallistumismaksu/' ),

@@ -24,6 +24,11 @@ Oletusarvo:
 
 - `2026-07-30`
 
+Tampere 2026 -ilmoittautumista jatkettiin järjestelytoimikunnan päätöksellä
+14.8.2026 saakka. Paikallisen tuotteen tallennettu määräpäivä on siksi
+`2026-08-14`; koodin oletusarvoa ei muutettu, koska jatko on tapahtumakohtainen
+ylläpitopäätös.
+
 Määräpäivä tulkitaan päivän loppuun asti paikallisessa aikavyöhykkeessä.  
 Käytännössä ostopolku sulkeutuu vasta, kun siirrytään seuraavaan päivään.
 
