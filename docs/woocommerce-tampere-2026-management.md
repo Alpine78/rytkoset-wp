@@ -53,6 +53,22 @@ Sama kapasiteettilogiikka toimii myös maksettujen tilausten kanssa ilman erilli
 
 Jos tuote on jo ostoskorissa tai kassalla, sama estologiikka pysäyttää etenemisen myös siellä.
 
+## Ilmoittautumisen päätyttyä
+
+Määräpäivä sulkee ostopolun automaattisesti, mutta tapahtuman jälkihoito
+tehdään erikseen:
+
+- aseta tuotteen kataloginäkyvyydeksi `Piilotettu`, jotta vanha
+  osallistumismaksu ei jää kaupan luetteloihin tai tuotehakuun
+- pidä tuote julkaistuna ja tapahtumaan linkitettynä, jotta aiemmat tilaukset
+  ja osallistujat säilyvät hallinnassa
+- päivitä tapahtumakuvaus ja muut markkinointipinnat kertomaan
+  ilmoittautumisen päättymisestä
+
+Tapahtuma-arkiston `Ilmoittautuminen avoinna` -merkki näytetään vain, kun
+linkitetty tuote on edelleen ostettavissa. Päättynyt ilmoittautuminen ei siis
+vaadi historiallisen tuotelinkin poistamista.
+
 ## Admin-tunnistettavuus
 
 WooCommerce Orders -listaan lisätään sarake:

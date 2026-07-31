@@ -85,7 +85,7 @@ $rytkoset_render_event_list = static function ( WP_Query $event_query ) {
 			$event_date_display = rytkoset_theme_get_event_date_display( get_the_ID() );
 			$event_location     = rytkoset_theme_get_event_location( get_the_ID() );
 			$event_excerpt      = trim( get_the_excerpt() );
-			$has_product_link   = '' !== rytkoset_theme_get_event_product_url( get_the_ID() );
+			$registration_open  = rytkoset_theme_is_event_product_registration_open( get_the_ID() );
 
 			if ( '' === $event_excerpt ) {
 				$event_excerpt = wp_strip_all_tags( get_the_content() );
@@ -128,7 +128,7 @@ $rytkoset_render_event_list = static function ( WP_Query $event_query ) {
 						<a class="btn btn--light event-card__link" href="<?php the_permalink(); ?>">
 							<?php esc_html_e( 'Katso tapahtuma', 'rytkoset-theme' ); ?>
 						</a>
-						<?php if ( $has_product_link ) : ?>
+						<?php if ( $registration_open ) : ?>
 							<span class="event-card__badge"><?php esc_html_e( 'Ilmoittautuminen avoinna', 'rytkoset-theme' ); ?></span>
 						<?php endif; ?>
 					</div>

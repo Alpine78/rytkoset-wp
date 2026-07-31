@@ -74,4 +74,45 @@ final class EventDisplayTest extends Rytkoset_Theme_Test_Case {
 	public function test_date_display_empty_without_date(): void {
 		$this->assertSame( '', rytkoset_theme_get_event_date_display( 10 ) );
 	}
+
+	// --- linked product registration status -------------------------------
+
+	public function test_linked_product_registration_is_open_before_deadline(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-30 12:00:00';
+		rytkoset_test_register_product(
+			50,
+			'publish',
+			'Tampere 2026',
+			array(
+				'_rytkoset_registration_mode'     => 'tampere_2026',
+				'_rytkoset_registration_deadline' => '2026-07-30',
+			)
+		);
+		update_post_meta( 10, rytkoset_theme_get_event_product_meta_key(), 50 );
+
+		$this->assertTrue( rytkoset_theme_is_event_product_registration_open( 10 ) );
+	}
+
+	public function test_linked_product_registration_is_closed_after_deadline(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-31 00:00:00';
+		rytkoset_test_register_product(
+			50,
+			'publish',
+			'Tampere 2026',
+			array(
+				'_rytkoset_registration_mode'     => 'tampere_2026',
+				'_rytkoset_registration_deadline' => '2026-07-30',
+			)
+		);
+		update_post_meta( 10, rytkoset_theme_get_event_product_meta_key(), 50 );
+
+		$this->assertFalse( rytkoset_theme_is_event_product_registration_open( 10 ) );
+	}
+
+	public function test_unpublished_linked_product_registration_is_not_open(): void {
+		rytkoset_test_register_product( 50, 'draft', 'Piilotettu tapahtumatuote' );
+		update_post_meta( 10, rytkoset_theme_get_event_product_meta_key(), 50 );
+
+		$this->assertFalse( rytkoset_theme_is_event_product_registration_open( 10 ) );
+	}
 }

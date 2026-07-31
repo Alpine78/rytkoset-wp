@@ -115,8 +115,30 @@ final class LegacyRedirectsTest extends Rytkoset_Theme_Test_Case {
 			$map['kauppa/sukulehdet/rytkösten-sukulainen-nro-8-detail']
 		);
 		$this->assertSame(
-			'https://rytkoset.test/tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/',
+			'https://rytkoset.test/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/',
 			$map['kauppa/tapahtumat/bussikyyti-tampereen-sukujuhliin-savo-tampere-savo']
+		);
+	}
+
+	public function test_exact_map_redirects_hidden_bus_event_paths_to_family_event(): void {
+		$map    = rytkoset_theme_get_legacy_redirect_exact_map();
+		$target = 'https://rytkoset.test/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/';
+
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi']
+		);
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Jos']
+		);
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätietoa']
+		);
+		$this->assertSame(
+			$target,
+			$map['tapahtumat/yhteiskuljetus-tampereen-sukujuhliin-iisalmi-tampere-iisalmi/Lisätiedot']
 		);
 	}
 
