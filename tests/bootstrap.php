@@ -290,6 +290,47 @@ class WC_Product {
 	}
 }
 
+/**
+ * Minimal stand-in for WC_Product_Variable.
+ *
+ * Only get_variation_price() is modelled; the theme uses it to read the lowest ticket price of a
+ * variable event product. Variation prices come from the _variation_prices meta array.
+ */
+class WC_Product_Variable extends WC_Product {
+
+	/**
+	 * @param string $min_or_max Which end of the variation price range to return.
+	 * @return string
+	 */
+	public function get_variation_price( string $min_or_max = 'min' ): string {
+		$prices = $this->get_meta( '_variation_prices' );
+
+		if ( ! is_array( $prices ) || array() === $prices ) {
+			return '';
+		}
+
+		sort( $prices, SORT_NUMERIC );
+
+		return (string) ( 'min' === $min_or_max ? reset( $prices ) : end( $prices ) );
+	}
+}
+
+/**
+ * Registers a stub WC_Product_Variable in the test registry (used by wc_get_product()).
+ *
+ * @param int                 $id     Product ID.
+ * @param string              $status Product status (publish, draft, …).
+ * @param string              $name   Product name.
+ * @param array<string,mixed> $meta   Meta key => value map, incl. _variation_prices.
+ * @return WC_Product_Variable
+ */
+function rytkoset_test_register_variable_product( int $id, string $status = 'publish', string $name = '', array $meta = array() ): WC_Product_Variable {
+	$product                                  = new WC_Product_Variable( $meta, $id, $status, $name );
+	$GLOBALS['rytkoset_test_products'][ $id ] = $product;
+
+	return $product;
+}
+
 class Rytkoset_Test_Cart {
 	/** @var array<int,array<string,mixed>> */
 	public array $items = array();

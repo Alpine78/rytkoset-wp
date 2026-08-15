@@ -93,12 +93,75 @@ function rytkoset_theme_build_event_iso_datetime( $date, $time ) {
 }
 
 /**
+ * Normalizes a raw price value into a schema.org-valid decimal string.
+ *
+ * Accepts the dot-decimal strings WooCommerce stores as well as the comma decimals admins type
+ * into the event price text. Anything that is not a plain non-negative number (free-form text
+ * like "Aikuiset 20 €, lapset 10 €") returns an empty string so the caller can omit the price
+ * rather than guess one.
+ *
+ * @param mixed $price Raw price value.
+ * @return string Decimal string, or empty when the value is not a plain number.
+ */
+function rytkoset_theme_normalize_schema_price( $price ) {
+	if ( ! is_scalar( $price ) ) {
+		return '';
+	}
+
+	$price = str_replace( ',', '.', trim( (string) $price ) );
+
+	if ( 1 !== preg_match( '/^\d+(?:\.\d{1,2})?$/', $price ) ) {
+		return '';
+	}
+
+	return $price;
+}
+
+/**
+ * Returns the lowest ticket price of the WooCommerce product linked to an event.
+ *
+ * Google defines schema.org/Event offers.price as "the lowest available price available for your
+ * tickets", so a variable product (e.g. adult / child registration) reports its minimum variation
+ * price. WC_Product_Variable::get_variation_price() is used for that instead of get_price(),
+ * because WooCommerce stores a variable product's own _price meta as several rows
+ * (WC_Product_Variable_Data_Store_CPT::sync_price()) and a single read is therefore unreliable.
+ *
+ * @param int $event_id Event post ID.
+ * @return string Decimal price string, or empty when no linked product carries a usable price.
+ */
+function rytkoset_theme_get_event_schema_product_price( $event_id ) {
+	if ( ! function_exists( 'rytkoset_theme_get_event_linked_product' ) ) {
+		return '';
+	}
+
+	$product = rytkoset_theme_get_event_linked_product( $event_id );
+
+	if ( ! class_exists( 'WC_Product' ) || ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	if ( method_exists( $product, 'get_variation_price' ) ) {
+		$price = rytkoset_theme_normalize_schema_price( $product->get_variation_price( 'min' ) );
+
+		if ( '' !== $price ) {
+			return $price;
+		}
+	}
+
+	return rytkoset_theme_normalize_schema_price( $product->get_price() );
+}
+
+/**
  * Builds the schema.org/Event offers node for a single event.
  *
- * Free events get an explicit price 0; paid events link the WooCommerce product and only set a
- * numeric price when the price text is cleanly numeric (free-form prices like "Aikuiset 20 €,
- * lapset 10 €" are left without a price rather than guessed). Returns null when there is no
- * usable offer data. Past events never expose an active offer.
+ * Free events get an explicit price 0. For paid events the price comes from the linked
+ * WooCommerce product, which is the authoritative live figure for what a ticket actually costs
+ * (#650 — Search Console reported a missing offers.price because the Tampere 2026 event's own
+ * price text is free-form copy naming two tier prices). The event's own price text stays as a
+ * fallback for paid events without a linked product, and is still only used when it is cleanly
+ * numeric — free-form prices like "Aikuiset 20 €, lapset 10 €" are left without a price rather
+ * than parsed. Returns null when there is no usable offer data. Past events never expose an
+ * active offer.
  *
  * @param int $event_id Event post ID.
  * @return array|null
@@ -135,10 +198,14 @@ function rytkoset_theme_get_event_schema_offers( $event_id ) {
 		$offer['availability'] = 'https://schema.org/InStock';
 	}
 
-	$price_text = rytkoset_theme_get_event_price_text( $event_id );
+	$price = rytkoset_theme_get_event_schema_product_price( $event_id );
 
-	if ( 1 === preg_match( '/^\d+(?:[,.]\d{1,2})?$/', $price_text ) ) {
-		$offer['price'] = str_replace( ',', '.', $price_text );
+	if ( '' === $price ) {
+		$price = rytkoset_theme_normalize_schema_price( rytkoset_theme_get_event_price_text( $event_id ) );
+	}
+
+	if ( '' !== $price ) {
+		$offer['price'] = $price;
 	}
 
 	// Skip a bare Offer with neither price nor URL; it carries no useful machine data.
