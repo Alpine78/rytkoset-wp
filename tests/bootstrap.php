@@ -1371,7 +1371,8 @@ function WC(): Rytkoset_Test_WC {
 }
 
 /**
- * Minimal wc_get_products(): supports status, limit and name ordering.
+ * Minimal wc_get_products(): supports status, category, catalog visibility,
+ * limit, return format and name ordering.
  */
 function wc_get_products( $args = array() ) {
 	$products = array_values( $GLOBALS['rytkoset_test_products'] );
@@ -1386,6 +1387,29 @@ function wc_get_products( $args = array() ) {
 		);
 	}
 
+	if ( ! empty( $args['category'] ) ) {
+		$categories = (array) $args['category'];
+		$products   = array_values(
+			array_filter(
+				$products,
+				static function ( WC_Product $product ) use ( $categories ): bool {
+					$product_categories = $GLOBALS['rytkoset_test_object_terms'][ $product->get_id() ]['product_cat'] ?? array();
+
+					return array() !== array_intersect( $categories, $product_categories );
+				}
+			)
+		);
+	}
+
+	if ( 'catalog' === ( $args['visibility'] ?? '' ) ) {
+		$products = array_values(
+			array_filter(
+				$products,
+				static fn( WC_Product $product ): bool => ! in_array( $product->get_catalog_visibility(), array( 'hidden', 'search' ), true )
+			)
+		);
+	}
+
 	if ( 'name' === ( $args['orderby'] ?? '' ) ) {
 		usort(
 			$products,
@@ -1395,6 +1419,10 @@ function wc_get_products( $args = array() ) {
 
 	if ( isset( $args['limit'] ) && (int) $args['limit'] > 0 ) {
 		$products = array_slice( $products, 0, (int) $args['limit'] );
+	}
+
+	if ( 'ids' === ( $args['return'] ?? '' ) ) {
+		return array_map( static fn( WC_Product $product ): int => $product->get_id(), $products );
 	}
 
 	return $products;
