@@ -40,7 +40,7 @@ Tämän jälkeen WP-funktio `get_privacy_policy_url()` palauttaa sivun osoitteen
 
 ## Vaikutustenarvioinnin tarpeen arviointi (sisäinen)
 
-Arvioitu 15.7.2026 tiketin #470 yhteydessä ja tarkistettu Turnstilen käyttöönoton yhteydessä 23.7.2026 (#629). Tämä on tietosuoja-asetuksen 35 artiklan mukaisen vaikutustenarvioinnin (DPIA) **tarvearvio**, ei varsinainen vaikutustenarviointi.
+Arvioitu 15.7.2026 tiketin #470 yhteydessä, tarkistettu Turnstilen käyttöönoton yhteydessä 23.7.2026 (#629) ja off-site-varmistuksen suunnittelun yhteydessä 13.8.2026 (#421). Tämä on tietosuoja-asetuksen 35 artiklan mukaisen vaikutustenarvioinnin (DPIA) **tarvearvio**, ei varsinainen vaikutustenarviointi.
 
 Nykyisen, reposta todennettavan käsittelyn perusteella täysimittaista vaikutustenarviointia ei arvioida tarvittavan:
 
@@ -50,6 +50,7 @@ Nykyisen, reposta todennettavan käsittelyn perusteella täysimittaista vaikutus
 - lapset voivat olla perhejäsenyyden tai tapahtuman yhteydessä rekisteröityjä, mutta sivuston toimintoja ei ole suunnattu nimenomaisesti lasten järjestelmälliseen arviointiin tai seurantaan
 - AI-tukichatti käyttää uutta teknologiaa, mutta se ei tee henkilöpäätöksiä, profiloi käyttäjiä tai tallenna keskusteluja palvelimelle; henkilötietojen syöttäminen chattiin kielletään käyttöliittymässä.
 - Turnstile arvioi vain yksittäisen rekisteröintipyynnön bottiriskiä sivuston suojaamiseksi. Se ei tee jäsenyyttä, maksamista tai tapahtumaan osallistumista koskevia päätöksiä, ja virheellisesti estetty käyttäjä voi ottaa yhteyttä yhdistykseen.
+- Salattu off-site-varmistus kopioi olemassa olevat tuotantotiedot rajatuksi ajaksi palautettavuuden turvaamiseksi. Se ei luo uutta käyttäjäprofilointia tai henkilöpäätöksiä; riskit liittyvät käyttöoikeuksiin, avainten hallintaan, palveluntarjoajaan ja siihen, että tuotannosta poistettu tieto säilyy enintään varmistuskierron ajan.
 
 Arvio on tehtävä uudelleen ennen muutosta, joka lisää esimerkiksi laajamittaista erityisten henkilötietoryhmien käsittelyä, lapsille kohdennettua palvelua, profilointia, automaattisia henkilöpäätöksiä, järjestelmällistä seurantaa, uusia tietolähteiden yhdistelyjä tai uuden tekoälytoiminnon. Samalla tarkistetaan Tietosuojavaltuutetun toimiston ajantasainen luettelo käsittelytoimista, jotka edellyttävät vaikutustenarviointia.
 
@@ -59,7 +60,7 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 ## Suomenkielinen pohja (kopioitavaksi)
 
-> Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Paytrail-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika sekä Turnstilen tuotantokäyttö ja pre-clearance-asetus **on tarkistettava** ennen julkaisua.
+> Pohja noudattaa WordPressin sisäänrakennetun tietosuojaohjeen rakennetta ja huomioi tämän sivuston todelliset tietovirrat (käyttäjätilit, tapahtumailmoittautumiset, WooCommerce-jäsenmaksut, Paytrail-maksunkäsittely, AcyMailing-uutiskirjeet). Tapahtumailmoittautumisten 12 kuukauden säilytysaika, Turnstilen tuotantokäyttö ja pre-clearance-asetus sekä #421:n Backblaze-off-site-varmistuksen todellinen käyttöönotto **on tarkistettava** ennen julkaisua. Backblaze-kappaleita ei julkaista faktana ennen kuin tili, EU Central -alue, DPA, salaus, cronit ja palautustesti on todennettu [`docs/varmuuskopiointi.md`](varmuuskopiointi.md):n tarkistuslistalla.
 
 > Sukututkimusrekisteri käsitellään erillisessä rekisteriselosteessa: `/sukuseura/rekisteriseloste/`.
 
@@ -69,7 +70,7 @@ Sisäinen seloste käsittelytoimista on tiedostossa [`docs/tietosuoja-kasittelyt
 
 # Tietosuojaseloste
 
-Päivitetty: 23.7.2026
+Päivitetty: 13.8.2026
 
 ## Rekisterinpitäjä
 
@@ -206,6 +207,26 @@ Sivuston ylläpitäjä näkee wp-adminissa ainoastaan koontitietoa chatin käyt�
 
 Älä kirjoita chattiin henkilötunnusta, salasanoja, maksukortin tietoja tai muita arkaluonteisia tietoja. Henkilökohtaisissa asioissa ota yhteyttä sähköpostitse: info@rytkoset.net.
 
+### Varmuuskopiot
+
+Sivuston palautettavuuden turvaamiseksi tietokannasta, sovellustiedostoista ja
+media-aineistosta tehdään automaattisia varmuuskopioita. Palveluntarjoajan
+omien kopioiden lisäksi salattu off-site-kopio tallennetaan Backblaze B2 Cloud
+Storage -palveluun EU Central -alueelle Amsterdamiin.
+
+Varmistusten sisältö ja tiedostonimet salataan sivuston palvelimella ennen
+siirtoa yhdistyksen hallitsemalla `rclone crypt` -avaimella, ja siirto on
+TLS-suojattu. Backblaze-bucket ei ole julkinen. Varmistuksia käytetään vain
+häiriöstä palautumiseen, ja niihin pääsevät vain tehtävään valtuutetut henkilöt.
+
+Päivätyt tietokanta- ja sovellustiedostoarkistot poistetaan 30 vuorokauden
+jälkeen. Media-aineiston nykykopio säilyy niin kauan kuin tiedosto on
+tuotannossa; poistettu tai korvattu mediaversio poistuu 30 vuorokauden
+jälkeen. Kun tietoja poistetaan tuotannosta, ne voivat siten säilyä
+varmistuskierrossa enintään 30 vuorokautta. Jos vanha varmistus palautetaan,
+palautuksen jälkeen tehdyt poistot ja anonymisoinnit toteutetaan uudelleen
+ennen ympäristön käyttöönottoa.
+
 ### Sisältöön upotettu media
 
 Sivustolla voi olla YouTube-videoita. Teema näyttää videot YouTuben privacy-enhanced -upotuksina (`youtube-nocookie.com`), jotta katselutieto ei lataushetkellä vaikuttaisi YouTube-käyttökokemuksen personointiin. Kun katsot videon, YouTube ja Google voivat silti käsitellä tietoja omien käytäntöjensä mukaisesti.
@@ -227,6 +248,7 @@ Sivustolla ei käytetä analytiikka- tai markkinointievästeitä. Voit estää e
 Emme myy emmekä luovuta henkilötietojasi ulkopuolisille tahoille markkinointitarkoituksiin. Käytämme seuraavia palveluntarjoajia tietojen käsittelyyn:
 
 - **Hosting**: Domainhotelli (palvelinlokit, varmuuskopiot)
+- **Off-site-varmistus**: Backblaze, Inc. / B2 Cloud Storage — asiakaspuolella salatut varmistukset EU Central -alueella Amsterdamissa
 - **Maksunvälitys**: Paytrail Oyj (Suomi) — verkkokaupan maksujen käsittely
 - **Sähköposti / uutiskirje**: AcyMailing (yhdistyksen oma palvelin)
 - **Upotettu media**: YouTube / Google — videoiden katsomisen yhteydessä käsiteltävät tiedot
@@ -243,6 +265,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 - Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
 - Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
+- Päivätyt tietokanta- ja sovellustiedostovarmistukset säilytetään 30 vuorokautta. Media-aineiston nykykopio seuraa tuotannon elinkaarta, ja poistettu tai korvattu versio säilytetään 30 vuorokautta.
 
 ## Mitä oikeuksia sinulla on tietoihisi
 
@@ -264,7 +287,7 @@ Sinulla on myös oikeus tehdä valitus tietosuojavaltuutetun toimistolle (tietos
 
 ## Mihin lähetämme tietosi
 
-Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välittämiseksi tarvittavia tietoja. Tukichatin käsittelijä Mistral AI toimii EU-alueella.
+Sivuston palvelin sijaitsee Suomessa. Paytrail Oyj käsittelee maksujen välittämiseksi tarvittavia tietoja. Tukichatin käsittelijä Mistral AI toimii EU-alueella. Salatut off-site-varmistukset tallennetaan Backblaze B2:n EU Central -alueelle Amsterdamiin. Backblaze, Inc. on yhdysvaltalainen palveluntarjoaja; varmistuksiin liittyvä käsittely, alikäsittelijät ja mahdollisten kansainvälisten siirtojen suojatoimet määräytyvät Backblazen tietojenkäsittelysopimuksen ja siinä olevien EU:n vakiolausekkeiden mukaan.
 
 Jos katsot sivustolle upotetun YouTube-videon, YouTube ja Google voivat käsitellä tietoja myös EU/ETA-alueen ulkopuolella omien tietosuojakäytäntöjensä mukaisesti.
 
@@ -294,3 +317,4 @@ Sivustolla käytetään LiteSpeed Cache -välimuistia suorituskyvyn parantamisee
 - Footerin linkki tulee `footer`-valikosta ([`footer.php`](../wp-content/themes/rytkoset-theme/footer.php)) — ei vaadi koodimuutoksia.
 - AI-tukichatti: [`inc/chat.php`](../wp-content/themes/rytkoset-theme/inc/chat.php) — API-avain ja kävijän IP eivät koskaan välity Mistralille, keskusteluhistoria ei tallennu palvelimelle eikä selaimen pysyvään muistiin. Tekninen kuvaus ja kulusuojat: [`docs/chat.md`](chat.md).
 - Rekisteröinnin bottisuoja: ympäristökohtainen **Simple CAPTCHA with Cloudflare Turnstile** -lisäosa lisää widgetin WordPressin `register_form`-koukkuun ja varmentaa tunnisteen `registration_errors`-käsittelyssä. Lisäosa lähettää Siteverify-pyyntöön tunnisteen ja IP-osoitteen. Tuotantoasetukset ja debug-lokin tietosisältö: [`docs/tietoturva.md`](tietoturva.md).
+- Off-site-varmistus: palvelimelle erikseen asennettava [`scripts/backup.sh`](../scripts/backup.sh) lukee DB-tunnukset `wp-config.php`:stä, siirtää kolme varmistusosaa `rclone crypt` -remoten kautta ja siivoaa paikallisen työtilan. Käyttöönotto, säilytys, palautustesti, vastuut ja kustannusseuranta: [`docs/varmuuskopiointi.md`](varmuuskopiointi.md).

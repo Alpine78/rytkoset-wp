@@ -157,7 +157,10 @@ Login-URL:n vaihtaminen on "security through obscurity" — vähentää bottilii
 ### Päivitykset ja varmuuskopiot
 
 - [ ] WP-core, liitännäiset ja teema ajan tasalla; päivitysrutiini sovittu. (Suurin yksittäinen riski WP-sivustoilla.)
-- [ ] Säännölliset varmuuskopiot ja palautus testattu.
+- [ ] Automaattinen, asiakaspuolella salattu off-site-varmistus on otettu käyttöön [`docs/varmuuskopiointi.md`](varmuuskopiointi.md):n mukaan.
+- [ ] Päivittäinen DB-varmistus, viikoittainen `wp-content`-varmistus ilman `uploads`-hakemistoa ja viikoittainen inkrementaalinen mediamirror on todennettu tuotantolokeista.
+- [ ] 30 päivän arkistorotaatio ja median B2-lifecycle on todennettu siten, ettei nykyinen media vanhene iän perusteella.
+- [ ] Palautus dev-ympäristöön on testattu kaikista kolmesta osasta, mukaan lukien alle 30 vuorokautta vanha poistettu tai korvattu mediatiedosto.
 
 ### HTTP-suojaus (palvelin / `.htaccess`)
 

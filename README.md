@@ -205,6 +205,8 @@ Tärkeät polut:
 - `wp-content/maintenance.php` - brändätty WordPressin huoltotilasivu
 - `wp-content/mu-plugins/automation-by-klik.php` - Klikin hallinnoiman ylläpidon
   MU-pluginin repoitu kopio; ei automaattisesti deployattava teematiedosto
+- `scripts/backup.sh` - palvelimelle erikseen asennettava off-site-varmistuksen
+  skriptipohja; ei kuulu teeman automaattiseen deployhin
 - `docs/` - ominaisuus- ja ylläpitodokumentaatio
 - `.github/workflows/` - CI- ja deploy-workflowt
 - `CHANGELOG.md` - manuaalinen muutoshistoria
@@ -256,6 +258,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/tietosuoja.md` - tietosuojamuistiinpanot
 - `docs/tietosuoja-kasittelytoimet.md` - sisäinen seloste verkkosivuston käsittelytoimista
 - `docs/tietoturva.md` - tietoturvakovennukset
+- `docs/varmuuskopiointi.md` - rclone/B2-off-site-varmistuksen käyttöönotto, rotaatio ja palautustesti
 - `docs/maksu-ja-toimitusehdot.md` - kaupan maksu- ja toimitusehdot (versionoitu sivukopio)
 - `docs/rekisteriseloste.md` - sukututkimusrekisterin rekisteriseloste (versionoitu sivukopio)
 - `docs/local-dev-wsl.md` - paikallinen kehitys Windowsilla WSL2:lla ilman Docker Desktopia
