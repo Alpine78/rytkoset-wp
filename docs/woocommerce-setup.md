@@ -36,6 +36,21 @@ Tämä dokumentti kuvaa ensimmäisen WooCommerce-slicen paikallisessa Docker-ymp
 - `Tilisiirto`-gateway on aktiivinen WooCommercen sisäisessä gateway-listassa.
 - Väliaikainen smoke-testituote poistettiin testin jälkeen.
 
+## Kaupan tuotekategorianavigaatio
+
+Kaupan etusivulla ja tuotekategoria-arkistoissa näkyvä kategoriapalkki näyttää
+`Kaikki`-linkin sekä vain kategoriat, joissa on vähintään yksi julkaistu ja
+WooCommercen katalogissa näkyvä tuote. Pelkkä kategorian WordPress-termimäärä
+ei ratkaise näkyvyyttä: kataloginäkyvyydeltään **Piilotettu** tai vain haussa
+näkyvä tuote ei pidä kategoriaa mukana palkissa.
+
+Jos tyhjän kategorian osoite avataan suoraan, sama palkki renderöidään ennen
+WooCommercen tyhjän tuloksen ilmoitusta. `Kaikki`-linkistä pääsee takaisin
+kaupan etusivulle. Kategoria palaa palkkiin automaattisesti, kun siihen kuuluu
+jälleen julkaistu katalogissa näkyvä tuote. Teema tukee tässä sekä
+WooCommercen tavallista arkistotemplatea että nykyisen teeman käyttämää
+shortcode-yhteensopivuuspolkua.
+
 ## Jätetään seuraaviin tiketteihin
 
 - Lasku maksutapana, jos se halutaan erillisenä vaihtoehtona.

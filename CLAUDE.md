@@ -362,6 +362,7 @@ WooCommerce-specific logic lives in `inc/woocommerce-*.php` modules, with small 
 - **Membership products** â€” annual and lifetime membership; dynamic checkout member rows (#520)
 - **Paid event fees / Tampere 2026** â€” linked event products, Tampere-specific checkout fields whose count comes from the `rytkoset_tampere_2026` Store API cart extension, stale participant field hiding in admin/emails, participant list in admin, CSV export, event-specific organizer email notifications
 - **Payments** — Paytrail is the current trial-period provider (#530). Mollie-specific Finnish texts and bank-transfer output buffering remain dormant for a possible rollback.
+- **Shop category navigation** — `inc/woocommerce-shop-categories.php` shows only categories backed by a published product matching WooCommerce's `visibility => catalog` query. The same bar is hooked before the empty-results notice so a directly opened empty category retains the `Kaikki` route back to the shop (#653). Both the standard archive hook and WooCommerce's unsupported-theme shortcode no-results hook are covered because this classic theme currently renders product archives through the latter compatibility path. Tests: `tests/ShopCategoriesTest.php`; operations: `docs/woocommerce-setup.md`.
 - **PhotoSwipe conflict** â€” WooCommerce registers PhotoSwipe 4 scripts; theme actively dequeues them to avoid conflicts
 
 ## Navigation menus
