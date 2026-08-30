@@ -1,6 +1,6 @@
 /* =================================================================
    Etusivun sisältölohkot — vaalea/tumma-vuorottelu
-   Hero (tumma) → Sukujuhlat-feature (vaalea) → Albumit (tumma) →
+   Hero (tumma) → Ajankohtaista-feature (vaalea) → Albumit (tumma) →
    Jäsenyys (vaalea) → Kauppa (tumma) → Sukututkimus/Viljo (vaalea)
 
    Sävyt tulevat --home-band-* -tokeneista (base.css), jotka kääntyvät
@@ -134,7 +134,7 @@
 }
 
 /* =================================================================
-   Sukujuhlat — etusivun kohokohta (feature)
+   Ajankohtaista — etusivun dynaaminen kohokohta (feature)
    ================================================================= */
 .home-feature {
   padding: clamp(4.5rem, 10vw, 6.5rem) 0;
@@ -168,6 +168,15 @@
   width: 1.6rem;
   height: 2px;
   background: var(--color-accent);
+}
+
+.home-feature__kind {
+  margin: 0 0 0.6rem;
+  color: var(--color-text-mute);
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .home-feature__title {
@@ -218,7 +227,25 @@
 .home-feature__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.75rem;
+}
+
+.home-feature__archive-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0.4rem;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-feature__archive-link:hover,
+.home-feature__archive-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .home-feature__media {
@@ -235,38 +262,9 @@
 .home-feature__figure img {
   display: block;
   width: 100%;
+  aspect-ratio: 4 / 3;
   height: auto;
-}
-
-/* Kelluva päivämäärämerkki kuvituksen päällä */
-.home-feature__badge {
-  position: absolute;
-  top: 1.4rem;
-  left: -1rem;
-  padding: 0.75rem 1.1rem;
-  border-radius: var(--radius-l);
-  background: var(--color-accent);
-  color: var(--color-primary-deeper);
-  text-align: center;
-  line-height: 1.05;
-  box-shadow: 0 14px 30px rgba(8, 37, 74, 0.28);
-}
-
-.home-feature__badge strong {
-  display: block;
-  font-family: var(--font-heading);
-  font-size: 1.6rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-.home-feature__badge span {
-  display: block;
-  margin-top: 0.2rem;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  object-fit: cover;
 }
 
 /* =================================================================
@@ -320,9 +318,5 @@
   .home-story__portrait {
     max-width: 15rem;
     margin-inline: auto;
-  }
-
-  .home-feature__badge {
-    left: 0.75rem;
   }
 }

@@ -1,6 +1,54 @@
 <?php get_header(); ?>
 
-<?php $rytkoset_home_img = get_template_directory_uri() . '/assets/images/home'; ?>
+<?php
+$rytkoset_home_img       = get_template_directory_uri() . '/assets/images/home';
+$rytkoset_home_highlight = rytkoset_theme_get_home_highlight();
+
+if ( $rytkoset_home_highlight instanceof WP_Post ) {
+	$rytkoset_highlight_id          = $rytkoset_home_highlight->ID;
+	$rytkoset_highlight_type        = get_post_type( $rytkoset_highlight_id );
+	$rytkoset_highlight_excerpt     = trim( (string) get_post_field( 'post_excerpt', $rytkoset_highlight_id ) );
+	$rytkoset_highlight_permalink   = get_permalink( $rytkoset_highlight_id );
+	$rytkoset_highlight_label       = '';
+	$rytkoset_highlight_meta        = '';
+	$rytkoset_highlight_datetime    = '';
+	$rytkoset_highlight_location    = '';
+	$rytkoset_highlight_cta         = '';
+	$rytkoset_highlight_archive_url = '';
+	$rytkoset_highlight_archive_cta = '';
+	$rytkoset_highlight_fallback    = $rytkoset_home_img . '/home-welcome-illustration.png';
+
+	if ( '' === $rytkoset_highlight_excerpt ) {
+		$rytkoset_highlight_excerpt = wp_strip_all_tags( strip_shortcodes( (string) get_post_field( 'post_content', $rytkoset_highlight_id ) ) );
+	}
+
+	if ( 'rytkoset_event' === $rytkoset_highlight_type ) {
+		$rytkoset_highlight_label       = __( 'Seuraava tapahtuma', 'rytkoset-theme' );
+		$rytkoset_highlight_meta        = rytkoset_theme_get_event_date_display( $rytkoset_highlight_id );
+		$rytkoset_highlight_datetime    = rytkoset_theme_get_event_date_raw( $rytkoset_highlight_id );
+		$rytkoset_highlight_location    = rytkoset_theme_get_event_location( $rytkoset_highlight_id );
+		$rytkoset_highlight_cta         = __( 'Tutustu tapahtumaan', 'rytkoset-theme' );
+		$rytkoset_highlight_archive_url = get_post_type_archive_link( 'rytkoset_event' );
+		$rytkoset_highlight_archive_cta = __( 'Kaikki tapahtumat', 'rytkoset-theme' );
+	} elseif ( 'gallery_album' === $rytkoset_highlight_type ) {
+		$rytkoset_highlight_label       = __( 'Uusin albumi', 'rytkoset-theme' );
+		$rytkoset_highlight_meta        = get_the_date( '', $rytkoset_highlight_id );
+		$rytkoset_highlight_datetime    = get_post_time( 'c', true, $rytkoset_highlight_id );
+		$rytkoset_highlight_cta         = __( 'Katso albumi', 'rytkoset-theme' );
+		$rytkoset_highlight_archive_url = get_post_type_archive_link( 'gallery_album' );
+		$rytkoset_highlight_archive_cta = __( 'Kaikki albumit', 'rytkoset-theme' );
+		$rytkoset_highlight_fallback    = $rytkoset_home_img . '/home-albums-illustration.png';
+	} else {
+		$rytkoset_blog_page             = get_page_by_path( 'blogi' );
+		$rytkoset_highlight_label       = __( 'Uusin kirjoitus', 'rytkoset-theme' );
+		$rytkoset_highlight_meta        = get_the_date( '', $rytkoset_highlight_id );
+		$rytkoset_highlight_datetime    = get_post_time( 'c', true, $rytkoset_highlight_id );
+		$rytkoset_highlight_cta         = __( 'Lue kirjoitus', 'rytkoset-theme' );
+		$rytkoset_highlight_archive_url = $rytkoset_blog_page instanceof WP_Post ? get_permalink( $rytkoset_blog_page ) : home_url( '/blogi/' );
+		$rytkoset_highlight_archive_cta = __( 'Kaikki kirjoitukset', 'rytkoset-theme' );
+	}
+}
+?>
 
 <main id="primary" class="site-main" tabindex="-1">
 
@@ -32,53 +80,79 @@
 	</div>
 </section>
 
-<!-- SUKUJUHLAT — etusivun kohokohta (vaalea, feature) -->
+<?php if ( $rytkoset_home_highlight instanceof WP_Post ) : ?>
+<!-- AJANKOHTAISTA — etusivun dynaaminen kohokohta (vaalea, feature) -->
 <section class="home-feature home-block--light">
 	<div class="container home-feature__split">
 	<div class="home-feature__copy">
-	<p class="home-feature__eyebrow">Suvun kohokohta</p>
-	<h2 class="home-feature__title">Sukujuhlat Tampereella</h2>
+	<p class="home-feature__eyebrow"><?php esc_html_e( 'Ajankohtaista', 'rytkoset-theme' ); ?></p>
+	<p class="home-feature__kind"><?php echo esc_html( $rytkoset_highlight_label ); ?></p>
+	<h2 class="home-feature__title"><?php echo esc_html( get_the_title( $rytkoset_highlight_id ) ); ?></h2>
 	<div class="home-feature__meta">
+	<?php if ( '' !== $rytkoset_highlight_meta ) : ?>
 	<span class="home-feature__chip">
 		<svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 		<rect x="3" y="4.5" width="14" height="12.5" rx="2" />
 		<path d="M3 8h14M7 3v3M13 3v3" />
 		</svg>
-		29.8.2026
+		<?php if ( '' !== $rytkoset_highlight_datetime ) : ?>
+			<time datetime="<?php echo esc_attr( $rytkoset_highlight_datetime ); ?>"><?php echo esc_html( $rytkoset_highlight_meta ); ?></time>
+		<?php else : ?>
+			<?php echo esc_html( $rytkoset_highlight_meta ); ?>
+		<?php endif; ?>
 	</span>
+	<?php endif; ?>
+	<?php if ( '' !== $rytkoset_highlight_location ) : ?>
 	<span class="home-feature__chip">
 		<svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 		<path d="M10 17.5c3.5-3.6 5.5-6.3 5.5-9A5.5 5.5 0 0 0 4.5 8.5c0 2.7 2 5.4 5.5 9z" />
 		<circle cx="10" cy="8.4" r="2.1" />
 		</svg>
-		Tampere
+		<?php echo esc_html( $rytkoset_highlight_location ); ?>
 	</span>
+	<?php endif; ?>
 	</div>
+	<?php if ( '' !== $rytkoset_highlight_excerpt ) : ?>
 	<p class="home-feature__lead">
-	Suvun väki kokoontuu Tampereelle loppukesästä. Luvassa juhlaohjelmaa, sukukokous ja
-	yhteistä aikaa. Ilmoittautuminen sukujuhliin on päättynyt.
+		<?php echo esc_html( wp_trim_words( $rytkoset_highlight_excerpt, 36 ) ); ?>
 	</p>
+	<?php endif; ?>
 	<div class="home-feature__actions">
-	<a href="<?php echo esc_url( home_url( '/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/' ) ); ?>" class="btn btn--primary">
-		Katso ohjelma
+	<a href="<?php echo esc_url( $rytkoset_highlight_permalink ); ?>" class="btn btn--primary">
+		<?php echo esc_html( $rytkoset_highlight_cta ); ?>
 	</a>
+	<?php if ( is_string( $rytkoset_highlight_archive_url ) && '' !== $rytkoset_highlight_archive_url ) : ?>
+	<a href="<?php echo esc_url( $rytkoset_highlight_archive_url ); ?>" class="home-feature__archive-link">
+		<?php echo esc_html( $rytkoset_highlight_archive_cta ); ?> <span aria-hidden="true">&rarr;</span>
+	</a>
+	<?php endif; ?>
 	</div>
 	</div>
 	<div class="home-feature__media">
 	<figure class="home-feature__figure">
-	<img
-		src="<?php echo esc_url( $rytkoset_home_img . '/home-sukujuhlat-tampere-illustration.png' ); ?>"
-		alt="Sukujuhlat Tampereella — pääsylippu ja kahvit Tammerkosken äärellä"
-		width="800" height="600" loading="lazy"
-	/>
+	<?php if ( has_post_thumbnail( $rytkoset_highlight_id ) ) : ?>
+		<?php
+		echo get_the_post_thumbnail(
+			$rytkoset_highlight_id,
+			'large',
+			array(
+				'class'   => 'home-feature__image',
+				'loading' => 'lazy',
+			)
+		);
+		?>
+	<?php else : ?>
+		<img
+			src="<?php echo esc_url( $rytkoset_highlight_fallback ); ?>"
+			alt=""
+			width="800" height="600" loading="lazy"
+		/>
+	<?php endif; ?>
 	</figure>
-	<div class="home-feature__badge" aria-hidden="true">
-	<strong>Elokuu</strong>
-	<span>2026</span>
-	</div>
 	</div>
 	</div>
 </section>
+<?php endif; ?>
 
 <!-- ALBUMIT (tumma) -->
 <section class="home-block home-block--dark">

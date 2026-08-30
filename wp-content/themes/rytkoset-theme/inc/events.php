@@ -240,11 +240,12 @@ function rytkoset_theme_is_event_date_passed( $event_id ) {
  * soonest event is returned. Shared by the empty-cart secondary link and any
  * other surface that needs "the next event".
  *
- * @param string $fee_type                 Optional fee type filter: 'free' or 'paid'.
+ * @param string $fee_type                  Optional fee type filter: 'free' or 'paid'.
  * @param bool   $require_open_registration Whether the registration deadline must exist and remain open.
+ * @param bool   $require_schema_enabled    Whether event-adjacent services without Event schema must be excluded.
  * @return int Event post ID, or 0 when there is no matching upcoming event.
  */
-function rytkoset_theme_get_next_upcoming_event_id( $fee_type = '', $require_open_registration = false ) {
+function rytkoset_theme_get_next_upcoming_event_id( $fee_type = '', $require_open_registration = false, $require_schema_enabled = false ) {
 	if ( ! function_exists( 'rytkoset_theme_get_event_date_raw' ) ) {
 		return 0;
 	}
@@ -255,6 +256,7 @@ function rytkoset_theme_get_next_upcoming_event_id( $fee_type = '', $require_ope
 		array(
 			'post_type'        => 'rytkoset_event',
 			'post_status'      => 'publish',
+			'has_password'     => false,
 			'numberposts'      => -1,
 			'fields'           => 'ids',
 			'suppress_filters' => false,
@@ -271,6 +273,10 @@ function rytkoset_theme_get_next_upcoming_event_id( $fee_type = '', $require_ope
 		}
 
 		if ( '' !== $fee_type && rytkoset_theme_get_event_fee_type( $event_id ) !== $fee_type ) {
+			continue;
+		}
+
+		if ( $require_schema_enabled && ! rytkoset_theme_event_schema_is_enabled( $event_id ) ) {
 			continue;
 		}
 
