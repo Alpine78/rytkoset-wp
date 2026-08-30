@@ -183,6 +183,8 @@ class WP_Post {
 	public int $ID;
 	public string $post_type;
 	public string $post_title;
+	public string $post_date = '1970-01-01 00:00:00';
+	public string $post_date_gmt = '1970-01-01 00:00:00';
 	public int $post_parent;
 	public int $menu_order;
 	public string $post_excerpt = '';
@@ -1500,7 +1502,7 @@ function wpautop( $text ) {
 // ---------------------------------------------------------------------------
 
 function get_posts( $args = array() ) {
-	$type   = $args['post_type'] ?? 'post';
+	$types  = (array) ( $args['post_type'] ?? 'post' );
 	$fields = $args['fields'] ?? '';
 	$parent = array_key_exists( 'post_parent', $args ) ? (int) $args['post_parent'] : null;
 	$search = trim( (string) ( $args['s'] ?? '' ) );
@@ -1508,8 +1510,16 @@ function get_posts( $args = array() ) {
 	$matches = array();
 
 	foreach ( $GLOBALS['rytkoset_test_posts'] as $id => $post ) {
-		if ( $post->post_type !== $type ) {
+		if ( ! in_array( $post->post_type, $types, true ) ) {
 			continue;
+		}
+
+		if ( isset( $args['post_status'] ) ) {
+			$post_statuses = (array) $args['post_status'];
+
+			if ( ! in_array( 'any', $post_statuses, true ) && ! in_array( $post->post_status, $post_statuses, true ) ) {
+				continue;
+			}
 		}
 
 		if ( null !== $parent && (int) $post->post_parent !== $parent ) {
@@ -1539,14 +1549,29 @@ function get_posts( $args = array() ) {
 		$matches[] = $post;
 	}
 
-	usort(
-		$matches,
-		static function ( WP_Post $a, WP_Post $b ) {
-			return $a->menu_order !== $b->menu_order
-				? $a->menu_order <=> $b->menu_order
-				: strcmp( $a->post_title, $b->post_title );
-		}
-	);
+	if ( 'date' === ( $args['orderby'] ?? '' ) ) {
+		$order = 'ASC' === strtoupper( (string) ( $args['order'] ?? 'DESC' ) ) ? 1 : -1;
+
+		usort(
+			$matches,
+			static function ( WP_Post $a, WP_Post $b ) use ( $order ) {
+				$date_comparison = strcmp( $a->post_date_gmt, $b->post_date_gmt );
+
+				return 0 !== $date_comparison
+					? $order * $date_comparison
+					: $order * ( $a->ID <=> $b->ID );
+			}
+		);
+	} else {
+		usort(
+			$matches,
+			static function ( WP_Post $a, WP_Post $b ) {
+				return $a->menu_order !== $b->menu_order
+					? $a->menu_order <=> $b->menu_order
+					: strcmp( $a->post_title, $b->post_title );
+			}
+		);
+	}
 
 	$limit = isset( $args['numberposts'] ) ? (int) $args['numberposts'] : (int) ( $args['posts_per_page'] ?? 0 );
 

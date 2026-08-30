@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Changed
+- `front-page.php` / `inc/home-highlight.php` / `assets/css/home.css` / `tests/HomeHighlightTest.php` / `tests/bootstrap.php` / `CLAUDE.md`: korvattu päättyneiden Tampere 2026 -sukujuhlien kovakoodattu etusivunosto dynaamisella **Ajankohtaista**-nostolla (#657). Lähin julkaistu tuleva tapahtuma ohittaa aina muun sisällön; jos tulevia tapahtumia ei ole, näytetään julkaisupäivältään uusin albumi tai blogikirjoitus. Menneet ja päivämäärättömät tapahtumat eivät päädy varasisällöksi. Nosto käyttää sisältötyypin mukaista otsikointia, metatietoja, toimintopainiketta ja arkistolinkkiä sekä ensisijaisesti artikkelikuvaa, muuten nykyistä yleiskuvitusta. Paikallisen WordPressin Tampere 2026 -tapahtumasivu päivitettiin menneeseen aikamuotoon: ohjelma sekä aika- ja paikkatiedot säilyvät, mutta ilmoittautumis-, yhteiskuljetus-, majoitus- ja yhteydenotto-ohjeet poistettiin; albumilinkkiä ei lisätty, koska Tampereen tapahtumasta ei ole julkaistua albumia. Playwright varmisti albumivarapolun, työpöytä- ja 390 px mobiilinäkymän, tumman teeman, näkyvän 3 px fokuksen, arkistoidun tapahtumatekstin ja aktiivisen ostopolun puuttumisen ilman konsolivirheitä tai vaakavieritystä. PHPCS 89/89, PHPUnit 926/926 (2329 assertiota; yksi ennestään tunnettu deprecation) ja `git diff --check` vihreät.
+
 ## [1.3.3] - 2026-08-15
 
 ### Fixed
