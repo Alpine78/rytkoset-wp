@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $GLOBALS['rytkoset_test_user_meta']    = array(); // [user_id][key] => value
 $GLOBALS['rytkoset_test_users']        = array(); // [user_id] => WP_User
 $GLOBALS['rytkoset_test_posts']        = array(); // [post_id] => WP_Post
+$GLOBALS['rytkoset_test_permalink_failures'] = array(); // [post_id] => true
 $GLOBALS['rytkoset_test_parent_map']   = array(); // [child_id] => parent_id (magazine articles)
 $GLOBALS['rytkoset_test_mails']        = array(); // recorded wp_mail() calls
 $GLOBALS['rytkoset_test_now']          = 'now';   // string accepted by DateTimeImmutable
@@ -72,6 +73,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
+	$GLOBALS['rytkoset_test_permalink_failures'] = array();
 	$GLOBALS['rytkoset_test_parent_map']    = array();
 	$GLOBALS['rytkoset_test_mails']         = array();
 	$GLOBALS['rytkoset_test_now']           = 'now';
@@ -183,6 +185,8 @@ class WP_Post {
 	public int $ID;
 	public string $post_type;
 	public string $post_title;
+	public string $post_date = '1970-01-01 00:00:00';
+	public string $post_date_gmt = '1970-01-01 00:00:00';
 	public int $post_parent;
 	public int $menu_order;
 	public string $post_excerpt = '';
@@ -1081,7 +1085,13 @@ function get_the_date( $format = '', $post = null ) {
 }
 
 function get_permalink( $post_id ) {
-	return 'https://rytkoset.test/?p=' . (int) ( $post_id instanceof WP_Post ? $post_id->ID : $post_id );
+	$post_id = (int) ( $post_id instanceof WP_Post ? $post_id->ID : $post_id );
+
+	if ( ! empty( $GLOBALS['rytkoset_test_permalink_failures'][ $post_id ] ) ) {
+		return false;
+	}
+
+	return 'https://rytkoset.test/?p=' . $post_id;
 }
 
 function get_post_type_archive_link( $post_type ) {
@@ -1500,7 +1510,7 @@ function wpautop( $text ) {
 // ---------------------------------------------------------------------------
 
 function get_posts( $args = array() ) {
-	$type   = $args['post_type'] ?? 'post';
+	$types  = (array) ( $args['post_type'] ?? 'post' );
 	$fields = $args['fields'] ?? '';
 	$parent = array_key_exists( 'post_parent', $args ) ? (int) $args['post_parent'] : null;
 	$search = trim( (string) ( $args['s'] ?? '' ) );
@@ -1508,8 +1518,24 @@ function get_posts( $args = array() ) {
 	$matches = array();
 
 	foreach ( $GLOBALS['rytkoset_test_posts'] as $id => $post ) {
-		if ( $post->post_type !== $type ) {
+		if ( ! in_array( $post->post_type, $types, true ) ) {
 			continue;
+		}
+
+		if ( isset( $args['post_status'] ) ) {
+			$post_statuses = (array) $args['post_status'];
+
+			if ( ! in_array( 'any', $post_statuses, true ) && ! in_array( $post->post_status, $post_statuses, true ) ) {
+				continue;
+			}
+		}
+
+		if ( array_key_exists( 'has_password', $args ) && null !== $args['has_password'] ) {
+			$has_password = '' !== $post->post_password;
+
+			if ( (bool) $args['has_password'] !== $has_password ) {
+				continue;
+			}
 		}
 
 		if ( null !== $parent && (int) $post->post_parent !== $parent ) {
@@ -1539,14 +1565,29 @@ function get_posts( $args = array() ) {
 		$matches[] = $post;
 	}
 
-	usort(
-		$matches,
-		static function ( WP_Post $a, WP_Post $b ) {
-			return $a->menu_order !== $b->menu_order
-				? $a->menu_order <=> $b->menu_order
-				: strcmp( $a->post_title, $b->post_title );
-		}
-	);
+	if ( 'date' === ( $args['orderby'] ?? '' ) ) {
+		$order = 'ASC' === strtoupper( (string) ( $args['order'] ?? 'DESC' ) ) ? 1 : -1;
+
+		usort(
+			$matches,
+			static function ( WP_Post $a, WP_Post $b ) use ( $order ) {
+				$date_comparison = strcmp( $a->post_date_gmt, $b->post_date_gmt );
+
+				return 0 !== $date_comparison
+					? $order * $date_comparison
+					: $order * ( $a->ID <=> $b->ID );
+			}
+		);
+	} else {
+		usort(
+			$matches,
+			static function ( WP_Post $a, WP_Post $b ) {
+				return $a->menu_order !== $b->menu_order
+					? $a->menu_order <=> $b->menu_order
+					: strcmp( $a->post_title, $b->post_title );
+			}
+		);
+	}
 
 	$limit = isset( $args['numberposts'] ) ? (int) $args['numberposts'] : (int) ( $args['posts_per_page'] ?? 0 );
 

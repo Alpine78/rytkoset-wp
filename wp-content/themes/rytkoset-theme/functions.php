@@ -30,6 +30,7 @@ require_once get_template_directory() . '/inc/youtube-privacy.php';
 require_once get_template_directory() . '/inc/media-library.php';
 require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
+require_once get_template_directory() . '/inc/home-highlight.php';
 require_once get_template_directory() . '/inc/event-registrations.php';
 require_once get_template_directory() . '/inc/event-registration-privacy.php';
 require_once get_template_directory() . '/inc/event-registration-anonymization.php';
