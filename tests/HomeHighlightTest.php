@@ -72,6 +72,35 @@ final class HomeHighlightTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 10, $highlight->ID );
 	}
 
+	public function test_excludes_password_protected_content(): void {
+		$protected_event                = $this->register_event( 5, '2026-09-01' );
+		$protected_event->post_password = 'salainen';
+		$album                          = $this->register_content( 10, 'gallery_album', '2026-08-28 10:00:00' );
+		$protected_post                 = $this->register_content( 11, 'post', '2026-08-30 11:00:00' );
+		$protected_post->post_password  = 'salainen';
+
+		$highlight = rytkoset_theme_get_home_highlight();
+
+		$this->assertSame( $album, $highlight );
+	}
+
+	public function test_event_adjacent_service_does_not_override_public_event(): void {
+		$transport = $this->register_event( 20, '2026-09-01' );
+		update_post_meta( $transport->ID, rytkoset_theme_get_event_schema_enabled_meta_key(), 'no' );
+		$event = $this->register_event( 21, '2026-09-05' );
+
+		$highlight = rytkoset_theme_get_home_highlight();
+
+		$this->assertSame( $event, $highlight );
+	}
+
+	public function test_returns_null_when_latest_content_has_no_permalink(): void {
+		$album = $this->register_content( 10, 'gallery_album', '2026-08-30 10:00:00' );
+		$GLOBALS['rytkoset_test_permalink_failures'][ $album->ID ] = true;
+
+		$this->assertNull( rytkoset_theme_get_home_highlight() );
+	}
+
 	public function test_returns_null_without_eligible_content(): void {
 		$this->register_event( 5, '2026-08-29' );
 

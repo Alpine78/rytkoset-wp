@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $GLOBALS['rytkoset_test_user_meta']    = array(); // [user_id][key] => value
 $GLOBALS['rytkoset_test_users']        = array(); // [user_id] => WP_User
 $GLOBALS['rytkoset_test_posts']        = array(); // [post_id] => WP_Post
+$GLOBALS['rytkoset_test_permalink_failures'] = array(); // [post_id] => true
 $GLOBALS['rytkoset_test_parent_map']   = array(); // [child_id] => parent_id (magazine articles)
 $GLOBALS['rytkoset_test_mails']        = array(); // recorded wp_mail() calls
 $GLOBALS['rytkoset_test_now']          = 'now';   // string accepted by DateTimeImmutable
@@ -72,6 +73,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
+	$GLOBALS['rytkoset_test_permalink_failures'] = array();
 	$GLOBALS['rytkoset_test_parent_map']    = array();
 	$GLOBALS['rytkoset_test_mails']         = array();
 	$GLOBALS['rytkoset_test_now']           = 'now';
@@ -1083,7 +1085,13 @@ function get_the_date( $format = '', $post = null ) {
 }
 
 function get_permalink( $post_id ) {
-	return 'https://rytkoset.test/?p=' . (int) ( $post_id instanceof WP_Post ? $post_id->ID : $post_id );
+	$post_id = (int) ( $post_id instanceof WP_Post ? $post_id->ID : $post_id );
+
+	if ( ! empty( $GLOBALS['rytkoset_test_permalink_failures'][ $post_id ] ) ) {
+		return false;
+	}
+
+	return 'https://rytkoset.test/?p=' . $post_id;
 }
 
 function get_post_type_archive_link( $post_type ) {
@@ -1518,6 +1526,14 @@ function get_posts( $args = array() ) {
 			$post_statuses = (array) $args['post_status'];
 
 			if ( ! in_array( 'any', $post_statuses, true ) && ! in_array( $post->post_status, $post_statuses, true ) ) {
+				continue;
+			}
+		}
+
+		if ( array_key_exists( 'has_password', $args ) && null !== $args['has_password'] ) {
+			$has_password = '' !== $post->post_password;
+
+			if ( (bool) $args['has_password'] !== $has_password ) {
 				continue;
 			}
 		}
