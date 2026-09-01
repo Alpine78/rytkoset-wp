@@ -38,7 +38,7 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan WooCommercessa.
   - `_rytkoset_membership_type = lifetime`
 - Toimintakauden jäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
   - `_rytkoset_membership_period = 2026-2029`
-- Vuosi-/perhejäsenmaksun voimassaolopäivä tallennetaan tuotemetadataan ISO-muodossa:
+- Toimintakauden henkilö-/perhejäsenmaksun voimassaolopäivä tallennetaan tuotemetadataan ISO-muodossa:
   - `_rytkoset_membership_expiry_date = 2029-08-30` nykyisillä kauden 2026–2029 tuotteilla
   - Asetetaan tuotteen **Jäsenyys voimassa asti** -kentästä. Automaattinen jäsenyyspäivitys (#302) käyttää tätä päivää käyttäjän jäsenyyden voimassaoloksi.
 - Perhejäsenmaksu kopioi kauden ja päättymispäivän myös päätilin erillisiin
@@ -48,7 +48,7 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan WooCommercessa.
   perhejäsenyyden.
 - Rakenteisten jäsenkenttien näkyminen kassalla määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
-- Lippu on käytössä sekä vuosijäsenmaksuilla että ainaisjäsenmaksulla.
+- Lippu on käytössä sekä toimintakauden jäsenmaksuilla että ainaisjäsenmaksulla.
 - Teema näyttää rakenteiset kentät silloin, kun korissa on nimet vaativa jäsenmaksutuote; kenttien käyttöä selittää niiden yläpuolelle injektoitu **Jäsentiedot**-osio-otsikko (ks. alla), ei erillinen ylätiedote — aiempi erillinen kassaohje-banneri poistettiin #520:n viimeistelyssä päällekkäisenä, kun otsikko lisättiin suoraan kenttien yhteyteen.
 - WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
 - Jäsenmaksutuotteen ostaminen vaatii kirjautuneen WordPress-käyttäjän (#661).
@@ -106,10 +106,10 @@ WooCommerce Orders -listaan lisätään sarake:
 
 - `Jäsenmaksu`
 
-Sarake näyttää jäsenmaksutilauksille jäsenmaksun tyypin ja vuosijäsenmaksuilla myös jäsenkauden, esimerkiksi:
+Sarake näyttää jäsenmaksutilauksille jäsenmaksun tyypin ja toimintakauden jäsenmaksuilla myös jäsenkauden, esimerkiksi:
 
-- `Vuosijäsen: Yksityishenkilö, 2023-2026`
-- `Vuosijäsen: Perhe, 2023-2026`
+- `Jäsenmaksu toimintakaudelle: Henkilö, 2026-2029`
+- `Jäsenmaksu toimintakaudelle: Perhe, 2026-2029`
 - `Ainaisjäsen`
 
 Yksittäisen tilauksen admin-näkymään lisätään `Jäsenmaksu`-laatikko. Se näyttää:
@@ -157,11 +157,11 @@ Tuotetta ei voi julkaista ennen kuin yllä olevat määräaikaisen jäsenmaksun 
 - Molemmat tuotteet ovat virtuaalisia ja myydään yksittäin.
 - `Ainaisjäsenmaksu` on olemassa WooCommercessa hinnalla 100 EUR.
 - `Ainaisjäsenmaksu` on virtuaalinen ja myydään yksittäin.
-- Vuosijäsenmaksutuote voidaan lisätä ostoskoriin.
+- Toimintakauden jäsenmaksutuote voidaan lisätä ostoskoriin.
 - `Kassa`-sivu latautuu jäsenmaksutuotteen kanssa.
 - Kassasivulle syötetään teeman kautta jäsenmaksuohje oikeassa sessiossa.
 - `Ainaisjäsenmaksu` voidaan lisätä ostoskoriin ja `Kassa`-sivu latautuu oikein.
-- `Ainaisjäsenmaksu` aktivoi saman jäsenrekisteriohjeen kuin vuosijäsenmaksut.
+- `Ainaisjäsenmaksu` aktivoi saman jäsenrekisteriohjeen kuin toimintakauden jäsenmaksut.
 - Yksittäin myytävän jäsenmaksutuotteen uusi lisäysyritys ei tuota kahta samaa ostoskori-ilmoitusta.
 - Jäsenmaksutuotteet tunnistetaan adminissa jäsenmaksumetadatan perusteella.
 - WooCommerce Orders -lista näyttää jäsenmaksutilauksille `Jäsenmaksu`-sarakkeen arvon.

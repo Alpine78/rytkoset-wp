@@ -71,7 +71,7 @@ function rytkoset_theme_get_family_membership_expires_meta_key() {
  */
 function rytkoset_theme_get_user_membership_type_options() {
 	return array(
-		'annual'   => __( 'Vuosijäsen', 'rytkoset-theme' ),
+		'annual'   => __( 'Jäsenmaksu toimintakaudelle', 'rytkoset-theme' ),
 		'family'   => __( 'Perhejäsen', 'rytkoset-theme' ),
 		'lifetime' => __( 'Ainaisjäsen', 'rytkoset-theme' ),
 	);
@@ -1081,7 +1081,7 @@ function rytkoset_theme_send_membership_confirmation_email( $user_id ) {
 		__( 'Kiitos, että olet Rytkösten sukuseura ry:n jäsen.', 'rytkoset-theme' ),
 		'',
 		sprintf(
-			/* translators: %s: membership type label (e.g. Vuosijäsen). */
+			/* translators: %s: membership type label (e.g. Jäsenmaksu toimintakaudelle). */
 			__( 'Jäsenyyden tyyppi: %s', 'rytkoset-theme' ),
 			$type_label
 		),
@@ -1300,7 +1300,7 @@ function rytkoset_theme_render_user_membership_fields( $user ) {
 	?>
 	<h2><?php esc_html_e( 'Jäsenyys', 'rytkoset-theme' ); ?></h2>
 	<p class="description">
-		<?php esc_html_e( 'Aseta jäsenyyden tila sukuseuran jäsenrekisterin perusteella. Vuosi- ja perhejäsen on aktiivinen vain voimassaolopäivään asti; ainaisjäsen on aina aktiivinen.', 'rytkoset-theme' ); ?>
+		<?php esc_html_e( 'Aseta jäsenyyden tila sukuseuran jäsenrekisterin perusteella. Määräaikainen henkilö- ja perhejäsenyys on aktiivinen vain voimassaolopäivään asti; ainaisjäsen on aina aktiivinen.', 'rytkoset-theme' ); ?>
 	</p>
 	<table class="form-table" role="presentation">
 		<tr>
@@ -1325,7 +1325,7 @@ function rytkoset_theme_render_user_membership_fields( $user ) {
 			<td>
 				<input type="text" name="<?php echo esc_attr( $period_field ); ?>" id="<?php echo esc_attr( $period_field ); ?>"
 					value="<?php echo esc_attr( $period ); ?>" class="regular-text" placeholder="2026-2029" pattern="\d{4}-\d{4}" />
-				<p class="description"><?php esc_html_e( 'Vuosi- ja perhejäsenelle, muotoa 2026-2029. Ainaisjäsenelle voi jättää tyhjäksi.', 'rytkoset-theme' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Määräaikaiselle henkilö- ja perhejäsenyydelle, muotoa 2026-2029. Ainaisjäsenelle voi jättää tyhjäksi.', 'rytkoset-theme' ); ?></p>
 			</td>
 		</tr>
 		<tr>
@@ -1335,7 +1335,34 @@ function rytkoset_theme_render_user_membership_fields( $user ) {
 			<td>
 				<input type="text" name="<?php echo esc_attr( $expires_field ); ?>" id="<?php echo esc_attr( $expires_field ); ?>"
 					value="<?php echo esc_attr( $expires_display ); ?>" class="regular-text" placeholder="pp.kk.vvvv" inputmode="numeric" autocomplete="off" />
-				<p class="description"><?php esc_html_e( 'Vuosi- ja perhejäsenen jäsenyys on aktiivinen tähän päivään asti. Muotoa pp.kk.vvvv, esim. 31.12.2029. Ilman päivää jäsenyyttä ei tulkita aktiiviseksi. Ainaisjäsenelle kenttää ei tarvita.', 'rytkoset-theme' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Määräaikainen henkilö- ja perhejäsenyys on aktiivinen tähän päivään asti. Muotoa pp.kk.vvvv, esim. 31.12.2029. Ilman päivää jäsenyyttä ei tulkita aktiiviseksi. Ainaisjäsenelle kenttää ei tarvita.', 'rytkoset-theme' ); ?></p>
+			</td>
+		</tr>
+	</table>
+
+	<h3><?php esc_html_e( 'Perhejäsenyyden jakamisoikeus', 'rytkoset-theme' ); ?></h3>
+	<p class="description">
+		<?php esc_html_e( 'Määrää, kuinka kauan päätilin perheenjäsenet saavat jäsenetuja. Tämä on erillinen päätilin omasta jäsenyydestä, joten esimerkiksi ainaisjäsenyys säilyy pysyvänä perhejäsenyyden rinnalla.', 'rytkoset-theme' ); ?>
+	</p>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th>
+				<label for="<?php echo esc_attr( $family_period_field ); ?>"><?php esc_html_e( 'Perhejäsenyyden kausi', 'rytkoset-theme' ); ?></label>
+			</th>
+			<td>
+				<input type="text" name="<?php echo esc_attr( $family_period_field ); ?>" id="<?php echo esc_attr( $family_period_field ); ?>"
+					value="<?php echo esc_attr( $family_membership['period'] ); ?>" class="regular-text" placeholder="2026-2029" pattern="\d{4}-\d{4}" />
+				<p class="description"><?php esc_html_e( 'Jätä molemmat perhejäsenyyden kentät tyhjiksi, jos päätilillä ei ole oikeutta jakaa perhejäsenetuja.', 'rytkoset-theme' ); ?></p>
+			</td>
+		</tr>
+		<tr>
+			<th>
+				<label for="<?php echo esc_attr( $family_expires_field ); ?>"><?php esc_html_e( 'Perhejäsenyys voimassa asti', 'rytkoset-theme' ); ?></label>
+			</th>
+			<td>
+				<input type="text" name="<?php echo esc_attr( $family_expires_field ); ?>" id="<?php echo esc_attr( $family_expires_field ); ?>"
+					value="<?php echo esc_attr( $family_expires_display ); ?>" class="regular-text" placeholder="pp.kk.vvvv" inputmode="numeric" autocomplete="off" />
+				<p class="description"><?php esc_html_e( 'Perheenjäsenten perityt edut ovat voimassa tähän päivään asti.', 'rytkoset-theme' ); ?></p>
 			</td>
 		</tr>
 	</table>

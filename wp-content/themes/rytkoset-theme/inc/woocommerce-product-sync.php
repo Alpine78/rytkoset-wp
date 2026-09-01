@@ -77,9 +77,9 @@ function rytkoset_theme_product_sync_validate_membership_meta( $meta ) {
 		return $errors;
 	}
 
-	// Vuosijäsenmaksulta vaaditaan jäsenkausi; ainaisjäseneltä ei.
+	// Time-bound membership products require a membership period; lifetime membership does not.
 	if ( 'lifetime' !== $type && '' === $period ) {
-		$errors[] = __( 'Vuosijäsenmaksulta vaaditaan jäsenkausi.', 'rytkoset-theme' );
+		$errors[] = __( 'Toimintakauden jäsenmaksulta vaaditaan jäsenkausi.', 'rytkoset-theme' );
 	}
 
 	return $errors;

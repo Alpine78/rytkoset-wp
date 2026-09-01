@@ -30,7 +30,7 @@ Toteutuksessa:
 - lista-ID asetetaan kohdassa **Ulkoasu → Mukauta → Uutiskirje → Jäsenviestinnän AcyMailing-listan ID**
 - yleisen footer-lomakkeen käyttämä lista-ID hylätään jäsenlista-asetuksesta
 - vastaanottajaksi hyväksytään vain käyttäjätilillinen, kelvollisen sähköpostin omaava aktiivinen jäsen
-- aktiivinen oma vuosi-, perhe- tai ainaisjäsenyys hyväksytään
+- aktiivinen oma toimintakauden henkilöjäsenyys, perhejäsenyys tai ainaisjäsenyys hyväksytään
 - aktiiviseen perhejäsenyyteen linkitetty käyttäjä hyväksytään
 - #525:n tiliä odottavat jäsenyydet ja `pending_account`-perherivit eivät kuulu listalle
 - jäsenyysmetan tai perhelinkityksen muutos synkronoidaan tapahtumapohjaisesti

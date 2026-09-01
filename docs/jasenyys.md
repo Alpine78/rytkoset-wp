@@ -28,10 +28,10 @@ säilyttää normaalin roolinsa, ja jäsenyys on erillistä metatietoa.
    ylläpitäjälle, oikeus `edit_users`).
 3. Valitse **Jäsenyyden tyyppi**:
    - **Ei jäsen** — käyttäjällä ei ole aktiivista jäsenyyttä.
-   - **Vuosijäsen** — määräaikainen jäsenyys.
+   - **Jäsenmaksu toimintakaudelle** — määräaikainen henkilöjäsenyys.
    - **Perhejäsen** — määräaikainen jäsenyys.
    - **Ainaisjäsen** — pysyvä jäsenyys, ei päättymispäivää.
-4. Vuosi- ja perhejäsenelle:
+4. Määräaikaiselle henkilö- ja perhejäsenyydelle:
    - **Jäsenkausi** — esim. `2026-2029` (vapaaehtoinen kuvaileva tieto).
    - **Voimassa asti** — suomalaisessa muodossa `pp.kk.vvvv`, esim.
      `31.12.2029`. **Tämä päivä ratkaisee, onko jäsenyys aktiivinen.**
@@ -47,9 +47,9 @@ koska ainaisjäsenyys on aina aktiivinen.
 | ----------------------- | ---------------------------------------------------------------- |
 | Ei jäsen                | Ei koskaan                                                       |
 | Ainaisjäsen             | Aina                                                             |
-| Vuosijäsen / Perhejäsen | Vain jos **Voimassa asti** -päivä on asetettu eikä se ole mennyt |
+| Jäsenmaksu toimintakaudelle / Perhejäsen | Vain jos **Voimassa asti** -päivä on asetettu eikä se ole mennyt |
 
-**Tärkeää:** jos vuosi- tai perhejäseneltä puuttuu voimassaolopäivä, jäsenyyttä
+**Tärkeää:** jos määräaikaiselta henkilö- tai perhejäsenyydeltä puuttuu voimassaolopäivä, jäsenyyttä
 **ei** tulkita aktiiviseksi. Muista siis aina asettaa voimassaolopäivä
 määräaikaiselle jäsenelle. Tämä on tarkoituksellinen "fail closed" -valinta:
 epävarmassa tilanteessa käyttäjää kohdellaan ei-jäsenenä, jotta jäsenetuja ei
@@ -163,8 +163,8 @@ Kun käyttäjän jäsenyys muuttuu **ei-aktiivisesta aktiiviseksi**, jäsenelle
 lähtee automaattisesti suomenkielinen kuittausviesti sähköpostiin (tiketti
 `#390`). Viesti kertoo:
 
-- jäsenyyden tyypin (vuosi-, perhe- tai ainaisjäsen),
-- voimassaolon: vuosi-/perhejäsenelle jäsenkauden ja voimassaolopäivän,
+- jäsenyyden tyypin (toimintakauden henkilöjäsenyys, perhejäsenyys tai ainaisjäsenyys),
+- voimassaolon: määräaikaiselle henkilö- ja perhejäsenyydelle jäsenkauden ja voimassaolopäivän,
   ainaisjäsenelle maininnan pysyvästä voimassaolosta,
 - sukuseuran yhteysosoitteen.
 
@@ -264,7 +264,7 @@ tarkistaa sähköpostin edelleen manipuloidun Store API -pyynnön varalta.
   jäsenyyden, tilauspolku vertaa vain käyttäjän omaa jäsenyyttä. Peritty active
   member -tila ei estä oman jäsenyyden tallennusta eikä kuittausviestiä.
 - **Puuttuva tyyppi:** jos jäsenmaksutuotteelta puuttuu jäsenmaksun tyyppi, jäsenyyttä ei voida määrittää ja tilaukseen kirjataan muistiinpano ylläpitäjälle.
-- **Puuttuva voimassaolopäivä:** puutteellista vuosi-/perhejäsentuotetta ei voi julkaista tai ostaa. Jos puutteellinen metadata havaitaan jo maksetulla tilauksella, käyttäjämetaa tai käsittelymerkintää ei kirjoiteta; tilaus jää korjauksen jälkeen uudelleen käsiteltäväksi.
+- **Puuttuva voimassaolopäivä:** puutteellista toimintakauden henkilö- tai perhejäsenmaksutuotetta ei voi julkaista tai ostaa. Jos puutteellinen metadata havaitaan jo maksetulla tilauksella, käyttäjämetaa tai käsittelymerkintää ei kirjoiteta; tilaus jää korjauksen jälkeen uudelleen käsiteltäväksi.
 
 Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
 
@@ -395,8 +395,8 @@ ei tarjota.
 
 Tyyppi, kausi ja voimassaolopäivä luetaan valitulta tuotteelta uudelleen
 palvelinpuolella ja tallennetaan käyttäjälle tai odottavaan merkintään kopiona.
-Tuotteen myöhempi muokkaus ei siis muuta jo käsiteltyä jäsenyyttä. Vuosi- ja
-perhejäsenmaksutuotteelta vaaditaan sekä jäsenkausi että kelvollinen
+Tuotteen myöhempi muokkaus ei siis muuta jo käsiteltyä jäsenyyttä. Toimintakauden
+henkilö- ja perhejäsenmaksutuotteelta vaaditaan sekä jäsenkausi että kelvollinen
 **Jäsenyys voimassa asti** -päivä; puutteellinen tuote estää koko käsittelyn.
 Ainaisjäsenmaksulla kausi ja päättymispäivä ohitetaan.
 
