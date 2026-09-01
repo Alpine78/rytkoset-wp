@@ -278,6 +278,8 @@ Membership model correction (#661; supersedes the older family-only details in t
 
 Member row 1 checkout locking (#661 follow-up): `rytkoset_theme_get_membership_member_field_attributes()` registers the primary name and email with WooCommerce's supported `readOnly` attribute plus `aria-disabled`; rows 2–6 remain editable. `assets/js/membership-checkout-prefill.js` continuously restores the authenticated account values in `wc/store/checkout` during the 15-second hydration window and disables the rendered inputs only after preserving their Store API values. This corrects stale checkout-draft values without triggering the normal mismatch notice. The server-side primary-email validation remains a fail-safe for manipulated Store API requests. Disabled-state styling is scoped to `data-rytkoset-account-field` in `assets/css/shop.css`.
 
+Membership terminology (#661 follow-up): user-facing labels use **Jäsenmaksu toimintakaudelle** instead of the misleading **Vuosijäsen** term. Product labels distinguish `Henkilö` and `Perhe`, while the stored keys (`annual`, `annual_individual`, and `annual_family`) remain unchanged for compatibility; this wording change does not require a data migration.
+
 ### CSS structure
 
 All local theme CSS/JS assets, including login assets and vendored PhotoSwipe files, use `rytkoset_theme_get_asset_version()` for `filemtime()`-based cache busting with the theme version as a missing-file fallback.

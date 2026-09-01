@@ -218,7 +218,7 @@ if ( ! function_exists( 'rytkoset_theme_membership_activation_resolve_product' )
 		if ( '' === $period || '' === $expires ) {
 			return new WP_Error(
 				'rytkoset_incomplete_membership_product',
-				__( 'Valitulle vuosi- tai perhejäsenmaksutuotteelle pitää asettaa jäsenkausi ja Jäsenyys voimassa asti -päivä.', 'rytkoset-theme' )
+				__( 'Valitulle toimintakauden henkilö- tai perhejäsenmaksutuotteelle pitää asettaa jäsenkausi ja Jäsenyys voimassa asti -päivä.', 'rytkoset-theme' )
 			);
 		}
 

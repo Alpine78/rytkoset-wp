@@ -59,8 +59,8 @@ function rytkoset_theme_get_membership_expiry_date_meta_key() {
  */
 function rytkoset_theme_get_membership_type_options() {
 	return array(
-		'annual_individual' => __( 'Vuosijäsen: Yksityishenkilö', 'rytkoset-theme' ),
-		'annual_family'     => __( 'Vuosijäsen: Perhe', 'rytkoset-theme' ),
+		'annual_individual' => __( 'Jäsenmaksu toimintakaudelle: Henkilö', 'rytkoset-theme' ),
+		'annual_family'     => __( 'Jäsenmaksu toimintakaudelle: Perhe', 'rytkoset-theme' ),
 		'lifetime'          => __( 'Ainaisjäsen', 'rytkoset-theme' ),
 	);
 }
@@ -320,7 +320,7 @@ function rytkoset_theme_render_membership_product_fields() {
 			'label'       => __( 'Jäsenkausi', 'rytkoset-theme' ),
 			'placeholder' => '2026-2029',
 			'value'       => rytkoset_theme_get_membership_product_period( $product ),
-			'description' => __( 'Käytä vuosijäsenmaksuilla muotoa 2026-2029. Ainaisjäsenmaksulla kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
+			'description' => __( 'Käytä toimintakauden jäsenmaksuilla muotoa 2026-2029. Ainaisjäsenmaksulla kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
 			'desc_tip'    => true,
 		)
 	);
@@ -331,7 +331,7 @@ function rytkoset_theme_render_membership_product_fields() {
 			'label'       => __( 'Jäsenyys voimassa asti', 'rytkoset-theme' ),
 			'type'        => 'date',
 			'value'       => rytkoset_theme_get_membership_product_expiry_date( $product ),
-			'description' => __( 'Vuosi- ja perhejäsenmaksulle: päivä, johon asti ostettu jäsenyys on voimassa (yleensä seuraavan sukukokouksen päivä). Automaattinen jäsenyyspäivitys käyttää tätä päivää. Ainaisjäsenmaksulle kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
+			'description' => __( 'Toimintakauden henkilö- ja perhejäsenmaksulle: päivä, johon asti ostettu jäsenyys on voimassa (yleensä seuraavan sukukokouksen päivä). Automaattinen jäsenyyspäivitys käyttää tätä päivää. Ainaisjäsenmaksulle kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
 			'desc_tip'    => true,
 		)
 	);
@@ -340,7 +340,7 @@ function rytkoset_theme_render_membership_product_fields() {
 		array(
 			'id'          => rytkoset_theme_get_member_names_required_meta_key(),
 			'label'       => __( 'Vaatii jäsenten nimet kassalla', 'rytkoset-theme' ),
-			'description' => __( 'Näyttää kassalla rakenteiset kentät jäsenten nimille ja sähköposteille. Perhejäsenmaksulla (tyyppi: Vuosijäsen: Perhe) kenttiä näytetään useita.', 'rytkoset-theme' ),
+			'description' => __( 'Näyttää kassalla rakenteiset kentät jäsenten nimille ja sähköposteille. Perhejäsenmaksulla (tyyppi: Jäsenmaksu toimintakaudelle: Perhe) kenttiä näytetään useita.', 'rytkoset-theme' ),
 			'value'       => $product->get_meta( rytkoset_theme_get_member_names_required_meta_key(), true ),
 		)
 	);

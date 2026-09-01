@@ -107,7 +107,7 @@ Jotta puutteellinen jäsenmaksukonfiguraatio ei pääse huomaamatta toiseen ymp�
 Tarkistettavat ehdot:
 
 - Jos `_rytkoset_membership_product = yes`, jäsenmaksun tyypin on oltava jokin sallituista: `annual_individual`, `annual_family` tai `lifetime`.
-- Vuosijäsenmaksulta (`annual_individual` / `annual_family`) vaaditaan jäsenkausi (`_rytkoset_membership_period`); ainaisjäseneltä (`lifetime`) ei.
+- Toimintakauden jäsenmaksulta (`annual_individual` / `annual_family`) vaaditaan jäsenkausi (`_rytkoset_membership_period`); ainaisjäseneltä (`lifetime`) ei.
 - Ristiriita, jossa jäsenmaksun tyyppi tai jäsenkausi on asetettu ilman jäsenmaksutuotteen lippua, nostetaan virheeksi.
 
 Toiminta:
@@ -148,7 +148,7 @@ Työkalu **ei** tällä hetkellä:
 - Downloadable-tuote siirtyy tiedostoineen; puuttuva tiedosto estää tuonnin `VIRHE`-tilalla.
 - Puuttuva kategoria luodaan kohdeympäristöön automaattisesti.
 - Custom meta -avaimet (`_rytkoset_membership_*`, `_rytkoset_registration_*`) säilyvät siirrossa.
-- Jäsenmaksutuotteen validointi (#407) testattu yksityishenkilön vuosijäsenmaksulla, perhejäsenmaksulla, ainaisjäsenmaksulla ja virheellisesti konfiguroidulla tuotteella: kelvolliset siirtyvät neljine (viidesti expiryineen) metoineen, virheellinen estää viennin ja merkitään tuonnin esikatselussa `VIRHE`-tilaan.
+- Jäsenmaksutuotteen validointi (#407) testattu toimintakauden henkilöjäsenmaksulla, perhejäsenmaksulla, ainaisjäsenmaksulla ja virheellisesti konfiguroidulla tuotteella: kelvolliset siirtyvät neljine (viidesti expiryineen) metoineen, virheellinen estää viennin ja merkitään tuonnin esikatselussa `VIRHE`-tilaan.
 - Variaatiotuote voidaan viedä ja tuoda parent-SKU:n sekä variaatio-SKU:iden perusteella.
 - Variaation hinnan muutos näkyy esikatselussa variaatiokohtaisena muutoksena.
 - Variaatioiden ja simple-tuotteiden `stock_status` siirtyy viennissä ja tuonnissa, ja muutos näkyy esikatselussa. Vanhat `1.0`/`1.1`-paketit eivät yliaja kohteen varastotilaa.
