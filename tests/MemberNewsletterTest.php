@@ -201,6 +201,13 @@ final class MemberNewsletterTest extends Rytkoset_Theme_Test_Case {
 				rytkoset_theme_get_user_membership_expires_meta_key()
 			)
 		);
+		$this->assertSame(
+			array( 10, 20 ),
+			rytkoset_theme_get_member_newsletter_affected_user_ids(
+				10,
+				rytkoset_theme_get_family_membership_expires_meta_key()
+			)
+		);
 	}
 
 	public function test_reverse_link_change_affects_only_linked_user(): void {

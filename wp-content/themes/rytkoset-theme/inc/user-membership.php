@@ -41,6 +41,28 @@ function rytkoset_theme_get_user_membership_expires_meta_key() {
 }
 
 /**
+ * Returns the user meta key storing a primary account's family-benefit period.
+ *
+ * This entitlement is separate from the primary account's own membership so a
+ * lifetime member can share time-bound family benefits without losing their
+ * permanent membership (#661).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_family_membership_period_meta_key() {
+	return 'rytkoset_family_membership_period';
+}
+
+/**
+ * Returns the user meta key storing a primary account's family-benefit expiry.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_family_membership_expires_meta_key() {
+	return 'rytkoset_family_membership_expires';
+}
+
+/**
  * Returns the supported user membership types.
  *
  * Empty string ('') means "not a member" and is offered as the default option in the UI.
@@ -179,18 +201,112 @@ function rytkoset_theme_user_has_own_active_membership( $user_id = null ) {
 }
 
 /**
- * Returns true when the user's own membership is an active family membership.
+ * Returns the family-benefit entitlement stored for a primary account.
  *
- * Family-member benefit inheritance must only flow from a primary account whose own membership
- * type is `family`; a lifetime or annual membership on the primary account is not enough.
+ * New purchases store the entitlement separately from the account's own
+ * membership. Existing primary accounts without the new meta fall back to
+ * their own `family` membership, keeping the pre-#661 data model compatible
+ * without a bulk migration.
+ *
+ * @param int|null $user_id User ID. Defaults to the current user.
+ * @return array{type:string,period:string,expires:string}
+ */
+function rytkoset_theme_get_user_family_membership( $user_id = null ) {
+	$user_id = $user_id ? (int) $user_id : get_current_user_id();
+	$empty   = array(
+		'type'    => '',
+		'period'  => '',
+		'expires' => '',
+	);
+
+	if ( $user_id <= 0 ) {
+		return $empty;
+	}
+
+	$period  = (string) get_user_meta( $user_id, rytkoset_theme_get_family_membership_period_meta_key(), true );
+	$expires = (string) get_user_meta( $user_id, rytkoset_theme_get_family_membership_expires_meta_key(), true );
+
+	if ( '' !== $period || '' !== $expires ) {
+		return array(
+			'type'    => 'family',
+			'period'  => $period,
+			'expires' => $expires,
+		);
+	}
+
+	$own_membership = rytkoset_theme_get_user_membership( $user_id );
+
+	return 'family' === $own_membership['type'] ? $own_membership : $empty;
+}
+
+/**
+ * Stores or clears a primary account's separate family-benefit entitlement.
+ *
+ * Non-empty values must be valid. An empty period and expiry clear only the
+ * separate entitlement; a legacy own `family` membership may still provide
+ * the compatibility fallback returned by rytkoset_theme_get_user_family_membership().
+ *
+ * @param int    $user_id Primary account user ID.
+ * @param string $period  Membership period (e.g. 2026-2029), or empty.
+ * @param string $expires Expiry date in Finnish or ISO format, or empty.
+ * @return true|WP_Error
+ */
+function rytkoset_theme_update_user_family_membership( $user_id, $period, $expires ) {
+	$user_id     = absint( $user_id );
+	$raw_period  = trim( (string) $period );
+	$raw_expires = trim( (string) $expires );
+
+	if ( $user_id <= 0 || ! get_userdata( $user_id ) instanceof WP_User ) {
+		return new WP_Error( 'rytkoset_invalid_family_primary', __( 'Perhejäsenyyden päätiliä ei löytynyt.', 'rytkoset-theme' ) );
+	}
+
+	$period  = rytkoset_theme_sanitize_user_membership_period( $raw_period );
+	$expires = rytkoset_theme_sanitize_user_membership_expires( $raw_expires );
+
+	if ( '' !== $raw_period && '' === $period ) {
+		return new WP_Error( 'rytkoset_invalid_family_membership_period', __( 'Anna perhejäsenyyden jäsenkausi muodossa 2026-2029.', 'rytkoset-theme' ) );
+	}
+
+	if ( '' !== $raw_expires && '' === $expires ) {
+		return new WP_Error( 'rytkoset_invalid_family_membership_expiry', __( 'Anna perhejäsenyyden voimassaolopäivä muodossa pp.kk.vvvv.', 'rytkoset-theme' ) );
+	}
+
+	$period_key  = rytkoset_theme_get_family_membership_period_meta_key();
+	$expires_key = rytkoset_theme_get_family_membership_expires_meta_key();
+
+	if ( '' === $period && '' === $expires ) {
+		delete_user_meta( $user_id, $period_key );
+		delete_user_meta( $user_id, $expires_key );
+
+		return true;
+	}
+
+	update_user_meta( $user_id, $period_key, $period );
+	update_user_meta( $user_id, $expires_key, $expires );
+
+	return true;
+}
+
+/**
+ * Returns true when a primary account can currently share family benefits.
+ *
+ * @param int|null $user_id User ID. Defaults to the current user.
+ * @return bool
+ */
+function rytkoset_theme_user_has_active_family_membership( $user_id = null ) {
+	$membership = rytkoset_theme_get_user_family_membership( $user_id );
+
+	return 'family' === $membership['type'] && rytkoset_theme_user_membership_is_active( $membership );
+}
+
+/**
+ * Backward-compatible alias for callers using the pre-#661 helper name.
  *
  * @param int|null $user_id User ID. Defaults to the current user.
  * @return bool
  */
 function rytkoset_theme_user_has_own_active_family_membership( $user_id = null ) {
-	$membership = rytkoset_theme_get_user_membership( $user_id );
-
-	return 'family' === $membership['type'] && rytkoset_theme_user_membership_is_active( $membership );
+	return rytkoset_theme_user_has_active_family_membership( $user_id );
 }
 
 /**
@@ -795,7 +911,7 @@ add_action( 'delete_user', 'rytkoset_theme_cleanup_family_links_on_user_delete' 
  * Returns effective membership details for the user.
  *
  * Own active membership wins. If the user has no active own membership, a linked family row can
- * provide benefits only while the primary account has an active `family` membership.
+ * provide benefits only while the primary account has an active family-benefit entitlement.
  *
  * @param int|null $user_id User ID. Defaults to the current user.
  * @return array{type:string,period:string,expires:string,source:string,primary_user_id:int}
@@ -828,12 +944,12 @@ function rytkoset_theme_get_effective_user_membership( $user_id = null ) {
 	if (
 		$primary_user_id <= 0
 		|| ! rytkoset_theme_family_primary_has_active_linked_user( $user_id, $primary_user_id )
-		|| ! rytkoset_theme_user_has_own_active_family_membership( $primary_user_id )
+		|| ! rytkoset_theme_user_has_active_family_membership( $primary_user_id )
 	) {
 		return $empty;
 	}
 
-	$primary_membership = rytkoset_theme_get_user_membership( $primary_user_id );
+	$primary_membership = rytkoset_theme_get_user_family_membership( $primary_user_id );
 
 	return $primary_membership + array(
 		'source'          => 'family',
@@ -1109,6 +1225,22 @@ function rytkoset_theme_validate_user_membership_profile_fields( $errors, $updat
 		return;
 	}
 
+	$family_period_field  = rytkoset_theme_get_family_membership_period_meta_key();
+	$family_expires_field = rytkoset_theme_get_family_membership_expires_meta_key();
+
+	if ( isset( $_POST[ $family_period_field ] ) || isset( $_POST[ $family_expires_field ] ) ) {
+		$raw_period  = isset( $_POST[ $family_period_field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $family_period_field ] ) ) : '';
+		$raw_expires = isset( $_POST[ $family_expires_field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $family_expires_field ] ) ) : '';
+
+		if ( '' !== $raw_period && '' === rytkoset_theme_sanitize_user_membership_period( $raw_period ) ) {
+			$errors->add( 'rytkoset_invalid_family_membership_period', __( 'Anna perhejäsenyyden jäsenkausi muodossa 2026-2029.', 'rytkoset-theme' ) );
+		}
+
+		if ( '' !== $raw_expires && '' === rytkoset_theme_sanitize_user_membership_expires( $raw_expires ) ) {
+			$errors->add( 'rytkoset_invalid_family_membership_expiry', __( 'Anna perhejäsenyyden voimassaolopäivä muodossa pp.kk.vvvv.', 'rytkoset-theme' ) );
+		}
+	}
+
 	if ( ! isset( $_POST['rytkoset_family_members'] ) ) {
 		return;
 	}
@@ -1149,13 +1281,17 @@ function rytkoset_theme_render_user_membership_fields( $user ) {
 		(string) get_user_meta( $user->ID, rytkoset_theme_get_user_membership_type_meta_key(), true )
 	);
 
-	$period          = (string) get_user_meta( $user->ID, rytkoset_theme_get_user_membership_period_meta_key(), true );
-	$expires         = (string) get_user_meta( $user->ID, rytkoset_theme_get_user_membership_expires_meta_key(), true );
-	$expires_display = rytkoset_theme_get_user_membership_expires_display( $expires );
+	$period                 = (string) get_user_meta( $user->ID, rytkoset_theme_get_user_membership_period_meta_key(), true );
+	$expires                = (string) get_user_meta( $user->ID, rytkoset_theme_get_user_membership_expires_meta_key(), true );
+	$expires_display        = rytkoset_theme_get_user_membership_expires_display( $expires );
+	$family_membership      = rytkoset_theme_get_user_family_membership( $user->ID );
+	$family_expires_display = rytkoset_theme_get_user_membership_expires_display( $family_membership['expires'] );
 
-	$type_field    = rytkoset_theme_get_user_membership_type_meta_key();
-	$period_field  = rytkoset_theme_get_user_membership_period_meta_key();
-	$expires_field = rytkoset_theme_get_user_membership_expires_meta_key();
+	$type_field           = rytkoset_theme_get_user_membership_type_meta_key();
+	$period_field         = rytkoset_theme_get_user_membership_period_meta_key();
+	$expires_field        = rytkoset_theme_get_user_membership_expires_meta_key();
+	$family_period_field  = rytkoset_theme_get_family_membership_period_meta_key();
+	$family_expires_field = rytkoset_theme_get_family_membership_expires_meta_key();
 
 	wp_nonce_field(
 		rytkoset_theme_get_user_membership_nonce_action( $user->ID ),
@@ -1204,9 +1340,36 @@ function rytkoset_theme_render_user_membership_fields( $user ) {
 		</tr>
 	</table>
 
+	<h3><?php esc_html_e( 'Perhejäsenyyden jakamisoikeus', 'rytkoset-theme' ); ?></h3>
+	<p class="description">
+		<?php esc_html_e( 'Määrää, kuinka kauan päätilin perheenjäsenet saavat jäsenetuja. Tämä on erillinen päätilin omasta jäsenyydestä, joten esimerkiksi ainaisjäsenyys säilyy pysyvänä perhejäsenyyden rinnalla.', 'rytkoset-theme' ); ?>
+	</p>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th>
+				<label for="<?php echo esc_attr( $family_period_field ); ?>"><?php esc_html_e( 'Perhejäsenyyden kausi', 'rytkoset-theme' ); ?></label>
+			</th>
+			<td>
+				<input type="text" name="<?php echo esc_attr( $family_period_field ); ?>" id="<?php echo esc_attr( $family_period_field ); ?>"
+					value="<?php echo esc_attr( $family_membership['period'] ); ?>" class="regular-text" placeholder="2026-2029" pattern="\d{4}-\d{4}" />
+				<p class="description"><?php esc_html_e( 'Jätä molemmat perhejäsenyyden kentät tyhjiksi, jos päätilillä ei ole oikeutta jakaa perhejäsenetuja.', 'rytkoset-theme' ); ?></p>
+			</td>
+		</tr>
+		<tr>
+			<th>
+				<label for="<?php echo esc_attr( $family_expires_field ); ?>"><?php esc_html_e( 'Perhejäsenyys voimassa asti', 'rytkoset-theme' ); ?></label>
+			</th>
+			<td>
+				<input type="text" name="<?php echo esc_attr( $family_expires_field ); ?>" id="<?php echo esc_attr( $family_expires_field ); ?>"
+					value="<?php echo esc_attr( $family_expires_display ); ?>" class="regular-text" placeholder="pp.kk.vvvv" inputmode="numeric" autocomplete="off" />
+				<p class="description"><?php esc_html_e( 'Perheenjäsenten perityt edut ovat voimassa tähän päivään asti.', 'rytkoset-theme' ); ?></p>
+			</td>
+		</tr>
+	</table>
+
 	<h3><?php esc_html_e( 'Perhejäsenet', 'rytkoset-theme' ); ?></h3>
 	<p class="description">
-		<?php esc_html_e( 'Perhejäsenlistaa käytetään vain, kun päätilillä on aktiivinen perhejäsenyys. Linkitetty käyttäjä saa jäsenedut päätilin kautta vain, kun rivin tila on aktiivinen.', 'rytkoset-theme' ); ?>
+		<?php esc_html_e( 'Perhejäsenlistaa käytetään vain, kun päätilillä on aktiivinen perhejäsenyyden jakamisoikeus. Linkitetty käyttäjä saa jäsenedut päätilin kautta vain, kun rivin tila on aktiivinen.', 'rytkoset-theme' ); ?>
 	</p>
 	<table class="widefat striped" role="presentation">
 		<thead>
@@ -1328,6 +1491,16 @@ function rytkoset_theme_save_user_membership_fields( $user_id ) {
 			update_user_meta( $user_id, $period_field, $period );
 			update_user_meta( $user_id, $expires_field, $expires );
 		}
+	}
+
+	$family_period_field  = rytkoset_theme_get_family_membership_period_meta_key();
+	$family_expires_field = rytkoset_theme_get_family_membership_expires_meta_key();
+
+	if ( isset( $_POST[ $family_period_field ] ) || isset( $_POST[ $family_expires_field ] ) ) {
+		$family_period  = isset( $_POST[ $family_period_field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $family_period_field ] ) ) : '';
+		$family_expires = isset( $_POST[ $family_expires_field ] ) ? sanitize_text_field( wp_unslash( $_POST[ $family_expires_field ] ) ) : '';
+
+		rytkoset_theme_update_user_family_membership( $user_id, $family_period, $family_expires );
 	}
 
 	if ( isset( $_POST['rytkoset_family_members'] ) ) {

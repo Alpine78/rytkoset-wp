@@ -784,6 +784,51 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 10, $membership['primary_user_id'] );
 	}
 
+	public function test_lifetime_primary_can_share_separate_time_bound_family_membership(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+		update_user_meta( 10, rytkoset_theme_get_user_membership_type_meta_key(), 'lifetime' );
+
+		$this->assertTrue( rytkoset_theme_update_user_family_membership( 10, '2026-2029', '2029-12-31' ) );
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				10,
+				array(
+					array(
+						'name'           => 'Lapsi',
+						'linked_user_id' => 20,
+						'status'         => 'active',
+					),
+				)
+			)
+		);
+
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 10 )['type'] );
+		$this->assertSame( '2026-2029', rytkoset_theme_get_user_family_membership( 10 )['period'] );
+		$this->assertTrue( rytkoset_theme_user_has_active_family_membership( 10 ) );
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 20 ) );
+		$this->assertSame( '2029-12-31', rytkoset_theme_get_effective_user_membership( 20 )['expires'] );
+
+		$GLOBALS['rytkoset_test_now'] = '2030-01-01';
+		$this->assertFalse( rytkoset_theme_user_has_active_family_membership( 10 ) );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 20 ) );
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 10 ) );
+		$this->assertSame( 'lifetime', rytkoset_theme_get_effective_user_membership( 10 )['type'] );
+	}
+
+	public function test_existing_family_primary_is_a_compatible_family_entitlement(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
+		$this->seed_time_bound( 10, 'family', '2026-2029', '2029-12-31' );
+
+		$this->assertSame(
+			rytkoset_theme_get_user_membership( 10 ),
+			rytkoset_theme_get_user_family_membership( 10 )
+		);
+		$this->assertTrue( rytkoset_theme_user_has_active_family_membership( 10 ) );
+	}
+
 	public function test_effective_membership_does_not_inherit_expired_or_non_family_primary(): void {
 		$GLOBALS['rytkoset_test_now'] = '2030-01-01';
 		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
