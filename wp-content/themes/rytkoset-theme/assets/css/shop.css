@@ -1423,6 +1423,15 @@ body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block
   color: var(--color-text);
 }
 
+/* The primary member is the authenticated account, not an editable family row. */
+#order.wc-block-components-address-form input[data-rytkoset-account-field="true"] {
+  background: var(--color-surface-muted);
+  border-color: var(--color-border-neutral);
+  color: var(--color-text-mute);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
 /* New-row entrance. */
 @media (prefers-reduced-motion: no-preference) {
   #order.wc-block-components-address-form > [class*="address-form__rytkoset-member_"] {
