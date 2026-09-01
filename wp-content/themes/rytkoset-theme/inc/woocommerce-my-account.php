@@ -529,9 +529,11 @@ if ( ! function_exists( 'rytkoset_theme_get_account_membership_view_data' ) ) {
 		$effective_membership = rytkoset_theme_get_effective_user_membership( $user_id );
 		$is_inherited         = 'family' === $effective_membership['source'];
 		$display_membership   = $is_inherited ? $effective_membership : $own_membership;
+		$family_membership    = rytkoset_theme_get_user_family_membership( $user_id );
+		$is_family_primary    = 'family' === $family_membership['type'];
 		$family_members       = array();
 
-		if ( 'family' === $own_membership['type'] ) {
+		if ( $is_family_primary ) {
 			foreach ( rytkoset_theme_get_family_members( $user_id ) as $index => $member ) {
 				if ( 'removed' !== $member['status'] ) {
 					// Preserve the original list index (not a sequential rebuild) so the
@@ -550,10 +552,12 @@ if ( ! function_exists( 'rytkoset_theme_get_account_membership_view_data' ) ) {
 			'effective_membership' => $effective_membership,
 			'display_membership'   => $display_membership,
 			'status'               => rytkoset_theme_get_account_membership_status( $display_membership ),
+			'family_membership'    => $family_membership,
+			'family_status'        => rytkoset_theme_get_account_membership_status( $family_membership ),
 			'is_inherited'         => $is_inherited,
 			'primary_user'         => $primary_user instanceof WP_User ? $primary_user : null,
 			'family_members'       => $family_members,
-			'is_family_primary'    => 'family' === $own_membership['type'],
+			'is_family_primary'    => $is_family_primary,
 		);
 	}
 }
@@ -763,7 +767,7 @@ if ( ! function_exists( 'rytkoset_theme_handle_account_membership_family_submit'
 		$user         = wp_get_current_user();
 
 		if ( ! is_user_logged_in() || ! $user instanceof WP_User
-			|| 'family' !== rytkoset_theme_get_user_membership( $user->ID )['type']
+			|| 'family' !== rytkoset_theme_get_user_family_membership( $user->ID )['type']
 		) {
 			wc_add_notice( __( 'Perheenjäseniä voi muokata vain perhejäsenyyden päätili.', 'rytkoset-theme' ), 'error' );
 			wp_safe_redirect( $redirect_url );
@@ -893,9 +897,24 @@ if ( ! function_exists( 'rytkoset_theme_render_account_membership_endpoint' ) ) 
 			<?php
 			$membership_url = rytkoset_theme_get_account_membership_url();
 			$editing_index  = rytkoset_theme_get_account_membership_editing_row_index();
+			$family_status  = $data['family_status'];
+			$family_expires = rytkoset_theme_get_user_membership_expires_display( $data['family_membership']['expires'] );
 			?>
 			<section class="rytkoset-account-family" aria-labelledby="rytkoset-family-title">
 				<h3 id="rytkoset-family-title" class="rytkoset-account-family__title"><?php esc_html_e( 'Perheenjäsenet', 'rytkoset-theme' ); ?></h3>
+				<p class="rytkoset-account-family__empty">
+					<?php
+					echo esc_html(
+						'' !== $family_expires
+							? sprintf(
+								/* translators: %s: family-benefit expiry date. */
+								__( 'Perheenjäsenten jäsenedut ovat voimassa %s asti.', 'rytkoset-theme' ),
+								$family_expires
+							)
+							: $family_status['description']
+					);
+					?>
+				</p>
 
 				<?php if ( ! empty( $data['family_members'] ) ) : ?>
 					<div class="rytkoset-family-rows">

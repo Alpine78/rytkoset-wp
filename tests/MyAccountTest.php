@@ -244,6 +244,31 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'Odottaa tiliä', $data['family_members'][0]['name'] );
 	}
 
+	public function test_lifetime_member_with_family_entitlement_is_family_primary(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
+		rytkoset_test_register_user( 10, 'primary@example.test', 'Perheen Päätili' );
+		update_user_meta( 10, rytkoset_theme_get_user_membership_type_meta_key(), 'lifetime' );
+		rytkoset_theme_update_user_family_membership( 10, '2026-2029', '2029-08-31' );
+		rytkoset_theme_update_family_members(
+			10,
+			array(
+				array(
+					'name'   => 'Odottaa tiliä',
+					'email'  => 'pending@example.test',
+					'status' => 'pending_account',
+				),
+			)
+		);
+
+		$data = rytkoset_theme_get_account_membership_view_data( 10 );
+
+		$this->assertTrue( $data['is_family_primary'] );
+		$this->assertSame( 'lifetime', $data['display_membership']['type'] );
+		$this->assertSame( 'family', $data['family_membership']['type'] );
+		$this->assertTrue( $data['family_status']['active'] );
+		$this->assertCount( 1, $data['family_members'] );
+	}
+
 	public function test_family_primary_view_preserves_original_row_index_after_filtering_removed(): void {
 		rytkoset_test_register_user( 10, 'primary@example.test', 'Perheen Päätili' );
 		update_user_meta( 10, rytkoset_theme_get_user_membership_type_meta_key(), 'family' );

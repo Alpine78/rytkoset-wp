@@ -193,7 +193,7 @@ function rytkoset_theme_get_membership_overview_rows() {
 			);
 		}
 
-		$primary_membership = $membership;
+		$primary_membership = rytkoset_theme_get_user_family_membership( $user->ID );
 		foreach ( rytkoset_theme_get_family_members( $user->ID ) as $family_member ) {
 			if ( 'removed' === $family_member['status'] ) {
 				continue;
@@ -201,9 +201,7 @@ function rytkoset_theme_get_membership_overview_rows() {
 
 			$linked_user      = $family_member['linked_user_id'] > 0 ? get_userdata( $family_member['linked_user_id'] ) : false;
 			$is_linked        = 'active' === $family_member['status'] && $linked_user instanceof WP_User;
-			$inherited_status = 'family' === $primary_membership['type']
-				? rytkoset_theme_get_membership_overview_status( $primary_membership, $today )
-				: 'incomplete';
+			$inherited_status = rytkoset_theme_get_membership_overview_status( $primary_membership, $today );
 			$rows[]           = array(
 				'name'            => $is_linked ? $linked_user->display_name : $family_member['name'],
 				'email'           => $is_linked ? $linked_user->user_email : $family_member['email'],

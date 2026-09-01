@@ -61,10 +61,17 @@ kunnes ylläpitäjä päivittää sen.
 
 ## Perhejäsenyyden perherakenne (#524)
 
-Perhejäsenyyden **päätili** on tavallinen WordPress-käyttäjä, jonka oma
-jäsenyyden tyyppi on **Perhejäsen** ja jonka voimassaolopäivä on edelleen
-voimassa. Päätilin profiilin Jäsenyys-osiossa on lisäksi **Perhejäsenet**
--taulukko.
+Perhejäsenyyden **päätili** on tavallinen WordPress-käyttäjä, jolla on
+määräaikainen **perhejäsenyyden jakamisoikeus**. Jakamisoikeus tallennetaan
+erilleen päätilin omasta jäsenyydestä, joten päätili voi olla esimerkiksi
+ainaisjäsen ja jakaa samalla perheenjäsenille määräaikaisia etuja. Päätilin
+profiilin Jäsenyys-osiossa ovat erilliset perhejäsenyyden kausi- ja
+voimassaolokentät sekä **Perhejäsenet**-taulukko.
+
+Ennen tikettiä #661 tallennetuilla päätilillä ei ole erillisiä perhejäsenyyden
+metoja. Niillä oma aktiivinen `family`-jäsenyys toimii yhteensopivuuspolkuna.
+Kun tällainen profiili avataan ylläpidossa, vanha kausi ja päättymispäivä
+näytetään valmiiksi myös erillisissä perhejäsenyyden kentissä.
 
 Perhejäsenrivi sisältää:
 
@@ -133,13 +140,13 @@ Uusi tallennus korvaa vanhentuneen viittauksen.
 -portti. Se palauttaa `true`, jos käyttäjällä on:
 
 1. oma aktiivinen jäsenyys, tai
-2. aktiivinen perhejäsenrivi päätilillä, jonka oma jäsenyys on aktiivinen
-   `family`.
+2. aktiivinen perhejäsenrivi päätilillä, jonka erillinen perhejäsenyyden
+   jakamisoikeus on aktiivinen.
 
 Peritty jäsenetu ei kopioi voimassaoloa perheenjäsenen omaan
-`rytkoset_membership_*`-metaan. Jos päätilin perhejäsenyys vanhenee, puuttuu tai
-ei ole tyyppiä `family`, linkitetty perheenjäsen ei saa jäsenetuja päätilin
-kautta.
+`rytkoset_membership_*`-metaan. Jos päätilin perhejäsenyyden jakamisoikeus
+vanhenee tai puuttuu, linkitetty perheenjäsen ei saa jäsenetuja päätilin kautta.
+Päätilin oma jäsenyys voi silti jatkua esimerkiksi pysyvänä ainaisjäsenyytenä.
 
 Kun koodin pitää tarkistaa vain käyttäjän omaa jäsenyyttä, käytetään
 `rytkoset_theme_user_has_own_active_membership( $user_id )`. Tätä käytetään
@@ -216,6 +223,8 @@ Käyttäjämeta-avaimet (ilman alaviivaa, erotuksena WooCommerce-jäsenmaksutuot
 - `rytkoset_membership_type` — `''` | `annual` | `family` | `lifetime`
 - `rytkoset_membership_period` — esim. `2026-2029`
 - `rytkoset_membership_expires` — tallennetaan ISO-muodossa `2029-12-31` (ylläpidossa syötetään ja näytetään suomalaisena `pp.kk.vvvv`)
+- `rytkoset_family_membership_period` — päätilin erillisen perhejäsenyyden kausi
+- `rytkoset_family_membership_expires` — päivä, johon asti päätili jakaa perheenjäsenetuja
 - `rytkoset_family_members` — päätilin normalisoitu perhejäsenlista
 - `rytkoset_family_primary_user_id` — linkitetyn perheenjäsenen viittaus
   päätiliin
@@ -228,30 +237,42 @@ päivittyvät automaattisesti samaan user meta -rakenteeseen kuin manuaalinen
 ylläpitonäkymä. Logiikka on moduulissa
 [`inc/woocommerce-membership.php`](../wp-content/themes/rytkoset-theme/inc/woocommerce-membership.php).
 
+Uuden jäsenmaksuoston tekeminen vaatii kirjautuneen käyttäjätilin. Kirjautunut
+WordPress-käyttäjä / WooCommerce-asiakas on jäsenyyden yksiselitteinen omistaja
+ja perhejäsenyyden päätili. Laskutussähköpostin muuttaminen ei vaihda päätiliä.
+Jäsenen 1 nimi ja sähköposti näytetään kassalla käyttäjätililtä luettuina mutta
+disabled-tilassa, joten ostaja ei voi vaihtaa päätilin tunnistetietoja. Palvelin
+tarkistaa sähköpostin edelleen manipuloidun Store API -pyynnön varalta.
+
 **Mitä tapahtuu:**
 
 - Tuotteen jäsenyyden tyyppi (`annual_individual` → `annual`, `annual_family` → `family`, `lifetime` → `lifetime`) kirjataan käyttäjämetaan.
 - Jäsenkausi kopioidaan tuotteen `_rytkoset_membership_period`-metasta (esim. `2026-2029`).
 - Voimassaolopäivä luetaan tuotteelle asetetusta **Jäsenyys voimassa asti** -kentästä (`_rytkoset_membership_expiry_date`, yleensä kauden sukukokouksen päivä). Ylläpitäjä asettaa tämän kentän jäsenmaksutuotteelle.
 - Ainaisjäseneltä poistetaan jäsenkausi ja voimassaolopäivä.
+- Perhejäsenmaksu tallentaa lisäksi päätilille erillisen perhejäsenyyden kauden
+  ja voimassaolopäivän. Jos päätilin oma jäsenyys on jo ainaisjäsenyys, sitä ei
+  korvata: vain määräaikainen perhe-etu ja perherivit päivitetään.
 - Kuittaussähköposti lähtee, jos jäsenyys muuttuu ei-aktiivisesta aktiiviseksi.
 
 **Erityistilanteet:**
 
 - **Idempotenssi:** tilaus käsitellään vain kerran, vaikka status muuttuisi useamman kerran. Käyttäjään yhdistetty tilaus saa aikaleiman `_rytkoset_membership_order_processed`; ilman tiliä jäänyt tilaus merkitään sen sijaan odottamaan tilikytkentää (ks. seuraava kohta).
-- **Ei käyttäjää (#518):** vierasostos, jonka laskutussähköpostilla ei ole tiliä, jää odottamaan tilikytkentää (order meta `_rytkoset_membership_awaiting_account`, `processed`-metaa ei aseteta). Ostajalle lähetetään laskutussähköpostiin suomenkielinen "luo tili" -viesti (kertaalleen per tilaus, merkintä `_rytkoset_membership_account_notice_sent`): jäsenmaksu on vastaanotettu, jäsenedut vaativat tilin ja tili kannattaa luoda samalla sähköpostiosoitteella, jolloin jäsenyys aktivoituu automaattisesti. Tilaukseen kirjataan aina myös muistiinpano ylläpitäjälle; jos laskutussähköposti puuttuu tai on epäkelpo, viestiä ei lähetetä ja jäljelle jää vain muistiinpano.
+- **Kirjautumaton käyttäjä (#661):** jäsenmaksutuotetta ei voi lisätä ostoskoriin ennen kirjautumista tai tilin luontia. Myös vanhasta istunnosta palautunut jäsenmaksukori estetään ostoskori-/kassavalidoinnissa. #518:n vierastilauksen odotustilalogiikka säilyy vain ennen #661:tä syntyneiden tilausten yhteensopivuus- ja korjauspolkuna.
 - **Jäsenyyttä ei lyhennetä:** jos käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys (ainaisjäsen, tai aktiivinen määräaikainen jäsenyys jonka voimassaolopäivä on sama tai myöhäisempi), ostoa ei sovelleta ja tilaukseen kirjataan muistiinpano. Tämä estää vahingossa ostetun lyhyemmän jäsenyyden lyhentämästä voimassa olevaa jäsenyyttä.
 - **Peritty perhejäsenyys ei estä omaa ostoa:** jos perheenjäsen ostaa oman
   jäsenyyden, tilauspolku vertaa vain käyttäjän omaa jäsenyyttä. Peritty active
   member -tila ei estä oman jäsenyyden tallennusta eikä kuittausviestiä.
 - **Puuttuva tyyppi:** jos jäsenmaksutuotteelta puuttuu jäsenmaksun tyyppi, jäsenyyttä ei voida määrittää ja tilaukseen kirjataan muistiinpano ylläpitäjälle.
-- **Puuttuva voimassaolopäivä:** jos vuosi-/perhejäsentuotteelta puuttuu **Jäsenyys voimassa asti** -päivä, jäsenyyttä ei voida aktivoida. Tyyppi tallennetaan, mutta jäsenyys ei aktivoidu (fail closed) eikä kuittaussähköpostia lähetetä; tilaukseen kirjataan muistiinpano, jossa pyydetään asettamaan voimassaolopäivä käyttäjähallinnassa.
+- **Puuttuva voimassaolopäivä:** puutteellista vuosi-/perhejäsentuotetta ei voi julkaista tai ostaa. Jos puutteellinen metadata havaitaan jo maksetulla tilauksella, käyttäjämetaa tai käsittelymerkintää ei kirjoiteta; tilaus jää korjauksen jälkeen uudelleen käsiteltäväksi.
 
 Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
 
-## Automaattinen kytkentä tilin luonnin yhteydessä (#518)
+## Vanhojen vierastilausten kytkentä tilin luonnissa (#518, rajattu #661)
 
-Kun uusi käyttäjätili luodaan (`user_register`-hook), teema etsii käyttäjän
+Uusia jäsenmaksuostoja ei voi tehdä vieraana. Ennen #661:tä syntyneitä
+vierastilauksia varten `user_register`-yhteensopivuuspolku säilyy: kun uusi
+käyttäjätili luodaan, teema etsii käyttäjän
 sähköpostilla maksetut (`processing`/`completed`) jäsenmaksutilaukset, jotka
 odottavat tilikytkentää, ja ajaa niille saman jäsenyyden sovelluslogiikan kuin
 tilaussiirtymissä. Käytännössä: vierasostaja, joka sai "luo tili" -viestin ja
@@ -274,11 +295,11 @@ Huomioita:
 ## Perhejäsenmaksun jäsenrivien automaattinen käsittely (#519)
 
 Kun `annual_family`-jäsenmaksutilaus saavuttaa tilan `processing` tai
-`completed`, jäsenrivit käsitellään ostajan päätilin alle. Päätili ratkaistaan
-samalla tavalla kuin ostajan jäsenyys (`#518`): ensisijaisesti tilauksen
-käyttäjästä ja vierastilauksella laskutussähköpostia vastaavasta tilistä.
-Jos päätiliä ei vielä ole, perherivejä ei tallenneta ennen kuin ostaja luo tilin
-samalla sähköpostilla.
+`completed`, jäsenrivit käsitellään ostajan päätilin alle. Uudella ostolla
+päätili on aina kirjautunut, tilaukseen kytketty käyttäjä. Jäsenen 1 tai
+laskutuksen sähköpostilla ei voi valita toista päätiliä. Ennen #661:tä
+syntyneillä vierastilauksilla säilyy #518:n yhteensopivuuspolku, joka odottaa
+laskutussähköpostia vastaavan tilin luontia.
 
 Ennen tallennusta sähköpostit normalisoidaan pieniksi kirjaimiksi ja
 deduplikoidaan. Ostajan laskutus-/tilisähköpostia vastaava jäsenrivi ohitetaan,
@@ -310,14 +331,52 @@ rivien vanha tilauspolku säilyy varmistuksena, mutta sen `wc_get_orders()`-haku
 rajataan jo käsiteltyihin perhetilauksiin
 (`_rytkoset_family_members_processed`), joten rekisteröityminen ei lataa koko
 maksettujen tilausten historiaa. Rivi muutetaan `active`-tilaan ja linkitetään
-käyttäjään. Jäsenetu johdetaan edelleen päätilin aktiivisesta
-`family`-jäsenyydestä; perheenjäsenen omaa `rytkoset_membership_*`-metaa ei
-muuteta. Jos käyttäjällä on oma voimassa oleva tai ainaisjäsenyys, effective
-membership valitsee oman jäsenyyden.
+käyttäjään. Jäsenetu johdetaan päätilin erillisestä aktiivisesta
+perhejäsenyyden jakamisoikeudesta; perheenjäsenen omaa
+`rytkoset_membership_*`-metaa ei muuteta. Jos käyttäjällä on oma voimassa oleva
+tai ainaisjäsenyys, effective membership valitsee oman jäsenyyden.
 
 Jos sähköpostia vastaava käyttäjätili kuuluu jo toiseen perheeseen, yhteinen
 validaattori estää uuden linkityksen. Linkkiä ei siirretä automaattisesti, vaan
 vanha perhelinkitys pitää poistaa ensin.
+
+## #661:n tuotantotietojen korjaus
+
+Ota tietokannasta varmuuskopio ennen korjausta. Älä tyhjennä tilauksen
+`_rytkoset_membership_order_processed`-, `_rytkoset_family_members_processed`-
+tai viestien deduplikointimetoja: profiilien korjaus ei vaadi tilauksen
+uudelleenkäsittelyä, ja metojen tyhjentäminen voisi lähettää viestejä uudelleen.
+
+### Ainaisjäsen, joka osti perhejäsenyyden
+
+1. Avaa oikea käyttäjä kohdassa **Käyttäjät → Muokkaa**.
+2. Vaihda käyttäjän omaksi jäsenyydeksi **Ainaisjäsen**. Oman jäsenkauden ja
+   päättymispäivän pitää tällöin tyhjentyä.
+3. Säilytä **Perhejäsenyyden jakamisoikeus** -kentissä ostetun kauden tiedot
+   (esimerkiksi `2026-2029` ja `31.08.2029`). Vanhan `family`-jäsenyyden arvot
+   näkyvät näissä kentissä valmiina.
+4. Säilytä Perhejäsenet-taulukon rivit ja tallenna profiili.
+5. Varmista **Verkkojäsenyydet**-näkymästä, että päätili näkyy ainaisjäsenenä ja
+   perheenjäsenet saavat määräaikaisen perhejäsenyyden.
+
+### Tilaus ja perhelinkit väärällä kaksoistilillä
+
+1. Tarkista väärän ja oikean käyttäjätilin kaikki tilaukset, jäsenyystiedot ja
+   muut käyttäjäkohtaiset tiedot. Ota talteen perhejäsenyyden kausi,
+   päättymispäivä ja aktiiviset perherivit.
+2. Avaa ensin **väärä päätili**. Merkitse sen aktiiviset perherivit poistetuiksi
+   tai tyhjennä ne ja tallenna, jotta reverse-linkit irtoavat. Tyhjennä samalla
+   sekä oma jäsenyys että perhejäsenyyden jakamisoikeuden molemmat kentät.
+3. Avaa **oikea päätili**. Aseta sen oma jäsenyys tarvittaessa perhejäseneksi,
+   aseta erillinen perhejäsenyyden kausi ja päättymispäivä sekä lisää talteen
+   otetut perherivit. Sähköpostilla olemassa olevat käyttäjät linkittyvät
+   tallennuksessa uudelleen oikeaan päätiliin.
+4. Vaihda WooCommerce-tilauksen **Asiakas** oikeaksi käyttäjäksi ja tallenna
+   tilaus. Älä muuta tilauksen tilaa äläkä poista käsittelymerkintöjä.
+5. Varmista oikealla tilillä **Oma tili → Jäsenyys**, perheenjäsenen kirjautunut
+   jäsenetu ja **Käyttäjät → Verkkojäsenyydet**.
+6. Poista väärä kaksoistili vasta, kun on varmistettu, ettei sillä ole muita
+   säilytettäviä tilauksia tai tietoja.
 
 ## Jäsenten aktivointityökalu (#525)
 
@@ -410,6 +469,8 @@ Näkymä näyttää:
 - ainaisjäsenyyden pysyvänä ilman päättymispäivää
 - linkitetylle perheenjäsenelle effective membership -tilan ja hänen
   perhejäsenyytensä päätilin
+- päätilille erillisen perhejäsenyyden jakamisoikeuden voimassaolon, vaikka
+  päätilin oma jäsenyys olisi ainaisjäsenyys
 - päätilille aktiiviset ja käyttäjätiliä odottavat perheenjäsenrivit; historialliset
   `removed`-rivit jätetään käyttäjän näkymästä pois.
 
@@ -474,9 +535,9 @@ Toteutus (`inc/woocommerce-my-account.php`):
   rakentaa kandidaattilistan ilman sivuvaikutuksia; lopullinen tallennus ja
   validointi (duplikaattisähköposti/-käyttäjä, itselinkitys, jo-linkitetty-
   toisaalle) tapahtuu aina `rytkoset_theme_update_family_members()`-kutsussa.
-- Toiminto sallitaan vain, jos kirjautuneen käyttäjän **oma** jäsenyystyyppi on
-  `family` (ei riitä, että käyttäjä saisi perhejäsenedut jonkun toisen
-  päätilin kautta).
+- Toiminto sallitaan vain, jos kirjautuneella käyttäjällä on oma
+  perhejäsenyyden jakamisoikeus (erillinen #661-meta tai vanhan mallin oma
+  `family`-jäsenyys). Toisen päätilin kautta peritty etu ei riitä.
 
 ## Rajaus
 
@@ -492,9 +553,9 @@ Näkymä ei ole virallinen tai täydellinen jäsenrekisteri. Henkilö ei näy si
 
 Koontia voi hakea nimellä tai sähköpostilla sekä suodattaa tilan ja jäsenyyden tyypin mukaan. Tila tarkoittaa:
 
-- **Aktiivinen:** jäsenyys tai päätilin perhejäsenyys on voimassa.
+- **Aktiivinen:** oma jäsenyys tai päätilin perhejäsenyyden jakamisoikeus on voimassa.
 - **Vanhentunut:** määräaikaisen jäsenyyden voimassaolopäivä on mennyt.
-- **Puutteellinen:** määräaikaiselta jäsenyydeltä puuttuu kelvollinen voimassaolopäivä tai perhelinkin päätilillä ei ole perhejäsenyyttä.
+- **Puutteellinen:** määräaikaiselta jäsenyydeltä puuttuu kelvollinen voimassaolopäivä tai perhelinkin päätilillä ei ole kelvollista perhejäsenyyden jakamisoikeutta.
 - **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin luonnin jälkeen.
 
 Nimi- ja päätililinkit avaavat käyttäjäprofiilin. Jäsenten aktivointi -lähdelinkki avaa aktivointityökalun, jossa odottavaa jäsenyyttä voi käsitellä.

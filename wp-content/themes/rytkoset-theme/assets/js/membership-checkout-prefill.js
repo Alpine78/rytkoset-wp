@@ -1,16 +1,15 @@
 /**
- * Member row 1 checkout prefill (#521).
+ * Member row 1 account-field synchronization (#521, #661).
  *
- * Suggests the logged-in buyer's own name and email for member row 1 in the
- * WooCommerce Block Checkout. Only fields that are empty are ever filled, so
- * values the buyer has edited (or that were already saved on the checkout
- * draft order) are never overwritten.
+ * Keeps the logged-in buyer's own name and email as the authoritative values
+ * for member row 1 in the WooCommerce Block Checkout. The rendered inputs are
+ * visible but disabled; the values remain in the checkout data store so the
+ * Store API still receives required member fields.
  *
  * The checkout block can asynchronously refresh its store after mounting
  * (e.g. right after a cart change), which resets additional fields and would
- * wipe a single one-shot fill. The fill therefore keeps re-applying to fields
- * that are still empty during a short startup window, and stops permanently
- * as soon as the buyer interacts with a member 1 field.
+ * wipe a single one-shot update. Synchronization therefore keeps re-applying
+ * the account values during a short startup window.
  */
 (function () {
   const prefill = window.rytkosetMembershipPrefill;
@@ -22,24 +21,12 @@
   if (!fieldIds.length) return;
 
   const inputId = (fieldId) => 'order-' + fieldId.replace(/\//g, '-');
-  const inputIds = fieldIds.map(inputId);
   const deadline = Date.now() + 15000;
   let timer = 0;
 
   const stop = () => window.clearInterval(timer);
 
-  // The buyer touched a member 1 field: it is theirs now, never fill again.
-  document.addEventListener(
-    'input',
-    (event) => {
-      if (event.isTrusted && event.target && inputIds.indexOf(event.target.id) !== -1) {
-        stop();
-      }
-    },
-    true
-  );
-
-  timer = window.setInterval(() => {
+  const synchronize = () => {
     if (Date.now() > deadline) {
       stop();
       return;
@@ -56,13 +43,24 @@
     const updates = {};
     fieldIds.forEach((fieldId) => {
       const input = document.getElementById(inputId(fieldId));
-      if (!fields[fieldId] && input && !input.value) {
+
+      if (fields[fieldId] !== prefill[fieldId]) {
         updates[fieldId] = prefill[fieldId];
+      }
+
+      if (input) {
+        input.readOnly = true;
+        input.disabled = true;
+        input.setAttribute('aria-disabled', 'true');
+        input.setAttribute('data-rytkoset-account-field', 'true');
       }
     });
 
     if (Object.keys(updates).length) {
       window.wp.data.dispatch('wc/store/checkout').setAdditionalFields(updates);
     }
-  }, 300);
+  };
+
+  synchronize();
+  timer = window.setInterval(synchronize, 300);
 })();
