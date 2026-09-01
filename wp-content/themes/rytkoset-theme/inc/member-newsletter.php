@@ -293,6 +293,8 @@ function rytkoset_theme_get_member_newsletter_affected_user_ids( $user_id, $meta
 		rytkoset_theme_get_user_membership_type_meta_key(),
 		rytkoset_theme_get_user_membership_period_meta_key(),
 		rytkoset_theme_get_user_membership_expires_meta_key(),
+		rytkoset_theme_get_family_membership_period_meta_key(),
+		rytkoset_theme_get_family_membership_expires_meta_key(),
 		rytkoset_theme_get_family_members_meta_key(),
 	);
 
@@ -322,6 +324,8 @@ function rytkoset_theme_sync_member_newsletter_on_user_meta_change( $meta_id, $u
 		rytkoset_theme_get_user_membership_type_meta_key(),
 		rytkoset_theme_get_user_membership_period_meta_key(),
 		rytkoset_theme_get_user_membership_expires_meta_key(),
+		rytkoset_theme_get_family_membership_period_meta_key(),
+		rytkoset_theme_get_family_membership_expires_meta_key(),
 		rytkoset_theme_get_family_members_meta_key(),
 		rytkoset_theme_get_family_primary_user_meta_key(),
 	);

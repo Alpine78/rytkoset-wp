@@ -194,12 +194,12 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 	// --- rytkoset_theme_chat_get_membership_context() ------------------------
 
 	public function test_membership_context_lists_only_published_membership_products(): void {
-		rytkoset_test_register_post( 20, 'product', 'Vuosijäsenyys' );
+		rytkoset_test_register_post( 20, 'product', 'Jäsenmaksu toimintakaudelle' );
 		update_post_meta( 20, '_rytkoset_membership_product', 'yes' );
 		rytkoset_test_register_product(
 			20,
 			'publish',
-			'Vuosijäsenyys',
+			'Jäsenmaksu toimintakaudelle',
 			array(
 				'_rytkoset_membership_product'     => 'yes',
 				'_rytkoset_membership_type'        => 'annual_individual',
@@ -219,7 +219,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 
 		$context = rytkoset_theme_chat_get_membership_context();
 
-		$this->assertStringContainsString( '- Vuosijäsenyys: 30 € (Vuosijäsen: Yksityishenkilö) — jäsenyys voimassa 12.7.2027 asti', $context );
+		$this->assertStringContainsString( '- Jäsenmaksu toimintakaudelle: 30 € (Jäsenmaksu toimintakaudelle: Henkilö) — jäsenyys voimassa 12.7.2027 asti', $context );
 		$this->assertStringNotContainsString( 'Luonnosjäsenyys', $context );
 		$this->assertStringNotContainsString( 'Sukukirja', $context );
 	}
@@ -341,7 +341,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 	public function test_shop_products_context_excludes_membership_products(): void {
 		$this->register_shop_product(
 			30,
-			'Vuosijäsenyys',
+			'Jäsenmaksu toimintakaudelle',
 			'publish',
 			array(
 				'_rytkoset_membership_product' => 'yes',
@@ -352,7 +352,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 
 		$context = rytkoset_theme_chat_get_shop_products_context();
 
-		$this->assertStringNotContainsString( 'Vuosijäsenyys', $context );
+		$this->assertStringNotContainsString( 'Jäsenmaksu toimintakaudelle', $context );
 		$this->assertStringContainsString( '- T-paita: 20 €', $context );
 	}
 
@@ -379,7 +379,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 	public function test_shop_products_context_empty_when_only_membership_products_exist(): void {
 		$this->register_shop_product(
 			30,
-			'Vuosijäsenyys',
+			'Jäsenmaksu toimintakaudelle',
 			'publish',
 			array(
 				'_rytkoset_membership_product' => 'yes',
@@ -423,7 +423,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 		update_post_meta( 30, '_rytkoset_membership_product', 'yes' );
 		$this->register_shop_product(
 			30,
-			'Vuosijäsenyys',
+			'Jäsenmaksu toimintakaudelle',
 			'publish',
 			array(
 				'_rytkoset_membership_product' => 'yes',
@@ -436,7 +436,7 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( 'Muut verkkokaupan tuotteet:', $context );
 		$this->assertStringContainsString( '- T-paita: 20 €', $context );
-		$this->assertSame( 1, substr_count( $context, 'Vuosijäsenyys' ) );
+		$this->assertSame( 1, substr_count( $context, 'Jäsenmaksu toimintakaudelle' ) );
 	}
 
 	public function test_live_context_omits_shop_products_section_when_empty(): void {

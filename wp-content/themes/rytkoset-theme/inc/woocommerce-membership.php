@@ -59,8 +59,8 @@ function rytkoset_theme_get_membership_expiry_date_meta_key() {
  */
 function rytkoset_theme_get_membership_type_options() {
 	return array(
-		'annual_individual' => __( 'Vuosijäsen: Yksityishenkilö', 'rytkoset-theme' ),
-		'annual_family'     => __( 'Vuosijäsen: Perhe', 'rytkoset-theme' ),
+		'annual_individual' => __( 'Jäsenmaksu toimintakaudelle: Henkilö', 'rytkoset-theme' ),
+		'annual_family'     => __( 'Jäsenmaksu toimintakaudelle: Perhe', 'rytkoset-theme' ),
 		'lifetime'          => __( 'Ainaisjäsen', 'rytkoset-theme' ),
 	);
 }
@@ -198,6 +198,26 @@ function rytkoset_theme_get_membership_product_purchase_block_message( $product 
 }
 
 /**
+ * Returns the customer-facing notice used when a guest tries to buy membership.
+ *
+ * Membership purchases are bound to the authenticated WordPress user, which is
+ * the only authoritative primary account (#661).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_login_required_message() {
+	$account_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : '';
+
+	return '' !== $account_url
+		? sprintf(
+			/* translators: %s: My Account login and registration URL. */
+			__( 'Jäsenmaksun ostaminen vaatii käyttäjätilin. Kirjaudu sisään tai luo tili ennen ostamista: %s', 'rytkoset-theme' ),
+			$account_url
+		)
+		: __( 'Jäsenmaksun ostaminen vaatii käyttäjätilin. Kirjaudu sisään tai luo tili ennen ostamista.', 'rytkoset-theme' );
+}
+
+/**
  * Returns the membership expiry date configured for a product, in ISO YYYY-MM-DD format.
  *
  * This is the date through which a membership bought via this product stays active (e.g. the
@@ -300,7 +320,7 @@ function rytkoset_theme_render_membership_product_fields() {
 			'label'       => __( 'Jäsenkausi', 'rytkoset-theme' ),
 			'placeholder' => '2026-2029',
 			'value'       => rytkoset_theme_get_membership_product_period( $product ),
-			'description' => __( 'Käytä vuosijäsenmaksuilla muotoa 2026-2029. Ainaisjäsenmaksulla kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
+			'description' => __( 'Käytä toimintakauden jäsenmaksuilla muotoa 2026-2029. Ainaisjäsenmaksulla kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
 			'desc_tip'    => true,
 		)
 	);
@@ -311,7 +331,7 @@ function rytkoset_theme_render_membership_product_fields() {
 			'label'       => __( 'Jäsenyys voimassa asti', 'rytkoset-theme' ),
 			'type'        => 'date',
 			'value'       => rytkoset_theme_get_membership_product_expiry_date( $product ),
-			'description' => __( 'Vuosi- ja perhejäsenmaksulle: päivä, johon asti ostettu jäsenyys on voimassa (yleensä seuraavan sukukokouksen päivä). Automaattinen jäsenyyspäivitys käyttää tätä päivää. Ainaisjäsenmaksulle kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
+			'description' => __( 'Toimintakauden henkilö- ja perhejäsenmaksulle: päivä, johon asti ostettu jäsenyys on voimassa (yleensä seuraavan sukukokouksen päivä). Automaattinen jäsenyyspäivitys käyttää tätä päivää. Ainaisjäsenmaksulle kentän voi jättää tyhjäksi.', 'rytkoset-theme' ),
 			'desc_tip'    => true,
 		)
 	);
@@ -320,7 +340,7 @@ function rytkoset_theme_render_membership_product_fields() {
 		array(
 			'id'          => rytkoset_theme_get_member_names_required_meta_key(),
 			'label'       => __( 'Vaatii jäsenten nimet kassalla', 'rytkoset-theme' ),
-			'description' => __( 'Näyttää kassalla rakenteiset kentät jäsenten nimille ja sähköposteille. Perhejäsenmaksulla (tyyppi: Vuosijäsen: Perhe) kenttiä näytetään useita.', 'rytkoset-theme' ),
+			'description' => __( 'Näyttää kassalla rakenteiset kentät jäsenten nimille ja sähköposteille. Perhejäsenmaksulla (tyyppi: Jäsenmaksu toimintakaudelle: Perhe) kenttiä näytetään useita.', 'rytkoset-theme' ),
 			'value'       => $product->get_meta( rytkoset_theme_get_member_names_required_meta_key(), true ),
 		)
 	);
@@ -404,9 +424,19 @@ function rytkoset_theme_validate_membership_product_add_to_cart( $passed, $produ
 	$product = function_exists( 'wc_get_product' ) ? wc_get_product( $product_id ) : null;
 	$message = rytkoset_theme_get_membership_product_purchase_block_message( $product );
 
-	if ( '' === $message ) {
+	if ( '' !== $message ) {
+		if ( function_exists( 'wc_add_notice' ) && ! wc_has_notice( $message, 'error' ) ) {
+			wc_add_notice( $message, 'error' );
+		}
+
+		return false;
+	}
+
+	if ( ! rytkoset_theme_is_membership_product( $product ) || is_user_logged_in() ) {
 		return $passed;
 	}
+
+	$message = rytkoset_theme_get_membership_login_required_message();
 
 	if ( function_exists( 'wc_add_notice' ) && ! wc_has_notice( $message, 'error' ) ) {
 		wc_add_notice( $message, 'error' );
@@ -426,15 +456,21 @@ function rytkoset_theme_validate_membership_product_cart_items() {
 		return;
 	}
 
-	$messages = array();
+	$messages       = array();
+	$has_membership = false;
 
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
-		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
-		$message = rytkoset_theme_get_membership_product_purchase_block_message( $product );
+		$product        = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
+		$message        = rytkoset_theme_get_membership_product_purchase_block_message( $product );
+		$has_membership = $has_membership || rytkoset_theme_is_membership_product( $product );
 
 		if ( '' !== $message ) {
 			$messages[ $message ] = true;
 		}
+	}
+
+	if ( $has_membership && ! is_user_logged_in() && empty( $messages ) ) {
+		$messages[ rytkoset_theme_get_membership_login_required_message() ] = true;
 	}
 
 	foreach ( array_keys( $messages ) as $message ) {
@@ -1118,6 +1154,73 @@ function rytkoset_theme_validate_membership_member_email_field( $value ) {
 }
 
 /**
+ * Validates that member row 1 identifies the authenticated primary account.
+ *
+ * Billing details may use another address, but a freely entered member email
+ * must never move the membership to another WordPress account (#661).
+ *
+ * @param string $value Submitted member row 1 email.
+ * @return WP_Error|void
+ */
+function rytkoset_theme_validate_membership_primary_email_field( $value ) {
+	$format_error = rytkoset_theme_validate_membership_member_email_field( $value );
+
+	if ( is_wp_error( $format_error ) ) {
+		return $format_error;
+	}
+
+	$user = wp_get_current_user();
+
+	if ( ! is_user_logged_in() || ! $user instanceof WP_User || ! $user->exists() ) {
+		return new WP_Error(
+			'rytkoset_membership_account_required',
+			__( 'Kirjaudu sisään ennen jäsenmaksun ostamista.', 'rytkoset-theme' )
+		);
+	}
+
+	$submitted_email = rytkoset_theme_normalize_family_member_email( (string) $value );
+	$account_email   = rytkoset_theme_normalize_family_member_email( (string) $user->user_email );
+
+	if ( '' === $account_email || $submitted_email !== $account_email ) {
+		return new WP_Error(
+			'rytkoset_membership_primary_email_mismatch',
+			__( 'Jäsenen 1 sähköpostin pitää olla sama kuin kirjautuneen käyttäjätilin sähköposti.', 'rytkoset-theme' )
+		);
+	}
+}
+
+/**
+ * Returns checkout attributes for a membership member field.
+ *
+ * Member row 1 is account-owned identity data. WooCommerce supports readOnly
+ * for additional checkout fields but not disabled, so the registered field is
+ * read-only as the server-rendered baseline. The checkout sync script applies
+ * the disabled DOM state after keeping the value in the Checkout data store.
+ *
+ * @param int    $index      Member row number.
+ * @param string $field_type Field type, either name or email.
+ * @return array<string, mixed>
+ */
+function rytkoset_theme_get_membership_member_field_attributes( $index, $field_type ) {
+	$index      = max( 1, absint( $index ) );
+	$field_type = 'email' === $field_type ? 'email' : 'name';
+	$attributes = array(
+		'autocomplete'   => sprintf( 'section-member-%d-%s new-password', $index, $field_type ),
+		'data-lpignore'  => 'true',
+		'data-1p-ignore' => 'true',
+		'maxLength'      => 200,
+	);
+
+	if ( 1 === $index ) {
+		$attributes['readOnly']                    = true;
+		$attributes['aria-disabled']               = 'true';
+		$attributes['data-rytkoset-account-field'] = 'true';
+	}
+
+	return $attributes;
+}
+
+/**
  * Registers structured member name and email fields for the membership checkout flow.
  *
  * Fields are always registered for Store API submissions and conditionally shown
@@ -1149,12 +1252,7 @@ function rytkoset_theme_register_membership_checkout_fields() {
 				'required'          => $is_first_row ? rytkoset_theme_get_membership_member_active_schema( 1 ) : false,
 				'hidden'            => rytkoset_theme_get_membership_member_hidden_schema( $index ),
 				'sanitize_callback' => 'sanitize_text_field',
-				'attributes'        => array(
-					'autocomplete'   => sprintf( 'section-member-%d-name new-password', $index ),
-					'data-lpignore'  => 'true',
-					'data-1p-ignore' => 'true',
-					'maxLength'      => 200,
-				),
+				'attributes'        => rytkoset_theme_get_membership_member_field_attributes( $index, 'name' ),
 			)
 		);
 
@@ -1170,13 +1268,10 @@ function rytkoset_theme_register_membership_checkout_fields() {
 				'required'          => $is_first_row ? rytkoset_theme_get_membership_member_active_schema( 1 ) : false,
 				'hidden'            => rytkoset_theme_get_membership_member_hidden_schema( $index ),
 				'sanitize_callback' => 'sanitize_email',
-				'validate_callback' => 'rytkoset_theme_validate_membership_member_email_field',
-				'attributes'        => array(
-					'autocomplete'   => sprintf( 'section-member-%d-email new-password', $index ),
-					'data-lpignore'  => 'true',
-					'data-1p-ignore' => 'true',
-					'maxLength'      => 200,
-				),
+				'validate_callback' => $is_first_row
+					? 'rytkoset_theme_validate_membership_primary_email_field'
+					: 'rytkoset_theme_validate_membership_member_email_field',
+				'attributes'        => rytkoset_theme_get_membership_member_field_attributes( $index, 'email' ),
 			)
 		);
 	}
@@ -1253,16 +1348,15 @@ function rytkoset_theme_get_membership_member_prefill_values( $user ) {
 }
 
 /**
- * Enqueues the checkout script that suggests the logged-in buyer's own details
- * for member row 1.
+ * Enqueues the checkout script that locks member row 1 to the logged-in buyer.
  *
  * WooCommerce's server-side additional-field default filter
  * (woocommerce_get_default_value_for_*) proved unreliable in Block Checkout
  * hydration: on the first checkout visit the client store ignores the default,
  * and the customer-object read overrides values already saved on the draft
- * order. The script instead fills only still-empty member 1 fields once via
- * the checkout data store, so user-edited or draft-persisted values are never
- * overwritten.
+ * order. The script instead keeps the authoritative account values in the
+ * checkout data store through the initial hydration window and disables the
+ * rendered controls without removing their submitted Store API values.
  *
  * @return void
  */
@@ -1625,6 +1719,40 @@ function rytkoset_theme_resolve_order_membership( $membership_items ) {
 				'expires' => $expires,
 			);
 			$best_priority    = $priority;
+			$best_expiry_rank = $expiry_rank;
+		}
+	}
+
+	return is_array( $best ) ? $best : array();
+}
+
+/**
+ * Resolves the longest family-benefit entitlement from membership order items.
+ *
+ * The entitlement is stored separately from the primary account's own
+ * membership (#661), so an active lifetime membership can remain untouched.
+ *
+ * @param array<int, array<string, mixed>> $membership_items Membership order items.
+ * @return array{type:string,period:string,expires:string}|array<never>
+ */
+function rytkoset_theme_resolve_order_family_membership( $membership_items ) {
+	$best             = null;
+	$best_expiry_rank = 0;
+
+	foreach ( $membership_items as $item ) {
+		if ( 'annual_family' !== (string) ( $item['type'] ?? '' ) ) {
+			continue;
+		}
+
+		$expires     = (string) ( $item['expiry_date'] ?? '' );
+		$expiry_rank = '' !== $expires ? (int) str_replace( '-', '', $expires ) : 0;
+
+		if ( null === $best || $expiry_rank > $best_expiry_rank ) {
+			$best             = array(
+				'type'    => 'family',
+				'period'  => (string) ( $item['period'] ?? '' ),
+				'expires' => $expires,
+			);
 			$best_expiry_rank = $expiry_rank;
 		}
 	}
@@ -2032,6 +2160,44 @@ function rytkoset_theme_process_family_members_from_order( $order ) {
 
 	if ( $primary_user_id <= 0 ) {
 		return false;
+	}
+
+	$family_membership = rytkoset_theme_resolve_order_family_membership(
+		rytkoset_theme_get_membership_order_items( $order )
+	);
+
+	if ( empty( $family_membership ) || '' === $family_membership['period'] || '' === $family_membership['expires'] ) {
+		return false;
+	}
+
+	$current_family_membership = rytkoset_theme_get_user_family_membership( $primary_user_id );
+	$explicit_period           = (string) get_user_meta( $primary_user_id, rytkoset_theme_get_family_membership_period_meta_key(), true );
+	$explicit_expires          = (string) get_user_meta( $primary_user_id, rytkoset_theme_get_family_membership_expires_meta_key(), true );
+	$has_explicit_entitlement  = '' !== $explicit_period || '' !== $explicit_expires;
+	$current_covers_new        = $has_explicit_entitlement
+		&& rytkoset_theme_user_membership_is_active( $current_family_membership )
+		&& $current_family_membership['expires'] >= $family_membership['expires'];
+
+	if ( ! $current_covers_new ) {
+		$entitlement_updated = rytkoset_theme_update_user_family_membership(
+			$primary_user_id,
+			$family_membership['period'],
+			$family_membership['expires']
+		);
+
+		if ( is_wp_error( $entitlement_updated ) ) {
+			$order->add_order_note(
+				sprintf(
+					/* translators: %s: family-benefit validation error. */
+					__( 'Perhejäsenyyden voimassaoloa ei voitu tallentaa päätilille: %s', 'rytkoset-theme' ),
+					$entitlement_updated->get_error_message()
+				),
+				false
+			);
+			$order->save();
+
+			return $entitlement_updated;
+		}
 	}
 
 	$primary_user   = get_userdata( $primary_user_id );

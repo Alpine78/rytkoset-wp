@@ -108,6 +108,26 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		);
 	}
 
+	public function test_resolve_family_membership_ignores_other_types_and_uses_latest_expiry(): void {
+		$resolved = rytkoset_theme_resolve_order_family_membership(
+			array(
+				$this->item( 'annual_individual', '2035-12-31', '2026-2035' ),
+				$this->item( 'annual_family', '2029-12-31', '2026-2029' ),
+				$this->item( 'annual_family', '2032-12-31', '2030-2032' ),
+				$this->item( 'lifetime', '', '' ),
+			)
+		);
+
+		$this->assertSame(
+			array(
+				'type'    => 'family',
+				'period'  => '2030-2032',
+				'expires' => '2032-12-31',
+			),
+			$resolved
+		);
+	}
+
 	// --- apply_membership_from_order (end-to-end with stubs) -----------------
 
 	public function test_apply_sets_membership_for_linked_user(): void {
@@ -344,6 +364,53 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 13 )['type'] );
 		$this->assertNotEmpty( $order->notes );
+	}
+
+	public function test_manual_lifetime_activation_survives_family_order_and_family_benefits_expire_separately(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-08-31';
+		rytkoset_test_register_user( 150, 'primary@example.test', 'Päätili' );
+		rytkoset_test_register_user( 151, 'family@example.test', 'Perheenjäsen' );
+
+		$this->assertSame(
+			'applied',
+			rytkoset_theme_apply_manual_membership(
+				150,
+				array(
+					'type'    => 'lifetime',
+					'period'  => '',
+					'expires' => '',
+				)
+			)
+		);
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'annual_family', '2029-08-31', '2026-2029' ) ),
+			150,
+			'primary@example.test'
+		);
+		$order->id     = 661;
+		$order->status = 'processing';
+		$this->set_member_row( $order, 1, 'Päätili', 'primary@example.test' );
+		$this->set_member_row( $order, 2, 'Perheenjäsen', 'family@example.test' );
+
+		rytkoset_theme_maybe_apply_membership_from_order( 661, $order );
+
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 150 )['type'] );
+		$this->assertSame(
+			array(
+				'type'    => 'family',
+				'period'  => '2026-2029',
+				'expires' => '2029-08-31',
+			),
+			rytkoset_theme_get_user_family_membership( 150 )
+		);
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 151 ) );
+		$this->assertSame( 'family', rytkoset_theme_get_effective_user_membership( 151 )['source'] );
+
+		$GLOBALS['rytkoset_test_now'] = '2029-09-01';
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 150 ) );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 151 ) );
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 150 )['type'] );
 	}
 
 	public function test_apply_does_not_shorten_longer_existing_membership(): void {

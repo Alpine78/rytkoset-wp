@@ -38,14 +38,23 @@ Tämä dokumentti kuvaa jäsenmaksutuotteiden nykytilan WooCommercessa.
   - `_rytkoset_membership_type = lifetime`
 - Toimintakauden jäsenmaksujen jäsenkausi tallennetaan tuotemetadataan:
   - `_rytkoset_membership_period = 2026-2029`
-- Vuosi-/perhejäsenmaksun voimassaolopäivä tallennetaan tuotemetadataan ISO-muodossa:
+- Toimintakauden henkilö-/perhejäsenmaksun voimassaolopäivä tallennetaan tuotemetadataan ISO-muodossa:
   - `_rytkoset_membership_expiry_date = 2029-08-30` nykyisillä kauden 2026–2029 tuotteilla
   - Asetetaan tuotteen **Jäsenyys voimassa asti** -kentästä. Automaattinen jäsenyyspäivitys (#302) käyttää tätä päivää käyttäjän jäsenyyden voimassaoloksi.
+- Perhejäsenmaksu kopioi kauden ja päättymispäivän myös päätilin erillisiin
+  `rytkoset_family_membership_period`- ja
+  `rytkoset_family_membership_expires`-käyttäjämetoihin (#661). Siksi
+  ainaisjäsenen oma `lifetime`-jäsenyys säilyy, vaikka hän ostaa määräaikaisen
+  perhejäsenyyden.
 - Rakenteisten jäsenkenttien näkyminen kassalla määräytyy tuotemetadata-lipulla:
   - `_rytkoset_member_names_required = yes`
-- Lippu on käytössä sekä vuosijäsenmaksuilla että ainaisjäsenmaksulla.
+- Lippu on käytössä sekä toimintakauden jäsenmaksuilla että ainaisjäsenmaksulla.
 - Teema näyttää rakenteiset kentät silloin, kun korissa on nimet vaativa jäsenmaksutuote; kenttien käyttöä selittää niiden yläpuolelle injektoitu **Jäsentiedot**-osio-otsikko (ks. alla), ei erillinen ylätiedote — aiempi erillinen kassaohje-banneri poistettiin #520:n viimeistelyssä päällekkäisenä, kun otsikko lisättiin suoraan kenttien yhteyteen.
 - WooCommercen samaa virheilmoitusta ei lisätä sessioon kahdesti. Kun yksittäin myytävä jäsenmaksutuote on jo ostoskorissa, uudesta lisäysyrityksestä näytetään vain yksi selkeä virheilmoitus.
+- Jäsenmaksutuotteen ostaminen vaatii kirjautuneen WordPress-käyttäjän (#661).
+  Vieras ei voi lisätä tuotetta ostoskoriin, ja vanhasta istunnosta palautunut
+  jäsenmaksukori estetään uudelleen ostoskori-/kassavalidoinnissa. Ilmoitus
+  ohjaa **Oma tili** -sivulle kirjautumaan tai luomaan tilin.
 
 ### Asetusten validointi ja oston esto
 
@@ -70,7 +79,7 @@ Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php
 - Perhejäsenmaksu alkaa yhdestä rivistä. **+ Lisää jäsen** lisää uuden rivin ilman sivulatausta ja rivien 2–6 roskakoripainike poistaa rivin; riviä 1 ei voi poistaa. Poisto tiivistää myöhemmät arvot järjestykseen ja tyhjentää viimeisen rivin, jotta poistettu tieto ei tallennu tilaukselle.
 - Rivimäärä tallennetaan WooCommerce-sessioon `extensionCartUpdate`-päivityksellä. Palvelin clampaa arvon aina tuotetyypin sallimaan väliin; `rytkoset_theme_membership_max_member_rows`-suodattimella voi muuttaa oletusmaksimia 6.
 - Rivit, joiden indeksi ylittää `member_row_count`-arvon, piilotetaan ja niiden validointi ohitetaan ehdollisella JSON-skeemalla.
-- Rivin 1 nimi ja sähköposti ovat pakollisia; lisärivit ovat valinnaisia. Sähköpostin muoto tarkistetaan `validate_callback`-funktiolla (`is_email`); tyhjät valinnaiset rivit ohitetaan.
+- Rivin 1 nimi ja sähköposti ovat pakollisia käyttäjätililtä luettuja tunnistetietoja. Ne näytetään kassalla vain luettavina ja näkyvät kontrollit asetetaan disabled-tilaan; lisärivit ovat valinnaisia ja muokattavia. Checkout-skripti pitää rivin 1 arvot datastoressa myös kontrollien lukitsemisen jälkeen, joten pakolliset arvot kulkevat Store API:lle. Sähköpostin muoto tarkistetaan `validate_callback`-funktiolla (`is_email`), tyhjät valinnaiset rivit ohitetaan ja palvelin hylkää edelleen manipuloidun pyynnön, jonka rivin 1 sähköposti ei vastaa kirjautuneen tilin `user_email`-arvoa. Tämä tekee tilaukseen kytketystä käyttäjästä yksiselitteisen päätilin; laskutussähköposti tai jäsenrivi ei voi siirtää jäsenyyttä toiselle tilille (#661).
 - Kentät tallentuvat tilauksen lisäkentiksi order-metana (`_wc_other/rytkoset/member_X_name`, `_wc_other/rytkoset/member_X_email`).
 - Tyhjien jäsenrivien lisäkenttämetat poistetaan uusilta Store API -tilauksilta, eikä tyhjiä rivejä näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
 - Kenttien autocomplete on rajattu pois, jotta selaimen autofill ei kirjoita arvoja vääriin riveihin.
@@ -78,16 +87,16 @@ Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php
 - Jäsenrivien yläpuolelle injektoidaan **Jäsentiedot**-osio-otsikko ja lyhyt ohjeteksti (`assets/js/membership-checkout-rows.js`); teksti vaihtuu perhe- ja yksilö-/ainaisjäsenmaksun välillä. Skripti latautuu aina, kun korissa on nimet vaativa jäsenmaksu — lisäys-/poistokontrollit renderöityvät vain perhejäsenmaksulla.
 - Jäsen- ja muut tuotekohtaiset lisätiedot sekä mahdollinen tilausmuistiinpano näytetään ennen maksutapoja. Maksutavat ovat viimeinen muokattava osio ennen ehtoja ja teeman keltaista, pyöristettyä **Lähetä tilaus** -painiketta.
 
-### Jäsen 1 -kenttien esitäyttö kirjautuneelle käyttäjälle (#521)
+### Jäsen 1 -kenttien lukitus kirjautuneeseen käyttäjään (#521, #661)
 
-Kun kirjautunut käyttäjä ostaa nimet vaativan jäsenmaksutuotteen, kassalla ehdotetaan jäsenriville 1 oletuksena käyttäjän omia tietoja:
+Kun kirjautunut käyttäjä ostaa nimet vaativan jäsenmaksutuotteen, kassalla näytetään jäsenrivillä 1 käyttäjän omat tiedot lukittuina:
 
 - Nimi: profiilin etu- ja sukunimi; jos ne puuttuvat, näyttönimi (`rytkoset_theme_get_membership_member_prefill_name()`).
 - Sähköposti: tilin `user_email` (`rytkoset_theme_get_membership_member_prefill_email()`).
 - Koskee kaikkia jäsenmaksutyyppejä, joilla `_rytkoset_member_names_required = yes`. Perhejäsenyydessä vain rivi 1 esitäytetään; rivit 2–6 jäävät tyhjiksi.
-- Vierasostajille ei tehdä esitäyttöä (skripti ja arvot eivät edes lataudu sivulle).
+- Vierasostajille ei ole jäsenmaksun ostopolkua (#661); #518:n vanha vierastilauslogiikka säilyy vain historiallisten tilausten yhteensopivuutta varten.
 
-Toteutus on rajattu checkout-JS (`assets/js/membership-checkout-prefill.js`), joka täyttää checkout-datastoren (`wc/store/checkout`, `setAdditionalFields`) kautta vain tyhjinä pysyvät jäsen 1 -kentät. Täyttöä yritetään uudelleen lyhyen käynnistysikkunan ajan (15 s), koska Checkout Block voi mountin jälkeen tehdä asynkronisen refreshin, joka nollaa lisäkentät ja pyyhkisi kertatäytön; heti kun käyttäjä itse koskee jäsen 1 -kenttään, täyttö lopetetaan pysyvästi. Esitäyttö on ehdotus, ei lukitus: käyttäjän muokkaamia tai kassan draft-tilaukselle jo tallentuneita arvoja ei koskaan ylikirjoiteta (tyhjennetty kenttä pysyy tyhjänä), ja tilaukselle tallentuu se arvo, jonka käyttäjä lopulta hyväksyy. Huomaa, että tuoreen draft-tilauksen hydraatiossa storen `additionalFields`-objektissa ei välttämättä ole member-avaimia lainkaan, joten skripti käyttää renderöityä kenttää (ei avaimen olemassaoloa) merkkinä kentän käytöstä. WooCommercen palvelinpuolen oletusarvosuodatin (`woocommerce_get_default_value_for_*`) todettiin toteutuksessa epäluotettavaksi Block Checkoutin hydraatiosykleissä (ensikäynnillä arvo ei näy; asiakasobjektin oletus yliajaa draft-tilaukselle tallennetun muokkauksen), joten sitä ei käytetä.
+Kentät rekisteröidään WooCommercen tukemalla `readOnly`-attribuutilla ja `aria-disabled="true"`-tilalla. Checkout-JS (`assets/js/membership-checkout-prefill.js`) pitää käyttäjätilin arvot checkout-datastoressa (`wc/store/checkout`, `setAdditionalFields`) ja asettaa renderöidyt kontrollit lisäksi HTML:n disabled-tilaan. Näin tietoja ei voi muokata, mutta pakolliset arvot eivät katoa Store API -pyynnöstä kuten tavallisen HTML-lomakkeen disabled-kentille voisi käydä. Synkronointia jatketaan lyhyen käynnistysikkunan ajan (15 s), koska Checkout Block voi mountin jälkeen hydratoida draft-tilauksen asynkronisesti ja palauttaa vanhan arvon. Mahdollinen vanha tai virheellinen draft-arvo korvataan aina käyttäjätilin tiedolla. WooCommercen palvelinpuolen oletusarvosuodatin (`woocommerce_get_default_value_for_*`) todettiin toteutuksessa epäluotettavaksi Block Checkoutin hydraatiosykleissä, joten sitä ei käytetä. Palvelimen sähköpostivalidointi säilyy suorien tai manipuloitujen API-pyyntöjen turvaverkkona, mutta sitä ei voi laukaista normaalista kassakäyttöliittymästä.
 
 ## Jäsenmaksutilausten käsittelymalli
 
@@ -97,10 +106,10 @@ WooCommerce Orders -listaan lisätään sarake:
 
 - `Jäsenmaksu`
 
-Sarake näyttää jäsenmaksutilauksille jäsenmaksun tyypin ja vuosijäsenmaksuilla myös jäsenkauden, esimerkiksi:
+Sarake näyttää jäsenmaksutilauksille jäsenmaksun tyypin ja toimintakauden jäsenmaksuilla myös jäsenkauden, esimerkiksi:
 
-- `Vuosijäsen: Yksityishenkilö, 2023-2026`
-- `Vuosijäsen: Perhe, 2023-2026`
+- `Jäsenmaksu toimintakaudelle: Henkilö, 2026-2029`
+- `Jäsenmaksu toimintakaudelle: Perhe, 2026-2029`
 - `Ainaisjäsen`
 
 Yksittäisen tilauksen admin-näkymään lisätään `Jäsenmaksu`-laatikko. Se näyttää:
@@ -148,11 +157,11 @@ Tuotetta ei voi julkaista ennen kuin yllä olevat määräaikaisen jäsenmaksun 
 - Molemmat tuotteet ovat virtuaalisia ja myydään yksittäin.
 - `Ainaisjäsenmaksu` on olemassa WooCommercessa hinnalla 100 EUR.
 - `Ainaisjäsenmaksu` on virtuaalinen ja myydään yksittäin.
-- Vuosijäsenmaksutuote voidaan lisätä ostoskoriin.
+- Toimintakauden jäsenmaksutuote voidaan lisätä ostoskoriin.
 - `Kassa`-sivu latautuu jäsenmaksutuotteen kanssa.
 - Kassasivulle syötetään teeman kautta jäsenmaksuohje oikeassa sessiossa.
 - `Ainaisjäsenmaksu` voidaan lisätä ostoskoriin ja `Kassa`-sivu latautuu oikein.
-- `Ainaisjäsenmaksu` aktivoi saman jäsenrekisteriohjeen kuin vuosijäsenmaksut.
+- `Ainaisjäsenmaksu` aktivoi saman jäsenrekisteriohjeen kuin toimintakauden jäsenmaksut.
 - Yksittäin myytävän jäsenmaksutuotteen uusi lisäysyritys ei tuota kahta samaa ostoskori-ilmoitusta.
 - Jäsenmaksutuotteet tunnistetaan adminissa jäsenmaksumetadatan perusteella.
 - WooCommerce Orders -lista näyttää jäsenmaksutilauksille `Jäsenmaksu`-sarakkeen arvon.

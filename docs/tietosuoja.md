@@ -138,7 +138,7 @@ Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja k�
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 
-Verkkokaupassa (esimerkiksi vuosijäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -osallistumismaksu) tallennamme:
+Verkkokaupassa (esimerkiksi toimintakauden jäsenmaksu, ainaisjäsenmaksu, Tampere 2026 -osallistumismaksu) tallennamme:
 
 - nimen ja yhteystiedot (sähköposti, puhelin, osoite)
 - tilauksen sisällön ja tilan
