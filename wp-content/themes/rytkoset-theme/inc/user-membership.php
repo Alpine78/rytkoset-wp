@@ -1367,6 +1367,33 @@ function rytkoset_theme_render_user_membership_fields( $user ) {
 		</tr>
 	</table>
 
+	<h3><?php esc_html_e( 'Perhejäsenyyden jakamisoikeus', 'rytkoset-theme' ); ?></h3>
+	<p class="description">
+		<?php esc_html_e( 'Määrää, kuinka kauan päätilin perheenjäsenet saavat jäsenetuja. Tämä on erillinen päätilin omasta jäsenyydestä, joten esimerkiksi ainaisjäsenyys säilyy pysyvänä perhejäsenyyden rinnalla.', 'rytkoset-theme' ); ?>
+	</p>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th>
+				<label for="<?php echo esc_attr( $family_period_field ); ?>"><?php esc_html_e( 'Perhejäsenyyden kausi', 'rytkoset-theme' ); ?></label>
+			</th>
+			<td>
+				<input type="text" name="<?php echo esc_attr( $family_period_field ); ?>" id="<?php echo esc_attr( $family_period_field ); ?>"
+					value="<?php echo esc_attr( $family_membership['period'] ); ?>" class="regular-text" placeholder="2026-2029" pattern="\d{4}-\d{4}" />
+				<p class="description"><?php esc_html_e( 'Jätä molemmat perhejäsenyyden kentät tyhjiksi, jos päätilillä ei ole oikeutta jakaa perhejäsenetuja.', 'rytkoset-theme' ); ?></p>
+			</td>
+		</tr>
+		<tr>
+			<th>
+				<label for="<?php echo esc_attr( $family_expires_field ); ?>"><?php esc_html_e( 'Perhejäsenyys voimassa asti', 'rytkoset-theme' ); ?></label>
+			</th>
+			<td>
+				<input type="text" name="<?php echo esc_attr( $family_expires_field ); ?>" id="<?php echo esc_attr( $family_expires_field ); ?>"
+					value="<?php echo esc_attr( $family_expires_display ); ?>" class="regular-text" placeholder="pp.kk.vvvv" inputmode="numeric" autocomplete="off" />
+				<p class="description"><?php esc_html_e( 'Perheenjäsenten perityt edut ovat voimassa tähän päivään asti.', 'rytkoset-theme' ); ?></p>
+			</td>
+		</tr>
+	</table>
+
 	<h3><?php esc_html_e( 'Perhejäsenet', 'rytkoset-theme' ); ?></h3>
 	<p class="description">
 		<?php esc_html_e( 'Perhejäsenlistaa käytetään vain, kun päätilillä on aktiivinen perhejäsenyyden jakamisoikeus. Linkitetty käyttäjä saa jäsenedut päätilin kautta vain, kun rivin tila on aktiivinen.', 'rytkoset-theme' ); ?>
