@@ -25,6 +25,12 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 		? rytkoset_theme_get_event_participants( $event_id, $status_filter )
 		: rytkoset_theme_get_all_events_participants( $status_filter );
 
+	// Never message a cancelled/refunded/failed order, and never message a
+	// cancelled free registration unless the admin explicitly picked the
+	// "Peruttu" filter. This same trimmed set is the safe base for a future
+	// feedback request.
+	$rows = rytkoset_theme_filter_active_event_participants( $rows, $status_filter );
+
 	$recipients = array();
 	$skipped    = 0;
 

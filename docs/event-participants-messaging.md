@@ -1,6 +1,7 @@
 # Massaviestintä tapahtuman osallistujille
 
-Tämä dokumentti kuvaa tikettien `#74` ja `#264` toteutuksen.
+Tämä dokumentti kuvaa tikettien `#74` ja `#264` toteutuksen sekä `#665`:n
+lisäyksen aktiivisesta vastaanottajajoukosta.
 
 ## Tavoite
 
@@ -24,6 +25,16 @@ Suodattimien jälkeen näkyy vastaanottajamäärä:
 > *"Viesti lisätään jonoon 23 vastaanottajalle (osoitteita puuttuu 2)."*
 
 Osoitteita puuttuvat osallistujat ohitetaan automaattisesti. Vastaanottajat deduplikoidaan sähköpostiosoitteen perusteella (sama yhteyshenkilö Tampere 2026 -tilauksessa lasketaan yhdeksi vastaanottajaksi).
+
+**Aktiivinen vastaanottajajoukko (`#665`):** vastaanottajalistasta rajataan aina
+pois ne WooCommerce-tilaukset, joiden status on `cancelled`, `refunded` tai
+`failed`, sekä perutut (`cancelled`) maksuttomat ilmoittautumiset — myös silloin,
+kun statussuodattimena on `Kaikki`. Perutut maksuttomat ilmoittautumiset
+säilyvät vastaanottajissa vain, jos statussuodattimeksi valitaan nimenomaan
+`Peruutettu`, jolloin viesti voidaan tietoisesti lähettää perutuille
+osallistujille. Sama rajaus on tulevan tapahtumakohtaisen palautepyynnön
+(`#666`) vastaanottajajoukon turvallinen pohja. Rajattavat tilaukset voi muokata
+suotimella `rytkoset_theme_event_feedback_inactive_order_statuses`.
 
 ### Viestilomake
 
@@ -106,7 +117,7 @@ Pääfunktiot:
 - `rytkoset_theme_get_event_messaging_send_attempts()` — lukee viimeisen tunnin lähetysyritykset `rytkoset_event_messaging_send_attempts`-optiosta
 - `rytkoset_theme_append_event_messaging_log($entry)` / `rytkoset_theme_get_event_messaging_log($limit)` — lokin tallennus ja haku
 
-Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content/themes/rytkoset-theme/inc/event-participants-admin.php):n olemassa olevia funktioita `rytkoset_theme_get_event_participants()` ja `rytkoset_theme_get_all_events_participants()`.
+Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content/themes/rytkoset-theme/inc/event-participants-admin.php):n olemassa olevia funktioita `rytkoset_theme_get_event_participants()` ja `rytkoset_theme_get_all_events_participants()`. Rivit ajetaan `rytkoset_theme_filter_active_event_participants()`-funktion läpi ennen vastaanottajien muodostamista.
 
 ## Rajaus tässä vaiheessa
 

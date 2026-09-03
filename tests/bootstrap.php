@@ -1551,6 +1551,10 @@ function get_posts( $args = array() ) {
 			continue;
 		}
 
+		if ( isset( $args['post__not_in'] ) && in_array( (int) $id, array_map( 'intval', (array) $args['post__not_in'] ), true ) ) {
+			continue;
+		}
+
 		if ( '' !== $search ) {
 			$haystack     = mb_strtolower( $post->post_title . "\n" . $post->post_content );
 			$search_terms = preg_split( '/\s+/u', mb_strtolower( $search ) );
@@ -1624,6 +1628,13 @@ function rytkoset_test_match_meta_query( int $post_id, array $meta_query ): bool
 
 		if ( 'EXISTS' === $compare ) {
 			$results[] = $exists;
+			continue;
+		}
+
+		if ( 'IN' === $compare || 'NOT IN' === $compare ) {
+			$haystack  = array_map( 'strval', (array) ( $clause['value'] ?? array() ) );
+			$in        = in_array( (string) get_post_meta( $post_id, $clause['key'], true ), $haystack, true );
+			$results[] = ( 'IN' === $compare ) ? $in : ! $in;
 			continue;
 		}
 
