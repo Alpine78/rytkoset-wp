@@ -14,16 +14,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 function rytkoset_theme_get_event_registration_meta_keys() {
 	return array(
-		'event_id'      => '_rytkoset_registration_event_id',
-		'name'          => '_rytkoset_registration_name',
-		'email'         => '_rytkoset_registration_email',
-		'diet'          => '_rytkoset_registration_diet',
-		'notes'         => '_rytkoset_registration_notes',
-		'status'        => '_rytkoset_registration_status',
-		'choice'        => '_rytkoset_registration_choice',
-		'quantity'      => '_rytkoset_registration_quantity',
-		'gdpr_consent'  => '_rytkoset_registration_gdpr_consent',
-		'anonymized_at' => '_rytkoset_registration_anonymized_at',
+		'event_id'             => '_rytkoset_registration_event_id',
+		'name'                 => '_rytkoset_registration_name',
+		'email'                => '_rytkoset_registration_email',
+		'diet'                 => '_rytkoset_registration_diet',
+		'notes'                => '_rytkoset_registration_notes',
+		'status'               => '_rytkoset_registration_status',
+		'choice'               => '_rytkoset_registration_choice',
+		'quantity'             => '_rytkoset_registration_quantity',
+		'gdpr_consent'         => '_rytkoset_registration_gdpr_consent',
+		'anonymized_at'        => '_rytkoset_registration_anonymized_at',
+		'source'               => '_rytkoset_registration_source',
+		'personal_data_source' => '_rytkoset_registration_personal_data_source',
+		'informed_status'      => '_rytkoset_registration_informed_status',
+		'informed_at'          => '_rytkoset_registration_informed_at',
 	);
 }
 
@@ -69,6 +73,95 @@ function rytkoset_theme_get_event_registration_statuses() {
 		'confirmed' => __( 'Vahvistettu', 'rytkoset-theme' ),
 		'cancelled' => __( 'Peruttu', 'rytkoset-theme' ),
 	);
+}
+
+/**
+ * Returns the registration statuses that count as an active participation.
+ *
+ * A cancelled registration keeps its row (for history and undo) but is excluded
+ * from the active headcount, event messaging and any feedback-request audience.
+ *
+ * @return string[]
+ */
+function rytkoset_theme_get_active_event_registration_statuses() {
+	return array( 'pending', 'confirmed' );
+}
+
+/**
+ * Returns supported registration source values and their admin labels.
+ *
+ * `web_form` is the public front-end form; `manual` is an organizer adding a
+ * person who signed up off-site (phone, email, in person). A manual record is
+ * never marked as paid and never carries a WooCommerce order.
+ *
+ * @return array<string,string>
+ */
+function rytkoset_theme_get_event_registration_source_labels() {
+	return array(
+		'web_form' => __( 'Verkkolomake', 'rytkoset-theme' ),
+		'manual'   => __( 'Käsin lisätty', 'rytkoset-theme' ),
+	);
+}
+
+/**
+ * Normalizes a raw source value to a supported key.
+ *
+ * Anything unrecognized (including an empty value on a legacy record created
+ * before this field existed) resolves to `web_form`.
+ *
+ * @param mixed $raw_source Raw source value.
+ * @return string
+ */
+function rytkoset_theme_normalize_event_registration_source( $raw_source ) {
+	$raw_source = sanitize_key( (string) $raw_source );
+	$labels     = rytkoset_theme_get_event_registration_source_labels();
+
+	return isset( $labels[ $raw_source ] ) ? $raw_source : 'web_form';
+}
+
+/**
+ * Returns the admin label for a registration's stored source value.
+ *
+ * @param int $registration_id Registration post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_registration_source_label( $registration_id ) {
+	$source = rytkoset_theme_normalize_event_registration_source(
+		rytkoset_theme_get_event_registration_meta( $registration_id, 'source' )
+	);
+	$labels = rytkoset_theme_get_event_registration_source_labels();
+
+	return isset( $labels[ $source ] ) ? $labels[ $source ] : $labels['web_form'];
+}
+
+/**
+ * Returns informing-state values and labels for manually added registrations.
+ *
+ * GDPR art. 14: when personal data is not obtained from the data subject, the
+ * controller must inform them. This tracks whether that has happened for an
+ * off-site sign-up. It is deliberately NOT a consent record — an organizer
+ * action is never stored as the data subject's consent.
+ *
+ * @return array<string,string>
+ */
+function rytkoset_theme_get_event_registration_informed_status_labels() {
+	return array(
+		'not_informed' => __( 'Ei informoitu', 'rytkoset-theme' ),
+		'informed'     => __( 'Informoitu', 'rytkoset-theme' ),
+	);
+}
+
+/**
+ * Normalizes a raw informing-status value to a supported key.
+ *
+ * @param mixed $raw_status Raw informing-status value.
+ * @return string
+ */
+function rytkoset_theme_normalize_event_registration_informed_status( $raw_status ) {
+	$raw_status = sanitize_key( (string) $raw_status );
+	$labels     = rytkoset_theme_get_event_registration_informed_status_labels();
+
+	return isset( $labels[ $raw_status ] ) ? $raw_status : 'not_informed';
 }
 
 /**
@@ -187,7 +280,21 @@ add_action( 'add_meta_boxes_event_registration', 'rytkoset_theme_register_event_
  * @param WP_Post $post Registration post object.
  */
 function rytkoset_theme_render_event_registration_metabox( $post ) {
-	$event_id         = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'event_id' ) );
+	$is_new   = 'auto-draft' === $post->post_status;
+	$event_id = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'event_id' ) );
+
+	// On a fresh "Lisää uusi ilmoittautuminen" screen opened from the participants
+	// page the event is passed in the URL so the event-specific choice/quantity
+	// fields render immediately, without a two-step save.
+	if ( $is_new && $event_id <= 0 ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only pre-select of a dropdown; the save itself is nonce-protected.
+		$preselected = isset( $_GET['rytkoset_event_id'] ) ? absint( wp_unslash( $_GET['rytkoset_event_id'] ) ) : 0;
+
+		if ( rytkoset_theme_is_valid_registration_event_id( $preselected ) ) {
+			$event_id = $preselected;
+		}
+	}
+
 	$name             = rytkoset_theme_get_event_registration_meta( $post->ID, 'name' );
 	$email            = rytkoset_theme_get_event_registration_meta( $post->ID, 'email' );
 	$diet             = rytkoset_theme_get_event_registration_meta( $post->ID, 'diet' );
@@ -195,6 +302,8 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 	$status           = rytkoset_theme_get_event_registration_meta( $post->ID, 'status' );
 	$events           = rytkoset_theme_get_event_registration_event_options();
 	$statuses         = rytkoset_theme_get_event_registration_statuses();
+	$source_labels    = rytkoset_theme_get_event_registration_source_labels();
+	$informed_labels  = rytkoset_theme_get_event_registration_informed_status_labels();
 	$has_choice       = $event_id > 0 && rytkoset_theme_event_has_choice_field( $event_id );
 	$choice_options   = $has_choice ? rytkoset_theme_get_event_choice_options( $event_id ) : array();
 	$choice_label     = $event_id > 0 ? rytkoset_theme_get_event_choice_field_label( $event_id ) : '';
@@ -204,12 +313,25 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 	$quantity         = absint( rytkoset_theme_get_event_registration_meta( $post->ID, 'quantity' ) );
 	$max_quantity     = rytkoset_theme_get_event_registration_max_quantity();
 
+	$stored_source        = rytkoset_theme_get_event_registration_meta( $post->ID, 'source' );
+	$source               = $is_new && '' === $stored_source
+		? 'manual'
+		: rytkoset_theme_normalize_event_registration_source( $stored_source );
+	$personal_data_source = rytkoset_theme_get_event_registration_meta( $post->ID, 'personal_data_source' );
+	$informed_status      = rytkoset_theme_normalize_event_registration_informed_status(
+		rytkoset_theme_get_event_registration_meta( $post->ID, 'informed_status' )
+	);
+	$informed_at          = rytkoset_theme_get_event_registration_meta( $post->ID, 'informed_at' );
+
 	if ( ! isset( $statuses[ $status ] ) ) {
-		$status = 'pending';
+		$status = $is_new ? 'confirmed' : 'pending';
 	}
 
 	wp_nonce_field( 'rytkoset_save_event_registration', 'rytkoset_event_registration_nonce' );
 	?>
+	<p class="description">
+		<?php esc_html_e( 'Tällä näkymällä lisätään sivuston ulkopuolella (esimerkiksi puhelimitse tai sähköpostitse) ilmoittautunut osallistuja tapahtumaan. Tallennus ei lähetä automaattista kuittia osallistujalle eikä järjestäjäilmoitusta.', 'rytkoset-theme' ); ?>
+	</p>
 	<p>
 		<label for="rytkoset_registration_event_id"><strong><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></strong></label>
 	</p>
@@ -221,6 +343,20 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 			</option>
 		<?php endforeach; ?>
 	</select>
+
+	<p>
+		<label for="rytkoset_registration_source"><strong><?php esc_html_e( 'Ilmoittautumisen lähde', 'rytkoset-theme' ); ?></strong></label>
+	</p>
+	<select id="rytkoset_registration_source" name="rytkoset_registration_source" class="widefat">
+		<?php foreach ( $source_labels as $source_key => $source_label ) : ?>
+			<option value="<?php echo esc_attr( $source_key ); ?>" <?php selected( $source, $source_key ); ?>>
+				<?php echo esc_html( $source_label ); ?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+	<p class="description">
+		<?php esc_html_e( 'Käsin lisättyä osallistujaa ei merkitä maksaneeksi eikä WooCommerce-osallistujaksi.', 'rytkoset-theme' ); ?>
+	</p>
 
 	<p>
 		<label for="rytkoset_registration_name"><strong><?php esc_html_e( 'Osallistujan nimi', 'rytkoset-theme' ); ?></strong></label>
@@ -281,6 +417,54 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 			</option>
 		<?php endforeach; ?>
 	</select>
+
+	<hr />
+
+	<p>
+		<label for="rytkoset_registration_personal_data_source"><strong><?php esc_html_e( 'Henkilötiedon lähde', 'rytkoset-theme' ); ?></strong></label>
+		<input type="text" id="rytkoset_registration_personal_data_source" name="rytkoset_registration_personal_data_source" class="widefat" value="<?php echo esc_attr( $personal_data_source ); ?>" maxlength="200" />
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Käytä vain kun tiedot on saatu muualta kuin rekisteröidyltä itseltään, esimerkiksi "ilmoittautuja itse puhelimitse" tai "huoltaja ilmoitti". Älä tuo vanhoja yhteystietolistoja.', 'rytkoset-theme' ); ?>
+	</p>
+
+	<p>
+		<label for="rytkoset_registration_informed_status"><strong><?php esc_html_e( 'Informoinnin tila', 'rytkoset-theme' ); ?></strong></label>
+	</p>
+	<select id="rytkoset_registration_informed_status" name="rytkoset_registration_informed_status" class="widefat">
+		<?php foreach ( $informed_labels as $informed_key => $informed_label ) : ?>
+			<option value="<?php echo esc_attr( $informed_key ); ?>" <?php selected( $informed_status, $informed_key ); ?>>
+				<?php echo esc_html( $informed_label ); ?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+	<p class="description">
+		<?php
+		if ( '' !== $informed_at ) {
+			echo esc_html(
+				sprintf(
+					/* translators: %s: formatted date and time. */
+					__( 'Merkitty informoiduksi: %s', 'rytkoset-theme' ),
+					rytkoset_theme_format_event_registration_consent_timestamp( $informed_at )
+				)
+			);
+		} else {
+			esc_html_e( 'Kun tiedot on saatu muualta kuin rekisteröidyltä, informointi tehdään dokumentoidusti, viimeistään ensimmäisen henkilökohtaisen tapahtumaviestin yhteydessä. Tämä ei ole suostumusmerkintä.', 'rytkoset-theme' );
+		}
+		?>
+	</p>
+
+	<hr />
+
+	<p>
+		<label>
+			<input type="checkbox" name="rytkoset_registration_allow_duplicate" value="1" />
+			<?php esc_html_e( 'Salli tietoinen kaksoiskappale (sama tapahtuma ja sähköposti)', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p class="description">
+		<?php esc_html_e( 'Ilman tätä valintaa tallennus, jossa on jo aktiivinen ilmoittautuminen samalla tapahtumalla ja sähköpostilla, tallennetaan Peruttu-tilassa vahingossa syntyvän kaksoiskappaleen estämiseksi.', 'rytkoset-theme' ); ?>
+	</p>
 	<?php
 }
 
@@ -348,6 +532,17 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 	$notes          = isset( $_POST['rytkoset_registration_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['rytkoset_registration_notes'] ) ) : '';
 	$status         = isset( $_POST['rytkoset_registration_status'] ) ? sanitize_key( wp_unslash( $_POST['rytkoset_registration_status'] ) ) : 'pending';
 
+	$source          = rytkoset_theme_normalize_event_registration_source(
+		isset( $_POST['rytkoset_registration_source'] ) ? wp_unslash( $_POST['rytkoset_registration_source'] ) : '' // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Normalized against an allowlist below.
+	);
+	$personal_source = isset( $_POST['rytkoset_registration_personal_data_source'] )
+		? sanitize_text_field( wp_unslash( $_POST['rytkoset_registration_personal_data_source'] ) )
+		: '';
+	$informed_status = rytkoset_theme_normalize_event_registration_informed_status(
+		isset( $_POST['rytkoset_registration_informed_status'] ) ? wp_unslash( $_POST['rytkoset_registration_informed_status'] ) : '' // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Normalized against an allowlist below.
+	);
+	$allow_duplicate = ! empty( $_POST['rytkoset_registration_allow_duplicate'] );
+
 	if ( ! rytkoset_theme_is_valid_registration_event_id( $event_id ) ) {
 		$event_id = 0;
 	}
@@ -360,6 +555,24 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 		$status = 'pending';
 	}
 
+	// Accidental-duplicate guard: if the same event + email already has an active
+	// registration and the organizer did not explicitly allow a duplicate, store
+	// the row as cancelled so it does not silently enter the active list. The row
+	// is kept and can be restored, and a re-save with "salli kaksoiskappale"
+	// ticked keeps the chosen status.
+	$forced_cancel_for_duplicate = false;
+
+	if (
+		$event_id > 0
+		&& '' !== $email
+		&& ! $allow_duplicate
+		&& in_array( $status, rytkoset_theme_get_active_event_registration_statuses(), true )
+		&& rytkoset_theme_event_has_active_registration_for_email( $event_id, $email, $post_id )
+	) {
+		$status                      = 'cancelled';
+		$forced_cancel_for_duplicate = true;
+	}
+
 	$values = array(
 		'event_id' => $event_id,
 		'name'     => $name,
@@ -367,6 +580,7 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 		'diet'     => $diet,
 		'notes'    => $notes,
 		'status'   => $status,
+		'source'   => $source,
 	);
 
 	foreach ( $values as $key => $value ) {
@@ -399,6 +613,28 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 		}
 	}
 
+	if ( '' === $personal_source ) {
+		delete_post_meta( $post_id, $meta_keys['personal_data_source'] );
+	} else {
+		update_post_meta( $post_id, $meta_keys['personal_data_source'], $personal_source );
+	}
+
+	update_post_meta( $post_id, $meta_keys['informed_status'], $informed_status );
+
+	// The informing timestamp is derived, never entered by hand: it is stamped
+	// once when the row first becomes "Informoitu" and cleared if it is set back.
+	if ( 'informed' === $informed_status ) {
+		if ( '' === rytkoset_theme_get_event_registration_meta( $post_id, 'informed_at' ) ) {
+			update_post_meta( $post_id, $meta_keys['informed_at'], time() );
+		}
+	} else {
+		delete_post_meta( $post_id, $meta_keys['informed_at'] );
+	}
+
+	if ( $forced_cancel_for_duplicate ) {
+		set_transient( 'rytkoset_evt_reg_dupe_notice_' . get_current_user_id(), absint( $post_id ), MINUTE_IN_SECONDS );
+	}
+
 	$title = rytkoset_theme_build_event_registration_title( $name, $event_id );
 
 	if ( get_the_title( $post_id ) !== $title ) {
@@ -413,6 +649,77 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 	}
 }
 add_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
+
+/**
+ * Shows a warning after a registration was stored cancelled as an accidental duplicate.
+ */
+function rytkoset_theme_event_registration_duplicate_admin_notice() {
+	$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+	if ( ! $screen instanceof WP_Screen || 'event_registration' !== $screen->post_type ) {
+		return;
+	}
+
+	$transient_key = 'rytkoset_evt_reg_dupe_notice_' . get_current_user_id();
+	$flagged_id    = absint( get_transient( $transient_key ) );
+
+	if ( $flagged_id <= 0 ) {
+		return;
+	}
+
+	delete_transient( $transient_key );
+
+	echo '<div class="notice notice-warning is-dismissible"><p>';
+	echo esc_html__( 'Samalla tapahtumalla ja sähköpostilla on jo aktiivinen ilmoittautuminen. Tietue tallennettiin Peruttu-tilassa. Jos kaksoiskappale on tarkoituksellinen, rastita "Salli tietoinen kaksoiskappale" ja tallenna uudelleen.', 'rytkoset-theme' );
+	echo '</p></div>';
+}
+add_action( 'admin_notices', 'rytkoset_theme_event_registration_duplicate_admin_notice' );
+
+/**
+ * Sets the status of an event registration and keeps the admin title in sync.
+ *
+ * Used by the participants-list cancel/restore action. Only touches the status
+ * meta and the post title; personal data and the row itself are untouched, so a
+ * cancellation is reversible and the sign-up history is preserved.
+ *
+ * @param int    $registration_id Registration post ID.
+ * @param string $status          Target status key.
+ * @return bool True on success.
+ */
+function rytkoset_theme_set_event_registration_status( $registration_id, $status ) {
+	$registration_id = absint( $registration_id );
+	$status          = sanitize_key( $status );
+	$statuses        = rytkoset_theme_get_event_registration_statuses();
+
+	if ( $registration_id <= 0 || 'event_registration' !== get_post_type( $registration_id ) ) {
+		return false;
+	}
+
+	if ( ! isset( $statuses[ $status ] ) ) {
+		return false;
+	}
+
+	$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+
+	update_post_meta( $registration_id, $meta_keys['status'], $status );
+
+	$name     = rytkoset_theme_get_event_registration_meta( $registration_id, 'name' );
+	$event_id = absint( rytkoset_theme_get_event_registration_meta( $registration_id, 'event_id' ) );
+	$title    = rytkoset_theme_build_event_registration_title( $name, $event_id );
+
+	if ( get_the_title( $registration_id ) !== $title ) {
+		remove_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
+		wp_update_post(
+			array(
+				'ID'         => $registration_id,
+				'post_title' => $title,
+			)
+		);
+		add_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
+	}
+
+	return true;
+}
 
 /**
  * Defines admin columns for event registrations.
@@ -575,46 +882,53 @@ function rytkoset_theme_event_can_show_free_registration_form( $event_id ) {
  * Cancelled registrations are intentionally ignored so a cancelled participant
  * can register again.
  *
- * @param int    $event_id Event post ID.
- * @param string $email    Registration email.
+ * @param int    $event_id   Event post ID.
+ * @param string $email      Registration email.
+ * @param int    $exclude_id Optional registration post ID to exclude (the row being edited).
  * @return bool
  */
-function rytkoset_theme_event_has_active_registration_for_email( $event_id, $email ) {
-	$event_id = absint( $event_id );
-	$email    = sanitize_email( $email );
+function rytkoset_theme_event_has_active_registration_for_email( $event_id, $email, $exclude_id = 0 ) {
+	$event_id   = absint( $event_id );
+	$email      = sanitize_email( $email );
+	$exclude_id = absint( $exclude_id );
 
 	if ( $event_id <= 0 || '' === $email ) {
 		return false;
 	}
 
-	$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
-	$existing  = get_posts(
-		array(
-			'post_type'              => 'event_registration',
-			'post_status'            => array( 'publish', 'future', 'draft', 'pending', 'private' ),
-			'posts_per_page'         => 1,
-			'fields'                 => 'ids',
-			'no_found_rows'          => true,
-			'update_post_meta_cache' => false,
-			'update_post_term_cache' => false,
-			'meta_query'             => array(
-				'relation' => 'AND',
-				array(
-					'key'   => $meta_keys['event_id'],
-					'value' => $event_id,
-				),
-				array(
-					'key'   => $meta_keys['email'],
-					'value' => $email,
-				),
-				array(
-					'key'     => $meta_keys['status'],
-					'value'   => array( 'pending', 'confirmed' ),
-					'compare' => 'IN',
-				),
+	$meta_keys  = rytkoset_theme_get_event_registration_meta_keys();
+	$query_args = array(
+		'post_type'              => 'event_registration',
+		'post_status'            => array( 'publish', 'future', 'draft', 'pending', 'private' ),
+		'posts_per_page'         => 1,
+		'fields'                 => 'ids',
+		'no_found_rows'          => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+		'meta_query'             => array(
+			'relation' => 'AND',
+			array(
+				'key'   => $meta_keys['event_id'],
+				'value' => $event_id,
 			),
-		)
+			array(
+				'key'   => $meta_keys['email'],
+				'value' => $email,
+			),
+			array(
+				'key'     => $meta_keys['status'],
+				'value'   => rytkoset_theme_get_active_event_registration_statuses(),
+				'compare' => 'IN',
+			),
+		),
 	);
+
+	if ( $exclude_id > 0 ) {
+		$query_args['post__not_in'] = array( $exclude_id );
+	}
+
+	$existing = get_posts( $query_args );
 
 	return ! empty( $existing );
 }
@@ -1052,6 +1366,7 @@ function rytkoset_theme_handle_event_registration_submission() {
 		$meta_keys['notes']        => $notes,
 		$meta_keys['status']       => 'pending',
 		$meta_keys['gdpr_consent'] => time(),
+		$meta_keys['source']       => 'web_form',
 	);
 
 	if ( '' !== $choice_value ) {

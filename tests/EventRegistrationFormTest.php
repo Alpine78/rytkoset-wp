@@ -352,4 +352,89 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( array( 'jarjestaja@example.test' ), $GLOBALS['rytkoset_test_mails'][1]['to'] );
 		$this->assertStringContainsString( 'Uusi ilmoittautuminen', $GLOBALS['rytkoset_test_mails'][1]['subject'] );
 	}
+
+	// --- registration source and informing state --------------------------
+
+	public function test_normalize_source_defaults_to_web_form_for_unknown_values(): void {
+		$this->assertSame( 'web_form', rytkoset_theme_normalize_event_registration_source( '' ) );
+		$this->assertSame( 'web_form', rytkoset_theme_normalize_event_registration_source( 'legacy' ) );
+		$this->assertSame( 'web_form', rytkoset_theme_normalize_event_registration_source( 'web_form' ) );
+		$this->assertSame( 'manual', rytkoset_theme_normalize_event_registration_source( 'manual' ) );
+	}
+
+	public function test_normalize_informed_status_defaults_to_not_informed(): void {
+		$this->assertSame( 'not_informed', rytkoset_theme_normalize_event_registration_informed_status( '' ) );
+		$this->assertSame( 'not_informed', rytkoset_theme_normalize_event_registration_informed_status( 'jotain' ) );
+		$this->assertSame( 'informed', rytkoset_theme_normalize_event_registration_informed_status( 'informed' ) );
+	}
+
+	public function test_public_submission_stamps_web_form_source(): void {
+		$this->event( 10 );
+
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.30';
+		$_POST                  = array(
+			'event_id'                                 => '10',
+			'website'                                  => '',
+			'rytkoset_event_registration_submit_nonce' => 'rytkoset_submit_event_registration',
+			'registration_name'                        => 'Maija Meikäläinen',
+			'registration_email'                       => 'maija@example.test',
+			'registration_gdpr_consent'                => '1',
+		);
+
+		try {
+			rytkoset_theme_handle_event_registration_submission();
+			$this->fail( 'Expected the submission handler to redirect after saving.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertStringContainsString( 'registration_status=success', $redirect->location );
+		}
+
+		$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+		$this->assertSame( 'web_form', get_post_meta( 1000, $meta_keys['source'], true ) );
+	}
+
+	// --- duplicate guard --------------------------------------------------
+
+	public function test_active_registration_check_can_exclude_the_edited_row(): void {
+		$this->event( 10 );
+		$this->registration( 201, 10, array( 'status' => 'confirmed' ) );
+
+		$this->assertTrue(
+			rytkoset_theme_event_has_active_registration_for_email( 10, 'maija@example.test' )
+		);
+		$this->assertFalse(
+			rytkoset_theme_event_has_active_registration_for_email( 10, 'maija@example.test', 201 )
+		);
+	}
+
+	public function test_cancelled_registration_does_not_block_a_new_one(): void {
+		$this->event( 10 );
+		$this->registration( 202, 10, array( 'status' => 'cancelled' ) );
+
+		$this->assertFalse(
+			rytkoset_theme_event_has_active_registration_for_email( 10, 'maija@example.test' )
+		);
+	}
+
+	// --- cancel / restore status toggle ---------------------------------
+
+	public function test_set_status_flips_between_cancelled_and_confirmed(): void {
+		$this->event( 10 );
+		$this->registration( 203, 10, array( 'status' => 'confirmed' ) );
+
+		$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+
+		$this->assertTrue( rytkoset_theme_set_event_registration_status( 203, 'cancelled' ) );
+		$this->assertSame( 'cancelled', get_post_meta( 203, $meta_keys['status'], true ) );
+
+		$this->assertTrue( rytkoset_theme_set_event_registration_status( 203, 'confirmed' ) );
+		$this->assertSame( 'confirmed', get_post_meta( 203, $meta_keys['status'], true ) );
+	}
+
+	public function test_set_status_rejects_unknown_status_and_non_registration(): void {
+		$this->event( 10 );
+		$this->registration( 204, 10 );
+
+		$this->assertFalse( rytkoset_theme_set_event_registration_status( 204, 'deleted' ) );
+		$this->assertFalse( rytkoset_theme_set_event_registration_status( 10, 'cancelled' ) );
+	}
 }
