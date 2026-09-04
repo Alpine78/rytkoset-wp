@@ -1091,7 +1091,7 @@ function rytkoset_theme_send_event_registration_organizer_notification( $registr
 
 	$lines = array(
 		__( 'Tapahtumaan on tullut uusi ilmoittautuminen maksuttomalla lomakkeella.', 'rytkoset-theme' ),
-		__( 'Ilmoittautuminen odottaa käsittelyä, kunnes järjestäjä muuttaa sen tilan ylläpidossa.', 'rytkoset-theme' ),
+		__( 'Ilmoittautuminen on tallennettu vahvistettuna. Järjestäjä voi muuttaa sen tilan ylläpidossa tarvittaessa.', 'rytkoset-theme' ),
 		'',
 		__( 'Tapahtuman tiedot:', 'rytkoset-theme' ),
 		sprintf(
@@ -1357,6 +1357,12 @@ function rytkoset_theme_handle_event_registration_submission() {
 		$quantity     = rytkoset_theme_normalize_event_registration_quantity( $raw_quantity );
 	}
 
+	// Confirmed immediately on successful submission (#666): most registrations
+	// never left "pending" in practice because nothing required an organizer to
+	// review them individually, which left downstream "active" filters (e.g. the
+	// event feedback survey audience) effectively empty. The duplicate-guard and
+	// cancel/restore flow are unaffected — a registration can still be cancelled
+	// by an organizer at any time.
 	$meta_keys  = rytkoset_theme_get_event_registration_meta_keys();
 	$meta_input = array(
 		$meta_keys['event_id']     => $event_id,
@@ -1364,7 +1370,7 @@ function rytkoset_theme_handle_event_registration_submission() {
 		$meta_keys['email']        => $email,
 		$meta_keys['diet']         => $diet,
 		$meta_keys['notes']        => $notes,
-		$meta_keys['status']       => 'pending',
+		$meta_keys['status']       => 'confirmed',
 		$meta_keys['gdpr_consent'] => time(),
 		$meta_keys['source']       => 'web_form',
 	);

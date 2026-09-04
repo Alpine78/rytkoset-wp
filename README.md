@@ -226,6 +226,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/events.md` - tapahtuma-CPT ja ilmoittautumisvirta
 - `docs/event-participants-admin.md` - osallistujahallinta
 - `docs/event-participants-messaging.md` - tapahtumaviestien lähetysjono
+- `docs/event-feedback.md` - tapahtumakohtainen palautekysely
 - `docs/media-saavutettavuus.md` - median ja gallerioiden saavutettavuus
 - `docs/media-library-ordering.md` - mediakirjaston ja albumien kuvajärjestys
 - `docs/digital-magazines.md` - digilehtien sisältö-, käyttöoikeus- ja hinnoittelumalli

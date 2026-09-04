@@ -1,7 +1,10 @@
 # Massaviestintä tapahtuman osallistujille
 
-Tämä dokumentti kuvaa tikettien `#74` ja `#264` toteutuksen sekä `#665`:n
-lisäyksen aktiivisesta vastaanottajajoukosta.
+Tämä dokumentti kuvaa tikettien `#74` ja `#264` toteutuksen, `#665`:n
+lisäyksen aktiivisesta vastaanottajajoukosta sekä `#666`:n
+`{palautelinkki}`-placeholderin ja "Palautekysely"-jonotusosion. Itse
+palautekyselyn asetukset, julkinen lomake ja tuloskooste on kuvattu
+tiedostossa [event-feedback.md](event-feedback.md).
 
 ## Tavoite
 
@@ -43,10 +46,14 @@ suotimella `rytkoset_theme_event_feedback_inactive_order_statuses`.
 | Aihe | Sähköpostin otsikkorivi (pakollinen, max 200 merkkiä) |
 | Viesti | Viestin runko tekstimuotoisena (pakollinen) |
 
-Lomake hyväksyy kaksi placeholderia, jotka korvataan jokaisen vastaanottajan kohdalla:
+Lomake hyväksyy kolme placeholderia:
 
-- `{nimi}` → osallistujan nimi
-- `{tapahtuma}` → tapahtuman otsikko
+- `{nimi}` → osallistujan nimi (korvataan jokaisen vastaanottajan kohdalla erikseen)
+- `{tapahtuma}` → tapahtuman otsikko (korvataan jokaisen vastaanottajan kohdalla erikseen)
+- `{palautelinkki}` → valitun tapahtuman julkisen palautelomakkeen osoite (`#666`). Ratkaistaan
+  kerran per jonotyö tapahtuman ID:stä, ei per vastaanottaja, koska linkillä ei ole
+  henkilökohtaista tunnistetta. Toimii vain kun jono on jonotettu yhdelle yksittäiselle
+  tapahtumalle — `Kaikki tapahtumat` -lähetyksellä placeholder korvautuu tyhjällä.
 
 Esim. *"Hei {nimi}, tervetuloa tapahtumaan {tapahtuma}!"* lähetetään yksilöllisesti jokaiselle.
 
@@ -97,6 +104,17 @@ Sivun alaosassa näkyy taulukko viimeisestä 20 valmistuneesta jonotyöstä:
 
 Lokia tallennetaan max 50 viimeisintä merkintää WordPressin option-taulukkoon avaimella `rytkoset_event_messaging_log`. Vanhin merkintä poistuu, kun uusi tulee tilalle (FIFO).
 
+### Palautekysely-osio (#666)
+
+Kun yksittäinen tapahtuma on valittuna (ei `Kaikki tapahtumat`), tapahtuman
+palautekysely ei ole `Ei palautekyselyä` -tilassa ja tapahtuma on ohi, viesti-
+lomakkeen yläpuolelle ilmestyy oma "Palautekysely"-osio. Se näyttää
+vastaanottajaerittelyn (osallistujarivit / yksilölliset osoitteet / ilman
+osoitetta jäävät) ja "Lisää palautepyyntö jonoon" -painikkeen, joka lähettää
+kiinteän aihe-/runkomallin (tapahtuman johdantoteksti + `{palautelinkki}`)
+samaan jonoon kuin yllä oleva yleinen viestilomake. Painike katoaa, kun
+palautepyyntö on jo jonotettu tälle tapahtumalle (`_rytkoset_event_feedback_queued_at`).
+
 ## Oikeudet
 
 Sivu, lähetyshandler ja lokin näkyminen on rajattu käyttäjille, joilla on `edit_others_event_registrations`-oikeus. Tämä kuuluu sekä `administrator`- että `event_organizer`-roolille. Lähetyshandleri tarkistaa oikeuden uudelleen `admin_post`-käsittelijässä ja vahvistaa nonce-merkin ennen lähetystä.
@@ -108,7 +126,7 @@ Toteutus on tiedostossa `wp-content/themes/rytkoset-theme/inc/event-participants
 Pääfunktiot:
 
 - `rytkoset_theme_get_event_messaging_recipients($event_id, $status_filter)` — deduplikoitu vastaanottajalista + ohitettujen määrä
-- `rytkoset_theme_personalize_event_message($body, $name, $event_title)` — placeholder-korvaus
+- `rytkoset_theme_personalize_event_message($body, $name, $event_title, $feedback_link = '')` — placeholder-korvaus, `#666`:n `{palautelinkki}` mukaan lukien
 - `rytkoset_theme_register_event_messaging_admin_page()` — rekisteröi adminisivun
 - `rytkoset_theme_render_event_messaging_admin_page()` — renderöi sivun
 - `rytkoset_theme_send_event_participants_message()` — `admin_post`-handleri, joka validoi lomakkeen ja lisää työn jonoon

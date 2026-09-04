@@ -195,7 +195,7 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'maija@example.test', get_post_meta( $registration_id, $meta_keys['email'], true ) );
 		$this->assertSame( 'Kuopio', get_post_meta( $registration_id, $meta_keys['choice'], true ) );
 		$this->assertSame( 10, get_post_meta( $registration_id, $meta_keys['quantity'], true ) );
-		$this->assertSame( 'pending', get_post_meta( $registration_id, $meta_keys['status'], true ) );
+		$this->assertSame( 'confirmed', get_post_meta( $registration_id, $meta_keys['status'], true ) );
 		// Event 10 has no organizer notification recipients, so only the
 		// participant receipt is sent. See the organizer notification tests
 		// below for the two-mail case.

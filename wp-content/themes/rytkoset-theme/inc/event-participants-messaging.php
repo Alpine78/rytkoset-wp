@@ -74,15 +74,22 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 /**
  * Replaces placeholders in a message body.
  *
- * @param string $body        Message body.
- * @param string $name        Recipient name.
- * @param string $event_title Event title.
+ * `{palautelinkki}` resolves to a single event's public feedback link (#666).
+ * It is computed once per job (not per recipient) since the link carries no
+ * per-recipient token, and resolves to an empty string for a "kaikki
+ * tapahtumat" broadcast (`$feedback_link` left blank by the caller) — a single
+ * link cannot represent multiple events.
+ *
+ * @param string $body          Message body.
+ * @param string $name          Recipient name.
+ * @param string $event_title   Event title.
+ * @param string $feedback_link Optional resolved feedback survey URL for the job's event.
  * @return string
  */
-function rytkoset_theme_personalize_event_message( $body, $name, $event_title ) {
+function rytkoset_theme_personalize_event_message( $body, $name, $event_title, $feedback_link = '' ) {
 	return str_replace(
-		array( '{nimi}', '{tapahtuma}' ),
-		array( $name, $event_title ),
+		array( '{nimi}', '{tapahtuma}', '{palautelinkki}' ),
+		array( $name, $event_title, $feedback_link ),
 		(string) $body
 	);
 }
@@ -472,6 +479,13 @@ function rytkoset_theme_process_event_messaging_queue() {
 					$headers[] = 'Reply-To: ' . $reply_to;
 				}
 
+				// Resolved once per job, not per recipient: the link carries no
+				// per-recipient token (#666). Empty for a "kaikki tapahtumat"
+				// broadcast (event_id 0), since one link cannot represent several events.
+				$feedback_link = function_exists( 'rytkoset_theme_get_event_feedback_public_url' )
+					? rytkoset_theme_get_event_feedback_public_url( (int) ( $job['event_id'] ?? 0 ) )
+					: '';
+
 				foreach ( $recipients as $index => $recipient ) {
 					if ( $available <= 0 ) {
 						break;
@@ -493,7 +507,8 @@ function rytkoset_theme_process_event_messaging_queue() {
 					$message = rytkoset_theme_personalize_event_message(
 						(string) ( $job['body'] ?? '' ),
 						(string) ( $recipient['name'] ?? '' ),
-						(string) ( $recipient['event_title'] ?? '' )
+						(string) ( $recipient['event_title'] ?? '' ),
+						$feedback_link
 					);
 
 					$attempt_time = time();
@@ -700,6 +715,10 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 			<br class="clear" />
 		</div>
 
+		<?php if ( function_exists( 'rytkoset_theme_render_event_feedback_queue_section' ) ) : ?>
+			<?php rytkoset_theme_render_event_feedback_queue_section( $selected_event ); ?>
+		<?php endif; ?>
+
 		<h2><?php esc_html_e( 'Viesti', 'rytkoset-theme' ); ?></h2>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="max-width: 760px;">
@@ -740,7 +759,7 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 							<p class="description">
 								<?php
 								echo wp_kses(
-									__( 'Voit käyttää placeholdereita: <code>{nimi}</code> korvautuu osallistujan nimellä ja <code>{tapahtuma}</code> tapahtuman otsikolla. Viesti lähetetään tekstimuotoisena.', 'rytkoset-theme' ),
+									__( 'Voit käyttää placeholdereita: <code>{nimi}</code> korvautuu osallistujan nimellä, <code>{tapahtuma}</code> tapahtuman otsikolla ja <code>{palautelinkki}</code> valitun tapahtuman palautelomakkeen osoitteella (toimii vain kun yksi tapahtuma on valittuna). Viesti lähetetään tekstimuotoisena.', 'rytkoset-theme' ),
 									array( 'code' => array() )
 								);
 								?>

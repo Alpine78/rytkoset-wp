@@ -414,6 +414,8 @@ class WC_Order {
 	public string $billing_email = '';
 	public string $billing_first_name = '';
 	public string $billing_last_name = '';
+	public string $billing_phone = '';
+	public string $customer_note = '';
 	public string $order_key = '';
 	public string $payment_method = '';
 	public string $edit_order_url = '';
@@ -455,6 +457,22 @@ class WC_Order {
 
 	public function get_billing_email(): string {
 		return $this->billing_email;
+	}
+
+	public function get_billing_first_name(): string {
+		return $this->billing_first_name;
+	}
+
+	public function get_billing_last_name(): string {
+		return $this->billing_last_name;
+	}
+
+	public function get_billing_phone(): string {
+		return $this->billing_phone;
+	}
+
+	public function get_customer_note(): string {
+		return $this->customer_note;
 	}
 
 	public function get_formatted_billing_full_name(): string {
@@ -916,6 +934,10 @@ function current_time( $type = 'mysql' ) {
 	}
 
 	return $now->format( 'Y-m-d H:i:s' );
+}
+
+function wp_is_post_revision( $post ) {
+	return false;
 }
 
 function wp_verify_nonce( $nonce, $action = -1 ) {
@@ -1905,6 +1927,14 @@ function wc_get_order_statuses(): array {
 	);
 }
 
+function wc_get_order_status_name( $status ): string {
+	$status   = (string) $status;
+	$statuses = wc_get_order_statuses();
+	$key      = 0 === strpos( $status, 'wc-' ) ? $status : 'wc-' . $status;
+
+	return $statuses[ $key ] ?? $status;
+}
+
 // ---------------------------------------------------------------------------
 // Load the modules under test.
 // ---------------------------------------------------------------------------
@@ -1932,6 +1962,8 @@ require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
 require_once $rytkoset_theme_inc . '/event-registration-anonymization.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
+require_once $rytkoset_theme_inc . '/event-participants-admin.php';
+require_once $rytkoset_theme_inc . '/event-feedback.php';
 require_once $rytkoset_theme_inc . '/email.php';
 require_once $rytkoset_theme_inc . '/gallery-albums.php';
 
