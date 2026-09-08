@@ -25,13 +25,13 @@ yksittäiseen osallistujaan.
 
 Tapahtuman muokkausnäkymän **Palautekysely**-laatikossa:
 
-| Kenttä | Selite |
-| --- | --- |
-| Palautekyselyn tila | **Ei palautekyselyä** (oletus kaikille tapahtumille), **Lähetä käsin** tai **Lähetä automaattisesti** |
-| Automaattinen lähetysaika | Pakollinen vain automaattitilassa. Ajan pitää olla tapahtumapäivän jälkeen — jos ei, tila tallennetaan hiljaisesti `Lähetä käsin`-arvoon |
-| Palautteen määräpäivä | Valinnainen. Tyhjänä kysely pysyy avoinna toistaiseksi |
-| Johdantoteksti | Valinnainen, max 500 merkkiä. Näytetään lomakkeella ja palautepyynnön viestin alussa |
-| Ilmoita järjestäjille uusista vastauksista | Valinnainen rasti, oletuksena pois. Ks. "Järjestäjäilmoitus" alla |
+| Kenttä                                     | Selite                                                                                                                                   |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Palautekyselyn tila                        | **Ei palautekyselyä** (oletus kaikille tapahtumille), **Lähetä käsin** tai **Lähetä automaattisesti**                                    |
+| Automaattinen lähetysaika                  | Pakollinen vain automaattitilassa. Ajan pitää olla tapahtumapäivän jälkeen — jos ei, tila tallennetaan hiljaisesti `Lähetä käsin`-arvoon |
+| Palautteen määräpäivä                      | Valinnainen. Tyhjänä kysely pysyy avoinna toistaiseksi                                                                                   |
+| Johdantoteksti                             | Valinnainen, max 500 merkkiä. Näytetään lomakkeella ja palautepyynnön viestin alussa                                                     |
+| Ilmoita järjestäjille uusista vastauksista | Valinnainen rasti, oletuksena pois. Ks. "Järjestäjäilmoitus" alla                                                                        |
 
 Jos palautepyyntö on jo lisätty lähetysjonoon (käsin tai automaattisesti),
 laatikko näyttää sen ajankohdan eikä asetusten muokkaaminen sen jälkeen
@@ -63,6 +63,35 @@ Lomake sisältää:
 2. **Mikä onnistui hyvin?** (valinnainen, max 500 merkkiä)
 3. **Mitä voisimme parantaa?** (valinnainen, max 500 merkkiä)
 4. **Toiveita tuleviin tapahtumiin** (valinnainen, max 500 merkkiä)
+
+### Ulkoasu
+
+Sivulla on oma asettelunsa, koska osallistuja saapuu sille suoraan
+sähköpostilinkistä ilman muuta kontekstia:
+
+- **Murupolku** Tapahtumat > tapahtuma > Palaute.
+- **Hero**: tummansininen gradienttiotsake, jossa tapahtuman nimi, tapahtuman
+  oma johdantoteksti (tai neutraali oletusteksti, jos sitä ei ole kirjoitettu),
+  tapahtuman sijainti pillerissä sekä rivi "Noin 2 minuuttia / Vastaukset ovat
+  anonyymejä". Metarivi näkyy vain, kun lomake on näkyvissä.
+- **Kortti**: hero ja sen alla oleva valkoinen kortti muodostavat yhden
+  elementin. Kortissa on joko lomake, kiitosnäkymä tai tilaviesti.
+- **Arvioasteikko**: viisi ruutua, joissa numero ja sanallinen kuvaus
+  (Heikko / Välttävä / Hyvä / Kiitettävä / Erinomainen) sekä ääripäiden
+  selitteet. Kapealla näytöllä sanallinen kuvaus piilotetaan visuaalisesti,
+  mutta se säilyy ruudunlukijan luettavana osana painikkeen nimeä.
+- **Merkkilaskuri** jokaisen tekstikentän alla. Laskuri on vain visuaalinen
+  (`aria-hidden`); pituusraja kerrotaan ruudunlukijalle erillisessä
+  `aria-describedby`-tekstissä, ja `maxlength` rajoittaa syötteen myös ilman
+  JavaScriptiä.
+- **Virhetilat**: kortin yläreunassa `role="alert"`-ilmoitus. Jos virhe on
+  puuttuva arvio, myös arvioruudut saavat virhekehyksen ja asteikon alle tulee
+  tarkentava viesti.
+
+Tyylit ovat tiedostossa `assets/css/event-feedback.css` ja merkkilaskuri
+tiedostossa `assets/js/event-feedback.js`. Molemmat ladataan vain tällä
+reitillä. Värit tulevat teeman tokeneista, joten tumma teema toimii ilman
+erillistä ylläpitoa.
 
 Turvallisuus: honeypot-kenttä tarkistetaan ennen noncea, nonce vaaditaan,
 oma IP-perusteinen lähetysrajoitin (oletus 5 lähetystä / 10 min, suotimet
@@ -216,6 +245,11 @@ Pääfunktiot:
 - `rytkoset_theme_event_feedback_survey_is_open($event_id)` — lomakkeen avoin-tila
 - `rytkoset_theme_register_event_feedback_response_cpt()` — rekisteröi `event_feedback`-CPT:n, jakaa `event_registration`:n `capability_type`:n (`inc/event-roles.php`)
 - `rytkoset_theme_render_event_feedback_page()` — julkisen `/palaute/{id}/`-reitin renderöinti + `template_redirect`-lähetyskäsittely
+- `rytkoset_theme_render_event_feedback_breadcrumbs($event_id)` / `..._render_event_feedback_hero($event_id, $show_meta)` / `..._get_event_feedback_hero_intro($event_id)` — sivun murupolku ja hero-otsake; johdantoteksti tulee tapahtuman omasta kentästä tai oletustekstistä
+- `rytkoset_theme_render_event_feedback_form($event_id, $error_code)` — lomake; `arvio`-virhekoodi merkitsee arviokentän virheelliseksi, muut virheet näkyvät vain kortin yläreunan ilmoituksessa
+- `rytkoset_theme_get_event_feedback_rating_labels()` / `..._get_event_feedback_text_questions()` — asteikon sanalliset kuvaukset ja tekstikysymysten määrittely; jälkimmäinen on kenttänimien ainoa lähde, joten se pysyy synkassa lähetyskäsittelijän kanssa
+- `rytkoset_theme_get_event_feedback_error_message($error_code)` — virhekoodin käyttäjälle näkyvä viesti
+- `rytkoset_theme_get_event_feedback_document_title()` — sivun `<title>`; asetetaan sekä WordPressin `document_title_parts`- että Rank Mathin `rank_math/frontend/title`-suotimeen, koska reitillä ei ole kyselyobjektia ja otsikko jäi muuten tyhjäksi (WCAG 2.4.2)
 - `rytkoset_theme_handle_event_feedback_submission($event_id)` — validointi, sanitointi, tallennus, PRG-uudelleenohjaus
 - `rytkoset_theme_event_feedback_notifies_organizers($event_id)` / `..._send_event_feedback_organizer_notification()` — järjestäjäilmoituksen opt-in ja lähetys, kutsutaan onnistuneen tallennuksen jälkeen ennen uudelleenohjausta
 - `rytkoset_theme_get_event_feedback_recipients($event_id)` — käyttää `rytkoset_theme_get_event_participants()` + `rytkoset_theme_filter_active_event_participants()` + `rytkoset_theme_get_event_messaging_recipients()` (kaikki `event-participants-admin.php`/`event-participants-messaging.php`), lisää osallistujarivien kokonaismäärän esikatselua varten

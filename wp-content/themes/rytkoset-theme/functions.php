@@ -614,6 +614,25 @@ function rytkoset_theme_scripts() {
 		);
 	}
 
+	// Tapahtumapalautteen julkinen sivu (/palaute/{event_id}/): oma hero +
+	// kortti -asettelu ja merkkilaskuri. Ladataan vain tällä reitillä.
+	if ( function_exists( 'rytkoset_theme_is_event_feedback_request' ) && rytkoset_theme_is_event_feedback_request() ) {
+		wp_enqueue_style(
+			'rytkoset-theme-event-feedback',
+			get_template_directory_uri() . '/assets/css/event-feedback.css',
+			array( $core_css_dependency ),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/event-feedback.css' )
+		);
+
+		wp_enqueue_script(
+			'rytkoset-theme-event-feedback',
+			get_template_directory_uri() . '/assets/js/event-feedback.js',
+			array(),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/event-feedback.js' ),
+			true
+		);
+	}
+
 	// AI-tukichatin widget (#413) — vain kun backend on konfiguroitu (#412).
 	if ( function_exists( 'rytkoset_theme_chat_widget_is_enabled' ) && rytkoset_theme_chat_widget_is_enabled() ) {
 		wp_enqueue_style(
