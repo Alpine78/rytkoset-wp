@@ -1,0 +1,575 @@
+/*
+ * Tapahtumakohtaisen palautekyselyn julkinen sivu (/palaute/{event_id}/).
+ *
+ * Ladataan vain palautereitillä (functions.php). Sivu on ainoa näkymä, jolle
+ * osallistuja tulee suoraan sähköpostilinkistä ilman muuta kontekstia, joten
+ * se saa oman hero + kortti -asettelunsa muiden lomakkeiden sijaan.
+ *
+ * Kaikki värit tulevat teeman tokeneista (base.css), joten tumma teema
+ * toimii ilman erillisiä värimäärittelyjä muualla kuin gradientissa ja
+ * virheilmoituksessa, joissa vaalean teeman sävy ei sellaisenaan toimi.
+ */
+
+.event-feedback-section {
+  padding: clamp(1.5rem, 5vw, 4rem) 0 5rem;
+  background: var(--color-bg);
+}
+
+.event-feedback-page {
+  --efb-radius-card: 20px;
+  --efb-shadow-card: 0 22px 50px rgba(8, 37, 74, 0.13);
+  --efb-hero-from: var(--color-primary);
+  --efb-hero-to: var(--color-primary-deeper);
+  --efb-error-border: #b91c1c;
+  --efb-error-bg: #fee2e2;
+  --efb-error-text: #7f1d1d;
+
+  width: min(820px, 100% - 2rem);
+  margin-inline: auto;
+}
+
+:root[data-theme="dark"] .event-feedback-page {
+  --efb-shadow-card: 0 22px 50px rgba(0, 0, 0, 0.42);
+  /* Tummassa teemassa --color-primary on kirkas sininen, joka tekisi herosta
+     vaaleamman kuin sivun taustasta. Käytetään tummempia brändisävyjä. */
+  --efb-hero-from: var(--color-primary-dark);
+  --efb-hero-to: var(--color-primary-deeper);
+  --efb-error-border: #f87171;
+  --efb-error-bg: #3f1414;
+  --efb-error-text: #fecaca;
+}
+
+/* ---------- Murupolku ---------- */
+
+.event-feedback-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  color: var(--color-text-mute);
+  font-size: 0.8125rem;
+}
+
+.event-feedback-crumbs a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.event-feedback-crumbs a:hover,
+.event-feedback-crumbs a:focus-visible {
+  text-decoration: underline;
+}
+
+.event-feedback-crumbs__sep {
+  color: var(--color-text-mute);
+}
+
+.event-feedback-crumbs__current {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* ---------- Hero ---------- */
+
+.event-feedback-hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.75rem, 4.5vw, 2.75rem) clamp(1.375rem, 4vw, 2.75rem);
+  border-radius: var(--efb-radius-card) var(--efb-radius-card) 0 0;
+  background: linear-gradient(155deg, var(--efb-hero-from) 0%, var(--efb-hero-to) 100%);
+  color: var(--color-text-inverted);
+}
+
+.event-feedback-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -80px -160px auto;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.2), transparent 68%);
+  pointer-events: none;
+}
+
+.event-feedback-hero > * {
+  position: relative;
+}
+
+.event-feedback-hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5625rem;
+  margin: 0 0 0.875rem;
+  color: var(--color-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.event-feedback-hero__eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.event-feedback-hero__title {
+  margin: 0 0 0.375rem;
+  color: inherit;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 4.4vw, 2.625rem);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.event-feedback-hero__sub {
+  max-width: 52ch;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: clamp(0.9375rem, 1.7vw, 1.0625rem);
+}
+
+.event-feedback-hero__route {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 1.125rem 0 0;
+  padding: 0.4375rem 0.875rem 0.4375rem 0.75rem;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-pill);
+  background: var(--color-nav-surface);
+  font-size: 0.84375rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.event-feedback-hero__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
+}
+
+.event-feedback-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem 1.375rem;
+  margin: 1.375rem 0 0;
+  padding: 1.25rem 0 0;
+  border-top: 1px solid var(--color-nav-border);
+  list-style: none;
+  font-size: 0.84375rem;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.event-feedback-hero__meta li {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+}
+
+.event-feedback-hero__meta i {
+  color: var(--color-accent);
+  font-style: normal;
+  font-weight: 800;
+}
+
+/* ---------- Kortti (lomake / kiitos / suljettu) ---------- */
+
+.event-feedback-panel {
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border-radius: 0 0 var(--efb-radius-card) var(--efb-radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--efb-shadow-card);
+}
+
+.event-feedback-form {
+  display: grid;
+  gap: 2.125rem;
+}
+
+/* ---------- Kysymyslohko ---------- */
+
+.event-feedback-q {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.event-feedback-q__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0;
+  color: var(--color-text);
+  font-size: clamp(1.0625rem, 2vw, 1.1875rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.event-feedback-q__req {
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+:root[data-theme="dark"] .event-feedback-q__req {
+  color: var(--color-text-light);
+}
+
+.event-feedback-q__opt {
+  color: var(--color-text-mute);
+  font-size: 0.78125rem;
+  font-weight: 600;
+}
+
+.event-feedback-q__help {
+  margin: -0.25rem 0 0.125rem;
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
+}
+
+.event-feedback-q__error {
+  margin: 0;
+  color: var(--efb-error-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .event-feedback-q__error {
+  color: var(--efb-error-border);
+}
+
+/* ---------- Arvioasteikko ---------- */
+
+.event-feedback-scale {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.625rem;
+}
+
+.event-feedback-scale input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.event-feedback-scale label {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: center;
+  align-content: center;
+  min-height: 48px;
+  padding: 0.875rem 0.375rem 0.75rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease,
+    background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.event-feedback-scale label b {
+  font-size: 1.375rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-feedback-scale label em {
+  color: var(--color-text-mute);
+  font-size: 0.71875rem;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.event-feedback-scale label:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-surface);
+  transform: translateY(-2px);
+}
+
+.event-feedback-scale input[type="radio"]:checked + label {
+  border-color: var(--color-primary-deeper);
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.4);
+  transform: translateY(-2px);
+}
+
+.event-feedback-scale input[type="radio"]:checked + label em {
+  color: var(--color-primary-deeper);
+}
+
+.event-feedback-scale input[type="radio"]:focus-visible + label {
+  outline: 3px solid var(--color-primary-light);
+  outline-offset: 3px;
+}
+
+.event-feedback-q--rating.is-error .event-feedback-scale label {
+  border-color: var(--efb-error-border);
+}
+
+.event-feedback-scale__ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-text-mute);
+  font-size: 0.78125rem;
+  font-weight: 600;
+}
+
+/* ---------- Tekstikentät ---------- */
+
+.event-feedback-q textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 120px;
+  padding: 0.875rem 1rem;
+  border: 1.5px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 0.96875rem;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 140ms ease, box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.event-feedback-q textarea::placeholder {
+  color: var(--color-text-mute);
+}
+
+.event-feedback-q textarea:hover {
+  border-color: var(--color-primary-light);
+}
+
+.event-feedback-q textarea:focus {
+  outline: none;
+  border-color: var(--color-primary-light);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px rgba(59, 118, 168, 0.16);
+}
+
+.event-feedback-q textarea:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.event-feedback-count {
+  margin: 0;
+  color: var(--color-text-mute);
+  font-size: 0.78125rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ---------- Tietosuojahuomio ---------- */
+
+.event-feedback-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  background: var(--color-surface-alt);
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
+}
+
+.event-feedback-note p {
+  margin: 0;
+}
+
+.event-feedback-note strong {
+  color: var(--color-text);
+}
+
+.event-feedback-note svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  color: var(--color-primary-light);
+}
+
+/* ---------- Lähetys ---------- */
+
+.event-feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-border-neutral);
+}
+
+.event-feedback-actions__note {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--color-text-mute);
+  font-size: 0.84375rem;
+}
+
+.event-feedback-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 48px;
+  padding: 0.9375rem 1.875rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(251, 191, 36, 0.36);
+  transition: transform 140ms ease, box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.event-feedback-submit:hover {
+  background: var(--color-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(251, 191, 36, 0.44);
+}
+
+.event-feedback-submit:active {
+  transform: translateY(0);
+}
+
+.event-feedback-submit:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.event-feedback-submit svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Ilmoitukset ---------- */
+
+.event-feedback-alert {
+  margin: 0 0 1.75rem;
+  padding: 0.875rem 1.125rem;
+  border: 1px solid var(--efb-error-border);
+  border-radius: var(--radius-l);
+  background: var(--efb-error-bg);
+  color: var(--efb-error-text);
+  font-weight: 700;
+}
+
+.event-feedback-closed {
+  margin: 0;
+  color: var(--color-text-mute);
+  font-size: 1rem;
+  text-align: center;
+}
+
+/* ---------- Kiitos-näkymä ---------- */
+
+.event-feedback-thanks {
+  padding: clamp(2.25rem, 6vw, 4rem) clamp(1.5rem, 4vw, 2.75rem);
+  text-align: center;
+}
+
+.event-feedback-thanks__badge {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.375rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-primary-deeper);
+}
+
+.event-feedback-thanks__badge svg {
+  width: 30px;
+  height: 30px;
+}
+
+.event-feedback-thanks__title {
+  margin: 0 0 0.625rem;
+  font-family: var(--font-heading);
+  font-size: clamp(1.5rem, 3.4vw, 2rem);
+  font-weight: 700;
+}
+
+.event-feedback-thanks__text {
+  max-width: 46ch;
+  margin: 0 auto;
+  color: var(--color-text-mute);
+}
+
+/* ---------- Kapea näyttö ---------- */
+
+@media (max-width: 35rem) {
+  .event-feedback-scale {
+    gap: 0.375rem;
+  }
+
+  .event-feedback-scale label {
+    padding: 0.75rem 0.125rem;
+  }
+
+  .event-feedback-scale label b {
+    font-size: 1.1875rem;
+  }
+
+  /* Sanallinen kuvaus piiloon visuaalisesti mutta EI saavutettavuuspuusta:
+     radiopainikkeen saavutettava nimi säilyy muodossa "3 Hyvä". */
+  .event-feedback-scale label em {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .event-feedback-scale__ends {
+    font-size: 0.71875rem;
+  }
+}
+
+/* ---------- Liikkeen vähentäminen ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .event-feedback-scale label,
+  .event-feedback-q textarea,
+  .event-feedback-submit {
+    transition: none;
+  }
+
+  .event-feedback-scale label:hover,
+  .event-feedback-scale input[type="radio"]:checked + label,
+  .event-feedback-submit:hover {
+    transform: none;
+  }
+}

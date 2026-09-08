@@ -789,6 +789,67 @@ function rytkoset_theme_event_feedback_rank_math_robots( $robots ) {
 add_filter( 'rank_math/frontend/robots', 'rytkoset_theme_event_feedback_rank_math_robots' );
 
 /**
+ * Returns the document title for the current public feedback request.
+ *
+ * The route has no queried object, so both WordPress and Rank Math produced an
+ * empty `<title>` for it. That is a WCAG 2.4.2 (Page Titled) failure and leaves
+ * the browser tab unidentifiable, which matters here because visitors arrive
+ * straight from an email link.
+ *
+ * @return string Title, or an empty string when this is not a feedback request.
+ */
+function rytkoset_theme_get_event_feedback_document_title() {
+	if ( ! rytkoset_theme_is_event_feedback_request() ) {
+		return '';
+	}
+
+	$event_id = absint( get_query_var( rytkoset_theme_get_event_feedback_query_var(), 0 ) );
+
+	if ( $event_id <= 0 || 'rytkoset_event' !== get_post_type( $event_id ) ) {
+		return '';
+	}
+
+	return sprintf(
+		/* translators: %s: event title. */
+		__( 'Palaute: %s', 'rytkoset-theme' ),
+		get_the_title( $event_id )
+	);
+}
+
+/**
+ * Sets the WordPress document title for the public feedback route.
+ *
+ * @param array<string, string> $parts Document title parts.
+ * @return array<string, string>
+ */
+function rytkoset_theme_event_feedback_document_title( $parts ) {
+	$title = rytkoset_theme_get_event_feedback_document_title();
+
+	if ( '' !== $title ) {
+		$parts['title'] = $title;
+	}
+
+	return $parts;
+}
+add_filter( 'document_title_parts', 'rytkoset_theme_event_feedback_document_title' );
+
+/**
+ * Sets the Rank Math document title for the public feedback route.
+ *
+ * Rank Math replaces the core title output where it is active, so the same
+ * title has to be supplied through its own filter as well.
+ *
+ * @param string $title Rank Math title.
+ * @return string
+ */
+function rytkoset_theme_event_feedback_rank_math_title( $title ) {
+	$feedback_title = rytkoset_theme_get_event_feedback_document_title();
+
+	return '' !== $feedback_title ? $feedback_title : $title;
+}
+add_filter( 'rank_math/frontend/title', 'rytkoset_theme_event_feedback_rank_math_title' );
+
+/**
  * Returns an event's public feedback survey URL.
  *
  * @param int $event_id Event post ID.
@@ -883,78 +944,174 @@ function rytkoset_theme_get_event_feedback_submit_nonce_action() {
 }
 
 /**
+ * Returns the 1–5 rating scale labels shown on the public feedback form.
+ *
+ * Presentation only: the stored response is still the plain integer, so
+ * changing a label never affects saved responses, the average rating or the
+ * admin summary.
+ *
+ * @return array<int, string>
+ */
+function rytkoset_theme_get_event_feedback_rating_labels() {
+	return array(
+		1 => __( 'Heikko', 'rytkoset-theme' ),
+		2 => __( 'Välttävä', 'rytkoset-theme' ),
+		3 => __( 'Hyvä', 'rytkoset-theme' ),
+		4 => __( 'Kiitettävä', 'rytkoset-theme' ),
+		5 => __( 'Erinomainen', 'rytkoset-theme' ),
+	);
+}
+
+/**
+ * Returns the free-text questions rendered on the public feedback form.
+ *
+ * The `name` values are the ones the submit handler reads, so this list is the
+ * single source of truth for the three optional textareas.
+ *
+ * @return array<int, array<string, string>>
+ */
+function rytkoset_theme_get_event_feedback_text_questions() {
+	return array(
+		array(
+			'name'        => 'feedback_well',
+			'slug'        => 'well',
+			'label'       => __( 'Mikä onnistui hyvin?', 'rytkoset-theme' ),
+			'placeholder' => __( 'Esimerkiksi aikataulu, järjestelyt, ohjelma tai tarjoilu.', 'rytkoset-theme' ),
+		),
+		array(
+			'name'        => 'feedback_improve',
+			'slug'        => 'improve',
+			'label'       => __( 'Mitä voisimme parantaa?', 'rytkoset-theme' ),
+			'placeholder' => __( 'Kerro rehellisesti. Myös pienet havainnot auttavat.', 'rytkoset-theme' ),
+		),
+		array(
+			'name'        => 'feedback_wishes',
+			'slug'        => 'wishes',
+			'label'       => __( 'Toiveita tuleviin tapahtumiin', 'rytkoset-theme' ),
+			'placeholder' => __( 'Millaisia tapahtumia toivoisit jatkossa?', 'rytkoset-theme' ),
+		),
+	);
+}
+
+/**
  * Renders the public feedback response form.
  *
- * @param int $event_id Event post ID.
+ * @param int    $event_id   Event post ID.
+ * @param string $error_code Error code from the previous submission, if any.
+ *                           Only `arvio` marks a field: the other codes are
+ *                           form-level and are shown in the alert above.
  */
-function rytkoset_theme_render_event_feedback_form( $event_id ) {
-	$event_id = absint( $event_id );
-	$max      = rytkoset_theme_get_event_feedback_text_max_length();
-	$intro    = rytkoset_theme_get_event_feedback_intro( $event_id );
-	$id_base  = 'event-feedback-' . $event_id;
+function rytkoset_theme_render_event_feedback_form( $event_id, $error_code = '' ) {
+	$event_id      = absint( $event_id );
+	$max           = rytkoset_theme_get_event_feedback_text_max_length();
+	$id_base       = 'event-feedback-' . $event_id;
+	$labels        = rytkoset_theme_get_event_feedback_rating_labels();
+	$questions     = rytkoset_theme_get_event_feedback_text_questions();
+	$rating_failed = ( 'arvio' === $error_code );
+	$rating_help   = $id_base . '-rating-help';
 	?>
-	<form method="post" action="<?php echo esc_url( rytkoset_theme_get_event_feedback_public_url( $event_id ) ); ?>" class="event-registration__form">
+	<form method="post" action="<?php echo esc_url( rytkoset_theme_get_event_feedback_public_url( $event_id ) ); ?>" class="event-feedback-form">
 		<input type="hidden" name="rytkoset_event_feedback_submit" value="1" />
 		<input type="text" name="feedback_website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="display:none" />
 		<?php wp_nonce_field( rytkoset_theme_get_event_feedback_submit_nonce_action(), 'rytkoset_event_feedback_submit_nonce' ); ?>
 
-		<?php if ( '' !== $intro ) : ?>
-			<p class="event-registration__description"><?php echo esc_html( $intro ); ?></p>
-		<?php endif; ?>
-
-		<fieldset class="event-registration__field event-feedback__rating">
-			<legend>
-				<?php esc_html_e( 'Kokonaisarvio tapahtumasta', 'rytkoset-theme' ); ?>
-				<span aria-hidden="true">*</span>
+		<fieldset class="event-feedback-q event-feedback-q--rating<?php echo $rating_failed ? ' is-error' : ''; ?>">
+			<legend class="event-feedback-q__legend">
+				<span><?php esc_html_e( 'Kokonaisarvio tapahtumasta', 'rytkoset-theme' ); ?></span>
+				<span class="event-feedback-q__req"><?php esc_html_e( 'Pakollinen', 'rytkoset-theme' ); ?></span>
 			</legend>
-			<div class="event-feedback__rating-options" role="radiogroup" aria-required="true">
-				<?php for ( $value = 1; $value <= 5; $value++ ) : ?>
-					<label class="event-feedback__rating-option">
-						<input type="radio" name="feedback_rating" value="<?php echo esc_attr( (string) $value ); ?>" required />
-						<span><?php echo esc_html( (string) $value ); ?></span>
+			<p class="event-feedback-q__help" id="<?php echo esc_attr( $rating_help ); ?>">
+				<?php esc_html_e( 'Valitse arvosana asteikolla 1–5.', 'rytkoset-theme' ); ?>
+			</p>
+			<div class="event-feedback-scale">
+				<?php foreach ( $labels as $value => $label ) : ?>
+					<?php $option_id = $id_base . '-rating-' . (int) $value; ?>
+					<input
+						type="radio"
+						name="feedback_rating"
+						id="<?php echo esc_attr( $option_id ); ?>"
+						value="<?php echo esc_attr( (string) $value ); ?>"
+						aria-describedby="<?php echo esc_attr( $rating_help ); ?>"
+						<?php echo $rating_failed ? 'aria-invalid="true" ' : ''; ?>
+						required
+					/>
+					<label for="<?php echo esc_attr( $option_id ); ?>">
+						<b><?php echo esc_html( (string) $value ); ?></b>
+						<em><?php echo esc_html( $label ); ?></em>
 					</label>
-				<?php endfor; ?>
+				<?php endforeach; ?>
 			</div>
+			<p class="event-feedback-scale__ends">
+				<span><?php esc_html_e( 'En suosittelisi', 'rytkoset-theme' ); ?></span>
+				<span><?php esc_html_e( 'Suosittelen lämpimästi', 'rytkoset-theme' ); ?></span>
+			</p>
+			<?php if ( $rating_failed ) : ?>
+				<p class="event-feedback-q__error"><?php esc_html_e( 'Valitse kokonaisarvio ennen lähettämistä.', 'rytkoset-theme' ); ?></p>
+			<?php endif; ?>
 		</fieldset>
 
-		<div class="event-registration__field">
-			<label for="<?php echo esc_attr( $id_base . '-well' ); ?>"><?php esc_html_e( 'Mikä onnistui hyvin?', 'rytkoset-theme' ); ?></label>
-			<textarea id="<?php echo esc_attr( $id_base . '-well' ); ?>" name="feedback_well" rows="3" maxlength="<?php echo esc_attr( (string) $max ); ?>"></textarea>
-		</div>
-
-		<div class="event-registration__field">
-			<label for="<?php echo esc_attr( $id_base . '-improve' ); ?>"><?php esc_html_e( 'Mitä voisimme parantaa?', 'rytkoset-theme' ); ?></label>
-			<textarea id="<?php echo esc_attr( $id_base . '-improve' ); ?>" name="feedback_improve" rows="3" maxlength="<?php echo esc_attr( (string) $max ); ?>"></textarea>
-		</div>
-
-		<div class="event-registration__field">
-			<label for="<?php echo esc_attr( $id_base . '-wishes' ); ?>"><?php esc_html_e( 'Toiveita tuleviin tapahtumiin', 'rytkoset-theme' ); ?></label>
-			<textarea id="<?php echo esc_attr( $id_base . '-wishes' ); ?>" name="feedback_wishes" rows="3" maxlength="<?php echo esc_attr( (string) $max ); ?>"></textarea>
-		</div>
-
-		<p class="event-registration__description">
-			<?php esc_html_e( 'Vastauksesi on anonyymi. Älä kirjoita vastauksiisi omia tai muiden terveystietoja tai muita arkaluonteisia henkilötietoja.', 'rytkoset-theme' ); ?>
+		<?php foreach ( $questions as $question ) : ?>
 			<?php
-			$privacy_url = get_privacy_policy_url();
-
-			if ( $privacy_url ) {
-				printf(
-					' ' . wp_kses(
-						/* translators: %s: link to the privacy policy page */
-						__( 'Lue lisää <a href="%s">tietosuojaselosteesta</a>.', 'rytkoset-theme' ),
-						array( 'a' => array( 'href' => true ) )
-					),
-					esc_url( $privacy_url )
-				);
-			}
+			$field_id = $id_base . '-' . $question['slug'];
+			$limit_id = $field_id . '-limit';
 			?>
-		</p>
+			<div class="event-feedback-q">
+				<label class="event-feedback-q__legend" for="<?php echo esc_attr( $field_id ); ?>">
+					<span><?php echo esc_html( $question['label'] ); ?></span>
+					<span class="event-feedback-q__opt"><?php esc_html_e( 'Vapaaehtoinen', 'rytkoset-theme' ); ?></span>
+				</label>
+				<textarea
+					id="<?php echo esc_attr( $field_id ); ?>"
+					name="<?php echo esc_attr( $question['name'] ); ?>"
+					rows="4"
+					maxlength="<?php echo esc_attr( (string) $max ); ?>"
+					placeholder="<?php echo esc_attr( $question['placeholder'] ); ?>"
+					aria-describedby="<?php echo esc_attr( $limit_id ); ?>"
+				></textarea>
+				<p class="event-feedback-count">
+					<span class="screen-reader-text" id="<?php echo esc_attr( $limit_id ); ?>">
+						<?php
+						printf(
+							/* translators: %d: maximum number of characters allowed in the answer. */
+							esc_html__( 'Enintään %d merkkiä.', 'rytkoset-theme' ),
+							(int) $max
+						);
+						?>
+					</span>
+					<span aria-hidden="true"><span data-feedback-count-current="">0</span>/<?php echo esc_html( (string) $max ); ?></span>
+				</p>
+			</div>
+		<?php endforeach; ?>
 
-		<p class="event-registration__required-note"><?php esc_html_e( '* Pakollinen kenttä', 'rytkoset-theme' ); ?></p>
+		<div class="event-feedback-note">
+			<?php echo rytkoset_theme_inline_icon( 'shield-check', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
+			<p>
+				<strong><?php esc_html_e( 'Vastauksesi on anonyymi.', 'rytkoset-theme' ); ?></strong>
+				<?php esc_html_e( 'Älä kirjoita vastauksiisi omia tai muiden terveystietoja tai muita arkaluonteisia henkilötietoja.', 'rytkoset-theme' ); ?>
+				<?php
+				$privacy_url = get_privacy_policy_url();
 
-		<button type="submit" class="btn btn--primary event-registration__submit">
-			<?php esc_html_e( 'Lähetä palaute', 'rytkoset-theme' ); ?>
-		</button>
+				if ( $privacy_url ) {
+					printf(
+						wp_kses(
+							/* translators: %s: link to the privacy policy page */
+							__( 'Lue lisää <a href="%s">tietosuojaselosteesta</a>.', 'rytkoset-theme' ),
+							array( 'a' => array( 'href' => true ) )
+						),
+						esc_url( $privacy_url )
+					);
+				}
+				?>
+			</p>
+		</div>
+
+		<div class="event-feedback-actions">
+			<button type="submit" class="event-feedback-submit">
+				<span><?php esc_html_e( 'Lähetä palaute', 'rytkoset-theme' ); ?></span>
+				<?php echo rytkoset_theme_inline_icon( 'arrow-right', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
+			</button>
+			<p class="event-feedback-actions__note"><?php esc_html_e( 'Emme kysy nimeäsi emmekä yhteystietojasi.', 'rytkoset-theme' ); ?></p>
+		</div>
 	</form>
 	<?php
 }
@@ -1144,6 +1301,108 @@ function rytkoset_theme_handle_event_feedback_submission( $event_id ) {
 }
 
 /**
+ * Returns the hero lead paragraph for the public feedback page.
+ *
+ * Uses the event's own intro when an organizer has written one, otherwise a
+ * neutral default so the page never opens with a bare heading.
+ *
+ * @param int $event_id Event post ID.
+ * @return string
+ */
+function rytkoset_theme_get_event_feedback_hero_intro( $event_id ) {
+	$intro = rytkoset_theme_get_event_feedback_intro( $event_id );
+
+	if ( '' !== $intro ) {
+		return $intro;
+	}
+
+	return __( 'Kiitos, että olit mukana! Kerro, mikä onnistui ja missä voisimme vielä parantaa. Vastauksesi auttaa meitä tekemään seuraavasta tapahtumasta paremman.', 'rytkoset-theme' );
+}
+
+/**
+ * Renders the breadcrumb trail above the feedback hero.
+ *
+ * @param int $event_id Event post ID.
+ */
+function rytkoset_theme_render_event_feedback_breadcrumbs( $event_id ) {
+	$archive_url = get_post_type_archive_link( 'rytkoset_event' );
+	$event_url   = get_permalink( $event_id );
+	?>
+	<nav class="event-feedback-crumbs" aria-label="<?php esc_attr_e( 'Murupolku', 'rytkoset-theme' ); ?>">
+		<?php if ( $archive_url ) : ?>
+			<a href="<?php echo esc_url( $archive_url ); ?>"><?php esc_html_e( 'Tapahtumat', 'rytkoset-theme' ); ?></a>
+			<span class="event-feedback-crumbs__sep" aria-hidden="true">›</span>
+		<?php endif; ?>
+		<?php if ( $event_url ) : ?>
+			<a href="<?php echo esc_url( $event_url ); ?>"><?php echo esc_html( get_the_title( $event_id ) ); ?></a>
+			<span class="event-feedback-crumbs__sep" aria-hidden="true">›</span>
+		<?php endif; ?>
+		<span class="event-feedback-crumbs__current" aria-current="page"><?php esc_html_e( 'Palaute', 'rytkoset-theme' ); ?></span>
+	</nav>
+	<?php
+}
+
+/**
+ * Renders the feedback page hero: eyebrow, event title, lead text, location
+ * and the "what this costs you" meta row.
+ *
+ * The eyebrow is decorative for assistive technology because the same word is
+ * already part of the heading's accessible name.
+ *
+ * @param int  $event_id  Event post ID.
+ * @param bool $show_meta Whether to show the "what this costs you" meta row.
+ *                        Only meaningful while the form is on screen, so the
+ *                        thank-you and closed views leave it out.
+ */
+function rytkoset_theme_render_event_feedback_hero( $event_id, $show_meta = true ) {
+	$location = function_exists( 'rytkoset_theme_get_event_location' )
+		? rytkoset_theme_get_event_location( $event_id )
+		: '';
+	?>
+	<header class="event-feedback-hero">
+		<p class="event-feedback-hero__eyebrow" aria-hidden="true"><?php esc_html_e( 'Palaute', 'rytkoset-theme' ); ?></p>
+		<h1 class="event-feedback-hero__title">
+			<span class="screen-reader-text"><?php esc_html_e( 'Palaute:', 'rytkoset-theme' ); ?> </span>
+			<?php echo esc_html( get_the_title( $event_id ) ); ?>
+		</h1>
+		<p class="event-feedback-hero__sub"><?php echo esc_html( rytkoset_theme_get_event_feedback_hero_intro( $event_id ) ); ?></p>
+		<?php if ( '' !== $location ) : ?>
+			<p class="event-feedback-hero__route">
+				<span class="event-feedback-hero__dot" aria-hidden="true"></span>
+				<?php echo esc_html( $location ); ?>
+			</p>
+		<?php endif; ?>
+		<?php if ( $show_meta ) : ?>
+			<ul class="event-feedback-hero__meta">
+				<li><i aria-hidden="true">◷</i><?php esc_html_e( 'Noin 2 minuuttia', 'rytkoset-theme' ); ?></li>
+				<li><i aria-hidden="true">◆</i><?php esc_html_e( 'Vastaukset ovat anonyymejä', 'rytkoset-theme' ); ?></li>
+			</ul>
+		<?php endif; ?>
+	</header>
+	<?php
+}
+
+/**
+ * Returns the visitor-facing message for a submission error code.
+ *
+ * @param string $error_code Error code carried in the redirect query string.
+ * @return string
+ */
+function rytkoset_theme_get_event_feedback_error_message( $error_code ) {
+	$messages = array(
+		'nonce'     => __( 'Lomakkeen istunto on vanhentunut. Yritä uudelleen.', 'rytkoset-theme' ),
+		'suljettu'  => __( 'Palautekysely ei ole avoinna.', 'rytkoset-theme' ),
+		'raja'      => __( 'Liian monta lähetystä lyhyessä ajassa. Yritä hetken kuluttua uudelleen.', 'rytkoset-theme' ),
+		'arvio'     => __( 'Valitse kokonaisarvio 1–5.', 'rytkoset-theme' ),
+		'tallennus' => __( 'Palautetta ei voitu tallentaa. Yritä uudelleen.', 'rytkoset-theme' ),
+	);
+
+	return isset( $messages[ $error_code ] )
+		? $messages[ $error_code ]
+		: __( 'Palautetta ei voitu tallentaa. Yritä uudelleen.', 'rytkoset-theme' );
+}
+
+/**
  * Renders the public feedback route (form, closed notice, or thank-you) and
  * dispatches a POST submission before rendering.
  */
@@ -1187,54 +1446,37 @@ function rytkoset_theme_render_event_feedback_page() {
 	get_header();
 	?>
 	<main id="primary" class="site-main" tabindex="-1">
-		<section class="section">
-			<div class="container section__narrow">
-				<article class="article event-feedback">
-					<h1 class="article__title">
-						<?php
-						echo esc_html(
-							sprintf(
-								/* translators: %s: event title. */
-								__( 'Palaute: %s', 'rytkoset-theme' ),
-								get_the_title( $event_id )
-							)
-						);
-						?>
-					</h1>
-					<div class="article__content">
-						<?php if ( $received ) : ?>
-							<p class="event-registration__notice event-registration__notice--success" role="status">
-								<?php esc_html_e( 'Kiitos palautteestasi!', 'rytkoset-theme' ); ?>
-							</p>
-						<?php elseif ( ! $is_open ) : ?>
-							<p class="event-registration__notice" role="status">
-								<?php esc_html_e( 'Palautekysely ei ole tällä hetkellä avoinna tälle tapahtumalle.', 'rytkoset-theme' ); ?>
-							</p>
-						<?php else : ?>
-							<?php if ( '' !== $error_code ) : ?>
-								<?php
-								$error_messages = array(
-									'nonce'     => __( 'Lomakkeen istunto on vanhentunut. Yritä uudelleen.', 'rytkoset-theme' ),
-									'suljettu'  => __( 'Palautekysely ei ole avoinna.', 'rytkoset-theme' ),
-									'raja'      => __( 'Liian monta lähetystä lyhyessä ajassa. Yritä hetken kuluttua uudelleen.', 'rytkoset-theme' ),
-									'arvio'     => __( 'Valitse kokonaisarvio 1–5.', 'rytkoset-theme' ),
-									'tallennus' => __( 'Palautetta ei voitu tallentaa. Yritä uudelleen.', 'rytkoset-theme' ),
-								);
-								?>
-								<div class="event-registration__notice event-registration__notice--error" role="alert">
-									<?php
-									echo esc_html(
-										isset( $error_messages[ $error_code ] )
-											? $error_messages[ $error_code ]
-											: __( 'Palautetta ei voitu tallentaa. Yritä uudelleen.', 'rytkoset-theme' )
-									);
-									?>
-								</div>
-							<?php endif; ?>
-							<?php rytkoset_theme_render_event_feedback_form( $event_id ); ?>
-						<?php endif; ?>
+		<section class="event-feedback-section">
+			<div class="event-feedback-page">
+				<?php rytkoset_theme_render_event_feedback_breadcrumbs( $event_id ); ?>
+				<?php rytkoset_theme_render_event_feedback_hero( $event_id, ! $received && $is_open ); ?>
+
+				<?php if ( $received ) : ?>
+					<div class="event-feedback-panel event-feedback-thanks" role="status">
+						<p class="event-feedback-thanks__badge">
+							<?php echo rytkoset_theme_inline_icon( 'check', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
+						</p>
+						<h2 class="event-feedback-thanks__title"><?php esc_html_e( 'Kiitos palautteestasi!', 'rytkoset-theme' ); ?></h2>
+						<p class="event-feedback-thanks__text">
+							<?php esc_html_e( 'Luemme kaikki vastaukset ja hyödynnämme niitä seuraavien tapahtumien suunnittelussa.', 'rytkoset-theme' ); ?>
+						</p>
 					</div>
-				</article>
+				<?php elseif ( ! $is_open ) : ?>
+					<div class="event-feedback-panel">
+						<p class="event-feedback-closed" role="status">
+							<?php esc_html_e( 'Palautekysely ei ole tällä hetkellä avoinna tälle tapahtumalle.', 'rytkoset-theme' ); ?>
+						</p>
+					</div>
+				<?php else : ?>
+					<div class="event-feedback-panel">
+						<?php if ( '' !== $error_code ) : ?>
+							<div class="event-feedback-alert" role="alert">
+								<?php echo esc_html( rytkoset_theme_get_event_feedback_error_message( $error_code ) ); ?>
+							</div>
+						<?php endif; ?>
+						<?php rytkoset_theme_render_event_feedback_form( $event_id, $error_code ); ?>
+					</div>
+				<?php endif; ?>
 			</div>
 		</section>
 	</main>

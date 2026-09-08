@@ -680,4 +680,75 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
 	}
+
+	// --- public form presentation (redesign) ----------------------------
+
+	public function test_rating_labels_cover_the_whole_scale(): void {
+		$labels = rytkoset_theme_get_event_feedback_rating_labels();
+
+		$this->assertSame( array( 1, 2, 3, 4, 5 ), array_keys( $labels ) );
+
+		foreach ( $labels as $label ) {
+			$this->assertNotSame( '', trim( (string) $label ) );
+		}
+	}
+
+	/**
+	 * The rendered textarea names are what the submit handler reads, so a
+	 * rename here would silently drop the answer instead of failing loudly.
+	 */
+	public function test_text_questions_match_the_submitted_field_names(): void {
+		$questions = rytkoset_theme_get_event_feedback_text_questions();
+
+		$this->assertSame(
+			array( 'feedback_well', 'feedback_improve', 'feedback_wishes' ),
+			array_column( $questions, 'name' )
+		);
+
+		$this->assertSame(
+			array( 'well', 'improve', 'wishes' ),
+			array_column( $questions, 'slug' )
+		);
+
+		foreach ( $questions as $question ) {
+			$this->assertNotSame( '', trim( (string) $question['label'] ) );
+			$this->assertNotSame( '', trim( (string) $question['placeholder'] ) );
+		}
+	}
+
+	public function test_hero_intro_uses_the_event_intro_when_set(): void {
+		$this->event( 120, '2020-01-01' );
+		update_post_meta( 120, $this->feedback_meta()['intro'], 'Kiitos bussimatkasta!' );
+
+		$this->assertSame( 'Kiitos bussimatkasta!', rytkoset_theme_get_event_feedback_hero_intro( 120 ) );
+	}
+
+	public function test_hero_intro_falls_back_to_default_text(): void {
+		$this->event( 121, '2020-01-01' );
+
+		$intro = rytkoset_theme_get_event_feedback_hero_intro( 121 );
+
+		$this->assertNotSame( '', trim( $intro ) );
+	}
+
+	public function test_error_message_maps_every_known_code(): void {
+		$codes = array( 'nonce', 'suljettu', 'raja', 'arvio', 'tallennus' );
+		$seen  = array();
+
+		foreach ( $codes as $code ) {
+			$message = rytkoset_theme_get_event_feedback_error_message( $code );
+
+			$this->assertNotSame( '', trim( $message ) );
+			$seen[] = $message;
+		}
+
+		$this->assertSame( $seen, array_unique( $seen ), 'Jokaisella virhekoodilla on oma viestinsä.' );
+	}
+
+	public function test_error_message_falls_back_for_unknown_code(): void {
+		$this->assertSame(
+			rytkoset_theme_get_event_feedback_error_message( 'tallennus' ),
+			rytkoset_theme_get_event_feedback_error_message( 'jotain-muuta' )
+		);
+	}
 }
