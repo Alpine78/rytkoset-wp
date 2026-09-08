@@ -101,8 +101,25 @@ Ilmoittautumisen tiedot tallennetaan WordPressin post metaan:
 | Määrä                        | `_rytkoset_registration_quantity`       | kokonaisluku 1–10 oletusrajalla     | Ilmoittautumisen henkilö- tai kappalemäärä                     |
 | GDPR-hyväksyntä              | `_rytkoset_registration_gdpr_consent`   | Unix-aikaleima                      | Tallennetaan, kun käyttäjä hyväksyy tietosuojakäytännön (#38) |
 | Anonymisointiaika            | `_rytkoset_registration_anonymized_at`  | MySQL-aikaleima                     | Tallennetaan, kun henkilötiedot anonymisoidaan (#250)         |
+| Ilmoittautumisen lähde       | `_rytkoset_registration_source`         | `web_form`, `manual`               | `web_form` = julkinen lomake, `manual` = ylläpitäjän käsin lisäämä (#665). Tyhjä = vanha rivi, tulkitaan `web_form`. |
+| Henkilötiedon lähde          | `_rytkoset_registration_personal_data_source` | vapaa teksti, max 200 merkkiä | Vain käsin lisättäessä: mistä tieto on saatu, kun se ei tule rekisteröidyltä itseltään (#665). Tyhjennetään anonymisoinnissa. |
+| Informoinnin tila            | `_rytkoset_registration_informed_status` | `not_informed`, `informed`         | GDPR 14 art: onko rekisteröityä informoitu, kun tieto on saatu muualta (#665). Ei suostumusmerkintä. |
+| Informointiaika              | `_rytkoset_registration_informed_at`    | Unix-aikaleima                      | Johdettu: leimataan kerran, kun tila muuttuu `informed`-arvoon; poistetaan jos tila palautetaan (#665). |
 
 Ilmoittautumisen otsikko muodostetaan automaattisesti muodossa `Osallistujan nimi - Tapahtuman nimi`, jotta admin-lista pysyy luettavana.
+
+### Palautekyselyn metakentät (#666)
+
+| Kenttä ylläpidossa | Meta-avain | Muoto / arvot | Käyttö |
+| ------------------ | ---------- | ------------- | ------ |
+| Palautekyselyn tila | `_rytkoset_event_feedback_mode` | `disabled` (puuttuva, oletus), `manual`, `automatic` | Ohjaa lomakkeen avoinna oloa ja lähetystapaa |
+| Automaattinen lähetysaika | `_rytkoset_event_feedback_send_at` | `Y-m-d\TH:i`, sivuston aikavyöhyke | Pakollinen vain `automatic`-tilassa; validoidaan tapahtumapäivän jälkeiseksi |
+| Palautteen määräpäivä | `_rytkoset_event_feedback_deadline` | `YYYY-MM-DD`, valinnainen | Tyhjänä kysely pysyy avoinna toistaiseksi |
+| Johdantoteksti | `_rytkoset_event_feedback_intro` | vapaa teksti, max 500 merkkiä | Näytetään lomakkeella ja palautepyynnön viestissä |
+| Ilmoita järjestäjille uusista vastauksista | `_rytkoset_event_feedback_notify_organizers` | `yes` tai puuttuva (oletus) | Päällä ollessaan lähettää jokaisesta vastauksesta sähköpostin tapahtuman `_rytkoset_event_organizer_notification_recipients`-osoitteisiin (sama kenttä kuin muissakin järjestäjäilmoituksissa) |
+| Jonotettu | `_rytkoset_event_feedback_queued_at` | MySQL-aikaleima | Kirjoitetaan vain lähetyspoluissa, ei asetusten tallennuksessa — pitää "jo jonotettu" -tilan näkyvissä eikä anna sen kadota asetusmuutoksessa |
+
+Palautevastaus tallennetaan omaan, ei-julkiseen `event_feedback`-sisältötyyppiin (meta-avaimet `_rytkoset_feedback_event_id`, `_rytkoset_feedback_rating`, `_rytkoset_feedback_well`, `_rytkoset_feedback_improve`, `_rytkoset_feedback_wishes`) — ei koskaan nimeä, sähköpostia, käyttäjä-, ilmoittautumis- tai tilaustunnistetta. Katso [event-feedback.md](event-feedback.md).
 
 ### Julkinen näkyminen
 
@@ -214,7 +231,59 @@ Maksulliselle tapahtumalle kannattaa lisäksi täyttää:
 
 Ilmaisten tapahtumien ilmoittautumiset tallennetaan `event_registration`-sisältötyyppiin. Ylläpitäjä voi luoda ja muokata ilmoittautumisia käsin WordPress-adminissa kohdassa `Tapahtumat > Ilmoittautumiset`.
 
-Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa honeypot-kentän, noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat aluksi tilaan `pending`, jotta ylläpitäjä voi käsitellä ne adminissa. Onnistuneen maksuttoman ilmoittautumisen jälkeen ilmoittautujalle lähetetään `wp_mail()`-pohjainen tekstimuotoinen kuittisähköposti, jossa kerrotaan ilmoittautumisen vastaanotosta ja näytetään tapahtuman perustiedot.
+Julkinen ilmoittautumislomake näkyy maksuttomissa tapahtumissa, jos tapahtumaan ei ole linkitetty WooCommerce-maksutuotetta ja ilmoittautumisen määräpäivä ei ole ohitettu. Jos määräpäivä on tyhjä, lomake sulkeutuu tapahtumapäivän jälkeen. Lomake tarkistaa honeypot-kentän, noncen, tapahtuman, nimen, sähköpostiosoitteen ja GDPR-hyväksynnän ennen tallennusta. Sama sähköpostiosoite voi luoda vain yhden aktiivisen (`pending` tai `confirmed`) ilmoittautumisen samaan tapahtumaan; `cancelled`-tilainen ilmoittautuminen sallii uuden ilmoittautumisen. Uudet ilmoittautumiset tallentuvat suoraan tilaan `confirmed` (#666) — mikään ei aiemmin vaatinut ylläpitäjää käsittelemään rivejä yksitellen, joten ne jäivät käytännössä pysyvästi `pending`-tilaan, mikä olisi jättänyt esimerkiksi tulevan palautekyselyn vastaanottajajoukon tyhjäksi. Järjestäjä voi tarvittaessa yhä vaihtaa yksittäisen ilmoittautumisen tilan adminissa. Onnistuneen maksuttoman ilmoittautumisen jälkeen ilmoittautujalle lähetetään `wp_mail()`-pohjainen tekstimuotoinen kuittisähköposti, jossa kerrotaan ilmoittautumisen vastaanotosta ja näytetään tapahtuman perustiedot.
+
+### Osallistujan käsin lisääminen (#665)
+
+Sivuston ulkopuolella (puhelimitse, sähköpostitse, järjestäjän kautta)
+ilmoittautuneen saa samaan osallistujalistaan `Tapahtumat > Osallistujat`
+-sivun **Lisää osallistuja** -painikkeella. Painike avaa vakiomuotoisen
+`Lisää uusi ilmoittautuminen` -näkymän; jos tapahtumavalitsimessa oli
+yksittäinen tapahtuma, se tulee esivalittuna (`?rytkoset_event_id=<id>`),
+jolloin myös tapahtumakohtaiset lisävalinta- ja määräkentät näkyvät heti.
+
+- **Ilmoittautumisen lähde** on käsin lisättäessä oletuksena `Käsin lisätty`
+  (`manual`). Käsin lisättyä henkilöä ei merkitä maksaneeksi eikä
+  WooCommerce-osallistujaksi, ja osallistujalistalla lähde näkyy muodossa
+  `Käsin lisätty`.
+- **Tila** on käsin lisättäessä oletuksena `Vahvistettu`, mutta järjestäjä voi
+  vaihtaa sen.
+- **Henkilötiedon lähde** ja **Informoinnin tila** tallennetaan rajattuna
+  tietona, kun tiedot on saatu muualta kuin rekisteröidyltä itseltään.
+  Ylläpitäjän toimintoa ei merkitä rekisteröidyn suostumukseksi. Informointi
+  voidaan tehdä viimeistään ensimmäisen henkilökohtaisen tapahtumaviestin
+  yhteydessä, jos soveltuva poikkeus ei päde.
+- **Duplikaattisuoja:** jos samalla tapahtumalla ja sähköpostilla on jo
+  aktiivinen (`pending`/`confirmed`) ilmoittautuminen, tietue tallennetaan
+  `cancelled`-tilassa ja ylläpitäjä saa varoituksen. Tietoinen kaksoiskappale
+  sallitaan rastittamalla "Salli tietoinen kaksoiskappale" ja tallentamalla
+  uudelleen.
+- **Tallennus ei lähetä** verkkolomakkeen kuittia eikä järjestäjäilmoitusta.
+  Tarvittava tapahtumaviestintä lähetetään erikseen `Tapahtumat > Viestintä`
+  -sivulta.
+- Käsin lisätty `event_registration` kuuluu samaan tapahtumakohtaiseen
+  anonymisointiin ja enintään 12 kuukauden säilytysrajaan kuin muut maksuttoman
+  polun ilmoittautumiset. Anonymisointi tyhjentää myös henkilötiedon lähteen;
+  koodatut lähde- ja informointikentät säilyvät operatiivisena metatietona.
+
+### Osallistumisen peruminen ja palauttaminen (#665)
+
+`Tapahtumat > Osallistujat` -listalla `event_registration`-riveillä on
+**Peru osallistuminen** -toiminto (ja `cancelled`-riveillä
+**Palauta ilmoittautuminen**). Toiminto vaatii `edit_others_event_registrations`
+-oikeuden, oman noncen ja selainvahvistuksen.
+
+- Peruminen vaihtaa tilaksi `cancelled`. Tietuetta ei poisteta eikä siirretä
+  roskakoriin, joten muutos on korjattavissa ja ilmoittautumishistoria säilyy.
+- Palauttaminen vaihtaa tilan takaisin `confirmed`-arvoon.
+- Peruttu henkilö poistuu aktiivisesta osallistujamäärästä, tapahtumaviestien
+  vastaanottajista ja tulevan palautepyynnön kohderyhmästä, mutta löytyy
+  edelleen **Peruttu**-suodattimella.
+- Peruminen ei ole tietosuoja-asetuksen mukainen poistopyyntö; henkilötiedot
+  anonymisoidaan normaalin säilytys- ja poistopolun mukaisesti.
+- Maksullisen WooCommerce-ilmoittautumisen peruutus, hyvitys ja
+  moniosallistujatilauksen yksittäisen henkilön poisto käsitellään WooCommercen
+  omalla tilaus-/hyvityspolulla, ei tästä toiminnosta.
 
 ### Järjestäjäilmoitus maksuttomasta ilmoittautumisesta (#638)
 
@@ -227,7 +296,36 @@ Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmo
 - Maksuttomalla polulla ei ole WooCommerce-tilauksen order note -lokia, joten onnistuneesta tai epäonnistuneesta lähetyksestä ei jää audit trailia. Jos ilmoituksia ei tule, tarkista ensin vastaanottajakenttä ja sen jälkeen palvelimen sähköpostinvälitys.
 - Ilmoitus lähetetään yhtenä `wp_mail()`-kutsuna riippumatta vastaanottajien määrästä. Kuittisähköposti ja järjestäjäilmoitus ovat toisistaan riippumattomia: kumpikaan ei estä toista.
 
-Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, mutta tapahtumaviittaus ja status säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
+Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet, lisätiedot ja käsin lisätyn tietueen henkilötiedon lähde poistetaan, mutta tapahtumaviittaus, status ja koodatut lähde-/informointikentät säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
+
+### Tapahtumakohtainen palautekysely (#666)
+
+Tapahtuman jälkeen ylläpitäjä voi pyytää lyhyen, anonyymin palautteen
+osallistujilta. Kokonaisuus on kuvattu tarkemmin tiedostossa
+[event-feedback.md](event-feedback.md); tiivistelmä:
+
+- Tapahtuman `Palautekysely`-laatikossa valitaan **Ei palautekyselyä**
+  (oletus), **Lähetä käsin** tai **Lähetä automaattisesti**, sekä valinnainen
+  määräpäivä ja johdantoteksti. Automaattitila vaatii tapahtumapäivän
+  jälkeisen lähetysajan.
+- Julkinen lomake (`/palaute/{tapahtuma-id}/`) avautuu vasta tapahtumapäivän
+  jälkeen ja pysyy avoinna kunnes mahdollinen määräpäivä ohittuu. Lomakkeessa
+  on yksi pakollinen 1–5-arvio ja kolme valinnaista, pituusrajattua
+  tekstikysymystä. Vastaus on täysin anonyymi eikä sitä kytketä
+  ilmoittautumiseen, tilaukseen, käyttäjään tai sähköpostiin.
+- Palautepyyntö lähtee nykyisen `Tapahtumat > Viestintä` -lähetysjonon kautta
+  (sama 18 viestiä / rullaava 60 min -raja), samalle aktiiviselle
+  vastaanottajajoukolle kuin muukin tapahtumaviestintä
+  (`rytkoset_theme_filter_active_event_participants()`, #665). Viestiin voi
+  lisätä `{palautelinkki}`-placeholderin.
+- `Tapahtumat > Palaute` näyttää tapahtumakohtaisen vastausmäärän,
+  keskiarvon ja vapaatekstivastaukset `edit_others_event_registrations`
+  -oikeudella.
+- Valinnainen rasti **"Ilmoita järjestäjille uusista vastauksista"** (oletus
+  pois) lähettää jokaisesta vastauksesta sähköpostin tapahtuman omille
+  järjestäjäilmoitusten vastaanottajille (sama kenttä kuin muissakin
+  tapahtuman järjestäjäilmoituksissa) — viesti sisältää arvion ja täytetyt
+  vapaatekstit, ei osallistujan tietoja, koska niitä ei tallenneta.
 
 ### Automaattinen 12 kuukauden anonymisointi (#580)
 
@@ -373,6 +471,8 @@ Tässä vaiheessa on toteutettu:
 - osallistujanäkymän suodatettu CSV-vienti ja maksuttomien ilmoittautumisten anonymisointi
 - tapahtumakohtaiset lisävalinta-, määrä- ja ruokavaliokentät maksuttomalle lomakkeelle
 - `Tapahtumat > Viestintä` -lähetysjono tuntirajoineen ja koontilokeineen
+- osallistujan käsin lisääminen ja osallistumisen peruminen/palauttaminen (#665)
+- tapahtumakohtainen anonyymi palautekysely: asetukset, julkinen lomake, käsin/automaattinen jonotus ja `Tapahtumat > Palaute` -kooste (#666)
 
 ## Jätetään myöhempään vaiheeseen
 
@@ -390,6 +490,9 @@ Tässä vaiheessa ei toteuteta:
 - karttalinkkiä tai karttaupotusta
 - numeerista hintamallia tapahtuman metakenttiin
 - automaattista WooCommerce-tuotteen luontia tai muuttamista tapahtumasta
+- yleistä kysely-/lomakerakentajaa palautteelle; palautelomakkeen neljä kysymystä on kiinteä (#666)
+- palautevastauksen henkilökohtaista seurantalinkkiä tai vastaajan tunnistamista (#666)
+- palautteen tulosten CSV-/PDF-vientiä, visualisointeja tai AI-yhteenvetoa (#666)
 
 ## Saavutettavuus
 

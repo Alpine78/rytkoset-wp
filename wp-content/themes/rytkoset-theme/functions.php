@@ -36,6 +36,7 @@ require_once get_template_directory() . '/inc/event-registration-privacy.php';
 require_once get_template_directory() . '/inc/event-registration-anonymization.php';
 require_once get_template_directory() . '/inc/event-participants-admin.php';
 require_once get_template_directory() . '/inc/event-participants-messaging.php';
+require_once get_template_directory() . '/inc/event-feedback.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
 require_once get_template_directory() . '/inc/digital-magazine-access.php';
 require_once get_template_directory() . '/inc/attachment-iptc.php';
@@ -610,6 +611,25 @@ function rytkoset_theme_scripts() {
 			get_template_directory_uri() . '/assets/css/forum.css',
 			array( $core_css_dependency ),
 			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/forum.css' )
+		);
+	}
+
+	// Tapahtumapalautteen julkinen sivu (/palaute/{event_id}/): oma hero +
+	// kortti -asettelu ja merkkilaskuri. Ladataan vain tällä reitillä.
+	if ( function_exists( 'rytkoset_theme_is_event_feedback_request' ) && rytkoset_theme_is_event_feedback_request() ) {
+		wp_enqueue_style(
+			'rytkoset-theme-event-feedback',
+			get_template_directory_uri() . '/assets/css/event-feedback.css',
+			array( $core_css_dependency ),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/css/event-feedback.css' )
+		);
+
+		wp_enqueue_script(
+			'rytkoset-theme-event-feedback',
+			get_template_directory_uri() . '/assets/js/event-feedback.js',
+			array(),
+			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/event-feedback.js' ),
+			true
 		);
 	}
 

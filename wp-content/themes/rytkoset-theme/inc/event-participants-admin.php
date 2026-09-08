@@ -53,7 +53,10 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 			continue;
 		}
 
-		$name = rytkoset_theme_get_event_registration_meta( $registration->ID, 'name' );
+		$name   = rytkoset_theme_get_event_registration_meta( $registration->ID, 'name' );
+		$origin = rytkoset_theme_normalize_event_registration_source(
+			rytkoset_theme_get_event_registration_meta( $registration->ID, 'source' )
+		);
 
 		$rows[] = array(
 			'name'             => '' !== $name ? $name : __( 'Nimetön osallistuja', 'rytkoset-theme' ),
@@ -68,12 +71,16 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 			'status'           => $status,
 			'status_label'     => isset( $statuses[ $status ] ) ? $statuses[ $status ] : $statuses['pending'],
 			'source'           => 'free',
+			'origin'           => $origin,
+			'origin_label'     => rytkoset_theme_get_event_registration_source_label( $registration->ID ),
 			'created'          => get_the_date( '', $registration ),
 			'contact_name'     => '' !== $name ? $name : '',
 			'contact_email'    => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
 			'edit_url'         => (string) get_edit_post_link( $registration->ID, '' ),
+			'registration_id'  => (int) $registration->ID,
 			'order_id'         => null,
 			'order_number'     => null,
+			'order_status'     => '',
 			'event_id'         => $event_id,
 			'event_title'      => get_the_title( $event_id ),
 		);
@@ -214,12 +221,16 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 					'status'           => 'paid',
 					'status_label'     => $status_label,
 					'source'           => 'paid',
+					'origin'           => 'paid',
+					'origin_label'     => __( 'Maksullinen', 'rytkoset-theme' ),
 					'created'          => $created,
 					'contact_name'     => $contact_name,
 					'contact_email'    => $contact_email,
 					'edit_url'         => $edit_url,
+					'registration_id'  => 0,
 					'order_id'         => $order->get_id(),
 					'order_number'     => $order->get_order_number(),
+					'order_status'     => $order_status,
 					'event_id'         => $event_id,
 					'event_title'      => get_the_title( $event_id ),
 				);
@@ -242,12 +253,16 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 				'status'           => 'paid',
 				'status_label'     => $status_label,
 				'source'           => 'paid',
+				'origin'           => 'paid',
+				'origin_label'     => __( 'Maksullinen', 'rytkoset-theme' ),
 				'created'          => $created,
 				'contact_name'     => $contact_name,
 				'contact_email'    => $contact_email,
 				'edit_url'         => $edit_url,
+				'registration_id'  => 0,
 				'order_id'         => $order->get_id(),
 				'order_number'     => $order->get_order_number(),
+				'order_status'     => $order_status,
 				'event_id'         => $event_id,
 				'event_title'      => get_the_title( $event_id ),
 			);
@@ -326,6 +341,69 @@ function rytkoset_theme_get_all_events_participants( $status_filter = '' ) {
 	}
 
 	return $rows;
+}
+
+/**
+ * Returns the WooCommerce order statuses that must never receive event messaging
+ * or a feedback request.
+ *
+ * A cancelled, refunded or failed order is not an active participation, so its
+ * billing contact must be excluded from any automatically built recipient set
+ * even when the admin picked the "Kaikki" status filter.
+ *
+ * @return string[]
+ */
+function rytkoset_theme_get_event_feedback_inactive_order_statuses() {
+	return (array) apply_filters(
+		'rytkoset_theme_event_feedback_inactive_order_statuses',
+		array( 'cancelled', 'refunded', 'failed' )
+	);
+}
+
+/**
+ * Filters participant rows down to an active participation audience.
+ *
+ * Removes rows whose WooCommerce order is cancelled, refunded or failed, and
+ * removes cancelled free registrations unless the caller explicitly asked for
+ * the `cancelled` status (so the messaging tool can still be pointed at
+ * cancelled participants on purpose). Used to build the event-messaging and
+ * feedback-request recipient sets so a cancelled participant is never contacted
+ * by an automatically built "Kaikki" audience.
+ *
+ * @param array  $rows          Participant rows.
+ * @param string $status_filter Status filter the rows were fetched with.
+ * @return array
+ */
+function rytkoset_theme_filter_active_event_participants( $rows, $status_filter = '' ) {
+	if ( ! is_array( $rows ) ) {
+		return array();
+	}
+
+	$inactive_order_statuses = rytkoset_theme_get_event_feedback_inactive_order_statuses();
+	$keep_cancelled_free     = 'cancelled' === $status_filter;
+
+	return array_values(
+		array_filter(
+			$rows,
+			static function ( $row ) use ( $inactive_order_statuses, $keep_cancelled_free ) {
+				if ( ! is_array( $row ) ) {
+					return false;
+				}
+
+				if ( isset( $row['source'] ) && 'paid' === $row['source'] ) {
+					$order_status = isset( $row['order_status'] ) ? (string) $row['order_status'] : '';
+
+					return ! in_array( $order_status, $inactive_order_statuses, true );
+				}
+
+				if ( $keep_cancelled_free ) {
+					return true;
+				}
+
+				return ! ( isset( $row['status'] ) && 'cancelled' === $row['status'] );
+			}
+		)
+	);
 }
 
 /**
@@ -545,6 +623,151 @@ function rytkoset_theme_render_event_participants_anonymization_form( $selected_
 }
 
 /**
+ * Returns the admin URL for adding a participant manually.
+ *
+ * When a single event is selected it is passed on so the new-registration
+ * screen pre-selects it and can render its choice/quantity fields immediately.
+ *
+ * @param int $selected_event Selected event ID (0 for all events).
+ * @return string
+ */
+function rytkoset_theme_get_event_participants_add_url( $selected_event ) {
+	$selected_event = absint( $selected_event );
+	$args           = array( 'post_type' => 'event_registration' );
+
+	if ( $selected_event > 0 && 'rytkoset_event' === get_post_type( $selected_event ) ) {
+		$args['rytkoset_event_id'] = $selected_event;
+	}
+
+	return add_query_arg( $args, admin_url( 'post-new.php' ) );
+}
+
+/**
+ * Renders the "Lisää osallistuja" button for the participants admin page.
+ *
+ * @param int $selected_event Selected event ID (0 for all events).
+ * @return void
+ */
+function rytkoset_theme_render_event_participants_add_button( $selected_event ) {
+	$url = rytkoset_theme_get_event_participants_add_url( $selected_event );
+	?>
+	<a class="page-title-action" href="<?php echo esc_url( $url ); ?>">
+		<?php esc_html_e( 'Lisää osallistuja', 'rytkoset-theme' ); ?>
+	</a>
+	<?php
+}
+
+/**
+ * Renders the cancel / restore action for one free-registration participant row.
+ *
+ * @param int    $registration_id Registration post ID.
+ * @param string $current_status  Current registration status.
+ * @param int    $return_event    Event ID to return to.
+ * @param string $return_status   Status filter to return to.
+ * @return void
+ */
+function rytkoset_theme_render_event_registration_cancel_action( $registration_id, $current_status, $return_event, $return_status ) {
+	$registration_id = absint( $registration_id );
+
+	if ( $registration_id <= 0 ) {
+		return;
+	}
+
+	$is_cancelled = 'cancelled' === $current_status;
+	$target       = $is_cancelled ? 'confirmed' : 'cancelled';
+	$label        = $is_cancelled
+		? __( 'Palauta ilmoittautuminen', 'rytkoset-theme' )
+		: __( 'Peru osallistuminen', 'rytkoset-theme' );
+	$confirm      = $is_cancelled
+		? __( 'Palautetaanko ilmoittautuminen vahvistetuksi?', 'rytkoset-theme' )
+		: __( 'Perutaanko tämän osallistujan ilmoittautuminen? Tietuetta ei poisteta.', 'rytkoset-theme' );
+	?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline; margin-left:8px;" onsubmit="return window.confirm('<?php echo esc_js( $confirm ); ?>');">
+		<input type="hidden" name="action" value="rytkoset_toggle_event_registration_status" />
+		<input type="hidden" name="registration_id" value="<?php echo esc_attr( (string) $registration_id ); ?>" />
+		<input type="hidden" name="target_status" value="<?php echo esc_attr( $target ); ?>" />
+		<input type="hidden" name="return_event_id" value="<?php echo esc_attr( (string) absint( $return_event ) ); ?>" />
+		<input type="hidden" name="return_status" value="<?php echo esc_attr( (string) $return_status ); ?>" />
+		<?php wp_nonce_field( 'rytkoset_toggle_event_registration_status_' . $registration_id ); ?>
+		<button type="submit" class="button-link<?php echo $is_cancelled ? '' : ' rytkoset-cancel-link'; ?>">
+			<?php echo esc_html( $label ); ?>
+		</button>
+	</form>
+	<?php
+}
+
+/**
+ * Handles the cancel / restore action from the participants admin list.
+ *
+ * @return void
+ */
+function rytkoset_theme_handle_event_registration_cancel_toggle() {
+	if ( ! current_user_can( 'edit_others_event_registrations' ) ) {
+		wp_die( esc_html__( 'Sinulla ei ole oikeutta muuttaa ilmoittautumisen tilaa.', 'rytkoset-theme' ) );
+	}
+
+	$registration_id = isset( $_POST['registration_id'] ) ? absint( wp_unslash( $_POST['registration_id'] ) ) : 0;
+
+	check_admin_referer( 'rytkoset_toggle_event_registration_status_' . $registration_id );
+
+	$target_status = isset( $_POST['target_status'] ) ? sanitize_key( wp_unslash( $_POST['target_status'] ) ) : '';
+	$return_event  = isset( $_POST['return_event_id'] ) ? absint( wp_unslash( $_POST['return_event_id'] ) ) : 0;
+	$return_status = isset( $_POST['return_status'] ) ? sanitize_key( wp_unslash( $_POST['return_status'] ) ) : '';
+
+	$redirect = add_query_arg(
+		array(
+			'post_type' => 'rytkoset_event',
+			'page'      => 'rytkoset-event-participants',
+			'event_id'  => $return_event,
+			'status'    => $return_status,
+		),
+		admin_url( 'edit.php' )
+	);
+
+	if ( ! in_array( $target_status, array( 'cancelled', 'confirmed' ), true ) ) {
+		wp_safe_redirect( add_query_arg( 'rytkoset_reg_toggle', 'error', $redirect ) );
+		exit;
+	}
+
+	$done   = rytkoset_theme_set_event_registration_status( $registration_id, $target_status );
+	$result = 'error';
+
+	if ( $done ) {
+		$result = 'cancelled' === $target_status ? 'cancelled' : 'restored';
+	}
+
+	wp_safe_redirect( add_query_arg( 'rytkoset_reg_toggle', $result, $redirect ) );
+	exit;
+}
+add_action( 'admin_post_rytkoset_toggle_event_registration_status', 'rytkoset_theme_handle_event_registration_cancel_toggle' );
+
+/**
+ * Renders feedback after a cancel / restore action.
+ *
+ * @return void
+ */
+function rytkoset_theme_render_event_registration_toggle_notice() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only redirect feedback set by the nonce-protected toggle action.
+	$notice = isset( $_GET['rytkoset_reg_toggle'] ) ? sanitize_key( wp_unslash( $_GET['rytkoset_reg_toggle'] ) ) : '';
+
+	if ( '' === $notice ) {
+		return;
+	}
+
+	if ( 'cancelled' === $notice ) {
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Osallistuminen peruttiin. Osallistuja löytyy edelleen Peruttu-suodattimella ja tilan voi palauttaa.', 'rytkoset-theme' ) . '</p></div>';
+		return;
+	}
+
+	if ( 'restored' === $notice ) {
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Ilmoittautuminen palautettiin vahvistetuksi.', 'rytkoset-theme' ) . '</p></div>';
+		return;
+	}
+
+	echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__( 'Ilmoittautumisen tilan muuttaminen epäonnistui.', 'rytkoset-theme' ) . '</p></div>';
+}
+
+/**
  * Builds a filename for the participants CSV export.
  *
  * @param int    $event_id        Event ID or 0 for all events.
@@ -685,9 +908,11 @@ function rytkoset_theme_export_event_participants_csv() {
 			$details = '' !== $details ? $details . "\n" . $notes : $notes;
 		}
 
-		$source_label = isset( $row['source'] ) && 'paid' === $row['source']
-			? __( 'Maksullinen', 'rytkoset-theme' )
-			: __( 'Maksuton', 'rytkoset-theme' );
+		$source_label = isset( $row['origin_label'] ) && '' !== (string) $row['origin_label']
+			? (string) $row['origin_label']
+			: ( isset( $row['source'] ) && 'paid' === $row['source']
+				? __( 'Maksullinen', 'rytkoset-theme' )
+				: __( 'Maksuton', 'rytkoset-theme' ) );
 
 		// Neutralisoi kaikki solut kaavainjektiota vastaan (CWE-1236); osallistujan
 		// syöttämät kentät (nimi, sähköposti, puhelin, huomiot, yhteyshenkilö) voivat
@@ -783,9 +1008,12 @@ function rytkoset_theme_render_event_participants_admin_page() {
 
 	?>
 	<div class="wrap">
-		<h1><?php esc_html_e( 'Tapahtumien osallistujat', 'rytkoset-theme' ); ?></h1>
-		<p><?php esc_html_e( 'Valitse tapahtuma nähdäksesi sekä maksuttomat että maksulliset ilmoittautumiset yhtenäisenä listana.', 'rytkoset-theme' ); ?></p>
+		<h1 class="wp-heading-inline"><?php esc_html_e( 'Tapahtumien osallistujat', 'rytkoset-theme' ); ?></h1>
+		<?php rytkoset_theme_render_event_participants_add_button( $selected_event ); ?>
+		<hr class="wp-header-end" />
+		<p><?php esc_html_e( 'Valitse tapahtuma nähdäksesi sekä maksuttomat että maksulliset ilmoittautumiset yhtenäisenä listana. Sivuston ulkopuolella (esimerkiksi puhelimitse) ilmoittautuneen voi lisätä "Lisää osallistuja" -painikkeella; peruminen ei poista tietuetta.', 'rytkoset-theme' ); ?></p>
 		<?php rytkoset_theme_render_event_participants_anonymization_notice(); ?>
+		<?php rytkoset_theme_render_event_registration_toggle_notice(); ?>
 
 		<div class="tablenav top">
 			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -997,9 +1225,12 @@ function rytkoset_theme_render_event_participants_admin_page() {
 								</td>
 								<td>
 									<?php
-									echo 'paid' === $row['source']
-										? esc_html__( 'Maksullinen', 'rytkoset-theme' )
-										: esc_html__( 'Maksuton', 'rytkoset-theme' );
+									$row_source_label = isset( $row['origin_label'] ) && '' !== (string) $row['origin_label']
+										? (string) $row['origin_label']
+										: ( 'paid' === $row['source']
+											? __( 'Maksullinen', 'rytkoset-theme' )
+											: __( 'Maksuton', 'rytkoset-theme' ) );
+									echo esc_html( $row_source_label );
 									?>
 								</td>
 								<td><?php echo esc_html( (string) $row['status_label'] ); ?></td>
@@ -1013,9 +1244,21 @@ function rytkoset_theme_render_event_participants_admin_page() {
 												: esc_html__( 'Muokkaa', 'rytkoset-theme' );
 											?>
 										</a>
-									<?php else : ?>
-										&mdash;
 									<?php endif; ?>
+									<?php
+									$registration_id_for_row = isset( $row['registration_id'] ) ? (int) $row['registration_id'] : 0;
+
+									if ( 'paid' !== $row['source'] && $registration_id_for_row > 0 ) {
+										rytkoset_theme_render_event_registration_cancel_action(
+											$registration_id_for_row,
+											(string) $row['status'],
+											$selected_event,
+											$selected_status
+										);
+									} elseif ( '' === (string) $row['edit_url'] ) {
+										echo '&mdash;';
+									}
+									?>
 								</td>
 							</tr>
 						<?php endforeach; ?>

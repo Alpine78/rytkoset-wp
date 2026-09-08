@@ -862,6 +862,56 @@
   outline-offset: 2px;
 }
 
+/* Tapahtumakohtaisen palautekyselyn 1–5-arvio (#666): natiivi radiogroup,
+   yhdistetty muiden lomakekenttien (.event-registration__field) tyyleihin. */
+.event-feedback__rating legend {
+  padding: 0;
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.event-feedback__rating-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.event-feedback__rating-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.event-feedback__rating-option input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.event-feedback__rating-option:has(input[type="radio"]:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-primary-dark);
+}
+
+.event-feedback__rating-option:has(input[type="radio"]:focus-visible) {
+  outline: 3px solid rgba(251, 191, 36, 0.6);
+  outline-offset: 2px;
+}
+
 @media (min-width: 64rem) {
   .article--event {
     gap: 2.5rem;

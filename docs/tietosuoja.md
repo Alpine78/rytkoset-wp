@@ -133,7 +133,38 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 
-Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Jos ilmoittautumiseen liittyvä tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan automaattisesti seuraavassa siivousajossa. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
+Voit ilmoittautua tapahtumaan myös sivuston ulkopuolella, esimerkiksi puhelimitse tai sähköpostitse tapahtuman järjestäjän kautta. Tällöin yhdistyksen ylläpitäjä lisää samat tiedot osallistujalistalle käsin. Jos tiedot on saatu muualta kuin sinulta itseltäsi, tallennamme myös tiedon lähteestä ja informoimme sinua käsittelystä viimeistään ensimmäisen sinulle lähetetyn henkilökohtaisen tapahtumaviestin yhteydessä, ellei laissa säädetty poikkeus sovellu. Ylläpitäjän tekemää lisäystä ei merkitä sinun antamaksesi suostumukseksi.
+
+Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen ja siihen liittyvään viestintään, mukaan lukien mahdollinen tapahtuman jälkeen lähetettävä palautekysely. Palautekyselyä ei lähetetä henkilöille, joiden osallistuminen on peruttu, eikä se lisää sinua uutiskirjeen tai markkinoinnin postituslistalle. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Osallistumisen peruminen ei yksin poista henkilötietoja: peruttu ilmoittautuminen säilyy tapahtuman jälkikäsittelyä varten ja anonymisoidaan saman säilytysajan puitteissa tai erillisestä pyynnöstäsi. Jos ilmoittautumiseen liittyvä tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan automaattisesti seuraavassa siivousajossa. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
+
+### Tapahtumapalautekysely
+
+Kun vastaat tapahtuman jälkeiseen palautekyselyyn, vastauksesi (1–5-arvio ja
+mahdolliset vapaamuotoiset vastaukset kolmeen kysymykseen) tallennetaan
+täysin anonyymina: emme yhdistä sitä nimeesi, sähköpostiosoitteeseesi,
+käyttäjätiliisi, ilmoittautumiseesi tai tilaukseesi, emmekä tallenna
+IP-osoitettasi vastauksen yhteyteen. Vastaaminen on vapaaehtoista.
+
+Tapahtuman järjestäjät voivat halutessaan ottaa käyttöön ilmoituksen, joka
+lähettää jokaisen vastauksen arvion ja vapaatekstin heille sähköpostitse
+kannustimena reagoida palautteeseen nopeasti. Koska vastausta ei ole kytketty
+sinuun, ilmoituskaan ei sisällä nimeäsi tai sähköpostiosoitettasi — vain sen,
+mitä olet itse kirjoittanut vapaisiin tekstikenttiin. Vältä siksi kirjoittamasta
+vapaisiin vastauksiin omia tai muiden tunnistettavia tietoja.
+
+Käsittelyn oikeusperusteena on yhdistyksen oikeutettu etu kehittää tulevia
+tapahtumia. Koska vastaus on anonyymi, sitä ei poisteta automaattisella
+aikataululla, vaan sitä voidaan säilyttää ja käyttää myöhempien tapahtumien
+(esimerkiksi seuraavan sukujuhlan) suunnittelussa. Jos olet vahingossa
+kirjoittanut vapaaseen tekstikenttään itseäsi tai muita koskevia
+tunnistettavia tietoja, ylläpito voi pyynnöstäsi poistaa tai muokata kyseisen
+vastauksen tekstin — koska vastausta ei ole kytketty sinuun, tämä edellyttää
+riittävää kuvausta vastauksen sisällöstä tunnistamista varten.
+
+Julkinen palautelomake ei vaadi kirjautumista eikä sisällä henkilökohtaista
+tunnistetta linkissä; kuka tahansa tapahtuman tunnisteen tietävä voi vastata
+kyselyn ollessa avoinna. Tämä on tietoinen valinta anonymiteetin
+säilyttämiseksi, ei tekninen puute.
 
 ### Jäsenmaksut ja muut WooCommerce-tilaukset
 
@@ -240,6 +271,7 @@ Henkilötietoihin pääsevät yhdistyksen sisällä vain ne henkilöt, joilla on
 
 - Käyttäjätilien tiedot säilytetään niin kauan kuin tilisi on aktiivinen. Voit pyytää tilisi poistamista milloin tahansa.
 - Tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta. Tämä toteutuu automaattisesti päivittäisellä ajastetulla siivouksella; ylläpitäjä voi anonymisoida ilmoittautumiset myös aiemmin käsin.
+- Tapahtumapalautekyselyn vastaukset ovat anonyymejä jo tallennushetkellä, joten niitä ei poisteta automaattisella aikataululla — niitä voidaan säilyttää tulevien tapahtumien suunnittelua varten. Ylläpito voi pyynnöstä poistaa tai muokata yksittäisen vastauksen vapaatekstiä, jos se on vahingossa sisältänyt tunnistettavia tietoja.
 - Verkkokaupan tilaustiedot säilytetään kirjanpitolain mukaisesti vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt.
 - Uutiskirjetilaajien tiedot säilytetään niin kauan kuin tilaus on voimassa.
 - Jäsenviestinnän aktiivinen listakytkentä säilytetään vain aktiivisen jäsenyyden ajan; peruutusmerkintää voidaan säilyttää kiellon noudattamiseksi.
@@ -288,9 +320,10 @@ Sivustolla käytetään LiteSpeed Cache -välimuistia suorituskyvyn parantamisee
 
 - Ilmoittautumislomakkeen GDPR-teksti: [`inc/event-registrations.php`](../wp-content/themes/rytkoset-theme/inc/event-registrations.php) — käyttää `get_privacy_policy_url()`-funktiota, joten linkki näkyy automaattisesti, kun tietosuojasivu on asetettu **Asetukset → Tietosuoja** -näkymässä.
 - Suostumuksen aikaleima tallennetaan meta-kenttään `_rytkoset_registration_gdpr_consent`.
-- Tapahtumailmoittautumisten anonymisointi: [`inc/event-registration-privacy.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-privacy.php) (Privacy Tools -vienti/-poisto ja tapahtumakohtainen massa-anonymisointi) ja [`inc/event-registration-anonymization.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-anonymization.php) (päivittäinen WP-Cron-ajo, joka anonymisoi yli 12 kuukautta vanhojen tapahtumien ilmoittautumiset automaattisesti). Anonymisoinnissa nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet ja lisätiedot poistetaan, ja tallennetaan aikaleima `_rytkoset_registration_anonymized_at`. Tekninen kuvaus: [`docs/events.md`](events.md).
+- Tapahtumailmoittautumisten anonymisointi: [`inc/event-registration-privacy.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-privacy.php) (Privacy Tools -vienti/-poisto ja tapahtumakohtainen massa-anonymisointi) ja [`inc/event-registration-anonymization.php`](../wp-content/themes/rytkoset-theme/inc/event-registration-anonymization.php) (päivittäinen WP-Cron-ajo, joka anonymisoi yli 12 kuukautta vanhojen tapahtumien ilmoittautumiset automaattisesti). Anonymisoinnissa nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet, lisätiedot ja käsin lisätyn tietueen henkilötiedon lähde (`_rytkoset_registration_personal_data_source`) poistetaan, ja tallennetaan aikaleima `_rytkoset_registration_anonymized_at`. Koodattu ilmoittautumisen lähde ja informoinnin tila säilyvät operatiivisena metatietona. Tekninen kuvaus: [`docs/events.md`](events.md).
 - Albumien YouTube-upotukset: [`inc/gallery-albums.php`](../wp-content/themes/rytkoset-theme/inc/gallery-albums.php) — käyttää `youtube-nocookie.com`-osoitetta.
 - Sisältöön (esim. tapahtumasivun tallenne tai blogikirjoitus) upotetut YouTube-videot: [`inc/youtube-privacy.php`](../wp-content/themes/rytkoset-theme/inc/youtube-privacy.php) — `embed_oembed_html`-suodatin kirjoittaa WordPressin oEmbed-upotusten iframe-osoitteen muotoon `www.youtube-nocookie.com/embed/…`, myös Gutenbergin upotuslohkolle ja postmetaan välimuistitetuille tuloksille. Suodatin muuttaa vain osoitteen isäntänimen, joten iframen `title`-attribuutti säilyy. Näin selosteen lupaus toteutuu sisältötyypistä riippumatta.
 - Footerin linkki tulee `footer`-valikosta ([`footer.php`](../wp-content/themes/rytkoset-theme/footer.php)) — ei vaadi koodimuutoksia.
 - AI-tukichatti: [`inc/chat.php`](../wp-content/themes/rytkoset-theme/inc/chat.php) — API-avain ja kävijän IP eivät koskaan välity Mistralille, keskusteluhistoria ei tallennu palvelimelle eikä selaimen pysyvään muistiin. Tekninen kuvaus ja kulusuojat: [`docs/chat.md`](chat.md).
 - Rekisteröinnin bottisuoja: ympäristökohtainen **Simple CAPTCHA with Cloudflare Turnstile** -lisäosa lisää widgetin WordPressin `register_form`-koukkuun ja varmentaa tunnisteen `registration_errors`-käsittelyssä. Lisäosa lähettää Siteverify-pyyntöön tunnisteen ja IP-osoitteen. Tuotantoasetukset ja debug-lokin tietosisältö: [`docs/tietoturva.md`](tietoturva.md).
+- Tapahtumakohtainen palautekysely: [`inc/event-feedback.php`](../wp-content/themes/rytkoset-theme/inc/event-feedback.php) — julkinen `/palaute/{tapahtuma-id}/`-lomake tallentaa vastauksen omaan `event_feedback`-sisältötyyppiin (meta-avaimet `_rytkoset_feedback_rating`, `_rytkoset_feedback_well`, `_rytkoset_feedback_improve`, `_rytkoset_feedback_wishes`, `_rytkoset_feedback_event_id`) ilman nimeä, sähköpostia, käyttäjä-, ilmoittautumis- tai tilaustunnistetta; `post_author` pakotetaan `0`:aan. IP käsitellään vain hetkellisesti lähetysrajoittimen transientissa, ei tallenneta postiin. Ylläpito voi muokata yksittäisen vastauksen vapaatekstiä (`rytkoset_theme_update_event_feedback_response_text()`) mahdollisen vahingossa syötetyn tunnistetiedon poistamiseksi. Tekninen kuvaus: [`docs/event-feedback.md`](event-feedback.md).

@@ -52,7 +52,10 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$chip = rytkoset_theme_get_order_status_chip( $order );
 
 		$this->assertStringContainsString( 'rytkoset-status-chip--done', $chip );
-		$this->assertStringContainsString( 'Completed', $chip );
+		// 'Valmis', not the ucfirst() fallback: tests/bootstrap.php now stubs
+		// wc_get_order_status_name() (added for the #666 paid-participant tests),
+		// so this exercises the same localized-label path WooCommerce itself uses.
+		$this->assertStringContainsString( 'Valmis', $chip );
 	}
 
 	public function test_status_chip_rejects_non_order(): void {

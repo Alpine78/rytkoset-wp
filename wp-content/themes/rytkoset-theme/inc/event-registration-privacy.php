@@ -129,6 +129,10 @@ function rytkoset_theme_anonymize_event_registration( $registration_id ) {
 	delete_post_meta( $registration_id, $meta_keys['email'] );
 	delete_post_meta( $registration_id, $meta_keys['diet'] );
 	delete_post_meta( $registration_id, $meta_keys['notes'] );
+	// The free-text personal-data source can name the participant or a third party
+	// (e.g. a guardian), so it is cleared with the other personal fields. The
+	// coded source/informing keys are non-personal operational metadata and stay.
+	delete_post_meta( $registration_id, $meta_keys['personal_data_source'] );
 	update_post_meta( $registration_id, $meta_keys['anonymized_at'], current_time( 'mysql' ) );
 
 	return true;
