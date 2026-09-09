@@ -137,6 +137,22 @@ Lisäksi teema rekisteröi oman Oma tili -endpointin uutiskirjeen hallintaan:
 |---|---|---|
 | `rytkoset_newsletter` | `uutiskirje` | Teeman koodissa rekisteröity, ei WooCommercen admin-asetus. URL rakentuu `wc_get_account_endpoint_url()`-funktion kautta. |
 
+## Sähköpostiosoitteen vahvistuskehote Tilaukset-sivulla (#649)
+
+WooCommerce 11.0 lisäsi asiakkaan sähköpostiosoitteen vahvistustoiminnon
+(`Automattic\WooCommerce\Internal\CustomerEmailVerification\VerificationController`).
+Se näyttää **Oma tili -> Tilaukset** -näkymässä kirjautuneelle asiakkaalle
+kehotteen vahvistaa sähköpostiosoitteensa, jotta aiemmin vieraana tehdyt
+tilaukset voidaan yhdistää käyttäjätiliin. Kehote näkyy, kun vieraskassa on
+käytössä eikä asiakkaan sähköpostia ole vielä vahvistettu.
+
+Mukana toimitettu suomenkielinen käännöspaketti ei vielä sisällä toiminnon
+tekstejä, joten ne näkyivät englanniksi. `inc/woocommerce-translations.php`
+suomentaa kehotteen, painikkeen ja vahvistuksen jälkeiset ilmoitukset
+`gettext`-suotimella muokkaamatta WooCommercen tiedostoja. Kun virallinen
+käännös aikanaan kattaa nämä merkkijonot, moduuli voi jäädä paikalleen
+(oma käännös vain voittaa) tai sen voi poistaa.
+
 ## Huomio
 
 Paytrail on nykyinen kokeilujakson maksunvälittäjä (#530). Dev-kassalla on

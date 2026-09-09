@@ -49,6 +49,7 @@ require_once get_template_directory() . '/inc/member-newsletter.php';
 require_once get_template_directory() . '/inc/user-membership-activation.php';
 require_once get_template_directory() . '/inc/user-memberships-admin.php';
 require_once get_template_directory() . '/inc/members-only-pages.php';
+require_once get_template_directory() . '/inc/woocommerce-translations.php';
 require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-member-coupon.php';
