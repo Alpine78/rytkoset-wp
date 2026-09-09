@@ -492,7 +492,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_submission_caps_free_text_length(): void {
 		$this->open_event( 95 );
-		$long = str_repeat( 'a', 600 );
+		$long = str_repeat( 'a', 1200 );
 
 		try {
 			$this->submit_feedback( 95, array( 'feedback_well' => $long ) );
@@ -503,7 +503,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		$meta_keys = rytkoset_theme_get_event_feedback_response_meta_keys();
 		$stored    = $GLOBALS['rytkoset_test_post_meta'][1000][ $meta_keys['well'] ];
 
-		$this->assertSame( 500, mb_strlen( $stored ) );
+		$this->assertSame( 1000, mb_strlen( $stored ) );
 	}
 
 	public function test_submission_is_rate_limited_after_configured_attempts(): void {
@@ -585,7 +585,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_sanitize_text_strips_tags_and_caps_length(): void {
 		$this->assertSame( 'aleksi', rytkoset_theme_sanitize_event_feedback_text( '<b>aleksi</b>' ) );
-		$this->assertSame( 500, mb_strlen( rytkoset_theme_sanitize_event_feedback_text( str_repeat( 'x', 1000 ) ) ) );
+		$this->assertSame( 1000, mb_strlen( rytkoset_theme_sanitize_event_feedback_text( str_repeat( 'x', 1500 ) ) ) );
 	}
 
 	// --- organizer notification opt-in ----------------------------------------
