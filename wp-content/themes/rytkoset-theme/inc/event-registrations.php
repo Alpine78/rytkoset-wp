@@ -1047,9 +1047,10 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
  * sent; there is deliberately no admin-email fallback, so participant details
  * never reach an address nobody configured for this purpose.
  *
- * The message carries only the event basics plus the participant's name and
- * email. Diet restrictions, notes, the extra choice and the quantity stay in
- * the admin views linked from the message.
+ * The message carries only the event basics, the participant's name and email,
+ * and the non-personal registration summary (#643). Diet restrictions, notes,
+ * the extra choice and the quantity stay in the admin views linked from the
+ * message.
  *
  * @param int $registration_id Registration post ID.
  * @return bool Whether WordPress accepted the email for sending.
@@ -1143,6 +1144,18 @@ function rytkoset_theme_send_event_registration_organizer_notification( $registr
 		__( 'Sähköposti: %s', 'rytkoset-theme' ),
 		'' !== $email ? $email : $not_given
 	);
+
+	$summary_lines = rytkoset_theme_format_event_registration_summary_lines(
+		rytkoset_theme_get_event_registration_summary(
+			$event_id,
+			rytkoset_theme_get_event_registration_participant_count( $registration_id )
+		)
+	);
+
+	if ( ! empty( $summary_lines ) ) {
+		$lines[] = '';
+		$lines   = array_merge( $lines, $summary_lines );
+	}
 
 	$lines[] = '';
 	$lines[] = __( 'Katso loput tiedot ylläpidosta:', 'rytkoset-theme' );

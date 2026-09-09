@@ -137,6 +137,22 @@ Voit ilmoittautua tapahtumaan myös sivuston ulkopuolella, esimerkiksi puhelimit
 
 Tietoja käytetään yksinomaan kyseisen tapahtuman järjestämiseen ja siihen liittyvään viestintään, mukaan lukien mahdollinen tapahtuman jälkeen lähetettävä palautekysely. Palautekyselyä ei lähetetä henkilöille, joiden osallistuminen on peruttu, eikä se lisää sinua uutiskirjeen tai markkinoinnin postituslistalle. Tietoja käsittelevät vain ne yhdistyksen vastuuhenkilöt ja sivuston ylläpitäjät, jotka tarvitsevat tietoja tapahtuman käytännön järjestelyihin. Tietoja ei luovuteta ulkopuolisille tahoille. Tiedot poistetaan tai anonymisoidaan, kun niitä ei enää tarvita tapahtuman jälkikäsittelyyn, viimeistään 12 kuukauden kuluttua tapahtumasta. Osallistumisen peruminen ei yksin poista henkilötietoja: peruttu ilmoittautuminen säilyy tapahtuman jälkikäsittelyä varten ja anonymisoidaan saman säilytysajan puitteissa tai erillisestä pyynnöstäsi. Jos ilmoittautumiseen liittyvä tapahtuma on poistettu pysyvästi, ilmoittautuminen anonymisoidaan automaattisesti seuraavassa siivousajossa. Tiedot voidaan anonymisoida myös rekisteröidyn pyynnön perusteella.
 
+#### Mitä tapahtuman järjestäjille lähtee sähköpostitse
+
+Jokaisesta ilmoittautumisesta lähtee ilmoitus tapahtuman järjestäjille, jos
+tapahtumalle on asetettu ilmoitusten vastaanottajat. Ilmoituksessa liikkuu vain
+se, mitä järjestäjä tarvitsee tunnistaakseen ilmoittautumisen:
+
+- ilmoittautujan nimi ja sähköpostiosoite (maksullisessa tilauksessa myös
+  tilaajan puhelinnumero ja osallistujien nimet)
+- tapahtuman perustiedot ja tilauksen perustiedot
+- ilmoittautumistilanteen yhteenveto, jossa on vain lukumääriä ja päivämääriä
+
+**Ruokarajoitteita, allergioita eikä vapaamuotoisia lisätietoja ei lähetetä
+sähköpostitse.** Ne luetaan sivuston ylläpidosta, johon ilmoituksessa on linkki.
+Sama koskee WooCommercen omaa ylläpidolle menevää tilausilmoitusta. Oma
+tilausvahvistuksesi näyttää edelleen kaikki antamasi tiedot.
+
 ### Tapahtumapalautekysely
 
 Kun vastaat tapahtuman jälkeiseen palautekyselyyn, vastauksesi (1–5-arvio ja

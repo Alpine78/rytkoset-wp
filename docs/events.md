@@ -292,9 +292,45 @@ Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmo
 - **Tyhjä kenttä tarkoittaa, ettei ilmoitusta lähetetä.** Varaosoitetta ei ole tarkoituksella, jotta osallistujan henkilötiedot eivät koskaan päädy osoitteeseen, jota kukaan ei ole valinnut tähän käyttöön. Sama sääntö on voimassa maksullisella polulla.
 - Viesti sisältää tapahtuman perustiedot sekä ilmoittautujan nimen ja sähköpostiosoitteen. **Ruokarajoitteet, lisätieto, lisävalinta ja määrä jätetään tarkoituksella pois** — ne katsotaan ylläpidosta, jotta sähköpostilla liikkuu mahdollisimman vähän henkilötietoa.
 - Viestin lopussa on kaksi linkkiä: yksittäisen ilmoittautumisen muokkausnäkymä ja `Tapahtumat > Osallistujat` oikealla tapahtumalla valittuna.
+- Viesti sisältää myös ilmoittautumisyhteenvedon (#643), ks. alla.
 - Viestin `Reply-To` on ilmoittautujan osoite, joten järjestäjä voi vastata suoraan ilmoittautujalle.
 - Maksuttomalla polulla ei ole WooCommerce-tilauksen order note -lokia, joten onnistuneesta tai epäonnistuneesta lähetyksestä ei jää audit trailia. Jos ilmoituksia ei tule, tarkista ensin vastaanottajakenttä ja sen jälkeen palvelimen sähköpostinvälitys.
 - Ilmoitus lähetetään yhtenä `wp_mail()`-kutsuna riippumatta vastaanottajien määrästä. Kuittisähköposti ja järjestäjäilmoitus ovat toisistaan riippumattomia: kumpikaan ei estä toista.
+
+### Ilmoittautumisyhteenveto järjestäjäilmoituksissa (#643)
+
+Sekä maksuttoman lomakkeen että maksullisen tilauksen järjestäjäilmoitus sisältää
+ilmoittautumishetken tilannekuvan, jotta järjestäjän ei tarvitse avata ylläpitoa
+nähdäkseen kokonaistilanteen:
+
+```
+Ilmoittautumistilanne:
+Tämän ilmoittautumisen henkilömäärä: 1
+Ilmoittautuneita yhteensä: 12
+Paikkoja jäljellä: 8
+Ilmoittautuminen päättyy: 14.8.2026 (4 päivää jäljellä)
+```
+
+- **Ilmoittautuneita yhteensä** on maksuttomien ilmoittautumisten ja maksullisten
+  tilausten ostettujen kappalemäärien summa. Perutut ilmoittautumiset sekä
+  perutut, hyvitetyt ja epäonnistuneet tilaukset jätetään laskennasta pois, joten
+  luku voi olla pienempi kuin `Tapahtumat > Osallistujat` -listan rivimäärä.
+- Jos tapahtumassa kerätään **määrä** (esim. matkustajien määrä), jokainen
+  ilmoittautuminen lasketaan tallennetulla määrällään. Muuten yksi
+  ilmoittautuminen on yksi henkilö.
+- **Paikkoja jäljellä** näkyy vain, jos tapahtumaan linkitetyssä
+  WooCommerce-tuotteessa on varastonhallinta päällä. Maksuttomalla tapahtumalla
+  ei ole linkitettyä tuotetta, joten rivi puuttuu.
+- **Ilmoittautuminen päättyy** käyttää samaa määräpäivää kuin tapahtumasivu.
+  Määräpäivä on viimeinen ilmoittautumispäivä, joten sinä päivänä rivillä lukee
+  `(viimeinen ilmoittautumispäivä)`.
+- Rivi jätetään kokonaan pois, jos arvoa ei voida selvittää. Yhteenvedossa ei
+  koskaan esitetä arvausta.
+
+Laskenta on tarkoituksella kevyt: se ei käytä `Tapahtumat > Osallistujat`
+-näkymän täyttä osallistujahakua, koska se lataisi kaikki WooCommerce-tilaukset
+kesken kassan tai tilauksen tilasiirtymän. Toteutus on moduulissa
+`inc/event-registration-summary.php`.
 
 Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet, lisätiedot ja käsin lisätyn tietueen henkilötiedon lähde poistetaan, mutta tapahtumaviittaus, status ja koodatut lähde-/informointikentät säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
 

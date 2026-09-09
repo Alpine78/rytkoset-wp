@@ -277,6 +277,16 @@ class WC_Product {
 		return (bool) ( $this->meta['_is_in_stock'] ?? true );
 	}
 
+	public function managing_stock(): bool {
+		return 'yes' === ( $this->meta['_manage_stock'] ?? 'no' );
+	}
+
+	public function get_stock_quantity(): ?int {
+		$stock = $this->meta['_stock'] ?? null;
+
+		return null === $stock ? null : (int) $stock;
+	}
+
 	public function get_attribute( string $name ): string {
 		return (string) ( $this->meta[ $name ] ?? '' );
 	}
@@ -418,6 +428,7 @@ class WC_Order {
 	public string $customer_note = '';
 	public string $order_key = '';
 	public string $payment_method = '';
+	public string $payment_method_title = '';
 	public string $edit_order_url = '';
 	public bool $payment_needed = false;
 	public string $checkout_payment_url = '';
@@ -495,6 +506,10 @@ class WC_Order {
 
 	public function get_payment_method(): string {
 		return $this->payment_method;
+	}
+
+	public function get_payment_method_title(): string {
+		return $this->payment_method_title;
 	}
 
 	public function needs_payment(): bool {
@@ -685,6 +700,7 @@ class WP_Role {
 class Rytkoset_Test_WPDB {
 	public string $prefix = 'wp_';
 	public string $users = 'wp_users';
+	public string $posts = 'wp_posts';
 	public string $last_query = '';
 	public string $last_error = '';
 	/** @var array<int,mixed> */
@@ -1964,6 +1980,7 @@ require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
 require_once $rytkoset_theme_inc . '/event-registration-anonymization.php';
 require_once $rytkoset_theme_inc . '/event-participants-messaging.php';
 require_once $rytkoset_theme_inc . '/event-participants-admin.php';
+require_once $rytkoset_theme_inc . '/event-registration-summary.php';
 require_once $rytkoset_theme_inc . '/event-feedback.php';
 require_once $rytkoset_theme_inc . '/email.php';
 require_once $rytkoset_theme_inc . '/gallery-albums.php';
