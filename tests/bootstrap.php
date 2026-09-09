@@ -1951,6 +1951,7 @@ require_once $rytkoset_theme_inc . '/woocommerce-digital-magazine.php';
 require_once $rytkoset_theme_inc . '/members-only-pages.php';
 require_once $rytkoset_theme_inc . '/events.php';
 require_once $rytkoset_theme_inc . '/event-registrations.php';
+require_once $rytkoset_theme_inc . '/woocommerce-translations.php';
 require_once $rytkoset_theme_inc . '/woocommerce-mollie.php';
 require_once $rytkoset_theme_inc . '/security.php';
 require_once $rytkoset_theme_inc . '/seo-meta.php';
