@@ -30,7 +30,7 @@ Tapahtuman muokkausnäkymän **Palautekysely**-laatikossa:
 | Palautekyselyn tila                        | **Ei palautekyselyä** (oletus kaikille tapahtumille), **Lähetä käsin** tai **Lähetä automaattisesti**                                    |
 | Automaattinen lähetysaika                  | Pakollinen vain automaattitilassa. Ajan pitää olla tapahtumapäivän jälkeen — jos ei, tila tallennetaan hiljaisesti `Lähetä käsin`-arvoon |
 | Palautteen määräpäivä                      | Valinnainen. Tyhjänä kysely pysyy avoinna toistaiseksi                                                                                   |
-| Johdantoteksti                             | Valinnainen, max 500 merkkiä. Näytetään lomakkeella ja palautepyynnön viestin alussa                                                     |
+| Johdantoteksti                             | Valinnainen, max 1000 merkkiä. Näytetään lomakkeella ja palautepyynnön viestin alussa                                                    |
 | Ilmoita järjestäjille uusista vastauksista | Valinnainen rasti, oletuksena pois. Ks. "Järjestäjäilmoitus" alla                                                                        |
 
 Jos palautepyyntö on jo lisätty lähetysjonoon (käsin tai automaattisesti),
@@ -60,9 +60,9 @@ Lomake sisältää:
 
 1. **Kokonaisarvio tapahtumasta**, asteikko 1–5 (pakollinen, natiivi
    radiogroup)
-2. **Mikä onnistui hyvin?** (valinnainen, max 500 merkkiä)
-3. **Mitä voisimme parantaa?** (valinnainen, max 500 merkkiä)
-4. **Toiveita tuleviin tapahtumiin** (valinnainen, max 500 merkkiä)
+2. **Mikä onnistui hyvin?** (valinnainen, max 1000 merkkiä)
+3. **Mitä voisimme parantaa?** (valinnainen, max 1000 merkkiä)
+4. **Toiveita tuleviin tapahtumiin** (valinnainen, max 1000 merkkiä)
 
 ### Ulkoasu
 
