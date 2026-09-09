@@ -1198,6 +1198,55 @@ function rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email( $show, $
 add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email', 10, 4 );
 
 /**
+ * Hides free-text event order notes while rendering an admin email table.
+ *
+ * WooCommerce prints customer_note separately from additional checkout fields,
+ * so the diet-field filter cannot protect sensitive text entered there.
+ * The getter filter only changes the displayed value, never the saved order.
+ *
+ * @param string   $note  Customer note.
+ * @param WC_Order $order Order being rendered.
+ * @return string
+ */
+function rytkoset_theme_hide_event_customer_note_from_admin_email( $note, $order ) {
+	if ( '' === $note || ! $order instanceof WC_Order ) {
+		return $note;
+	}
+
+	return rytkoset_theme_is_tampere_2026_registration_order( $order ) || ! empty( rytkoset_theme_get_order_paid_event_ids( $order ) )
+		? ''
+		: $note;
+}
+
+/**
+ * Enables note minimization for WooCommerce admin email order tables.
+ *
+ * @param WC_Order $order         Order being rendered.
+ * @param bool     $sent_to_admin Whether the email is for the store admin.
+ * @return void
+ */
+function rytkoset_theme_begin_event_admin_email_note_minimization( $order, $sent_to_admin ) {
+	if ( $sent_to_admin ) {
+		add_filter( 'woocommerce_order_get_customer_note', 'rytkoset_theme_hide_event_customer_note_from_admin_email', 10, 2 );
+	}
+}
+add_action( 'woocommerce_email_before_order_table', 'rytkoset_theme_begin_event_admin_email_note_minimization', 10, 2 );
+
+/**
+ * Restores note display before subsequent customer emails or admin views.
+ *
+ * @param WC_Order $order         Order being rendered.
+ * @param bool     $sent_to_admin Whether the email is for the store admin.
+ * @return void
+ */
+function rytkoset_theme_end_event_admin_email_note_minimization( $order, $sent_to_admin ) {
+	if ( $sent_to_admin ) {
+		remove_filter( 'woocommerce_order_get_customer_note', 'rytkoset_theme_hide_event_customer_note_from_admin_email', 10 );
+	}
+}
+add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_end_event_admin_email_note_minimization', 10, 2 );
+
+/**
  * Removes extra Tampere 2026 participant fields from WooCommerce admin order fields.
  *
  * @param array<string, mixed> $fields Admin field definitions.

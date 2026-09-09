@@ -290,7 +290,7 @@ jolloin myös tapahtumakohtaiset lisävalinta- ja määräkentät näkyvät heti
 Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmoitus, jos tapahtuman `Järjestäjäilmoitukset`-laatikkoon on asetettu vastaanottajia. Käytössä on täsmälleen sama vastaanottajakenttä kuin maksullisten tapahtumien tilausilmoituksissa (`docs/woocommerce-tampere-2026-notifications.md`), joten järjestäjät hallitaan yhdestä paikasta tapahtuman muokkausnäkymässä.
 
 - **Tyhjä kenttä tarkoittaa, ettei ilmoitusta lähetetä.** Varaosoitetta ei ole tarkoituksella, jotta osallistujan henkilötiedot eivät koskaan päädy osoitteeseen, jota kukaan ei ole valinnut tähän käyttöön. Sama sääntö on voimassa maksullisella polulla.
-- Viesti sisältää tapahtuman perustiedot sekä ilmoittautujan nimen ja sähköpostiosoitteen. **Ruokarajoitteet, lisätieto, lisävalinta ja määrä jätetään tarkoituksella pois** — ne katsotaan ylläpidosta, jotta sähköpostilla liikkuu mahdollisimman vähän henkilötietoa.
+- Viesti sisältää tapahtuman perustiedot sekä ilmoittautujan nimen ja sähköpostiosoitteen. **Ruokarajoitteet, lisätieto ja lisävalinta jätetään tarkoituksella pois** — ne katsotaan ylläpidosta, jotta sähköpostilla liikkuu mahdollisimman vähän henkilötietoa.
 - Viestin lopussa on kaksi linkkiä: yksittäisen ilmoittautumisen muokkausnäkymä ja `Tapahtumat > Osallistujat` oikealla tapahtumalla valittuna.
 - Viesti sisältää myös ilmoittautumisyhteenvedon (#643), ks. alla.
 - Viestin `Reply-To` on ilmoittautujan osoite, joten järjestäjä voi vastata suoraan ilmoittautujalle.

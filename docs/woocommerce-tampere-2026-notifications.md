@@ -56,7 +56,7 @@ Viestistä on tarkoituksella jätetty pois tiedot, jotka ovat arkaluonteisia tai
 
 Viestin lopussa on aina kaksi linkkiä, joista tarkat tiedot löytyvät: `tilaus:` ja `osallistujalista:`.
 
-Sama minimointi koskee WooCommercen omaa **ylläpidon "Uusi tilaus" -sähköpostia**: `rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email()` piilottaa `rytkoset/participant_N_diet` -kentät, kun WooCommerce merkitsee viestin `sent_to_admin`-kontekstiin. Asiakkaan oma tilausvahvistus, kiitos-sivu ja tilausnäkymä säilyvät ennallaan.
+Sama minimointi koskee WooCommercen omaa **ylläpidon "Uusi tilaus" -sähköpostia**: `rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email()` piilottaa `rytkoset/participant_N_diet` -kentät, kun WooCommerce merkitsee viestin `sent_to_admin`-kontekstiin. Lisäksi tapahtumatilauksen vapaa tilauslisätieto (`customer_note`) piilotetaan ylläpidon HTML- ja tekstisähköpostien tilaustaulukosta. Tämä kenttä tulostuu WooCommercessa erillään osallistujakentistä, joten se suodatetaan erikseen vain viestin renderöinnin ajaksi. Rajaus koskee Tampere 2026 -tilauksia ja muihin tapahtumiin linkitettyjä tilauksia; muiden tilausten lisätiedot näkyvät edelleen. Asiakkaan oma tilausvahvistus, kiitos-sivu ja tilausnäkymä säilyvät ennallaan.
 
 ### Ilmoittautumisyhteenveto (#643)
 

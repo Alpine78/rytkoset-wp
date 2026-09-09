@@ -482,8 +482,10 @@ class WC_Order {
 		return $this->billing_phone;
 	}
 
-	public function get_customer_note(): string {
-		return $this->customer_note;
+	public function get_customer_note( string $context = 'view' ): string {
+		return 'view' === $context
+			? (string) apply_filters( 'woocommerce_order_get_customer_note', $this->customer_note, $this )
+			: $this->customer_note;
 	}
 
 	public function get_formatted_billing_full_name(): string {

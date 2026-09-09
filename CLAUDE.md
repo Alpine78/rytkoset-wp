@@ -82,6 +82,8 @@ Do not create commits automatically â€” report the implementation first, su
 
 ## Theme architecture
 
+Event email privacy (#643): WooCommerce admin order emails hide both the Tampere 2026 diet fields and the free-text customer note on event orders. The note getter is filtered only between `woocommerce_email_before_order_table` and `woocommerce_email_after_order_table`; saved notes, customer emails and non-event order notes remain available.
+
 The theme `wp-content/themes/rytkoset-theme/` is the primary versioned codebase. WordPress core, installed plugins and uploads are not in the repo, but a few standalone `wp-content` operational files are tracked when they need reviewable change history.
 
 `wp-content/mu-plugins/automation-by-klik.php` is the repo copy of Klik's MU-plugin for externally managed automatic updates/backups. It disables WordPress automatic updates and the matching Site Health background-update test because Klik manages those operations outside WordPress. It is included in PHPCS so direct changes are reviewed, but the current theme deploy workflows do not upload `wp-content/mu-plugins/`.

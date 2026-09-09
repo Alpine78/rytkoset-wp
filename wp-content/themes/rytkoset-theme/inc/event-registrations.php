@@ -1049,8 +1049,8 @@ function rytkoset_theme_send_event_registration_receipt_email( $event_id, $name,
  *
  * The message carries only the event basics, the participant's name and email,
  * and the non-personal registration summary (#643). Diet restrictions, notes,
- * the extra choice and the quantity stay in the admin views linked from the
- * message.
+ * and the extra choice stay in the admin views linked from the message. The
+ * collected quantity is included as the new registration's participant count.
  *
  * @param int $registration_id Registration post ID.
  * @return bool Whether WordPress accepted the email for sending.

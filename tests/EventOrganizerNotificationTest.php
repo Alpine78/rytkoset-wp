@@ -75,6 +75,40 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 
 	// --- data minimization ---------------------------------------------------
 
+	public function test_admin_email_hides_event_note_without_changing_saved_note_or_customer_email(): void {
+		$order = $this->order( $this->registration_product( 900 ) );
+		$note  = $order->get_customer_note();
+
+		do_action( 'woocommerce_email_before_order_table', $order, true, false, null );
+		$this->assertSame( '', $order->get_customer_note() );
+		$this->assertSame( $note, $order->get_customer_note( 'edit' ) );
+		do_action( 'woocommerce_email_after_order_table', $order, true, false, null );
+
+		$this->assertSame( $note, $order->get_customer_note() );
+		do_action( 'woocommerce_email_before_order_table', $order, false, false, null );
+		$this->assertSame( $note, $order->get_customer_note() );
+		do_action( 'woocommerce_email_after_order_table', $order, false, false, null );
+	}
+
+	public function test_admin_email_hides_notes_for_other_linked_event_products(): void {
+		$product = rytkoset_test_register_product( 900, 'publish', 'Bussikyyti' );
+		$this->event( 10, 900 );
+		$order = $this->order( $product );
+
+		do_action( 'woocommerce_email_before_order_table', $order, true, false, null );
+		$this->assertSame( '', $order->get_customer_note() );
+		do_action( 'woocommerce_email_after_order_table', $order, true, false, null );
+	}
+
+	public function test_admin_email_keeps_notes_for_non_event_orders(): void {
+		$order = $this->order( rytkoset_test_register_product( 900, 'publish', 'Sukukirja' ) );
+		$note  = $order->get_customer_note();
+
+		do_action( 'woocommerce_email_before_order_table', $order, true, false, null );
+		$this->assertSame( $note, $order->get_customer_note() );
+		do_action( 'woocommerce_email_after_order_table', $order, true, false, null );
+	}
+
 	public function test_message_omits_diet_details_and_the_customer_note(): void {
 		$product = $this->registration_product( 900 );
 		$this->event( 10, 900 );
