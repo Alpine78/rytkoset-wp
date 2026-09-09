@@ -1166,6 +1166,87 @@ function rytkoset_theme_filter_tampere_2026_order_confirmation_fields( $show, $f
 add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_tampere_2026_order_confirmation_fields', 10, 4 );
 
 /**
+ * Hides Tampere 2026 diet fields from WooCommerce's own admin order emails.
+ *
+ * WooCommerce renders the Store API additional fields into every order
+ * confirmation surface, including the admin "New order" email. Diet
+ * restrictions and allergies are health-related data that must not travel by
+ * email to the organizer inbox (#643); they stay on the order screen and in
+ * `Tapahtumat > Osallistujat`.
+ *
+ * `sent_to_admin` is only present in the two WC_Email callers, so the
+ * customer's own confirmation email, the thank-you page and the order
+ * confirmation blocks are left untouched.
+ *
+ * @param bool                 $show    Whether WooCommerce would show the field.
+ * @param array<string, mixed> $field   Field data.
+ * @param array<string, mixed> $fields  All fields in the current confirmation context.
+ * @param array<string, mixed> $context Confirmation context.
+ * @return bool
+ */
+function rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email( $show, $field, $fields, $context ) {
+	if ( ! $show || empty( $context['sent_to_admin'] ) ) {
+		return $show;
+	}
+
+	$field_id = rytkoset_theme_normalize_tampere_2026_participant_field_id(
+		rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields )
+	);
+
+	return 1 !== preg_match( '/^rytkoset\/participant_\d+_diet$/', $field_id );
+}
+add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email', 10, 4 );
+
+/**
+ * Hides free-text event order notes while rendering an admin email table.
+ *
+ * WooCommerce prints customer_note separately from additional checkout fields,
+ * so the diet-field filter cannot protect sensitive text entered there.
+ * The getter filter only changes the displayed value, never the saved order.
+ *
+ * @param string   $note  Customer note.
+ * @param WC_Order $order Order being rendered.
+ * @return string
+ */
+function rytkoset_theme_hide_event_customer_note_from_admin_email( $note, $order ) {
+	if ( '' === $note || ! $order instanceof WC_Order ) {
+		return $note;
+	}
+
+	return rytkoset_theme_is_tampere_2026_registration_order( $order ) || ! empty( rytkoset_theme_get_order_paid_event_ids( $order ) )
+		? ''
+		: $note;
+}
+
+/**
+ * Enables note minimization for WooCommerce admin email order tables.
+ *
+ * @param WC_Order $order         Order being rendered.
+ * @param bool     $sent_to_admin Whether the email is for the store admin.
+ * @return void
+ */
+function rytkoset_theme_begin_event_admin_email_note_minimization( $order, $sent_to_admin ) {
+	if ( $sent_to_admin ) {
+		add_filter( 'woocommerce_order_get_customer_note', 'rytkoset_theme_hide_event_customer_note_from_admin_email', 10, 2 );
+	}
+}
+add_action( 'woocommerce_email_before_order_table', 'rytkoset_theme_begin_event_admin_email_note_minimization', 10, 2 );
+
+/**
+ * Restores note display before subsequent customer emails or admin views.
+ *
+ * @param WC_Order $order         Order being rendered.
+ * @param bool     $sent_to_admin Whether the email is for the store admin.
+ * @return void
+ */
+function rytkoset_theme_end_event_admin_email_note_minimization( $order, $sent_to_admin ) {
+	if ( $sent_to_admin ) {
+		remove_filter( 'woocommerce_order_get_customer_note', 'rytkoset_theme_hide_event_customer_note_from_admin_email', 10 );
+	}
+}
+add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_end_event_admin_email_note_minimization', 10, 2 );
+
+/**
  * Removes extra Tampere 2026 participant fields from WooCommerce admin order fields.
  *
  * @param array<string, mixed> $fields Admin field definitions.
@@ -1678,6 +1759,10 @@ function rytkoset_theme_get_order_event_product_quantity( $order, $event_id ) {
 /**
  * Returns participant rows for an event organizer notification.
  *
+ * Only the fields the notification renders are assembled. Tampere 2026 rows come
+ * from the shared participant reader and still carry a `diet` value used by the
+ * admin views; the notification never prints it (#643).
+ *
  * @param WC_Order $order    WooCommerce order object.
  * @param int      $event_id Event post ID.
  * @return array<int, array<string, mixed>>
@@ -1701,12 +1786,11 @@ function rytkoset_theme_get_event_order_notification_participants( $order, $even
 		$contact_name = __( 'Nimi puuttuu', 'rytkoset-theme' );
 	}
 
+	// Contact email and phone are deliberately not repeated per participant: the
+	// billing contact is already printed once in the message (#643).
 	for ( $index = 0; $index < $quantity; $index++ ) {
 		$participants[] = array(
 			'name'             => $contact_name,
-			'email'            => (string) $order->get_billing_email(),
-			'phone'            => (string) $order->get_billing_phone(),
-			'diet'             => '',
 			'participant_type' => '',
 			'friday_buffet'    => null,
 		);
@@ -1740,6 +1824,13 @@ function rytkoset_theme_get_event_organizer_notification_subject( $order, $event
 /**
  * Builds the organizer notification email body for an event order.
  *
+ * Data minimization (#643): the message carries the order basics, the billing
+ * contact, the participant names and the non-personal registration summary.
+ * Diet restrictions and allergies, per-participant contact details and the
+ * customer's free-text note are deliberately left out and reached through the
+ * admin links instead, following the model of the free registration
+ * notification in inc/event-registrations.php.
+ *
  * @param WC_Order $order    WooCommerce order object.
  * @param int      $event_id Event post ID.
  * @return string
@@ -1754,7 +1845,6 @@ function rytkoset_theme_get_event_organizer_notification_message( $order, $event
 	$email          = trim( (string) $order->get_billing_email() );
 	$phone          = trim( (string) $order->get_billing_phone() );
 	$payment_method = trim( (string) $order->get_payment_method_title() );
-	$customer_note  = trim( (string) $order->get_customer_note() );
 	$created_at     = $order->get_date_created();
 	$created_text   = $created_at ? wp_date( 'j.n.Y H:i', $created_at->getTimestamp(), wp_timezone() ) : __( 'Ei tiedossa', 'rytkoset-theme' );
 	$status_name    = function_exists( 'wc_get_order_status_name' ) ? wc_get_order_status_name( $order->get_status() ) : $order->get_status();
@@ -1798,29 +1888,38 @@ function rytkoset_theme_get_event_organizer_notification_message( $order, $event
 				$lines[] = '   osallistujatyyppi: ' . $participant['participant_type'];
 			}
 
-			if ( ! empty( $participant['email'] ) ) {
-				$lines[] = '   sähköposti: ' . $participant['email'];
-			}
-
-			if ( ! empty( $participant['phone'] ) ) {
-				$lines[] = '   puhelin: ' . $participant['phone'];
-			}
-
-			if ( ! empty( $participant['diet'] ) ) {
-				$lines[] = '   ruokarajoitteet / allergiat: ' . $participant['diet'];
-			}
-
 			if ( array_key_exists( 'friday_buffet', $participant ) && null !== $participant['friday_buffet'] ) {
 				$lines[] = '   perjantain buffet: ' . ( ! empty( $participant['friday_buffet'] ) ? 'kyllä' : 'ei' );
 			}
 		}
 	}
 
-	if ( '' !== $customer_note ) {
+	$summary_lines = rytkoset_theme_format_event_registration_summary_lines(
+		rytkoset_theme_get_event_registration_summary( $event_id, count( $participants ) )
+	);
+
+	if ( ! empty( $summary_lines ) ) {
 		$lines[] = '';
-		$lines[] = 'Asiakkaan lisätiedot:';
-		$lines[] = $customer_note;
+		$lines   = array_merge( $lines, $summary_lines );
 	}
+
+	// The order URL is repeated here on purpose so the "where are the details"
+	// block is actionable on its own without scrolling back up.
+	$lines[] = '';
+	$lines[] = __( 'Ruokarajoitteet, allergiat ja muut osallistujien tarkat tiedot löytyvät vain ylläpidosta:', 'rytkoset-theme' );
+
+	if ( '' !== $admin_edit_url ) {
+		$lines[] = 'tilaus: ' . $admin_edit_url;
+	}
+
+	$lines[] = 'osallistujalista: ' . add_query_arg(
+		array(
+			'post_type' => 'rytkoset_event',
+			'page'      => 'rytkoset-event-participants',
+			'event_id'  => $event_id,
+		),
+		admin_url( 'edit.php' )
+	);
 
 	return implode( PHP_EOL, $lines );
 }

@@ -301,6 +301,41 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringNotContainsString( 'Kuopio', $message );
 	}
 
+	public function test_organizer_notification_includes_the_registration_summary(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-08-10 09:00:00';
+
+		$this->event( 10, 'free', '2026-08-14' );
+		$this->organizer_recipients( 10, 'jarjestaja@example.test' );
+		$this->registration( 500, 10, array( 'status' => 'confirmed' ) );
+		$this->registration( 501, 10, array( 'status' => 'confirmed' ) );
+		$this->registration( 502, 10, array( 'status' => 'cancelled' ) );
+
+		$this->assertTrue( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+
+		$message = $GLOBALS['rytkoset_test_mails'][0]['message'];
+
+		$this->assertStringContainsString( 'Ilmoittautumistilanne:', $message );
+		$this->assertStringContainsString( 'Tämän ilmoittautumisen henkilömäärä: 1', $message );
+		// The cancelled registration is left out of the headcount.
+		$this->assertStringContainsString( 'Ilmoittautuneita yhteensä: 2', $message );
+		$this->assertStringContainsString( 'Ilmoittautuminen päättyy: 14.8.2026 (4 päivää jäljellä)', $message );
+	}
+
+	public function test_organizer_notification_summary_counts_people_when_quantity_is_collected(): void {
+		$this->event( 10, 'free' );
+		$this->organizer_recipients( 10, 'jarjestaja@example.test' );
+		update_post_meta( 10, rytkoset_theme_get_event_collect_quantity_meta_key(), 'yes' );
+
+		$this->registration( 500, 10, array( 'status' => 'confirmed', 'quantity' => '3' ) );
+
+		$this->assertTrue( rytkoset_theme_send_event_registration_organizer_notification( 500 ) );
+
+		$message = $GLOBALS['rytkoset_test_mails'][0]['message'];
+
+		$this->assertStringContainsString( 'Tämän ilmoittautumisen henkilömäärä: 3', $message );
+		$this->assertStringContainsString( 'Ilmoittautuneita yhteensä: 3', $message );
+	}
+
 	public function test_organizer_notification_includes_admin_links(): void {
 		$this->event( 10 );
 		$this->organizer_recipients( 10, 'jarjestaja@example.test' );
