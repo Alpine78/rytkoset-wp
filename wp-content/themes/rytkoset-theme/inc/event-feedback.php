@@ -276,7 +276,7 @@ function rytkoset_theme_event_feedback_survey_is_open( $event_id ) {
  * @return int
  */
 function rytkoset_theme_get_event_feedback_text_max_length() {
-	return (int) apply_filters( 'rytkoset_theme_event_feedback_text_max_length', 500 );
+	return (int) apply_filters( 'rytkoset_theme_event_feedback_text_max_length', 1000 );
 }
 
 /**
