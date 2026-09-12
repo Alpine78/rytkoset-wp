@@ -118,9 +118,13 @@
             return null;
         }
 
-        return getAllGalleryTriggers().find(function (trigger) {
+        var matches = getAllGalleryTriggers().filter(function (trigger) {
             return getItemIdFromNode(trigger) === itemId;
-        }) || null;
+        });
+
+        return matches.find(function (trigger) {
+            return !trigger.closest('[hidden]') && trigger.getClientRects().length > 0;
+        }) || matches[0] || null;
     };
 
     var fallbackCopyToClipboard = function (text) {

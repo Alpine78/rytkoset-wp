@@ -46,6 +46,33 @@ function rytkoset_theme_register_gallery_album_cpt() {
 add_action( 'init', 'rytkoset_theme_register_gallery_album_cpt' );
 
 /**
+ * Registers an editor pattern for one album section (heading + gallery).
+ *
+ * Gives admins a ready-made starting point for the #677 public section
+ * filter: a heading followed by a core/gallery block becomes one filterable
+ * section on the album page (see assets/js/album-filter.js), so the pattern
+ * bakes in the structure the filter relies on without any new meta field.
+ */
+function rytkoset_theme_register_gallery_album_section_pattern() {
+	if ( ! function_exists( 'register_block_pattern' ) ) {
+		return;
+	}
+
+	register_block_pattern(
+		'rytkoset-theme/album-section',
+		array(
+			'title'       => __( 'Albumin osio', 'rytkoset-theme' ),
+			/* translators: used in the block pattern inserter as a description. */
+			'description' => __( 'Otsikko ja galleria yhdelle albumin osiolle, esimerkiksi yhdelle tilaisuudelle. Julkisella albumisivulla kävijä voi suodattaa osion mukaan, kun albumissa on vähintään kaksi tällaista osiota tai osio ja videot.', 'rytkoset-theme' ),
+			'categories'  => array( 'gallery' ),
+			'postTypes'   => array( 'gallery_album' ),
+			'content'     => "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">" . esc_html__( 'Tilaisuuden nimi', 'rytkoset-theme' ) . "</h2>\n<!-- /wp:heading -->\n\n<!-- wp:gallery {\"linkTo\":\"none\"} -->\n<figure class=\"wp-block-gallery has-nested-images columns-default is-cropped\"></figure>\n<!-- /wp:gallery -->",
+		)
+	);
+}
+add_action( 'init', 'rytkoset_theme_register_gallery_album_section_pattern' );
+
+/**
  * Lisää ACF-kentät albumien kuville ja videoille.
  */
 function rytkoset_theme_register_gallery_fields() {
@@ -210,6 +237,66 @@ function rytkoset_theme_sort_gallery_images_by_filename( array $images ) {
 }
 
 /**
+ * Builds a stable hash identifying a specific set of gallery image IDs.
+ *
+ * Used as the cache sub-key for the filename sort order of one gallery
+ * instance, because an album can contain more than one core/gallery block
+ * (see #677 section filter) and each holds a different set of images.
+ *
+ * @param array<int, int> $ids Attachment IDs.
+ * @return string
+ */
+function rytkoset_theme_get_gallery_image_set_hash( array $ids ) {
+	$ids = array_unique( array_map( 'intval', $ids ) );
+	sort( $ids, SORT_NUMERIC );
+
+	return md5( implode( ',', $ids ) );
+}
+
+/**
+ * Gets the cached filename-based sort order for one gallery instance in an album.
+ *
+ * @param int    $post_id Album post ID.
+ * @param string $hash    Gallery image set hash from rytkoset_theme_get_gallery_image_set_hash().
+ * @return array<int, int>|false Sorted attachment IDs, or false when not cached.
+ */
+function rytkoset_theme_get_album_gallery_sort_cache( $post_id, $hash ) {
+	$cache = get_transient( 'album_gallery_order_' . (int) $post_id );
+
+	if ( ! is_array( $cache ) || ! isset( $cache[ $hash ] ) || ! is_array( $cache[ $hash ] ) ) {
+		return false;
+	}
+
+	return $cache[ $hash ];
+}
+
+/**
+ * Stores the filename-based sort order for one gallery instance in an album.
+ *
+ * All of an album's gallery instances share a single transient keyed by
+ * post ID, with the per-gallery order nested under its image-set hash. This
+ * keeps the existing single delete_transient() call on save valid for every
+ * gallery instance in the album.
+ *
+ * @param int             $post_id    Album post ID.
+ * @param string          $hash       Gallery image set hash.
+ * @param array<int, int> $sorted_ids Sorted attachment IDs.
+ * @return void
+ */
+function rytkoset_theme_set_album_gallery_sort_cache( $post_id, $hash, array $sorted_ids ) {
+	$cache_key = 'album_gallery_order_' . (int) $post_id;
+	$cache     = get_transient( $cache_key );
+
+	if ( ! is_array( $cache ) ) {
+		$cache = array();
+	}
+
+	$cache[ $hash ] = $sorted_ids;
+
+	set_transient( $cache_key, $cache, HOUR_IN_SECONDS );
+}
+
+/**
  * Sorts core/gallery innerBlocks by attachment post_title on gallery_album pages.
  *
  * Runs via render_block_data so the sort happens before WordPress renders the
@@ -244,9 +331,9 @@ function rytkoset_theme_sort_gallery_block_by_filename( $block ) {
 		return $block;
 	}
 
-	$post_id    = (int) get_the_ID();
-	$cache_key  = 'album_gallery_order_' . $post_id;
-	$sorted_ids = get_transient( $cache_key );
+	$post_id      = (int) get_the_ID();
+	$gallery_hash = rytkoset_theme_get_gallery_image_set_hash( array_keys( $id_map ) );
+	$sorted_ids   = rytkoset_theme_get_album_gallery_sort_cache( $post_id, $gallery_hash );
 
 	if ( false === $sorted_ids ) {
 		$sorted_posts = get_posts(
@@ -266,7 +353,7 @@ function rytkoset_theme_sort_gallery_block_by_filename( $block ) {
 			$sorted_ids[] = $post->ID;
 		}
 
-		set_transient( $cache_key, $sorted_ids, HOUR_IN_SECONDS );
+		rytkoset_theme_set_album_gallery_sort_cache( $post_id, $gallery_hash, $sorted_ids );
 	}
 
 	$sorted = array();
@@ -290,6 +377,10 @@ add_filter( 'render_block_data', 'rytkoset_theme_sort_gallery_block_by_filename'
 
 /**
  * Invalidates the gallery order transient when an album is saved.
+ *
+ * Clears the whole per-album transient, which covers every gallery instance's
+ * cached order since they are nested under one key (see
+ * rytkoset_theme_set_album_gallery_sort_cache()).
  *
  * @param int $post_id Album post ID.
  * @return void
