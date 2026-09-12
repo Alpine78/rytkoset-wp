@@ -62,3 +62,45 @@ PhotoSwipe (kuvan suurennusnäkymä) toimii näppäimistöllä ilman erillisiä 
 | **← / →** | Edellinen / seuraava kuva |
 | **Esc** | Sulkee suurennuksen |
 | **Tab / Shift+Tab** | Siirtyy työkalupalkin painikkeisiin (mm. *Kopioi linkki*, *Sulje*) |
+
+## Albumin osiosuodatin (#677)
+
+Kun albumissa on vähintään kaksi valittavaa osiota (ks.
+[`docs/media-library-ordering.md`](media-library-ordering.md) osioiden
+tekemisestä), albumin yläosaan ilmestyy "Kaikki / osio / Videot" -valinta.
+Suodattimen saavutettavuutta tukevat seuraavat ratkaisut:
+
+- Jokainen valinta on oma `<button>`-elementti, joten se on tavoitettavissa
+  Tab-näppäimellä ja aktivoitavissa Enterillä/välilyönnillä ilman erillistä
+  koodia.
+- Valittu osio merkitään `aria-pressed="true"`-attribuutilla **ja** pienellä
+  valintamerkillä painikkeen tekstin edessä — tila ei siis välity pelkällä
+  värillä.
+- Näkyvän tilan vaihtuminen ilmoitetaan ruudunlukijalle `aria-live="polite"`
+  -alueella (esim. "Näytetään: Lauantain juhla, 85 kuvaa."), joten muutos
+  huomataan myös ilman näköä.
+- Piilotetut osiot saavat HTML:n `hidden`-attribuutin, joten niiden linkit ja
+  kuvat poistuvat kokonaan Tab-järjestyksestä eivätkä jää "haamuiksi" ruudulle.
+- Suodatin vaatii JavaScriptin toimiakseen. Ilman sitä albumi näyttää kaiken
+  sisältönsä kuten ennen suodattimen käyttöönottoakin — mitään ei siis jää
+  saavuttamattomiin.
+
+### Toteutuksen tarkistus 12.9.2026
+
+Paikallisessa Docker-WordPressissä tarkistettu Playwrightilla kahden gallerian
+ja kahden videon testialbumi sekä aiempi yhden gallerian albumi:
+
+- Valinnat ja lukumäärät, johdannon näkyminen, `aria-pressed` ja live-ilmoitus.
+- Enter-aktivointi, fokuksen säilyminen sekä näkyvä fokus 390 px leveydellä
+  vaaleassa ja tummassa teemassa; ei vaakasuuntaista ylivuotoa.
+- `?nayta=` ja muiden URL-osien säilyminen, tuntemattoman valinnan palautuminen
+  Kaikki-tilaan sekä piilotetun kuvan PhotoSwipe-jakolinkki.
+- Samassa albumissa toistuva kuva avautuu näkyvästä galleriasta; lightboxin
+  kuvasarja pysyy kyseisen Galleria-lohkon sisällä.
+- Videon piilotus palauttaa iframe-lähteen; ilman JavaScriptiä kaikki sisältö
+  näkyy ja suodatin pysyy piilossa.
+
+Lohkomallin rekisteröinti ja H2 + Galleria -rakenne tarkistettu WordPressin
+lohkomallirekisteristä. Varsinainen ruudunlukijatesti ja julkaisemisen jälkeinen
+`dev.rytkoset.net`-tarkistus jäävät tehtäviksi; muutoksia ei julkaistu tässä
+paikallisessa tarkistuksessa.

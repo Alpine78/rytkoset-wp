@@ -749,10 +749,43 @@ function rytkoset_theme_scripts() {
 			true
 		);
 
+		// The section filter (#677) only applies to a single album's own body
+		// content, not the archive. It must run before photoswipe-init.js so a
+		// #kuva= deep link can be checked against the resolved section before
+		// PhotoSwipe tries to open it; listing it as a dependency below
+		// guarantees that script order.
+		$photoswipe_init_deps = array( 'rytkoset-photoswipe-lightbox' );
+
+		if ( is_singular( 'gallery_album' ) ) {
+			wp_enqueue_script(
+				'rytkoset-album-filter',
+				get_template_directory_uri() . '/assets/js/album-filter.js',
+				array(),
+				rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/album-filter.js' ),
+				true
+			);
+
+			wp_add_inline_script(
+				'rytkoset-album-filter',
+				'window.rytkosetAlbumFilter = ' . wp_json_encode(
+					array(
+						'allLabel'            => __( 'Kaikki', 'rytkoset-theme' ),
+						'imagesFallbackLabel' => __( 'Kuvat', 'rytkoset-theme' ),
+						'videosFallbackLabel' => __( 'Videot', 'rytkoset-theme' ),
+						'statusAllText'       => __( 'Näytetään kaikki albumin sisältö.', 'rytkoset-theme' ),
+						'checkIconHtml'       => rytkoset_theme_inline_icon( 'check', 'ui' ),
+					)
+				) . ';',
+				'before'
+			);
+
+			$photoswipe_init_deps[] = 'rytkoset-album-filter';
+		}
+
 		wp_enqueue_script(
 			'rytkoset-photoswipe-init',
 			get_template_directory_uri() . '/assets/js/photoswipe-init.js',
-			array( 'rytkoset-photoswipe-lightbox' ),
+			$photoswipe_init_deps,
 			rytkoset_theme_get_asset_version( get_template_directory() . '/assets/js/photoswipe-init.js' ),
 			true
 		);

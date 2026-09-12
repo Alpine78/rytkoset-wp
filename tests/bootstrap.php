@@ -1080,6 +1080,10 @@ function get_post( $post = null ) {
 	return $GLOBALS['rytkoset_test_posts'][ (int) $post ] ?? null;
 }
 
+function get_the_ID() {
+	return (int) $GLOBALS['rytkoset_test_current_post'];
+}
+
 function get_page_by_path( $page_path, $output = 'OBJECT', $post_type = 'page' ) {
 	$page_path  = trim( (string) $page_path, '/' );
 	$post_types = (array) $post_type;
@@ -1554,11 +1558,16 @@ function get_posts( $args = array() ) {
 	$fields = $args['fields'] ?? '';
 	$parent = array_key_exists( 'post_parent', $args ) ? (int) $args['post_parent'] : null;
 	$search = trim( (string) ( $args['s'] ?? '' ) );
+	$in     = isset( $args['post__in'] ) ? array_map( 'intval', (array) $args['post__in'] ) : null;
 
 	$matches = array();
 
 	foreach ( $GLOBALS['rytkoset_test_posts'] as $id => $post ) {
 		if ( ! in_array( $post->post_type, $types, true ) ) {
+			continue;
+		}
+
+		if ( null !== $in && ! in_array( (int) $id, $in, true ) ) {
 			continue;
 		}
 

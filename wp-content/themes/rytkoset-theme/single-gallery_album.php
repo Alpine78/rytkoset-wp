@@ -76,12 +76,26 @@ if ( have_posts() ) :
 			<section class="section album__section">
 				<div class="container section__wide">
 					<div class="album__body">
+						<?php
+						/*
+						 * Empty skeleton for the #677 section filter (Kaikki / osiot / Videot).
+						 * assets/js/album-filter.js identifies the sections itself from the
+						 * rendered .album__content / .album__videos / .album__gallery markup
+						 * below and only reveals this container when there are at least two
+						 * choices, so without JS (or for a single-section album) nothing
+						 * renders here.
+						 */
+						?>
+						<div class="album-filter" role="group" aria-label="<?php esc_attr_e( 'Näytä albumista', 'rytkoset-theme' ); ?>" hidden>
+							<div class="album-filter__list"></div>
+							<p class="album-filter__status screen-reader-text" aria-live="polite"></p>
+						</div>
 						<?php if ( '' !== $rytkoset_album_body_content ) : ?>
-							<div class="album__content"><?php the_content(); ?></div>
+							<div class="album__content" data-album-filter-root><?php the_content(); ?></div>
 						<?php endif; ?>
 
 						<?php if ( ! empty( $rytkoset_album_videos ) ) : ?>
-							<div class="album__videos">
+							<div class="album__videos" data-album-section="videot">
 								<h2 class="album__section-title"><?php esc_html_e( 'Videot', 'rytkoset-theme' ); ?></h2>
 								<?php
 								$rytkoset_album_title_plain = wp_strip_all_tags( get_the_title() );
@@ -162,7 +176,7 @@ if ( have_posts() ) :
 
 						if ( ! empty( $rytkoset_gallery_items ) ) :
 							?>
-							<div class="album__gallery">
+							<div class="album__gallery" data-album-section="kuvat">
 								<h2 class="album__section-title"><?php esc_html_e( 'Kuvat', 'rytkoset-theme' ); ?></h2>
 								<div class="gallery-grid js-gallery-grid" data-pswp-gallery="album-<?php echo esc_attr( get_the_ID() ); ?>">
 									<?php foreach ( $rytkoset_gallery_items as $rytkoset_item ) : ?>
