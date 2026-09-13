@@ -63,6 +63,9 @@ PhotoSwipe (kuvan suurennusnäkymä) toimii näppäimistöllä ilman erillisiä 
 | **Esc** | Sulkee suurennuksen |
 | **Tab / Shift+Tab** | Siirtyy työkalupalkin painikkeisiin (mm. *Kopioi linkki*, *Sulje*) |
 
+Osioidussa albumissa nuolinäppäimet kulkevat **Kaikki**-valinnassa myös
+tilaisuudesta toiseen; yhden osion valinnassa ne pysyvät sen kuvissa.
+
 ## Albumin osiosuodatin (#677)
 
 Kun albumissa on vähintään kaksi valittavaa osiota (ks.
@@ -96,7 +99,7 @@ ja kahden videon testialbumi sekä aiempi yhden gallerian albumi:
 - `?nayta=` ja muiden URL-osien säilyminen, tuntemattoman valinnan palautuminen
   Kaikki-tilaan sekä piilotetun kuvan PhotoSwipe-jakolinkki.
 - Samassa albumissa toistuva kuva avautuu näkyvästä galleriasta; lightboxin
-  kuvasarja pysyy kyseisen Galleria-lohkon sisällä.
+kuvasarja pysyi silloin kyseisen Galleria-lohkon sisällä.
 - Videon piilotus palauttaa iframe-lähteen; ilman JavaScriptiä kaikki sisältö
   näkyy ja suodatin pysyy piilossa.
 
@@ -104,3 +107,15 @@ Lohkomallin rekisteröinti ja H2 + Galleria -rakenne tarkistettu WordPressin
 lohkomallirekisteristä. Varsinainen ruudunlukijatesti ja julkaisemisen jälkeinen
 `dev.rytkoset.net`-tarkistus jäävät tehtäviksi; muutoksia ei julkaistu tässä
 paikallisessa tarkistuksessa.
+
+### Osioiden yli selaamisen tarkistus 13.9.2026 (#679)
+
+Paikallisessa testialbumissa tarkistettu, että Kaikki-valinnassa nuolinäppäimet
+kulkevat kahden Galleria-lohkon rajojen yli molempiin suuntiin ja osion
+valinnassa pysyvät sen kuvissa. Sama kuva sijoitettiin selaintestissä kahteen
+osioon: molemmat esiintymät säilyivät erillisinä dioina, ja jälkimmäistä
+klikkaamalla avautui juuri jälkimmäinen kohta. Tarkistettu myös kuvan
+jakolinkki, johdannon yksittäinen kuva ja vanha ACF-kuvaruudukko,
+vanha yhden gallerian albumi, 390 px leveys, tumma teema sekä
+kaiken sisällön näkyminen ilman JavaScriptiä. Dev-palvelimen tarkistus odottaa
+julkaisua.

@@ -94,10 +94,16 @@ Jos sama kuva on myös valitussa osiossa, valinta säilyy ja kuva avautuu siitä
 Pelkkää tekstiä sisältävät H2-osiot näkyvät aina. Lukumäärä sisältää osion
 kuvat ja upotukset; videon toisto pysäytetään, kun sen osio piilotetaan.
 
+Kun **Kaikki** on valittuna, kuvan suurennusnäkymän nuolilla voi selata albumin
+valokuvat läpi osioiden rajojen yli siinä järjestyksessä kuin kuvat näkyvät
+sivulla. Yhden osion valinnassa selaus pysyy kyseisen osion kuvissa. Jos sama
+kuva on sijoitettu useaan osioon, se näkyy myös Kaikki-selauksessa jokaisessa
+esiintymiskohdassa. Yksittäisen kuvan `#kuva=ID`-jakolinkki avaa ensimmäisen
+näkyvän esiintymän, koska liitteen ID on sama kaikissa kohdissa. Videot eivät
+kuulu kuvien suurennusnäkymään.
+
 ### Rajaukset
 
 - Suodatin ei vielä osaa liittää yksittäistä videota tiettyyn tilaisuuteen —
   ACF:n Videot-kentän videot muodostavat yhden yhteisen "Videot"-valinnan.
   Editorin H2-osion sisään lisätty upotus kuuluu kyseiseen osioon.
-- Kuvien lightbox-selaus (PhotoSwipe) pysyy aina valitun osion sisällä; se ei
-  vielä siirry osiosta toiseen "Kaikki"-näkymässä nuolinäppäimillä selattaessa.
