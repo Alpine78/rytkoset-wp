@@ -113,14 +113,38 @@
         );
     };
 
+    var getAlbumGalleryTriggers = function (body, clickedTrigger) {
+        var selectedButton = body.querySelector('.album-filter__btn[aria-pressed="true"]');
+        var selectedSlug = selectedButton ? selectedButton.getAttribute('data-album-filter-slug') : 'kaikki';
+        var clickedSection = clickedTrigger.closest('[data-album-section]');
+
+        return getAllGalleryTriggers().filter(function (trigger) {
+            if (!body.contains(trigger) || trigger.closest('[hidden]')) {
+                return false;
+            }
+
+            if ('kaikki' === selectedSlug) {
+                return true;
+            }
+
+            // Intro images are always visible, but are not part of a selected section.
+            var section = trigger.closest('[data-album-section]');
+            return clickedSection ? section && section.getAttribute('data-album-section') === selectedSlug : !section;
+        });
+    };
+
     var findGalleryTriggerByItemId = function (itemId) {
         if (!itemId) {
             return null;
         }
 
-        return getAllGalleryTriggers().find(function (trigger) {
+        var matches = getAllGalleryTriggers().filter(function (trigger) {
             return getItemIdFromNode(trigger) === itemId;
-        }) || null;
+        });
+
+        return matches.find(function (trigger) {
+            return !trigger.closest('[hidden]') && trigger.getClientRects().length > 0;
+        }) || matches[0] || null;
     };
 
     var fallbackCopyToClipboard = function (text) {
@@ -390,13 +414,30 @@
             node.removeAttribute('data-wp-interactive');
         });
 
+        var albumBody = document.querySelector('.album__body');
+        var filteredAlbumBody = albumBody && albumBody.querySelector('.album-filter:not([hidden])') ? albumBody : null;
         var lightbox = new PhotoSwipeLightbox({
-            gallery: gallerySelector,
+            gallery: filteredAlbumBody || gallerySelector,
             children: galleryChildrenSelector,
             showHideAnimationType: 'zoom',
             loop: false, // disable infinite looping; first/last arrows will be disabled
             pswpModule: PhotoSwipe,
         });
+
+        if (filteredAlbumBody) {
+            lightbox.addFilter('clickedIndex', function (index, event) {
+                var trigger = event.target.closest('a.pswp-link, .js-gallery-item');
+                if (!trigger || !filteredAlbumBody.contains(trigger)) {
+                    return -1;
+                }
+
+                // PhotoSwipe accepts a list of child elements as its data source.
+                // Keep each DOM occurrence, including repeated attachment IDs.
+                var triggers = getAlbumGalleryTriggers(filteredAlbumBody, trigger);
+                lightbox.options.children = triggers;
+                return triggers.indexOf(trigger);
+            });
+        }
 
         lightbox.addFilter('itemData', function (itemData) {
             var trigger = itemData.element;
