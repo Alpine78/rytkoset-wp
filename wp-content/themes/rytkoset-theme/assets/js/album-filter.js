@@ -288,6 +288,7 @@
             button.type = 'button';
             button.className = 'album-filter__btn';
             button.setAttribute('aria-pressed', 'false');
+            button.setAttribute('data-album-filter-slug', slug);
 
             if (config.checkIconHtml) {
                 var check = document.createElement('span');
