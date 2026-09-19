@@ -381,11 +381,13 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 
 	private function submit_feedback( int $event_id, array $overrides = array() ): void {
 		$_SERVER['REMOTE_ADDR'] = '203.0.113.20';
+		$submission_token       = str_pad( (string) $GLOBALS['rytkoset_test_next_post_id'], 32, '0', STR_PAD_LEFT );
 		$_POST                  = array_merge(
 			array(
 				'rytkoset_event_feedback_submit'        => '1',
 				'feedback_website'                       => '',
 				'rytkoset_event_feedback_submit_nonce'  => rytkoset_theme_get_event_feedback_submit_nonce_action(),
+				'rytkoset_event_feedback_submission_token' => $submission_token,
 				'feedback_rating'                        => '4',
 				'feedback_well'                           => 'Kaikki sujui hyvin.',
 				'feedback_improve'                         => '',
@@ -530,6 +532,53 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
 			$this->assertStringContainsString( 'palaute_virhe=raja', $redirect->location );
 		}
+	}
+
+	public function test_same_submission_token_stores_and_notifies_only_once(): void {
+		$this->open_event( 97 );
+		update_post_meta( 97, $this->feedback_meta()['notify_organizers'], 'yes' );
+		update_post_meta( 97, '_rytkoset_event_organizer_notification_recipients', 'jarjestaja@example.test' );
+		$token = 'SameFormSubmissionToken123456789';
+
+		for ( $attempt = 0; $attempt < 2; $attempt++ ) {
+			try {
+				$this->submit_feedback( 97, array( 'rytkoset_event_feedback_submission_token' => $token ) );
+				$this->fail( 'Expected a redirect after submission.' );
+			} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+				$this->assertStringContainsString( 'palaute=kiitos', $redirect->location );
+			}
+		}
+
+		$this->assertSame( 1001, $GLOBALS['rytkoset_test_next_post_id'] );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+	}
+
+	public function test_submission_rejects_missing_one_time_token(): void {
+		$this->open_event( 98 );
+
+		try {
+			$this->submit_feedback( 98, array( 'rytkoset_event_feedback_submission_token' => '' ) );
+			$this->fail( 'Expected a redirect for a missing submission token.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertStringContainsString( 'palaute_virhe=istunto', $redirect->location );
+		}
+
+		$this->assertArrayNotHasKey( 1000, $GLOBALS['rytkoset_test_posts'] );
+	}
+
+	public function test_form_renders_one_time_token_and_accessible_submission_state(): void {
+		$GLOBALS['rytkoset_test_privacy_url'] = '';
+		ob_start();
+		rytkoset_theme_render_event_feedback_form( 99 );
+		$html = (string) ob_get_clean();
+
+		$this->assertMatchesRegularExpression(
+			'/name="rytkoset_event_feedback_submission_token" value="[A-Za-z0-9]{32}"/',
+			$html
+		);
+		$this->assertStringContainsString( 'data-submitting-label="Lähetetään…"', $html );
+		$this->assertStringContainsString( 'data-submitting-status="Palautetta lähetetään."', $html );
+		$this->assertStringContainsString( 'data-feedback-submit-status aria-live="polite"', $html );
 	}
 
 	// --- manual redaction ---------------------------------------------------
@@ -732,7 +781,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_error_message_maps_every_known_code(): void {
-		$codes = array( 'nonce', 'suljettu', 'raja', 'arvio', 'tallennus' );
+		$codes = array( 'nonce', 'istunto', 'suljettu', 'raja', 'arvio', 'tallennus' );
 		$seen  = array();
 
 		foreach ( $codes as $code ) {

@@ -617,7 +617,8 @@ function rytkoset_theme_scripts() {
 	}
 
 	// Tapahtumapalautteen julkinen sivu (/palaute/{event_id}/): oma hero +
-	// kortti -asettelu ja merkkilaskuri. Ladataan vain tällä reitillä.
+	// kortti -asettelu, merkkilaskuri ja lähetyspainikkeen lukitus.
+	// Ladataan vain tällä reitillä.
 	if ( function_exists( 'rytkoset_theme_is_event_feedback_request' ) && rytkoset_theme_is_event_feedback_request() ) {
 		wp_enqueue_style(
 			'rytkoset-theme-event-feedback',

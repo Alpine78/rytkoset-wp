@@ -944,6 +944,92 @@ function rytkoset_theme_get_event_feedback_submit_nonce_action() {
 }
 
 /**
+ * Creates a random one-time token for a rendered feedback form.
+ *
+ * The token is not tied to a person, session or response. Its only purpose is
+ * to make one rendered form idempotent when a browser sends the same POST more
+ * than once.
+ *
+ * @return string
+ */
+function rytkoset_theme_create_event_feedback_submission_token() {
+	return wp_generate_password( 32, false, false );
+}
+
+/**
+ * Returns the option name used to claim a feedback submission token.
+ *
+ * Hashing keeps the random form token out of the options table while the event
+ * ID prevents an otherwise valid token from being replayed for another event.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $token    Submitted one-time token.
+ * @return string
+ */
+function rytkoset_theme_get_event_feedback_submission_option_name( $event_id, $token ) {
+	return 'rytkoset_evt_fb_once_' . hash( 'sha256', absint( $event_id ) . '|' . $token );
+}
+
+/**
+ * Atomically claims a feedback form's one-time submission token.
+ *
+ * add_option() relies on the database's unique option_name index, so only one
+ * of two concurrent requests can claim the same token. The short-lived marker
+ * contains no response content or visitor identifier.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $token    Submitted one-time token.
+ * @return bool True when this request claimed the token.
+ */
+function rytkoset_theme_claim_event_feedback_submission( $event_id, $token ) {
+	$event_id = absint( $event_id );
+	$token    = sanitize_text_field( $token );
+
+	if ( $event_id <= 0 || 1 !== preg_match( '/^[A-Za-z0-9]{32}$/', $token ) ) {
+		return false;
+	}
+
+	$option_name = rytkoset_theme_get_event_feedback_submission_option_name( $event_id, $token );
+	$expires_at  = time() + ( 2 * DAY_IN_SECONDS );
+	$claimed     = add_option( $option_name, $expires_at, '', false );
+
+	if ( ! $claimed ) {
+		$previous_expiry = (int) get_option( $option_name, 0 );
+
+		if ( $previous_expiry > 0 && $previous_expiry <= time() ) {
+			delete_option( $option_name );
+			$claimed = add_option( $option_name, $expires_at, '', false );
+		}
+	}
+
+	if ( $claimed ) {
+		wp_schedule_single_event( $expires_at, 'rytkoset_cleanup_event_feedback_submission', array( $option_name ) );
+	}
+
+	return $claimed;
+}
+
+/**
+ * Removes an expired feedback submission marker.
+ *
+ * @param string $option_name Claimed option name passed by WP-Cron.
+ */
+function rytkoset_theme_cleanup_event_feedback_submission( $option_name ) {
+	$option_name = sanitize_key( $option_name );
+
+	if ( 0 !== strpos( $option_name, 'rytkoset_evt_fb_once_' ) ) {
+		return;
+	}
+
+	$expires_at = (int) get_option( $option_name, 0 );
+
+	if ( $expires_at <= time() ) {
+		delete_option( $option_name );
+	}
+}
+add_action( 'rytkoset_cleanup_event_feedback_submission', 'rytkoset_theme_cleanup_event_feedback_submission' );
+
+/**
  * Returns the 1–5 rating scale labels shown on the public feedback form.
  *
  * Presentation only: the stored response is still the plain integer, so
@@ -1009,9 +1095,11 @@ function rytkoset_theme_render_event_feedback_form( $event_id, $error_code = '' 
 	$questions     = rytkoset_theme_get_event_feedback_text_questions();
 	$rating_failed = ( 'arvio' === $error_code );
 	$rating_help   = $id_base . '-rating-help';
+	$submit_token  = rytkoset_theme_create_event_feedback_submission_token();
 	?>
 	<form method="post" action="<?php echo esc_url( rytkoset_theme_get_event_feedback_public_url( $event_id ) ); ?>" class="event-feedback-form">
 		<input type="hidden" name="rytkoset_event_feedback_submit" value="1" />
+		<input type="hidden" name="rytkoset_event_feedback_submission_token" value="<?php echo esc_attr( $submit_token ); ?>" />
 		<input type="text" name="feedback_website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="display:none" />
 		<?php wp_nonce_field( rytkoset_theme_get_event_feedback_submit_nonce_action(), 'rytkoset_event_feedback_submit_nonce' ); ?>
 
@@ -1106,10 +1194,16 @@ function rytkoset_theme_render_event_feedback_form( $event_id, $error_code = '' 
 		</div>
 
 		<div class="event-feedback-actions">
-			<button type="submit" class="event-feedback-submit">
-				<span><?php esc_html_e( 'Lähetä palaute', 'rytkoset-theme' ); ?></span>
+			<button
+				type="submit"
+				class="event-feedback-submit"
+				data-submitting-label="<?php esc_attr_e( 'Lähetetään…', 'rytkoset-theme' ); ?>"
+				data-submitting-status="<?php esc_attr_e( 'Palautetta lähetetään.', 'rytkoset-theme' ); ?>"
+			>
+				<span data-feedback-submit-label><?php esc_html_e( 'Lähetä palaute', 'rytkoset-theme' ); ?></span>
 				<?php echo rytkoset_theme_inline_icon( 'arrow-right', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
 			</button>
+			<span class="screen-reader-text" data-feedback-submit-status aria-live="polite"></span>
 			<p class="event-feedback-actions__note"><?php esc_html_e( 'Emme kysy nimeäsi emmekä yhteystietojasi.', 'rytkoset-theme' ); ?></p>
 		</div>
 	</form>
@@ -1254,6 +1348,20 @@ function rytkoset_theme_handle_event_feedback_submission( $event_id ) {
 		exit;
 	}
 
+	$submission_token = isset( $_POST['rytkoset_event_feedback_submission_token'] )
+		? sanitize_text_field( wp_unslash( $_POST['rytkoset_event_feedback_submission_token'] ) )
+		: '';
+
+	if ( 1 !== preg_match( '/^[A-Za-z0-9]{32}$/', $submission_token ) ) {
+		wp_safe_redirect( add_query_arg( array( 'palaute_virhe' => 'istunto' ), rytkoset_theme_get_event_feedback_public_url( $event_id ) ) );
+		exit;
+	}
+
+	if ( ! rytkoset_theme_claim_event_feedback_submission( $event_id, $submission_token ) ) {
+		wp_safe_redirect( add_query_arg( array( 'palaute' => 'kiitos' ), rytkoset_theme_get_event_feedback_public_url( $event_id ) ) );
+		exit;
+	}
+
 	$meta_keys = rytkoset_theme_get_event_feedback_response_meta_keys();
 	$well      = isset( $_POST['feedback_well'] ) ? rytkoset_theme_sanitize_event_feedback_text( wp_unslash( $_POST['feedback_well'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in rytkoset_theme_sanitize_event_feedback_text().
 	$improve   = isset( $_POST['feedback_improve'] ) ? rytkoset_theme_sanitize_event_feedback_text( wp_unslash( $_POST['feedback_improve'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in rytkoset_theme_sanitize_event_feedback_text().
@@ -1391,6 +1499,7 @@ function rytkoset_theme_render_event_feedback_hero( $event_id, $show_meta = true
 function rytkoset_theme_get_event_feedback_error_message( $error_code ) {
 	$messages = array(
 		'nonce'     => __( 'Lomakkeen istunto on vanhentunut. Yritä uudelleen.', 'rytkoset-theme' ),
+		'istunto'   => __( 'Lomakkeen istunto on vanhentunut. Lataa sivu uudelleen ja yritä uudelleen.', 'rytkoset-theme' ),
 		'suljettu'  => __( 'Palautekysely ei ole avoinna.', 'rytkoset-theme' ),
 		'raja'      => __( 'Liian monta lähetystä lyhyessä ajassa. Yritä hetken kuluttua uudelleen.', 'rytkoset-theme' ),
 		'arvio'     => __( 'Valitse kokonaisarvio 1–5.', 'rytkoset-theme' ),

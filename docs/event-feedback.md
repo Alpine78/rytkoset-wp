@@ -94,7 +94,15 @@ reitillä. Värit tulevat teeman tokeneista, joten tumma teema toimii ilman
 erillistä ylläpitoa.
 
 Turvallisuus: honeypot-kenttä tarkistetaan ennen noncea, nonce vaaditaan,
-oma IP-perusteinen lähetysrajoitin (oletus 5 lähetystä / 10 min, suotimet
+ja jokainen renderöity lomake saa anonyymin kertakäyttöisen lähetysavaimen.
+Palvelin varaa avaimen atomisesti ennen palautteen tallennusta, joten kaksi
+rinnakkaista POST-pyyntöä samalla avaimella tuottavat vain yhden vastauksen ja
+mahdollisen järjestäjäilmoituksen. Varausmerkintä ei sisällä vastaussisältöä tai
+kävijän tunnistetta, ja WP-Cron poistaa sen kahden vuorokauden kuluttua.
+JavaScript lukitsee lisäksi lähetyspainikkeen ensimmäisen hyväksytyn
+submit-tapahtuman jälkeen, vaihtaa tekstiksi **Lähetetään…** ja ilmoittaa tilan
+ruudunlukijalle; palvelinpuolen suoja toimii myös ilman JavaScriptiä. Lomakkeella
+on lisäksi oma IP-perusteinen lähetysrajoitin (oletus 5 lähetystä / 10 min, suotimet
 `rytkoset_theme_event_feedback_rate_limit` / `..._rate_limit_window`, ei jaeta
 `inc/event-registrations.php`:n rekisteröinnin rajoittimen kanssa). Onnistunut
 lähetys uudelleenohjaa (PRG), joten sivun päivitys ei lähetä vastausta
@@ -144,9 +152,10 @@ nimeä, sähköpostia, käyttäjä-, ilmoittautumis- tai tilaustunnistetta, eik�
 IP-osoitetta tallenneta postiin (IP käsitellään vain hetkellisesti
 lähetysrajoittimen transientissa). `post_author` pakotetaan aina `0`:aan.
 
-MVP hyväksyy mahdollisen useamman vastauksen samalta henkilöltä; täydellinen
-duplikaattien esto vaatisi tunnisteen, evästeen tai kirjautumisen, mikä
-heikentäisi anonymiteettiä suhteettomasti.
+Sama renderöity lomake voidaan käsitellä vain kerran, mutta MVP hyväksyy yhä
+mahdollisen useamman vastauksen samalta henkilöltä, jos hän avaa tai lataa
+lomakkeen uudelleen. Henkilökohtainen yhden vastauksen sääntö vaatisi tunnisteen,
+evästeen tai kirjautumisen, mikä heikentäisi anonymiteettiä suhteettomasti.
 
 ## Lähettäminen
 
@@ -251,6 +260,7 @@ Pääfunktiot:
 - `rytkoset_theme_get_event_feedback_error_message($error_code)` — virhekoodin käyttäjälle näkyvä viesti
 - `rytkoset_theme_get_event_feedback_document_title()` — sivun `<title>`; asetetaan sekä WordPressin `document_title_parts`- että Rank Mathin `rank_math/frontend/title`-suotimeen, koska reitillä ei ole kyselyobjektia ja otsikko jäi muuten tyhjäksi (WCAG 2.4.2)
 - `rytkoset_theme_handle_event_feedback_submission($event_id)` — validointi, sanitointi, tallennus, PRG-uudelleenohjaus
+- `rytkoset_theme_create_event_feedback_submission_token()` / `..._claim_event_feedback_submission()` / `..._cleanup_event_feedback_submission()` — yhden renderöidyn lomakkeen kertakäyttöinen, atomisesti varattava lähetysavain ja sen ajastettu siivous
 - `rytkoset_theme_event_feedback_notifies_organizers($event_id)` / `..._send_event_feedback_organizer_notification()` — järjestäjäilmoituksen opt-in ja lähetys, kutsutaan onnistuneen tallennuksen jälkeen ennen uudelleenohjausta
 - `rytkoset_theme_get_event_feedback_recipients($event_id)` — käyttää `rytkoset_theme_get_event_participants()` + `rytkoset_theme_filter_active_event_participants()` + `rytkoset_theme_get_event_messaging_recipients()` (kaikki `event-participants-admin.php`/`event-participants-messaging.php`), lisää osallistujarivien kokonaismäärän esikatselua varten
 - `rytkoset_theme_render_event_feedback_queue_section($event_id)` / `..._send_event_feedback_request()` — käsin-jonotuksen osio ja `admin_post`-handleri
