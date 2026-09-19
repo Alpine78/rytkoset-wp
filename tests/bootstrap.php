@@ -1725,10 +1725,24 @@ function update_option( $option, $value, $autoload = null ): bool {
 	return true;
 }
 
+function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' ): bool {
+	if ( array_key_exists( $option, $GLOBALS['rytkoset_test_options'] ) ) {
+		return false;
+	}
+
+	$GLOBALS['rytkoset_test_options'][ $option ] = $value;
+
+	return true;
+}
+
 function delete_option( $option ): bool {
 	unset( $GLOBALS['rytkoset_test_options'][ $option ] );
 
 	return true;
+}
+
+function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ): string {
+	return substr( str_repeat( 'Ab12Cd34Ef56Gh78', (int) ceil( $length / 16 ) ), 0, $length );
 }
 
 function flush_rewrite_rules( $hard = true ): void {
