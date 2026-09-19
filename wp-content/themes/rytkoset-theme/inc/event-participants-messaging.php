@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Returns deduplicated recipient list for a given event/status filter.
  *
  * Each row in the participants list is normalized to a single email recipient.
- * Falls back to contact_email when the participant's own email is empty.
+ * Falls back to contact_email and contact_name together when the participant's own email is empty.
  * Returns also a count of rows that were skipped because no usable address was found.
  *
  * @param int    $event_id      Event ID or 0 for all events.
@@ -36,9 +36,12 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 
 	foreach ( $rows as $row ) {
 		$email = trim( (string) ( $row['email'] ?? '' ) );
+		$name  = trim( (string) ( $row['name'] ?? '' ) );
 
 		if ( '' === $email ) {
+			// Keep the recipient's name paired with the address we actually use.
 			$email = trim( (string) ( $row['contact_email'] ?? '' ) );
+			$name  = trim( (string) ( $row['contact_name'] ?? '' ) );
 		}
 
 		if ( '' === $email || ! is_email( $email ) ) {
@@ -52,17 +55,30 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 			continue;
 		}
 
-		$name = trim( (string) ( $row['name'] ?? '' ) );
-
-		if ( '' === $name ) {
-			$name = trim( (string) ( $row['contact_name'] ?? '' ) );
-		}
-
 		$recipients[ $email_key ] = array(
 			'email'       => $email,
 			'name'        => $name,
 			'event_title' => (string) ( $row['event_title'] ?? '' ),
 		);
+	}
+
+	// Add unnamed recipients after the primary pass so a person's own registration wins.
+	foreach ( $rows as $row ) {
+		if ( 'free' !== ( $row['source'] ?? '' ) ) {
+			continue;
+		}
+		foreach ( $row['additional_emails'] ?? array() as $email ) {
+			$email_key = strtolower( $email );
+			if ( ! is_email( $email ) || isset( $recipients[ $email_key ] ) ) {
+				continue;
+			}
+			$recipients[ $email_key ] = array(
+				'email'                  => $email,
+				'name'                   => '',
+				'event_title'            => (string) ( $row['event_title'] ?? '' ),
+				'additional_participant' => true,
+			);
+		}
 	}
 
 	return array(
@@ -89,7 +105,7 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 function rytkoset_theme_personalize_event_message( $body, $name, $event_title, $feedback_link = '' ) {
 	return str_replace(
 		array( '{nimi}', '{tapahtuma}', '{palautelinkki}' ),
-		array( $name, $event_title, $feedback_link ),
+		array( '' !== trim( $name ) ? $name : __( 'osallistuja', 'rytkoset-theme' ), $event_title, $feedback_link ),
 		(string) $body
 	);
 }
@@ -314,12 +330,13 @@ function rytkoset_theme_enqueue_event_messaging_job( $args ) {
 		}
 
 		$recipients[] = array(
-			'email'       => $email,
-			'name'        => sanitize_text_field( (string) ( $recipient['name'] ?? '' ) ),
-			'event_title' => sanitize_text_field( (string) ( $recipient['event_title'] ?? '' ) ),
-			'status'      => 'pending',
-			'sent_at'     => '',
-			'failed_at'   => '',
+			'email'                  => $email,
+			'name'                   => sanitize_text_field( (string) ( $recipient['name'] ?? '' ) ),
+			'event_title'            => sanitize_text_field( (string) ( $recipient['event_title'] ?? '' ) ),
+			'additional_participant' => ! empty( $recipient['additional_participant'] ),
+			'status'                 => 'pending',
+			'sent_at'                => '',
+			'failed_at'              => '',
 		);
 	}
 
@@ -510,6 +527,14 @@ function rytkoset_theme_process_event_messaging_queue() {
 						(string) ( $recipient['event_title'] ?? '' ),
 						$feedback_link
 					);
+
+					if ( ! empty( $recipient['additional_participant'] ) ) {
+						$message    .= "\n\n" . __( 'Saat tämän viestin, koska tapahtumaan ilmoittautunut henkilö antoi sähköpostiosoitteesi ilmoittautumisen yhteydessä. Osoitetta käytetään vain tämän tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin. Jos et halua näitä viestejä, vastaa tähän viestiin ja pyydä osoitteesi poistamista.', 'rytkoset-theme' );
+						$privacy_url = get_privacy_policy_url();
+						if ( $privacy_url ) {
+							$message .= "\n" . __( 'Tietosuojaseloste: ', 'rytkoset-theme' ) . $privacy_url;
+						}
+					}
 
 					$attempt_time = time();
 					$attempts[]   = $attempt_time;

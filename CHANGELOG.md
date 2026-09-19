@@ -6,7 +6,11 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Added
+- #676: maksuttoman tapahtuman vapaaehtoinen muiden osallistujien sähköpostikenttä (oletuksena pois päältä), osoitteiden validointi ja rajat, viestinnän ja palautepyynnön vastaanottajien laajennus, neutraali puhuttelu sekä lähde- ja tietosuojatieto lisäosoitteiden viesteihin. Osoitteet näkyvät ylläpidossa ja CSV:ssä; Privacy Tools käsittelee myös lisäosallistujan omat vienti- ja poistopyynnöt, ja anonymisointi poistaa osoitteet. Osallistujamäärä ja WooCommerce-kassa säilyvät ennallaan. Päivitetty tapahtuma-, viestintä-, palaute- ja tietosuojaohjeet sekä `CLAUDE.md`.
+
 ### Fixed
+- Korjattu Tampere 2026 -tapahtumaviestien ja palautepyyntöjen nimipersonointi: ostajan sähköpostiin lähetettävä viesti käyttää nyt ostajan nimeä osallistujan nimen sijaan. Samalla osoitteella tehdyt erilliset ostot tuottavat edelleen yhden vastaanottajan. Lisätty regressiotesti sekä päivitetty viestintä- ja palauteohjeet ja `CLAUDE.md`. Korjaus koskee uusia jonotuksia.
 - `inc/event-feedback.php` / `assets/js/event-feedback.js` / `tests/EventFeedbackTest.php` / `tests/bootstrap.php` / `docs/event-feedback.md` / `CLAUDE.md`: estetty tapahtumapalautteen kaksoislähetys (#683). Jokainen renderöity lomake saa nyt anonyymin kertakäyttöisen lähetysavaimen, jonka palvelin varaa atomisesti `add_option()`-operaatiolla ennen tallennusta; kaksi rinnakkaista pyyntöä samalla avaimella tuottavat vain yhden `event_feedback`-vastauksen ja yhden mahdollisen järjestäjäilmoituksen. Avaimesta tallennetaan vain tapahtumaan rajattu hash ja kahden vuorokauden vanhenemisaika, jonka WP-Cron siivoaa. JavaScript lukitsee painikkeen ensimmäisen hyväksytyn lähetyksen jälkeen, näyttää **Lähetetään…**-tilan ja ilmoittaa sen ruudunlukijalle, mutta palvelinpuolen suoja toimii myös ilman JavaScriptiä. Eri lomakerenderöinneillä voi edelleen lähettää useamman anonyymin vastauksen nykyisen IP-rajoittimen puitteissa.
 
 ## [1.4.0] - 2026-09-13

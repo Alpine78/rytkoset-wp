@@ -48,7 +48,7 @@ suotimella `rytkoset_theme_event_feedback_inactive_order_statuses`.
 
 Lomake hyväksyy kolme placeholderia:
 
-- `{nimi}` → osallistujan nimi (korvataan jokaisen vastaanottajan kohdalla erikseen)
+- `{nimi}` → osallistujan nimi, kun käytetään osallistujan omaa sähköpostia. Jos osoite otetaan yhteyshenkilöltä, käytetään myös yhteyshenkilön nimeä (Tampere 2026:ssa ostajan laskutustietojen nimi). Osallistujalistan nimet säilyvät ennallaan.
 - `{tapahtuma}` → tapahtuman otsikko (korvataan jokaisen vastaanottajan kohdalla erikseen)
 - `{palautelinkki}` → valitun tapahtuman julkisen palautelomakkeen osoite (`#666`). Ratkaistaan
   kerran per jonotyö tapahtuman ID:stä, ei per vastaanottaja, koska linkillä ei ole
@@ -60,6 +60,8 @@ Esim. *"Hei {nimi}, tervetuloa tapahtumaan {tapahtuma}!"* lähetetään yksilöl
 ### Lähetys ja jono
 
 Lähetyspainike on muodossa "Lisää jonoon X vastaanottajalle" ja näyttää tarkistuksen ennen jonotusta. Jos vastaanottajia on 0, painike on disabloitu.
+
+Nimikorjaus koskee uusia jonotuksia. Jo jonossa oleviin viesteihin vastaanottajien nimet on tallennettu jonotuksen yhteydessä.
 
 Admin-lomake ei lähetä viestejä heti. Se tallentaa vastaanottajat, aiheen, viestin, lähettäjän ja `Reply-To`-osoitteen lähetysjonoon. WP-Cron käsittelee jonon vanhimmasta viestistä alkaen ja tekee jokaiselle vastaanottajalle oman `wp_mail()`-kutsun.
 
@@ -145,3 +147,11 @@ Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content
 - Ei unsubscribe-linkkejä
 - Loki ei näytä per-vastaanottaja-tasoa (vain aggregoidut laskurit)
 - Ei AcyMailing-integraatiota tässä ratkaisussa
+
+## Maksuttomien ilmoittautumisten lisäosoitteet (#676)
+
+Tapahtumalle erikseen käyttöön otettu lisäsähköpostikenttä laajentaa vastaanottajamäärää ja lähetyksiä. Sama osoite saa vain yhden viestin kirjainkoosta riippumatta. Jos osoitteella on myös oma ilmoittautuminen, sen nimi on ensisijainen. Muulle lisäosoitteelle `{nimi}` korvataan sanalla **osallistuja**, joten esimerkiksi `Hei {nimi}!` muuttuu muotoon `Hei osallistuja!`.
+
+Lisäosoitteeseen lähetettävän viestin loppuun lisätään tieto siitä, että osoitteen antoi tapahtumaan ilmoittautunut henkilö, tapahtumaviestintään ja palautepyyntöön rajattu käyttötarkoitus, poistopyynnön vastausohje sekä tietosuojaselosteen linkki, jos sivu on määritetty WordPressissä. Tieto lisätään myös palautepyyntöihin. Lisäosoitteita ei viedä AcyMailingiin.
+
+Perutun ilmoittautumisen lisäosoitteet poistuvat aktiivisesta vastaanottajahausta; viestinnän nimenomainen **Peruttu**-suodatin toimii kuten ennenkin. Vastaanottajat tallennetaan jonotushetkellä: muutokset ilmoittautumiseen eivät päivitä jo luotua jonoa. Varmista siksi vastaanottajat ennen jonotusta. Pyydä teknistä ylläpitäjää tarkistamaan myös odottavat jonotyöt, jos osoite on poistettava jonotuksen jälkeen.

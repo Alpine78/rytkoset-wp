@@ -53,4 +53,31 @@ final class EventPrivacyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'informed', get_post_meta( 120, $meta_keys['informed_status'], true ) );
 		$this->assertSame( 'confirmed', get_post_meta( 120, $meta_keys['status'], true ) );
 	}
+
+	public function test_additional_participant_exports_and_erases_only_their_own_data(): void {
+		rytkoset_test_register_post( 10, 'rytkoset_event', 'Sukujuhla' );
+		rytkoset_test_register_post( 120, 'event_registration', 'Maija' );
+		$keys = rytkoset_theme_get_event_registration_meta_keys();
+		foreach ( array( 'event_id' => 10, 'name' => 'Maija', 'email' => 'maija@example.test', 'diet' => 'Secret diet', 'additional_emails' => array( 'friend@example.test', 'other@example.test', 'notfriend@example.test' ) ) as $key => $value ) {
+			update_post_meta( 120, $keys[ $key ], $value );
+		}
+		$this->assertSame( array( 120 ), rytkoset_theme_get_event_registration_ids_by_email( 'FRIEND@example.test' ) );
+		$export = rytkoset_theme_export_event_registration_personal_data( 'FRIEND@example.test' );
+		$this->assertCount( 1, $export['data'] );
+		$values = array_column( $export['data'][0]['data'], 'value' );
+		$this->assertContains( 'friend@example.test', $values );
+		$this->assertNotContains( 'Maija', $values );
+		$this->assertNotContains( 'Secret diet', $values );
+		$this->assertNotContains( 'maija@example.test', $values );
+		$this->assertNotContains( 'other@example.test', $values );
+		$owner_export = rytkoset_theme_export_event_registration_personal_data( 'maija@example.test' );
+		$this->assertStringContainsString( 'friend@example.test', json_encode( $owner_export ) );
+		$this->assertTrue( rytkoset_theme_erase_event_registration_personal_data( 'FRIEND@example.test' )['items_removed'] );
+		$this->assertSame( array( 'other@example.test', 'notfriend@example.test' ), rytkoset_theme_get_event_registration_additional_emails( 120 ) );
+		$this->assertSame( 'Maija', rytkoset_theme_get_event_registration_meta( 120, 'name' ) );
+		$this->assertEmpty( rytkoset_theme_get_event_registration_ids_by_email( 'friend@example.test' ) );
+		$this->assertTrue( rytkoset_theme_erase_event_registration_personal_data( 'maija@example.test' )['items_removed'] );
+		$this->assertSame( '', get_post_meta( 120, $keys['additional_emails'], true ) );
+	}
+
 }

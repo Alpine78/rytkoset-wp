@@ -123,6 +123,8 @@ Turnstilen pre-clearance on pois käytöstä, joten palvelun valinnaista `cf_cle
 
 ### Tapahtumailmoittautumiset
 
+<!-- #676: vahvista lisäosallistujien osoitteiden käsittelyperuste ja informointiteksti tietosuojasta vastaavan kanssa ennen keruun käyttöönottoa. -->
+
 Kun ilmoittaudut tapahtumaan, tallennamme:
 
 - nimesi
@@ -130,6 +132,8 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 - ruokarajoitteet (jos annat)
 - vapaamuotoiset lisätiedot (jos annat)
 - ilmoittautumisajan ja antamasi tietosuojasuostumuksen aikaleiman
+
+Maksuttomassa tapahtumassa ilmoittaja voi tapahtumakohtaisen valinnan ollessa käytössä antaa vapaaehtoisesti myös muiden osallistujien sähköpostiosoitteet, yksi osoite per rivi ja vain henkilön luvalla. Näitä osoitteita käytetään vain kyseisen tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin. Jos saamme osoitteesi toiselta ilmoittautujalta, kerromme lähteen ja käyttötarkoituksen sinulle lähetettävässä tapahtumaviestissä ja ohjaamme tähän selosteeseen. Voit pyytää oman osoitteesi poistamista ilman muiden osallistujien tietojen poistamista. Lisäosoitteisiin sovelletaan samaa jäljempänä kuvattua säilytysaikaa.
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 

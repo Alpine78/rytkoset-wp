@@ -165,7 +165,9 @@ Kumpikin tila käyttää samaa vastaanottajajoukkoa: `#665`:n
 `rytkoset_theme_filter_active_event_participants()`, joka rajaa pois perutut
 maksuttomat ilmoittautumiset sekä perutut, hyvitetyt ja epäonnistuneet
 tilaukset. Yhden ilmoittautumisen/tilauksen vastaanottajarivit deduplikoidaan
-sähköpostiosoitteen mukaan ennen jonotusta.
+sähköpostiosoitteen mukaan ennen jonotusta. Jos osoite on yhteyshenkilön
+(Tampere 2026:ssa ostajan laskutussähköposti), myös `{nimi}` tulee
+yhteyshenkilön tiedoista, ei hänen ilmoittamansa osallistujan nimestä.
 
 - **Lähetä käsin:** `Tapahtumat > Viestintä` -sivun Palautekysely-osiossa
   näytetään vastaanottajaerittely (osallistujarivit / yksilölliset osoitteet
@@ -279,3 +281,7 @@ Pääfunktiot:
 - Ei tulosten CSV-/PDF-vientiä, visualisointeja eikä AI-yhteenvetoa.
 - Ei palautteeseen perustuvaa markkinointiprofilointia.
 - Ei automaattista vapaatekstin poistoa — ks. "Tietosuoja ja säilytys".
+
+## Lisäosallistujien sähköpostit (#676)
+
+Maksuttoman ilmoittautumisen vapaaehtoiset lisäosoitteet sisältyvät samaan vastaanottajahakuun kuin tapahtumaviestinnässä. Esikatselun yksilöllisten osoitteiden määrä voi siksi ylittää osallistujarivien määrän. Osallistujamäärä ei muutu. Perutun ilmoittautumisen lisäosoitteet jäävät pois hausta, päällekkäiset osoitteet yhdistetään ja nimetön vastaanottaja puhutellaan sanalla **osallistuja**. Viesti sisältää lisäosoitteen lähteen ja käyttötarkoituksen sekä tietosuojaselosteen linkin. Palauteosoite ja anonyymi vastaaminen säilyvät ennallaan.

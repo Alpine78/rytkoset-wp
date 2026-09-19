@@ -59,30 +59,31 @@ function rytkoset_theme_get_event_free_participants( $event_id, $status_filter =
 		);
 
 		$rows[] = array(
-			'name'             => '' !== $name ? $name : __( 'Nimetön osallistuja', 'rytkoset-theme' ),
-			'email'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
-			'phone'            => '',
-			'diet'             => rytkoset_theme_get_event_registration_meta( $registration->ID, 'diet' ),
-			'notes'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'notes' ),
-			'choice'           => rytkoset_theme_get_event_registration_meta( $registration->ID, 'choice' ),
-			'quantity'         => absint( rytkoset_theme_get_event_registration_meta( $registration->ID, 'quantity' ) ),
-			'participant_type' => '',
-			'friday_buffet'    => false,
-			'status'           => $status,
-			'status_label'     => isset( $statuses[ $status ] ) ? $statuses[ $status ] : $statuses['pending'],
-			'source'           => 'free',
-			'origin'           => $origin,
-			'origin_label'     => rytkoset_theme_get_event_registration_source_label( $registration->ID ),
-			'created'          => get_the_date( '', $registration ),
-			'contact_name'     => '' !== $name ? $name : '',
-			'contact_email'    => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
-			'edit_url'         => (string) get_edit_post_link( $registration->ID, '' ),
-			'registration_id'  => (int) $registration->ID,
-			'order_id'         => null,
-			'order_number'     => null,
-			'order_status'     => '',
-			'event_id'         => $event_id,
-			'event_title'      => get_the_title( $event_id ),
+			'name'              => '' !== $name ? $name : __( 'Nimetön osallistuja', 'rytkoset-theme' ),
+			'email'             => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
+			'additional_emails' => rytkoset_theme_get_event_registration_additional_emails( $registration->ID ),
+			'phone'             => '',
+			'diet'              => rytkoset_theme_get_event_registration_meta( $registration->ID, 'diet' ),
+			'notes'             => rytkoset_theme_get_event_registration_meta( $registration->ID, 'notes' ),
+			'choice'            => rytkoset_theme_get_event_registration_meta( $registration->ID, 'choice' ),
+			'quantity'          => absint( rytkoset_theme_get_event_registration_meta( $registration->ID, 'quantity' ) ),
+			'participant_type'  => '',
+			'friday_buffet'     => false,
+			'status'            => $status,
+			'status_label'      => isset( $statuses[ $status ] ) ? $statuses[ $status ] : $statuses['pending'],
+			'source'            => 'free',
+			'origin'            => $origin,
+			'origin_label'      => rytkoset_theme_get_event_registration_source_label( $registration->ID ),
+			'created'           => get_the_date( '', $registration ),
+			'contact_name'      => '' !== $name ? $name : '',
+			'contact_email'     => rytkoset_theme_get_event_registration_meta( $registration->ID, 'email' ),
+			'edit_url'          => (string) get_edit_post_link( $registration->ID, '' ),
+			'registration_id'   => (int) $registration->ID,
+			'order_id'          => null,
+			'order_number'      => null,
+			'order_status'      => '',
+			'event_id'          => $event_id,
+			'event_title'       => get_the_title( $event_id ),
 		);
 	}
 
@@ -888,6 +889,7 @@ function rytkoset_theme_export_event_participants_csv() {
 		__( 'Yhteyshenkilö', 'rytkoset-theme' ),
 		__( 'Yhteyshenkilön sähköposti', 'rytkoset-theme' ),
 		__( 'Tilausnumero', 'rytkoset-theme' ),
+		__( 'Muiden osallistujien sähköpostiosoitteet', 'rytkoset-theme' ),
 	);
 
 	if ( $has_choice_column ) {
@@ -933,6 +935,7 @@ function rytkoset_theme_export_event_participants_csv() {
 				(string) ( $row['contact_name'] ?? '' ),
 				(string) ( $row['contact_email'] ?? '' ),
 				isset( $row['order_number'] ) && null !== $row['order_number'] ? (string) $row['order_number'] : '',
+				implode( "\n", $row['additional_emails'] ?? array() ),
 			)
 		);
 

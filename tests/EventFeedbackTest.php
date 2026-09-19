@@ -329,6 +329,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		// 3 free rows + 5 paid rows fetched, active filter keeps 2 free + 2 paid = 4.
 		$this->assertSame( 4, $result['participant_row_count'] );
 		$this->assertSame( 0, $result['no_address_count'] );
+		$this->assertSame( 'Vahvistettu', $result['recipients']['vahvistettu@example.test']['name'] );
 	}
 
 	public function test_recipients_dedupe_by_email(): void {
@@ -357,6 +358,39 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 1, $result['recipients'] );
 		$this->assertSame( 3, $result['participant_row_count'] );
 		$this->assertSame( 1, $result['no_address_count'] );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_tampere_messages_and_feedback_use_buyer_name_for_shared_billing_email(): void {
+		$this->event( 72, '2020-01-01' );
+		update_post_meta( 72, '_rytkoset_event_product_id', 900 );
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'tampere_2026' ), 900 );
+		$GLOBALS['rytkoset_test_products'][900] = $product;
+
+		// The later purchase for another person is encountered before the buyer's own purchase.
+		foreach ( array( 802 => 'Toinen Osallistuja', 801 => 'Maija Ostaja' ) as $id => $name ) {
+			$order = new WC_Order();
+			$order->id = $id;
+			$order->status = 'completed';
+			$order->billing_first_name = 'Maija';
+			$order->billing_last_name = 'Ostaja';
+			$order->billing_email = 802 === $id ? 'MAIJA@example.test' : 'maija@example.test';
+			$order->items[] = new Rytkoset_Test_Order_Item( $product );
+			$order->meta['_wc_other/rytkoset/participant_1_name'] = $name;
+			$GLOBALS['rytkoset_test_orders'][ $id ] = $order;
+		}
+
+		$rows = rytkoset_theme_get_event_paid_participants( 72 );
+		$this->assertCount( 2, $rows );
+		$this->assertSame( 'Toinen Osallistuja', $rows[0]['name'] );
+
+		foreach ( array( rytkoset_theme_get_event_messaging_recipients( 72 ), rytkoset_theme_get_event_feedback_recipients( 72 ) ) as $result ) {
+			$this->assertCount( 1, $result['recipients'] );
+			$recipient = $result['recipients']['maija@example.test'];
+			$this->assertSame( 'Maija Ostaja', $recipient['name'] );
+			$this->assertSame( 'Hei Maija Ostaja!', rytkoset_theme_personalize_event_message( 'Hei {nimi}!', $recipient['name'], 'Sukujuhla' ) );
+		}
 	}
 
 	// --- {palautelinkki} placeholder --------------------------------------

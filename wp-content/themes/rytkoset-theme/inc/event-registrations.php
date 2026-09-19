@@ -17,6 +17,7 @@ function rytkoset_theme_get_event_registration_meta_keys() {
 		'event_id'             => '_rytkoset_registration_event_id',
 		'name'                 => '_rytkoset_registration_name',
 		'email'                => '_rytkoset_registration_email',
+		'additional_emails'    => '_rytkoset_registration_additional_emails',
 		'diet'                 => '_rytkoset_registration_diet',
 		'notes'                => '_rytkoset_registration_notes',
 		'status'               => '_rytkoset_registration_status',
@@ -60,6 +61,79 @@ function rytkoset_theme_normalize_event_registration_quantity( $raw_value ) {
 	}
 
 	return $count;
+}
+
+/**
+ * Returns the additional-address limit for a registration.
+ *
+ * @param int $event_id Event ID.
+ * @param int $quantity Total party size, including the registrant.
+ * @return int
+ */
+function rytkoset_theme_get_event_additional_email_limit( $event_id, $quantity = 0 ) {
+	if ( rytkoset_theme_event_collects_quantity( $event_id ) ) {
+		return max( 0, $quantity - 1 );
+	}
+
+	return max( 0, (int) apply_filters( 'rytkoset_theme_event_registration_max_additional_emails', 9, $event_id ) );
+}
+
+/**
+ * Validates raw lines before sanitizing so malformed addresses are never repaired silently.
+ *
+ * @param mixed  $raw       One email per line.
+ * @param string $email     Registrant email.
+ * @param int    $event_id  Event ID.
+ * @param int    $quantity  Total party size.
+ * @return string[]|WP_Error
+ */
+function rytkoset_theme_validate_event_additional_emails( $raw, $email, $event_id, $quantity = 0 ) {
+	if ( ! rytkoset_theme_event_collects_participant_emails( $event_id ) ) {
+		return array();
+	}
+
+	if ( ! is_string( $raw ) ) {
+		return new WP_Error( 'invalid_additional_email' );
+	}
+
+	// Bound work even when a client bypasses the form's length limit.
+	if ( strlen( $raw ) > 10000 ) {
+		return new WP_Error( 'too_many_additional_emails' );
+	}
+
+	$emails = array();
+	foreach ( preg_split( '/\r\n|\r|\n/', $raw ) as $line ) {
+		$line = trim( $line );
+		if ( '' === $line ) {
+			continue;
+		}
+		if ( ! is_email( $line ) ) {
+			return new WP_Error( 'invalid_additional_email' );
+		}
+		$line = strtolower( sanitize_email( $line ) );
+		if ( strtolower( trim( $email ) ) !== $line ) {
+			$emails[ $line ] = $line;
+		}
+	}
+
+	if ( count( $emails ) > rytkoset_theme_get_event_additional_email_limit( $event_id, $quantity ) ) {
+		return new WP_Error( 'too_many_additional_emails' );
+	}
+
+	return array_values( $emails );
+}
+
+/**
+ * Reads stored additional emails independently of the current collection toggle.
+ *
+ * @param int $registration_id Registration ID.
+ * @return string[]
+ */
+function rytkoset_theme_get_event_registration_additional_emails( $registration_id ) {
+	$keys   = rytkoset_theme_get_event_registration_meta_keys();
+	$emails = get_post_meta( $registration_id, $keys['additional_emails'], true );
+
+	return is_array( $emails ) ? array_values( array_filter( $emails, 'is_email' ) ) : array();
 }
 
 /**
@@ -367,6 +441,15 @@ function rytkoset_theme_render_event_registration_metabox( $post ) {
 		<label for="rytkoset_registration_email"><strong><?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?></strong></label>
 		<input type="email" id="rytkoset_registration_email" name="rytkoset_registration_email" class="widefat" value="<?php echo esc_attr( $email ); ?>" />
 	</p>
+	<?php $additional_emails = rytkoset_theme_get_event_registration_additional_emails( $post->ID ); ?>
+	<?php if ( ! empty( $additional_emails ) ) : ?>
+		<p><strong><?php esc_html_e( 'Muiden osallistujien sähköpostiosoitteet', 'rytkoset-theme' ); ?></strong></p>
+		<ul>
+			<?php foreach ( $additional_emails as $additional_email ) : ?>
+				<li><?php echo esc_html( $additional_email ); ?></li>
+			<?php endforeach; ?>
+		</ul>
+	<?php endif; ?>
 
 	<?php if ( $has_choice ) : ?>
 		<p>
@@ -1370,6 +1453,13 @@ function rytkoset_theme_handle_event_registration_submission() {
 		$quantity     = rytkoset_theme_normalize_event_registration_quantity( $raw_quantity );
 	}
 
+	// Validate the raw lines before sanitization to reject malformed input intact.
+	$raw_additional_emails = isset( $_POST['registration_additional_emails'] ) ? wp_unslash( $_POST['registration_additional_emails'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Validated and sanitized by the helper below.
+	$additional_emails     = rytkoset_theme_validate_event_additional_emails( $raw_additional_emails, $email, $event_id, $quantity );
+	if ( is_wp_error( $additional_emails ) ) {
+		rytkoset_theme_handle_event_registration_error( $event_id, $additional_emails->get_error_code() );
+	}
+
 	// Confirmed immediately on successful submission (#666): most registrations
 	// never left "pending" in practice because nothing required an organizer to
 	// review them individually, which left downstream "active" filters (e.g. the
@@ -1394,6 +1484,10 @@ function rytkoset_theme_handle_event_registration_submission() {
 
 	if ( $quantity > 0 ) {
 		$meta_input[ $meta_keys['quantity'] ] = $quantity;
+	}
+
+	if ( ! empty( $additional_emails ) ) {
+		$meta_input[ $meta_keys['additional_emails'] ] = $additional_emails;
 	}
 
 	$registration_id = wp_insert_post(
@@ -1441,11 +1535,13 @@ add_action( 'admin_post_nopriv_rytkoset_submit_event_registration', 'rytkoset_th
  */
 function rytkoset_theme_get_event_registration_error_field( $error_code ) {
 	$map = array(
-		'missing_name'       => 'name',
-		'invalid_email'      => 'email',
-		'already_registered' => 'email',
-		'missing_consent'    => 'gdpr',
-		'invalid_choice'     => 'choice',
+		'missing_name'               => 'name',
+		'invalid_email'              => 'email',
+		'already_registered'         => 'email',
+		'missing_consent'            => 'gdpr',
+		'invalid_choice'             => 'choice',
+		'invalid_additional_email'   => 'additional-emails',
+		'too_many_additional_emails' => 'additional-emails',
 	);
 
 	return isset( $map[ $error_code ] ) ? $map[ $error_code ] : '';
@@ -1463,10 +1559,14 @@ function rytkoset_theme_get_event_registration_error_field( $error_code ) {
  */
 function rytkoset_theme_get_event_registration_privacy_notice( $event_id ) {
 	if ( rytkoset_theme_event_collects_diet( $event_id ) ) {
-		return __( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' );
+		$notice = __( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite, ruokarajoitteet ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' );
+	} else {
+		$notice = __( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' );
 	}
-
-	return __( 'Ilmoittautumisen yhteydessä kerättyjä henkilötietoja (nimi, sähköpostiosoite ja lisätiedot) käytetään tapahtuman järjestämistä varten. Tietoja ei luovuteta ulkopuolisille.', 'rytkoset-theme' );
+	if ( rytkoset_theme_event_collects_participant_emails( $event_id ) ) {
+		$notice .= ' ' . __( 'Muiden osallistujien vapaaehtoisia sähköpostiosoitteita käytetään vain tämän tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin. Anna osoite vain henkilön luvalla.', 'rytkoset-theme' );
+	}
+	return $notice;
 }
 
 /**
@@ -1494,12 +1594,14 @@ function rytkoset_theme_get_event_registration_feedback() {
 	$error = isset( $_GET['registration_error'] ) ? sanitize_key( wp_unslash( $_GET['registration_error'] ) ) : '';
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
 	$messages = array(
-		'missing_name'       => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
-		'invalid_email'      => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
-		'missing_consent'    => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
-		'already_registered' => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
-		'invalid_choice'     => __( 'Valitse vaihtoehto.', 'rytkoset-theme' ),
-		'rate_limited'       => __( 'Liian monta ilmoittautumisyritystä lyhyessä ajassa. Odota hetki ja yritä uudelleen.', 'rytkoset-theme' ),
+		'missing_name'               => __( 'Tarkista ilmoittautumisen tiedot. Nimi on pakollinen.', 'rytkoset-theme' ),
+		'invalid_email'              => __( 'Tarkista ilmoittautumisen tiedot. Sähköpostiosoite ei ole kelvollinen.', 'rytkoset-theme' ),
+		'missing_consent'            => __( 'Hyväksy tietosuojakäytäntö ennen lomakkeen lähettämistä.', 'rytkoset-theme' ),
+		'already_registered'         => __( 'Tällä sähköpostiosoitteella on jo aktiivinen ilmoittautuminen tähän tapahtumaan.', 'rytkoset-theme' ),
+		'invalid_choice'             => __( 'Valitse vaihtoehto.', 'rytkoset-theme' ),
+		'invalid_additional_email'   => __( 'Tarkista muiden osallistujien sähköpostiosoitteet. Anna yksi kelvollinen osoite per rivi.', 'rytkoset-theme' ),
+		'too_many_additional_emails' => __( 'Muiden osallistujien sähköpostiosoitteita on liikaa. Tarkista henkilömäärä ja kentän enimmäismäärä.', 'rytkoset-theme' ),
+		'rate_limited'               => __( 'Liian monta ilmoittautumisyritystä lyhyessä ajassa. Odota hetki ja yritä uudelleen.', 'rytkoset-theme' ),
 	);
 
 	return array(
@@ -1660,6 +1762,28 @@ function rytkoset_theme_render_free_event_registration_form( $event_id ) {
 						<span aria-hidden="true">*</span>
 					</label>
 					<input id="<?php echo esc_attr( $form_id . '-quantity' ); ?>" name="registration_quantity" type="number" inputmode="numeric" min="1" max="<?php echo esc_attr( (string) $max_quantity ); ?>" step="1" value="1" required aria-required="true" />
+				</div>
+			<?php endif; ?>
+
+			<?php if ( rytkoset_theme_event_collects_participant_emails( $event_id ) ) : ?>
+				<div class="event-registration__field">
+					<label for="<?php echo esc_attr( $form_id . '-additional-emails' ); ?>"><?php esc_html_e( 'Muiden osallistujien sähköpostiosoitteet (vapaaehtoinen)', 'rytkoset-theme' ); ?></label>
+					<textarea id="<?php echo esc_attr( $form_id . '-additional-emails' ); ?>" name="registration_additional_emails" rows="3" maxlength="10000" aria-describedby="<?php echo esc_attr( $form_id . '-additional-emails-help' . ( 'additional-emails' === $invalid_field ? ' ' . $notice_id : '' ) ); ?>"
+					<?php
+					if ( 'additional-emails' === $invalid_field ) :
+						?>
+						aria-invalid="true"<?php endif; ?>></textarea>
+					<p id="<?php echo esc_attr( $form_id . '-additional-emails-help' ); ?>">
+						<?php esc_html_e( 'Yksi osoite per rivi, vain henkilön luvalla. Osoitteita käytetään tämän tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin.', 'rytkoset-theme' ); ?>
+						<?php if ( $collect_quantity ) : ?>
+							<?php esc_html_e( 'Enintään henkilömäärä miinus yksi osoitetta. Laske itsesi mukaan henkilömäärään.', 'rytkoset-theme' ); ?>
+						<?php else : ?>
+							<?php
+							/* translators: %d: maximum additional addresses */
+							printf( esc_html__( 'Enintään %d osoitetta.', 'rytkoset-theme' ), (int) rytkoset_theme_get_event_additional_email_limit( $event_id ) );
+							?>
+						<?php endif; ?>
+					</p>
 				</div>
 			<?php endif; ?>
 

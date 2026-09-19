@@ -25,7 +25,7 @@ function rytkoset_theme_get_anonymized_event_registration_name() {
  * @return int[]
  */
 function rytkoset_theme_get_event_registration_ids_by_email( $email, $page = 1, $per_page = 50 ) {
-	$email    = sanitize_email( $email );
+	$email    = strtolower( sanitize_email( $email ) );
 	$page     = max( 1, absint( $page ) );
 	$per_page = max( 1, absint( $per_page ) );
 
@@ -46,12 +46,19 @@ function rytkoset_theme_get_event_registration_ids_by_email( $email, $page = 1, 
 			'update_post_meta_cache' => false,
 			'update_post_term_cache' => false,
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					'meta_query'     => array(
-						array(
-							'key'   => $meta_keys['email'],
-							'value' => $email,
-						),
-					),
+			'meta_query'             => array(
+				'relation' => 'OR',
+				array(
+					'key'   => $meta_keys['email'],
+					'value' => $email,
+				),
+				array(
+					'key'     => $meta_keys['additional_emails'],
+					// Quoted boundaries match one complete address in the serialized array.
+					'value'   => '"' . $email . '"',
+					'compare' => 'LIKE',
+				),
+			),
 		)
 	);
 }
@@ -127,6 +134,7 @@ function rytkoset_theme_anonymize_event_registration( $registration_id ) {
 
 	update_post_meta( $registration_id, $meta_keys['name'], $anonymized_name );
 	delete_post_meta( $registration_id, $meta_keys['email'] );
+	delete_post_meta( $registration_id, $meta_keys['additional_emails'] );
 	delete_post_meta( $registration_id, $meta_keys['diet'] );
 	delete_post_meta( $registration_id, $meta_keys['notes'] );
 	// The free-text personal-data source can name the participant or a third party
@@ -178,6 +186,7 @@ add_filter( 'wp_privacy_personal_data_exporters', 'rytkoset_theme_register_event
  * @return array
  */
 function rytkoset_theme_export_event_registration_personal_data( $email_address, $page = 1 ) {
+	$email_address    = strtolower( sanitize_email( $email_address ) );
 	$per_page         = 50;
 	$registration_ids = rytkoset_theme_get_event_registration_ids_by_email( $email_address, $page, $per_page );
 	$statuses         = rytkoset_theme_get_event_registration_statuses();
@@ -240,6 +249,30 @@ function rytkoset_theme_export_event_registration_personal_data( $email_address,
 			);
 		}
 
+		$additional_emails = rytkoset_theme_get_event_registration_additional_emails( $registration_id );
+		if ( strtolower( rytkoset_theme_get_event_registration_meta( $registration_id, 'email' ) ) !== strtolower( $email_address ) ) {
+			// A third-party recipient must never receive the registrant's personal data.
+			$data = array(
+				array(
+					'name'  => __( 'Tapahtuma', 'rytkoset-theme' ),
+					'value' => get_the_title( $event_id ),
+				),
+				array(
+					'name'  => __( 'Sähköposti', 'rytkoset-theme' ),
+					'value' => strtolower( $email_address ),
+				),
+				array(
+					'name'  => __( 'Tietojen lähde', 'rytkoset-theme' ),
+					'value' => __( 'Tapahtumaan ilmoittautunut henkilö', 'rytkoset-theme' ),
+				),
+			);
+		} elseif ( ! empty( $additional_emails ) ) {
+			$data[] = array(
+				'name'  => __( 'Ilmoittamasi muiden osallistujien sähköpostiosoitteet', 'rytkoset-theme' ),
+				'value' => implode( ', ', $additional_emails ),
+			);
+		}
+
 		$items[] = array(
 			'group_id'    => 'rytkoset-event-registrations',
 			'group_label' => __( 'Tapahtumailmoittautumiset', 'rytkoset-theme' ),
@@ -279,6 +312,7 @@ add_filter( 'wp_privacy_personal_data_erasers', 'rytkoset_theme_register_event_r
  */
 function rytkoset_theme_erase_event_registration_personal_data( $email_address, $page = 1 ) {
 	unset( $page );
+	$email_address = strtolower( sanitize_email( $email_address ) );
 
 	$per_page         = 50;
 	$registration_ids = rytkoset_theme_get_event_registration_ids_by_email( $email_address, 1, $per_page );
@@ -287,6 +321,20 @@ function rytkoset_theme_erase_event_registration_personal_data( $email_address, 
 	$messages         = array();
 
 	foreach ( $registration_ids as $registration_id ) {
+		if ( strtolower( rytkoset_theme_get_event_registration_meta( $registration_id, 'email' ) ) !== strtolower( $email_address ) ) {
+			$keys   = rytkoset_theme_get_event_registration_meta_keys();
+			$emails = rytkoset_theme_get_event_registration_additional_emails( $registration_id );
+			$emails = array_values( array_diff( $emails, array( strtolower( $email_address ) ) ) );
+			$ok     = empty( $emails )
+				? delete_post_meta( $registration_id, $keys['additional_emails'] )
+				: update_post_meta( $registration_id, $keys['additional_emails'], $emails );
+			if ( $ok ) {
+				++$removed;
+			} else {
+				++$retained;
+			}
+			continue;
+		}
 		if ( rytkoset_theme_anonymize_event_registration( $registration_id ) ) {
 			++$removed;
 			continue;
@@ -297,8 +345,8 @@ function rytkoset_theme_erase_event_registration_personal_data( $email_address, 
 
 	if ( $removed > 0 ) {
 		$messages[] = sprintf(
-			/* translators: %d: anonymized registration count */
-			_n( '%d tapahtumailmoittautuminen anonymisoitiin.', '%d tapahtumailmoittautumista anonymisoitiin.', $removed, 'rytkoset-theme' ),
+			/* translators: %d: registrations with removed personal data */
+			_n( 'Henkilötietoja poistettiin %d tapahtumailmoittautumisesta.', 'Henkilötietoja poistettiin %d tapahtumailmoittautumisesta.', $removed, 'rytkoset-theme' ),
 			$removed
 		);
 	}
