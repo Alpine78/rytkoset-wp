@@ -797,6 +797,10 @@ if ( ! defined( 'DAY_IN_SECONDS' ) ) {
 	define( 'DAY_IN_SECONDS', 86400 );
 }
 
+function _n( $single, $plural, $number, $domain = 'default' ) {
+	return 1 === (int) $number ? $single : $plural;
+}
+
 function __( $text, $domain = 'default' ) {
 	return $text;
 }
@@ -889,6 +893,11 @@ function esc_attr( $text ) {
 
 function esc_url( $url ) {
 	return (string) $url;
+}
+
+// Rendering-only stand-in; this is not a sanitizer security test.
+function wp_kses( $data, $allowed_html, $allowed_protocols = array() ) {
+	return strip_tags( (string) $data, array_keys( $allowed_html ) );
 }
 
 function wp_kses_post( $data ) {
@@ -1120,6 +1129,10 @@ function get_the_title( $post = 0 ) {
 	return isset( $GLOBALS['rytkoset_test_posts'][ $id ] )
 		? $GLOBALS['rytkoset_test_posts'][ $id ]->post_title
 		: '';
+}
+
+function get_the_time( $format = '', $post = null ) {
+	return wp_date( '' === $format ? get_option( 'time_format' ) : $format, current_datetime()->getTimestamp() );
 }
 
 function get_the_date( $format = '', $post = null ) {
@@ -1684,6 +1697,12 @@ function rytkoset_test_match_meta_query( int $post_id, array $meta_query ): bool
 			$haystack  = array_map( 'strval', (array) ( $clause['value'] ?? array() ) );
 			$in        = in_array( (string) get_post_meta( $post_id, $clause['key'], true ), $haystack, true );
 			$results[] = ( 'IN' === $compare ) ? $in : ! $in;
+			continue;
+		}
+
+		if ( 'LIKE' === $compare ) {
+			$value = get_post_meta( $post_id, $clause['key'], true );
+			$results[] = str_contains( is_array( $value ) ? serialize( $value ) : (string) $value, (string) $clause['value'] );
 			continue;
 		}
 

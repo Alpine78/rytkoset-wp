@@ -190,4 +190,47 @@ final class EventParticipantsAdminTest extends Rytkoset_Theme_Test_Case {
 		// The cancelled free row is kept on purpose; a dead order still drops.
 		$this->assertSame( array( 'Peruttu maksuton' ), $kept );
 	}
+
+	public function test_additional_emails_expand_messages_and_feedback_without_extra_participant_rows(): void {
+		rytkoset_test_register_post( 10, 'rytkoset_event', 'Sukujuhla' );
+		$keys = rytkoset_theme_get_event_registration_meta_keys();
+		foreach ( array( 101 => 'maija@example.test', 102 => 'friend@example.test', 103 => 'cancelled@example.test' ) as $id => $email ) {
+			rytkoset_test_register_post( $id, 'event_registration', 'Ilmoittautuminen' );
+			update_post_meta( $id, $keys['event_id'], 10 );
+			update_post_meta( $id, $keys['name'], 102 === $id ? 'Ystävä' : 'Maija' );
+			update_post_meta( $id, $keys['email'], $email );
+			update_post_meta( $id, $keys['status'], 103 === $id ? 'cancelled' : 'confirmed' );
+		}
+		update_post_meta( 101, $keys['quantity'], 3 );
+		update_post_meta( 101, $keys['additional_emails'], array( 'friend@example.test', 'extra@example.test' ) );
+		update_post_meta( 102, $keys['additional_emails'], array( 'extra@example.test' ) );
+		update_post_meta( 103, $keys['additional_emails'], array( 'excluded@example.test' ) );
+		$rows = rytkoset_theme_get_event_free_participants( 10 );
+		$this->assertCount( 3, $rows );
+		$summary = rytkoset_theme_get_event_participant_choice_summary( $rows, true );
+		$this->assertSame( 4, $summary['total'] );
+		$result = rytkoset_theme_get_event_messaging_recipients( 10 );
+		$this->assertCount( 3, $result['recipients'] );
+		$this->assertSame( 'Ystävä', $result['recipients']['friend@example.test']['name'] );
+		$this->assertSame( '', $result['recipients']['extra@example.test']['name'] );
+		$this->assertSame( $result['recipients'], rytkoset_theme_get_event_feedback_recipients( 10 )['recipients'] );
+		$this->assertArrayNotHasKey( 'excluded@example.test', $result['recipients'] );
+		$this->assertSame( 'Hei osallistuja!', rytkoset_theme_personalize_event_message( 'Hei {nimi}!', '', 'Sukujuhla' ) );
+
+		rytkoset_theme_enqueue_event_messaging_job( array( 'event_id' => 10, 'recipients' => $result['recipients'], 'subject' => 'Info', 'body' => 'Hei {nimi}!', 'reply_to' => 'organizer@example.test' ) );
+		rytkoset_theme_process_event_messaging_queue();
+		$this->assertCount( 3, $GLOBALS['rytkoset_test_mails'] );
+		foreach ( $GLOBALS['rytkoset_test_mails'] as $mail ) {
+			if ( 'extra@example.test' === $mail['to'] ) {
+				$this->assertStringContainsString( 'Hei osallistuja!', $mail['message'] );
+				$this->assertStringContainsString( 'ilmoittautunut henkilö antoi sähköpostiosoitteesi', $mail['message'] );
+			} else {
+				$this->assertStringNotContainsString( 'ilmoittautunut henkilö antoi sähköpostiosoitteesi', $mail['message'] );
+			}
+		}
+		update_post_meta( 101, $keys['status'], 'cancelled' );
+		update_post_meta( 102, $keys['status'], 'cancelled' );
+		$this->assertEmpty( rytkoset_theme_get_event_feedback_recipients( 10 )['recipients'] );
+	}
+
 }

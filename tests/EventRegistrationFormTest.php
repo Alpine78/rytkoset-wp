@@ -472,4 +472,101 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_set_event_registration_status( 204, 'deleted' ) );
 		$this->assertFalse( rytkoset_theme_set_event_registration_status( 10, 'cancelled' ) );
 	}
+
+	public function test_additional_emails_are_opt_in_and_validate_without_repairing_input(): void {
+		$this->event( 10 );
+		$this->assertFalse( rytkoset_theme_event_collects_participant_emails( 10 ) );
+		$this->assertSame( array(), rytkoset_theme_validate_event_additional_emails( 'invalid', 'own@example.test', 10 ) );
+		update_post_meta( 10, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$this->assertSame( array(), rytkoset_theme_validate_event_additional_emails( '', 'own@example.test', 10 ) );
+		$this->assertSame( array( 'friend@example.test' ), rytkoset_theme_validate_event_additional_emails( " OWN@example.test\r\nFriend@example.test\nfriend@example.test\n", 'own@example.test', 10 ) );
+		foreach ( array( 'friend @example.test', 'friend@example.test,other@example.test', '<friend@example.test>', array( 'friend@example.test' ) ) as $raw ) {
+			$result = rytkoset_theme_validate_event_additional_emails( $raw, 'own@example.test', 10 );
+			$this->assertSame( 'invalid_additional_email', $result->get_error_code() );
+		}
+		$this->assertSame( 'too_many_additional_emails', rytkoset_theme_validate_event_additional_emails( str_repeat( 'a', 10001 ), '', 10 )->get_error_code() );
+	}
+
+	public function test_additional_email_limits_follow_quantity_or_filtered_cap(): void {
+		$this->event( 10 );
+		update_post_meta( 10, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$this->assertSame( 9, rytkoset_theme_get_event_additional_email_limit( 10 ) );
+		$emails = array_map( static fn( $i ) => 'person' . $i . '@example.test', range( 1, 9 ) );
+		$this->assertSame( $emails, rytkoset_theme_validate_event_additional_emails( implode( "\n", $emails ), '', 10 ) );
+		$this->assertSame( 'too_many_additional_emails', rytkoset_theme_validate_event_additional_emails( implode( "\n", $emails ) . "\nextra@example.test", '', 10 )->get_error_code() );
+		$filter = static fn() => 1;
+		add_filter( 'rytkoset_theme_event_registration_max_additional_emails', $filter );
+		$this->assertSame( 1, rytkoset_theme_get_event_additional_email_limit( 10 ) );
+		$this->assertSame( 'too_many_additional_emails', rytkoset_theme_validate_event_additional_emails( "a@example.test\nb@example.test", '', 10 )->get_error_code() );
+		remove_filter( 'rytkoset_theme_event_registration_max_additional_emails', $filter );
+		update_post_meta( 10, rytkoset_theme_get_event_collect_quantity_meta_key(), 'yes' );
+		$this->assertSame( array( 'a@example.test' ), rytkoset_theme_validate_event_additional_emails( 'a@example.test', '', 10, 2 ) );
+		$this->assertSame( 'too_many_additional_emails', rytkoset_theme_validate_event_additional_emails( 'a@example.test', '', 10, 1 )->get_error_code() );
+	}
+
+	public function test_additional_email_toggle_requires_valid_nonce_and_capability(): void {
+		$this->event( 10 );
+		$_POST = array( 'rytkoset_event_collect_participant_emails' => 'yes' );
+		rytkoset_theme_save_event_choice_field( 10 );
+		$this->assertFalse( rytkoset_theme_event_collects_participant_emails( 10 ) );
+		$_POST['rytkoset_event_choice_field_nonce'] = 'rytkoset_save_event_choice_field';
+		$GLOBALS['rytkoset_test_caps']['edit_post'] = false;
+		rytkoset_theme_save_event_choice_field( 10 );
+		$this->assertFalse( rytkoset_theme_event_collects_participant_emails( 10 ) );
+		$GLOBALS['rytkoset_test_caps']['edit_post'] = true;
+		rytkoset_theme_save_event_choice_field( 10 );
+		$this->assertTrue( rytkoset_theme_event_collects_participant_emails( 10 ) );
+		unset( $_POST['rytkoset_event_collect_participant_emails'] );
+		rytkoset_theme_save_event_choice_field( 10 );
+		$this->assertFalse( rytkoset_theme_event_collects_participant_emails( 10 ) );
+	}
+
+	public function test_additional_email_form_is_optional_and_error_is_accessible(): void {
+		$this->event( 10 );
+		ob_start();
+		rytkoset_theme_render_free_event_registration_form( 10 );
+		$this->assertStringNotContainsString( 'registration_additional_emails', ob_get_clean() );
+		update_post_meta( 10, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$_GET = array( 'registration_status' => 'error', 'registration_error' => 'invalid_additional_email' );
+		ob_start();
+		rytkoset_theme_render_free_event_registration_form( 10 );
+		$html = ob_get_clean();
+		$this->assertMatchesRegularExpression( '/name="registration_additional_emails"[^>]*aria-invalid="true"/', $html );
+		$this->assertDoesNotMatchRegularExpression( '/name="registration_additional_emails"[^>]*required/', $html );
+		$this->assertStringContainsString( 'vain henkilön luvalla', $html );
+		$this->assertStringContainsString( 'Muiden osallistujien vapaaehtoisia', rytkoset_theme_get_event_registration_privacy_notice( 10 ) );
+	}
+
+	public function test_submission_rejects_bad_additional_email_then_saves_valid_list_without_extra_receipts(): void {
+		$this->event( 10 );
+		update_post_meta( 10, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.76';
+		$_POST = array(
+			'event_id' => '10',
+			'rytkoset_event_registration_submit_nonce' => 'rytkoset_submit_event_registration',
+			'registration_name' => 'Maija',
+			'registration_email' => 'maija@example.test',
+			'registration_gdpr_consent' => '1',
+			'registration_additional_emails' => 'bad email',
+		);
+		try {
+			rytkoset_theme_handle_event_registration_submission();
+			$this->fail( 'Expected redirect.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $e ) {
+			$this->assertStringContainsString( 'registration_error=invalid_additional_email', $e->location );
+		}
+		$this->assertEmpty( get_posts( array( 'post_type' => 'event_registration' ) ) );
+		$this->assertEmpty( $GLOBALS['rytkoset_test_mails'] );
+		$_POST['registration_additional_emails'] = "FRIEND@example.test\nfriend@example.test\nmaija@example.test";
+		try {
+			rytkoset_theme_handle_event_registration_submission();
+			$this->fail( 'Expected redirect.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $e ) {
+			$this->assertStringContainsString( 'registration_status=success', $e->location );
+		}
+		$this->assertSame( array( 'friend@example.test' ), rytkoset_theme_get_event_registration_additional_emails( 1000 ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertSame( 'maija@example.test', $GLOBALS['rytkoset_test_mails'][0]['to'] );
+	}
+
 }

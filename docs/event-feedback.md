@@ -281,3 +281,7 @@ Pääfunktiot:
 - Ei tulosten CSV-/PDF-vientiä, visualisointeja eikä AI-yhteenvetoa.
 - Ei palautteeseen perustuvaa markkinointiprofilointia.
 - Ei automaattista vapaatekstin poistoa — ks. "Tietosuoja ja säilytys".
+
+## Lisäosallistujien sähköpostit (#676)
+
+Maksuttoman ilmoittautumisen vapaaehtoiset lisäosoitteet sisältyvät samaan vastaanottajahakuun kuin tapahtumaviestinnässä. Esikatselun yksilöllisten osoitteiden määrä voi siksi ylittää osallistujarivien määrän. Osallistujamäärä ei muutu. Perutun ilmoittautumisen lisäosoitteet jäävät pois hausta, päällekkäiset osoitteet yhdistetään ja nimetön vastaanottaja puhutellaan sanalla **osallistuja**. Viesti sisältää lisäosoitteen lähteen ja käyttötarkoituksen sekä tietosuojaselosteen linkin. Palauteosoite ja anonyymi vastaaminen säilyvät ennallaan.

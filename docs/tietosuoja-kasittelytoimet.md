@@ -57,3 +57,12 @@ Tietosuoja-asetuksen 28 artiklan mukainen käsittelysopimus tarvitaan jokaisen h
 Tuotantotiedot, sopimukset ja vastuuhenkilön hyväksyntä todennetaan jatkotiketissä [#564](https://github.com/Alpine78/rytkoset-wp/issues/564).
 
 Oikeudellinen pohja: [yleisen tietosuoja-asetuksen 30 artikla](https://eur-lex.europa.eu/legal-content/FI/TXT/?uri=CELEX:32016R0679). Tämä luonnos on tarkistettava tietosuojasta vastaavan henkilön tai juristin kanssa ennen hyväksymistä.
+
+## Maksuttoman tapahtuman lisäosallistujien sähköpostit (#676)
+
+- Tietoryhmä: ilmoittajan vapaaehtoisesti antamat muiden osallistujien sähköpostiosoitteet. Ei lisäosallistujien nimiä. Kenttä on oletuksena pois käytöstä; osoite annetaan vain henkilön luvalla.
+- Käyttö: vain kyseisen tapahtuman viestintä ja palautepyyntö. Ei uutiskirjettä, markkinointia tai ilmoittautumiskuittia lisäosallistujalle.
+- Lähde ja informointi: tapahtumaan ilmoittautunut henkilö. Lisäosoitteeseen lähetettävään viestiin lisätään automaattisesti lähde, käyttötarkoitus, poistopyynnön ohje ja määritetyn tietosuojasivun linkki. **Käsittelyperuste ja informointiteksti vahvistetaan tietosuojasta vastaavan kanssa ennen käyttöönottoa.** Ilmoittajan lupavakuutus ei yksin ole arvio käsittelyn oikeusperusteesta.
+- Tallennus: `_rytkoset_registration_additional_emails`, sähköpostitaulukko ilmoittautumisen post metassa. Ylläpidon lukutieto, CSV-vienti ja lähetysjonon vastaanottajat.
+- Säilytys: sama tapahtumakohtainen anonymisointi ja enintään 12 kuukauden raja kuin ilmoittautumisen muilla tiedoilla. Anonymisointi poistaa koko lisäosoitelistan.
+- Rekisteröidyn pyyntö: Privacy Tools löytää myös lisäosoitteen. Lisäosallistujan vienti sisältää vain hänen osoitteensa, tapahtuman ja yleisen lähdetiedon; poisto poistaa vain hänen osoitteensa. Ilmoittajan anonymisointi poistaa koko ilmoittautumisen henkilötiedot, myös lisäosoitteet. Jo jonotetut työt on tarkistettava erikseen, koska ne sisältävät jonotushetken vastaanottajat.

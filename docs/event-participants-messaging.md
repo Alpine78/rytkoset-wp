@@ -147,3 +147,11 @@ Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content
 - Ei unsubscribe-linkkejä
 - Loki ei näytä per-vastaanottaja-tasoa (vain aggregoidut laskurit)
 - Ei AcyMailing-integraatiota tässä ratkaisussa
+
+## Maksuttomien ilmoittautumisten lisäosoitteet (#676)
+
+Tapahtumalle erikseen käyttöön otettu lisäsähköpostikenttä laajentaa vastaanottajamäärää ja lähetyksiä. Sama osoite saa vain yhden viestin kirjainkoosta riippumatta. Jos osoitteella on myös oma ilmoittautuminen, sen nimi on ensisijainen. Muulle lisäosoitteelle `{nimi}` korvataan sanalla **osallistuja**, joten esimerkiksi `Hei {nimi}!` muuttuu muotoon `Hei osallistuja!`.
+
+Lisäosoitteeseen lähetettävän viestin loppuun lisätään tieto siitä, että osoitteen antoi tapahtumaan ilmoittautunut henkilö, tapahtumaviestintään ja palautepyyntöön rajattu käyttötarkoitus, poistopyynnön vastausohje sekä tietosuojaselosteen linkki, jos sivu on määritetty WordPressissä. Tieto lisätään myös palautepyyntöihin. Lisäosoitteita ei viedä AcyMailingiin.
+
+Perutun ilmoittautumisen lisäosoitteet poistuvat aktiivisesta vastaanottajahausta; viestinnän nimenomainen **Peruttu**-suodatin toimii kuten ennenkin. Vastaanottajat tallennetaan jonotushetkellä: muutokset ilmoittautumiseen eivät päivitä jo luotua jonoa. Varmista siksi vastaanottajat ennen jonotusta. Pyydä teknistä ylläpitäjää tarkistamaan myös odottavat jonotyöt, jos osoite on poistettava jonotuksen jälkeen.
