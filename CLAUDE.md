@@ -4,6 +4,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Event message recipient identity: `rytkoset_theme_get_event_messaging_recipients()` pairs participant email with participant name, or contact email with contact name when participant email is absent. Tampere 2026 messages and feedback requests therefore address the billing contact by the billing name. Participant rows are unchanged. Existing queued jobs retain their saved recipient names. Regression: `tests/EventFeedbackTest.php`.
+
 ## Project context
 
 WordPress site for RytkÃ¶sten sukuseura ry (rytkoset.net). AGENTS.md contains project principles, priorities, and collaboration model â€” CLAUDE.md covers the technical environment and architecture.

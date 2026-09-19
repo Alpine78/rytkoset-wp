@@ -48,7 +48,7 @@ suotimella `rytkoset_theme_event_feedback_inactive_order_statuses`.
 
 Lomake hyväksyy kolme placeholderia:
 
-- `{nimi}` → osallistujan nimi (korvataan jokaisen vastaanottajan kohdalla erikseen)
+- `{nimi}` → osallistujan nimi, kun käytetään osallistujan omaa sähköpostia. Jos osoite otetaan yhteyshenkilöltä, käytetään myös yhteyshenkilön nimeä (Tampere 2026:ssa ostajan laskutustietojen nimi). Osallistujalistan nimet säilyvät ennallaan.
 - `{tapahtuma}` → tapahtuman otsikko (korvataan jokaisen vastaanottajan kohdalla erikseen)
 - `{palautelinkki}` → valitun tapahtuman julkisen palautelomakkeen osoite (`#666`). Ratkaistaan
   kerran per jonotyö tapahtuman ID:stä, ei per vastaanottaja, koska linkillä ei ole
@@ -60,6 +60,8 @@ Esim. *"Hei {nimi}, tervetuloa tapahtumaan {tapahtuma}!"* lähetetään yksilöl
 ### Lähetys ja jono
 
 Lähetyspainike on muodossa "Lisää jonoon X vastaanottajalle" ja näyttää tarkistuksen ennen jonotusta. Jos vastaanottajia on 0, painike on disabloitu.
+
+Nimikorjaus koskee uusia jonotuksia. Jo jonossa oleviin viesteihin vastaanottajien nimet on tallennettu jonotuksen yhteydessä.
 
 Admin-lomake ei lähetä viestejä heti. Se tallentaa vastaanottajat, aiheen, viestin, lähettäjän ja `Reply-To`-osoitteen lähetysjonoon. WP-Cron käsittelee jonon vanhimmasta viestistä alkaen ja tekee jokaiselle vastaanottajalle oman `wp_mail()`-kutsun.
 

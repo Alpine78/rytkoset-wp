@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Returns deduplicated recipient list for a given event/status filter.
  *
  * Each row in the participants list is normalized to a single email recipient.
- * Falls back to contact_email when the participant's own email is empty.
+ * Falls back to contact_email and contact_name together when the participant's own email is empty.
  * Returns also a count of rows that were skipped because no usable address was found.
  *
  * @param int    $event_id      Event ID or 0 for all events.
@@ -36,9 +36,12 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 
 	foreach ( $rows as $row ) {
 		$email = trim( (string) ( $row['email'] ?? '' ) );
+		$name  = trim( (string) ( $row['name'] ?? '' ) );
 
 		if ( '' === $email ) {
+			// Keep the recipient's name paired with the address we actually use.
 			$email = trim( (string) ( $row['contact_email'] ?? '' ) );
+			$name  = trim( (string) ( $row['contact_name'] ?? '' ) );
 		}
 
 		if ( '' === $email || ! is_email( $email ) ) {
@@ -50,12 +53,6 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 
 		if ( isset( $recipients[ $email_key ] ) ) {
 			continue;
-		}
-
-		$name = trim( (string) ( $row['name'] ?? '' ) );
-
-		if ( '' === $name ) {
-			$name = trim( (string) ( $row['contact_name'] ?? '' ) );
 		}
 
 		$recipients[ $email_key ] = array(

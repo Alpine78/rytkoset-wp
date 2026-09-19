@@ -165,7 +165,9 @@ Kumpikin tila käyttää samaa vastaanottajajoukkoa: `#665`:n
 `rytkoset_theme_filter_active_event_participants()`, joka rajaa pois perutut
 maksuttomat ilmoittautumiset sekä perutut, hyvitetyt ja epäonnistuneet
 tilaukset. Yhden ilmoittautumisen/tilauksen vastaanottajarivit deduplikoidaan
-sähköpostiosoitteen mukaan ennen jonotusta.
+sähköpostiosoitteen mukaan ennen jonotusta. Jos osoite on yhteyshenkilön
+(Tampere 2026:ssa ostajan laskutussähköposti), myös `{nimi}` tulee
+yhteyshenkilön tiedoista, ei hänen ilmoittamansa osallistujan nimestä.
 
 - **Lähetä käsin:** `Tapahtumat > Viestintä` -sivun Palautekysely-osiossa
   näytetään vastaanottajaerittely (osallistujarivit / yksilölliset osoitteet
