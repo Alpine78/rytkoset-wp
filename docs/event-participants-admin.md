@@ -1,5 +1,7 @@
 # Tapahtumakohtainen osallistujalista adminissa
 
+#642:n yleiskäyttöiset maksulliset tapahtumat käyttävät samaa osallistujalistaa ja CSV-vientiä. Tuotteen osallistujakytkin, määräpäivä ja rajat on kuvattu [maksullisen tapahtuman ohjeessa](woocommerce-event-registration.md). Uusien tilausten osallistujarivit säilyvät myös tuotteen keruun myöhemmän poiskytkennän jälkeen. Eri tapahtumien tuotteita sisältävästä tilauksesta näytetään kullekin tapahtumalle vain siihen kuuluvat osallistujat.
+
 Tämä dokumentti kuvaa tikettien `#72` (näkymä), `#73` (CSV-vienti) ja `#665`
 (osallistujan käsin lisääminen ja peruminen) toteutukset.
 
@@ -62,7 +64,7 @@ Jokaiselta osallistujalta näkyy:
 | Nimi | Osallistujan nimi |
 | Tapahtumakohtainen lisävalinta | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty lisävalinta; otsikkona käytetään tapahtuman kenttäotsikkoa |
 | Tapahtumakohtainen määrä | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty määräkenttä; otsikkona käytetään tapahtuman kenttäotsikkoa |
-| Osallistujatyyppi | Tampere 2026 -variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
+| Osallistujatyyppi | Tapahtumatuotteen variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
 | Perjantain buffet | Osallistuuko henkilö perjantain buffet-illalliselle |
 | Sähköposti | Osallistujan sähköposti (ilmaisessa) tai yhteyshenkilön sähköposti (maksullisessa) |
 | Puhelin | Puhelinnumero |
@@ -110,8 +112,8 @@ Sarakkeet:
 | --- | --- |
 | Tapahtuma | Tapahtuman otsikko |
 | Nimi | Osallistujan nimi |
-| Osallistujatyyppi | Tampere 2026 -osallistujilla tuotteen variaatio |
-| Perjantain buffet | `Kyllä` tai `Ei` |
+| Osallistujatyyppi | Osallistujakenttiä käyttävillä tapahtumilla tuotteen variaatio |
+| Perjantain buffet | Vanhoilla osallistujilla `Kyllä` tai `Ei`; uusilla yleiskäyttöisillä tapahtumilla tyhjä |
 | Sähköposti | Osallistujan sähköposti |
 | Puhelin | Puhelinnumero |
 | Ruokavalio / huomiot | Ruokarajoitteet ja lisätiedot yhdistettynä |
@@ -156,8 +158,8 @@ Lähde: WooCommerce-tilaukset, joissa on tapahtuman meta-avaimeen `_rytkoset_eve
 name          – osallistujan nimi
 choice        – maksuttoman ilmoittautumisen tapahtumakohtainen lisävalinta
 quantity      – maksuttoman ilmoittautumisen tapahtumakohtainen määrä
-participant_type – Tampere 2026 -osallistujatyyppi
-friday_buffet – true/false perjantain buffet-illalliselle
+participant_type – tapahtumatuotteen osallistujatyyppi
+friday_buffet – vanhoilla osallistujilla true/false; uusilla yleiskäyttöisillä tapahtumilla null
 email         – sähköposti
 phone         – puhelinnumero
 diet          – ruokarajoitteet

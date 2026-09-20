@@ -1,5 +1,7 @@
 # WooCommerce: Tampere 2026 checkout-kentät
 
+Uuden tapahtuman käyttöönotto: [maksullisen tapahtuman osallistujailmoittautuminen](woocommerce-event-registration.md). Tämä ohje kuvaa vanhan tapahtuman asetuksia.
+
 Tämä dokumentti kuvaa tiketin `#140` toteutusmallin.
 
 **#642, vaihe 1:** PHP-moduuli on nyt `inc/woocommerce-event-registration.php`, funktiot käyttävät `paid_event`-nimiä ja kassaskripti `assets/js/event-checkout-participants.js` saa asetuksensa `window.rytkosetEventParticipants`-oliosta. Alla kuvattu Tampere-kassan toiminta ja tallennetut kenttätunnisteet säilyvät. Uuden tapahtuman käyttöönotto pelkillä ylläpidon asetuksilla ei vielä sisälly tähän vaiheeseen. PHP- ja JS-muutokset julkaistaan yhdessä; ennen julkaisua avattu kassa ladataan uudelleen.
@@ -49,7 +51,7 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä.
 - Osallistujatyyppi puretaan tilauksen rivien variaatioista samassa järjestyksessä kuin osallistujakohtaiset checkout-kentät.
 - Kenttien autocomplete on tarkoituksella rajattu pois, jotta selaimen autofill ei kirjoita nimiä ruokarajoitekenttiin.
-- Korttien otsakkeet tuottaa `assets/js/event-checkout-participants.js`, ja kehys-, mobiili- sekä tumman teeman tyylit ovat `assets/css/shop.css`-tiedostossa. Sama skripti injektoi korttien yläpuolelle **Osallistujat — Tampere 2026** -osio-otsikon ja ohjetekstin.
+- Korttien otsakkeet tuottaa `assets/js/event-checkout-participants.js`, ja kehys-, mobiili- sekä tumman teeman tyylit ovat `assets/css/shop.css`-tiedostossa. Sama skripti injektoi korttien yläpuolelle **Tapahtuman osallistujat** -osio-otsikon ja ohjetekstin.
 - Tuotekohtaiset lisätiedot ja mahdollinen tilausmuistiinpano näytetään ennen maksutapoja. Maksutavat ovat näin kassan viimeinen muokattava osio ennen ehtojen hyväksyntää ja teeman keltaista **Lähetä tilaus** -painiketta.
 
 ## Rajaus tässä vaiheessa

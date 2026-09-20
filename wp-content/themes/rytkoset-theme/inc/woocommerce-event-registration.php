@@ -17,40 +17,44 @@ function rytkoset_theme_get_legacy_event_registration_sku() {
 }
 
 /**
- * Returns true when a product is the Tampere 2026 registration product.
+ * Returns the registration mode inherited from a parent product.
  *
- * @param WC_Product|null $product WooCommerce product object.
+ * @param WC_Product|null $product Product or variation.
+ * @return string
+ */
+function rytkoset_theme_get_paid_event_registration_mode( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return '';
+	}
+
+	// Existing variations may carry the legacy marker directly.
+	if ( 'tampere_2026' === $product->get_meta( '_rytkoset_registration_mode', true ) || rytkoset_theme_get_legacy_event_registration_sku() === (string) $product->get_sku() ) {
+		return 'tampere_2026';
+	}
+
+	if ( $product->get_parent_id() > 0 ) {
+		$parent = wc_get_product( $product->get_parent_id() );
+		if ( $parent instanceof WC_Product ) {
+			$product = $parent;
+		}
+	}
+
+	$mode = (string) $product->get_meta( '_rytkoset_registration_mode', true );
+	if ( in_array( $mode, array( 'event_participants', 'tampere_2026' ), true ) ) {
+		return $mode;
+	}
+
+	return rytkoset_theme_get_legacy_event_registration_sku() === (string) $product->get_sku() ? 'tampere_2026' : '';
+}
+
+/**
+ * Returns whether a product collects paid event participants.
+ *
+ * @param WC_Product|null $product Product or variation.
  * @return bool
  */
 function rytkoset_theme_is_paid_event_registration_product( $product ) {
-	if ( ! $product instanceof WC_Product ) {
-		return false;
-	}
-
-	$registration_mode = $product->get_meta( '_rytkoset_registration_mode', true );
-
-	if ( 'tampere_2026' === $registration_mode ) {
-		return true;
-	}
-
-	if ( rytkoset_theme_get_legacy_event_registration_sku() === (string) $product->get_sku() ) {
-		return true;
-	}
-
-	$parent_id = $product->get_parent_id();
-
-	if ( $parent_id <= 0 ) {
-		return false;
-	}
-
-	$parent = wc_get_product( $parent_id );
-
-	if ( ! $parent instanceof WC_Product ) {
-		return false;
-	}
-
-	return 'tampere_2026' === $parent->get_meta( '_rytkoset_registration_mode', true )
-		|| rytkoset_theme_get_legacy_event_registration_sku() === (string) $parent->get_sku();
+	return '' !== rytkoset_theme_get_paid_event_registration_mode( $product );
 }
 
 /**
@@ -112,7 +116,7 @@ function rytkoset_theme_normalize_registration_deadline_date( $raw_date ) {
 		return '';
 	}
 
-	return $date->format( 'Y-m-d' );
+	return $date->format( 'Y-m-d' ) === $raw_date ? $raw_date : '';
 }
 
 /**
@@ -136,7 +140,9 @@ function rytkoset_theme_get_paid_event_registration_deadline( $product ) {
 		return $deadline;
 	}
 
-	return rytkoset_theme_get_legacy_event_registration_default_deadline();
+	return 'tampere_2026' === rytkoset_theme_get_paid_event_registration_mode( $product )
+		? rytkoset_theme_get_legacy_event_registration_default_deadline()
+		: '';
 }
 
 /**
@@ -242,64 +248,103 @@ function rytkoset_theme_get_paid_event_registration_unavailability_message( $pro
 }
 
 /**
- * Adds Tampere 2026 management fields to the WooCommerce product inventory tab.
+ * Renders paid event settings in the product inventory panel.
  *
  * @return void
  */
 function rytkoset_theme_render_paid_event_product_management_fields() {
-	global $post;
+	global $product_object;
 
-	if ( ! $post instanceof WP_Post || 'product' !== $post->post_type ) {
+	if ( ! $product_object instanceof WC_Product ) {
 		return;
 	}
-
-	$product = wc_get_product( $post->ID );
-
-	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
-		return;
-	}
+	$product = $product_object;
+	$legacy  = 'tampere_2026' === rytkoset_theme_get_paid_event_registration_mode( $product );
 
 	echo '<div class="options_group">';
-
+	// Presence marker prevents unrelated product saves from resetting settings.
+	echo '<input type="hidden" name="rytkoset_paid_event_settings" value="1">';
+	woocommerce_wp_checkbox(
+		array(
+			'id'                => '_rytkoset_event_participants_enabled',
+			'label'             => __( 'Tapahtuman osallistujat', 'rytkoset-theme' ),
+			'description'       => $legacy
+				? __( 'Vanhan tapahtumatuotteen osallistujakentät säilytetään automaattisesti.', 'rytkoset-theme' )
+				: __( 'Kerää kassalla jokaisen osallistujan nimi ja mahdolliset ruokarajoitteet. Yksi tuotekappale vastaa yhtä osallistujaa.', 'rytkoset-theme' ),
+			'value'             => rytkoset_theme_is_paid_event_registration_product( $product ) ? 'yes' : 'no',
+			'custom_attributes' => $legacy ? array( 'disabled' => 'disabled' ) : array(),
+		)
+	);
 	woocommerce_wp_text_input(
 		array(
 			'id'          => rytkoset_theme_get_paid_event_registration_deadline_meta_key(),
 			'label'       => __( 'Ilmoittautumisen määräpäivä', 'rytkoset-theme' ),
-			'description' => __( 'Kapasiteetti tulee tämän tuotteen varastosaldosta. Ota varastonhallinta käyttöön, aseta osallistujapaikkojen määrä Stock quantity -kenttään ja pidä backorders pois päältä.', 'rytkoset-theme' ),
-			'desc_tip'    => false,
+			'description' => __( 'Tyhjä = ei määräpäivää uusille tapahtumatuotteille. Kapasiteetti asetetaan tuotteen varastosaldolla; pidä jälkitoimitukset pois päältä.', 'rytkoset-theme' ),
 			'type'        => 'date',
 			'value'       => rytkoset_theme_get_paid_event_registration_deadline( $product ),
 		),
 		$product
 	);
-
+	woocommerce_wp_text_input(
+		array(
+			'id'                => '_rytkoset_registration_max_participants',
+			'label'             => __( 'Osallistujia enintään / tilaus', 'rytkoset-theme' ),
+			'description'       => __( 'Tuotteen ja sen variaatioiden yhteinen raja (1–10). Yhdellä tilauksella voi olla yhteensä enintään 10 tapahtumaosallistujaa.', 'rytkoset-theme' ),
+			'type'              => 'number',
+			'value'             => rytkoset_theme_get_paid_event_product_participant_limit( $product ),
+			'custom_attributes' => array(
+				'min'  => 1,
+				'max'  => 10,
+				'step' => 1,
+			),
+		),
+		$product
+	);
 	echo '</div>';
 }
 add_action( 'woocommerce_product_options_inventory_product_data', 'rytkoset_theme_render_paid_event_product_management_fields' );
 
 /**
- * Saves Tampere 2026 product management settings.
+ * Returns the per-product limit, bounded by the checkout field ceiling.
  *
- * @param WC_Product $product WooCommerce product object.
+ * @param WC_Product|null $product Product or variation.
+ * @return int
+ */
+function rytkoset_theme_get_paid_event_product_participant_limit( $product ) {
+	if ( $product instanceof WC_Product && $product->get_parent_id() > 0 ) {
+		$product = wc_get_product( $product->get_parent_id() );
+	}
+	$stored = $product instanceof WC_Product ? $product->get_meta( '_rytkoset_registration_max_participants', true ) : '';
+	return '' === $stored ? 10 : max( 1, min( 10, (int) $stored ) );
+}
+
+/**
+ * Saves settings after WooCommerce has checked product permissions and nonce.
+ *
+ * @param WC_Product $product Product being saved.
  * @return void
  */
 function rytkoset_theme_save_paid_event_product_management_fields( $product ) {
-	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the product edit nonce and capability before this hook.
+	if ( ! $product instanceof WC_Product || ! isset( $_POST['rytkoset_paid_event_settings'] ) ) {
 		return;
 	}
-
-	// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the product edit nonce before this hook runs.
-	$raw_deadline = isset( $_POST[ rytkoset_theme_get_paid_event_registration_deadline_meta_key() ] )
-		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_paid_event_registration_deadline_meta_key() ] ) )
-		: '';
+	$legacy = 'tampere_2026' === rytkoset_theme_get_paid_event_registration_mode( $product );
+	if ( ! $legacy ) {
+		$product->update_meta_data( '_rytkoset_registration_mode', isset( $_POST['_rytkoset_event_participants_enabled'] ) ? 'event_participants' : '' );
+	}
+	$raw_deadline = isset( $_POST['_rytkoset_registration_deadline'] ) && is_string( $_POST['_rytkoset_registration_deadline'] )
+		? sanitize_text_field( wp_unslash( $_POST['_rytkoset_registration_deadline'] ) ) : '';
+	$raw_limit    = isset( $_POST['_rytkoset_registration_max_participants'] ) && is_scalar( $_POST['_rytkoset_registration_max_participants'] )
+		? (int) $_POST['_rytkoset_registration_max_participants'] : 10;
 	// phpcs:enable WordPress.Security.NonceVerification.Missing
 	$deadline = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
-
-	if ( '' === $deadline ) {
-		$deadline = rytkoset_theme_get_legacy_event_registration_default_deadline();
+	if ( '' !== $raw_deadline && '' === $deadline ) {
+		WC_Admin_Meta_Boxes::add_error( __( 'Ilmoittautumisen määräpäivä ei ole kelvollinen päivämäärä. Aiempi määräpäivä säilytettiin.', 'rytkoset-theme' ) );
+	} else {
+		$product->update_meta_data( '_rytkoset_registration_deadline', '' === $deadline && $legacy ? rytkoset_theme_get_legacy_event_registration_default_deadline() : $deadline );
 	}
-
-	$product->update_meta_data( rytkoset_theme_get_paid_event_registration_deadline_meta_key(), $deadline );
+	$product->update_meta_data( '_rytkoset_registration_max_participants', max( 1, min( 10, $raw_limit ) ) );
 }
 add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_paid_event_product_management_fields' );
 
@@ -344,7 +389,7 @@ function rytkoset_theme_cart_has_paid_event_registration() {
  */
 function rytkoset_theme_get_paid_event_checkout_notice_markup() {
 	$notice_text = html_entity_decode(
-		'<strong>Tampere 2026 sukukokous:</strong> Täytä jokaiselle osallistujalle nimi, mahdolliset ruokarajoitteet tai allergiat sekä perjantain buffet-illallisen valinta kohdassa Tilauksen lisätiedot.',
+		__( '<strong>Tapahtuman osallistujat:</strong> Täytä jokaiselle osallistujalle nimi ja mahdolliset ruokarajoitteet tai allergiat kohdassa Tilauksen lisätiedot.', 'rytkoset-theme' ),
 		ENT_QUOTES,
 		'UTF-8'
 	);
@@ -456,7 +501,7 @@ function rytkoset_theme_validate_paid_event_cart_items() {
 		return;
 	}
 
-	$messages = array();
+	$messages = array_fill_keys( rytkoset_theme_get_paid_event_cart_limit_errors( WC()->cart->get_cart() ), true );
 
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
@@ -479,6 +524,168 @@ function rytkoset_theme_validate_paid_event_cart_items() {
 	}
 }
 add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_paid_event_cart_items' );
+
+/**
+ * Validates aggregate limits across all variations of each event product.
+ *
+ * @param array $cart_items Cart items.
+ * @return string[]
+ */
+function rytkoset_theme_get_paid_event_cart_limit_errors( $cart_items ) {
+	$counts   = array();
+	$products = array();
+	$errors   = array();
+	foreach ( $cart_items as $cart_item ) {
+		$product = rytkoset_theme_get_paid_event_registration_parent_product( $cart_item['data'] ?? null );
+		if ( ! $product instanceof WC_Product ) {
+			continue;
+		}
+		$id              = $product->get_id();
+		$counts[ $id ]   = ( $counts[ $id ] ?? 0 ) + max( 0, (int) ( $cart_item['quantity'] ?? 0 ) );
+		$products[ $id ] = $product;
+	}
+	foreach ( $counts as $id => $quantity ) {
+		$limit = rytkoset_theme_get_paid_event_product_participant_limit( $products[ $id ] );
+		if ( $quantity > $limit ) {
+			$errors[] = sprintf(
+				/* translators: 1: product name, 2: maximum participants per order. */
+				__( '%1$s: yhdellä tilauksella voi ilmoittaa enintään %2$d osallistujaa. Pienennä määrää ostoskorissa.', 'rytkoset-theme' ),
+				$products[ $id ]->get_name(),
+				$limit
+			);
+		}
+	}
+	if ( array_sum( $counts ) > rytkoset_theme_get_paid_event_max_participants() ) {
+		$errors[] = __( 'Yhdellä tilauksella voi ilmoittaa yhteensä enintään 10 tapahtumaosallistujaa. Pienennä määrää ostoskorissa.', 'rytkoset-theme' );
+	}
+	return $errors;
+}
+
+/**
+ * Rejects excessive participant quantities in the Store API as well.
+ *
+ * @param WP_Error $errors Cart validation errors.
+ * @param WC_Cart  $cart   Current cart.
+ * @return void
+ */
+function rytkoset_theme_validate_paid_event_store_api_cart( $errors, $cart ) {
+	foreach ( rytkoset_theme_get_paid_event_cart_limit_errors( $cart->get_cart() ) as $message ) {
+		$errors->add( 'rytkoset_participant_limit_' . md5( $message ), $message );
+	}
+}
+add_action( 'woocommerce_store_api_cart_errors', 'rytkoset_theme_validate_paid_event_store_api_cart', 10, 2 );
+
+/**
+ * Returns the one-based participant positions that retain legacy buffet fields.
+ *
+ * @param array $cart_items Cart items.
+ * @return int[]
+ */
+function rytkoset_theme_get_paid_event_legacy_buffet_indices( $cart_items ) {
+	$indices = array();
+	$index   = 0;
+	foreach ( $cart_items as $cart_item ) {
+		$mode = rytkoset_theme_get_paid_event_registration_mode( $cart_item['data'] ?? null );
+		if ( '' === $mode ) {
+			continue;
+		}
+		$quantity = max( 0, (int) ( $cart_item['quantity'] ?? 0 ) );
+		for ( $i = 0; $i < $quantity && $index < rytkoset_theme_get_paid_event_max_participants(); $i++ ) {
+			++$index;
+			if ( 'tampere_2026' === $mode ) {
+				$indices[] = $index;
+			}
+		}
+	}
+	return $indices;
+}
+
+/**
+ * Matches only the cart positions that belong to a legacy event product.
+ *
+ * @param int $index One-based participant position.
+ * @return array
+ */
+function rytkoset_theme_get_paid_event_legacy_buffet_schema( $index ) {
+	$schema    = rytkoset_theme_get_paid_event_participant_active_schema( $index );
+	$namespace = rytkoset_theme_get_paid_event_store_api_namespace();
+	$extension = &$schema['properties']['cart']['properties']['extensions']['properties'][ $namespace ];
+	$extension['properties']['legacy_buffet_indices'] = array(
+		'type'     => 'array',
+		'contains' => array( 'const' => (int) $index ),
+	);
+	$extension['required'][]                          = 'legacy_buffet_indices';
+	return $schema;
+}
+
+/**
+ * Saves the registration mode on each purchased line, independently of later product edits.
+ *
+ * @param WC_Order $order Checkout order.
+ * @return void
+ */
+function rytkoset_theme_snapshot_paid_event_order_items( $order ) {
+	foreach ( $order->get_items() as $item ) {
+		$mode = rytkoset_theme_get_paid_event_registration_mode( $item->get_product() );
+		if ( '' !== $mode ) {
+			$item->update_meta_data( '_rytkoset_registration_mode', $mode );
+			$item->update_meta_data( '_rytkoset_participant_type', rytkoset_theme_get_paid_event_participant_type_label( $item->get_product() ) );
+			$item->save();
+		}
+	}
+}
+add_action( 'woocommerce_store_api_checkout_update_order_meta', 'rytkoset_theme_snapshot_paid_event_order_items' );
+
+/**
+ * Expands saved order lines in the same order as the checkout participant fields.
+ *
+ * @param WC_Order $order Order to read.
+ * @return array
+ */
+function rytkoset_theme_get_paid_event_order_participant_contexts( $order ) {
+	if ( ! $order instanceof WC_Order ) {
+		return array();
+	}
+	$contexts = array();
+	foreach ( $order->get_items() as $item ) {
+		$mode = (string) $item->get_meta( '_rytkoset_registration_mode', true );
+		if ( '' === $mode ) {
+			$mode = rytkoset_theme_get_paid_event_registration_mode( $item->get_product() );
+		}
+		if ( ! in_array( $mode, array( 'event_participants', 'tampere_2026' ), true ) ) {
+			continue;
+		}
+		$type = (string) $item->get_meta( '_rytkoset_participant_type', true );
+		if ( '' === $type ) {
+			$type = rytkoset_theme_get_paid_event_participant_type_label( $item->get_product() );
+		}
+		$context = array(
+			'mode'        => $mode,
+			'type'        => $type,
+			'product_ids' => rytkoset_theme_get_order_item_product_reference_ids( $item ),
+		);
+		for ( $i = 0; $i < (int) $item->get_quantity(); $i++ ) {
+			$contexts[] = $context;
+		}
+	}
+	return $contexts;
+}
+
+/**
+ * Checks whether an order contains participant fields for a specific event product.
+ *
+ * @param WC_Order $order      Order to read.
+ * @param int      $product_id Linked event product.
+ * @return bool
+ */
+function rytkoset_theme_order_has_paid_event_participant_product( $order, $product_id ) {
+	foreach ( rytkoset_theme_get_paid_event_order_participant_contexts( $order ) as $context ) {
+		if ( in_array( (int) $product_id, $context['product_ids'], true ) ) {
+			return true;
+		}
+	}
+	return false;
+}
 
 /**
  * Returns the maximum number of Tampere 2026 participants supported in one order.
@@ -519,14 +726,18 @@ function rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items ) {
 		}
 
 		$type_label = rytkoset_theme_get_paid_event_participant_type_label( $product );
-		$price      = html_entity_decode(
+		if ( 'event_participants' === rytkoset_theme_get_paid_event_registration_mode( $product ) ) {
+			$parent     = rytkoset_theme_get_paid_event_registration_parent_product( $product );
+			$type_label = $parent->get_name() . ( '' !== $type_label ? ' — ' . $type_label : '' );
+		}
+		$price    = html_entity_decode(
 			wp_strip_all_tags( wc_price( wc_get_price_including_tax( $product ) ) ),
 			ENT_QUOTES,
 			'UTF-8'
 		);
-		$quantity   = isset( $cart_item['quantity'] ) ? (int) $cart_item['quantity'] : 0;
+		$quantity = isset( $cart_item['quantity'] ) ? (int) $cart_item['quantity'] : 0;
 
-		for ( $i = 0; $i < $quantity; $i++ ) {
+		for ( $i = 0; $i < $quantity && count( $lines ) < rytkoset_theme_get_paid_event_max_participants(); $i++ ) {
 			$lines[] = array(
 				'type'  => $type_label,
 				'price' => $price,
@@ -557,8 +768,9 @@ function rytkoset_theme_get_paid_event_cart_participant_lines() {
  */
 function rytkoset_theme_get_paid_event_store_api_cart_data() {
 	return array(
-		'participant_count' => rytkoset_theme_get_paid_event_participant_count(),
-		'participants'      => rytkoset_theme_get_paid_event_cart_participant_lines(),
+		'participant_count'     => rytkoset_theme_get_paid_event_participant_count(),
+		'legacy_buffet_indices' => rytkoset_theme_get_paid_event_legacy_buffet_indices( function_exists( 'WC' ) && WC()->cart ? WC()->cart->get_cart() : array() ),
+		'participants'          => rytkoset_theme_get_paid_event_cart_participant_lines(),
 	);
 }
 
@@ -569,14 +781,19 @@ function rytkoset_theme_get_paid_event_store_api_cart_data() {
  */
 function rytkoset_theme_get_paid_event_store_api_cart_schema() {
 	return array(
-		'participant_count' => array(
-			'description' => __( 'Tampere 2026 -osallistujien määrä ostoskorissa.', 'rytkoset-theme' ),
+		'legacy_buffet_indices' => array(
+			'type'     => 'array',
+			'readonly' => true,
+			'items'    => array( 'type' => 'integer' ),
+		),
+		'participant_count'     => array(
+			'description' => __( 'Tapahtumaosallistujien määrä ostoskorissa.', 'rytkoset-theme' ),
 			'type'        => 'integer',
 			'minimum'     => 0,
 			'readonly'    => true,
 		),
-		'participants'      => array(
-			'description' => __( 'Tampere 2026 -osallistujarivit (osallistujatyyppi ja hinta) ostoskorissa.', 'rytkoset-theme' ),
+		'participants'          => array(
+			'description' => __( 'Tapahtuman osallistujarivit (osallistujatyyppi ja hinta) ostoskorissa.', 'rytkoset-theme' ),
 			'type'        => 'array',
 			'readonly'    => true,
 			'items'       => array(
@@ -656,8 +873,8 @@ function rytkoset_theme_enqueue_paid_event_checkout_participants() {
 		'i18n'      => array(
 			/* translators: %d: participant number. */
 			'title'   => __( 'Osallistuja %d', 'rytkoset-theme' ),
-			'heading' => __( 'Osallistujat — Tampere 2026', 'rytkoset-theme' ),
-			'intro'   => __( 'Täytä jokaiselle osallistujalle nimi, mahdolliset ruokarajoitteet tai allergiat sekä perjantain buffet-illallisen valinta.', 'rytkoset-theme' ),
+			'heading' => __( 'Tapahtuman osallistujat', 'rytkoset-theme' ),
+			'intro'   => __( 'Täytä jokaiselle osallistujalle nimi ja mahdolliset ruokarajoitteet tai allergiat.', 'rytkoset-theme' ),
 		),
 	);
 
@@ -743,12 +960,6 @@ function rytkoset_theme_register_paid_event_checkout_fields() {
 		return;
 	}
 
-	$product_id = wc_get_product_id_by_sku( rytkoset_theme_get_legacy_event_registration_sku() );
-
-	if ( ! $product_id ) {
-		return;
-	}
-
 	for ( $index = 1; $index <= rytkoset_theme_get_paid_event_max_participants(); $index++ ) {
 		$name_field_id   = sprintf( 'rytkoset/participant_%d_name', $index );
 		$diet_field_id   = sprintf( 'rytkoset/participant_%d_diet', $index );
@@ -802,7 +1013,7 @@ function rytkoset_theme_register_paid_event_checkout_fields() {
 				'location'          => 'order',
 				'type'              => 'checkbox',
 				'required'          => false,
-				'hidden'            => rytkoset_theme_get_paid_event_participant_hidden_schema( $index ),
+				'hidden'            => array( 'not' => rytkoset_theme_get_paid_event_legacy_buffet_schema( $index ) ),
 				'sanitize_callback' => 'rest_sanitize_boolean',
 			)
 		);
@@ -916,60 +1127,25 @@ function rytkoset_theme_get_paid_event_participant_type_label( $product ) {
  * @return array<int, string>
  */
 function rytkoset_theme_get_paid_event_order_participant_type_sequence( $order ) {
-	if ( ! $order instanceof WC_Order ) {
-		return array();
-	}
-
-	$types = array();
-
-	foreach ( $order->get_items() as $item ) {
-		$product = $item->get_product();
-
-		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
-			continue;
-		}
-
-		$type_label = rytkoset_theme_get_paid_event_participant_type_label( $product );
-
-		for ( $i = 0; $i < (int) $item->get_quantity(); $i++ ) {
-			$types[] = $type_label;
-		}
-	}
-
-	return $types;
+	return array_column( rytkoset_theme_get_paid_event_order_participant_contexts( $order ), 'type' );
 }
 
 /**
  * Returns Tampere 2026 participant data saved on an order.
  *
- * @param WC_Order $order WooCommerce order object.
- * @return array<int, array<string, string>>
+ * @param WC_Order $order      WooCommerce order object.
+ * @param int      $product_id Optional event product filter; field indices remain order-wide.
+ * @return array<int, array<string, mixed>>
  */
-function rytkoset_theme_get_paid_event_order_participants( $order ) {
-	if ( ! $order instanceof WC_Order ) {
-		return array();
-	}
+function rytkoset_theme_get_paid_event_order_participants( $order, $product_id = 0 ) {
+	$contexts     = rytkoset_theme_get_paid_event_order_participant_contexts( $order );
+	$participants = array();
 
-	$participant_count = 0;
-
-	foreach ( $order->get_items() as $item ) {
-		$product = $item->get_product();
-
-		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
+	foreach ( $contexts as $position => $context ) {
+		$index = $position + 1;
+		if ( $product_id > 0 && ! in_array( (int) $product_id, $context['product_ids'], true ) ) {
 			continue;
 		}
-
-		$participant_count += (int) $item->get_quantity();
-	}
-
-	if ( $participant_count < 1 ) {
-		return array();
-	}
-
-	$participants      = array();
-	$participant_types = rytkoset_theme_get_paid_event_order_participant_type_sequence( $order );
-
-	for ( $index = 1; $index <= $participant_count; $index++ ) {
 		$name   = trim(
 			rytkoset_theme_get_order_additional_checkout_field_value(
 				$order,
@@ -986,7 +1162,10 @@ function rytkoset_theme_get_paid_event_order_participants( $order ) {
 			$order,
 			sprintf( 'rytkoset/participant_%d_friday_buffet', $index )
 		);
-		$type   = isset( $participant_types[ $index - 1 ] ) ? (string) $participant_types[ $index - 1 ] : '';
+		$type   = $context['type'];
+		if ( 'tampere_2026' !== $context['mode'] ) {
+			$buffet = null;
+		}
 
 		if ( '' === $name && '' === $diet && ! $buffet ) {
 			continue;
@@ -1010,19 +1189,7 @@ function rytkoset_theme_get_paid_event_order_participants( $order ) {
  * @return bool
  */
 function rytkoset_theme_is_paid_event_registration_order( $order ) {
-	if ( ! $order instanceof WC_Order ) {
-		return false;
-	}
-
-	foreach ( $order->get_items() as $item ) {
-		$product = $item->get_product();
-
-		if ( rytkoset_theme_is_paid_event_registration_product( $product ) ) {
-			return true;
-		}
-	}
-
-	return false;
+	return ! empty( rytkoset_theme_get_paid_event_order_participant_contexts( $order ) );
 }
 
 /**
@@ -1032,23 +1199,7 @@ function rytkoset_theme_is_paid_event_registration_order( $order ) {
  * @return int
  */
 function rytkoset_theme_get_paid_event_order_participant_quantity( $order ) {
-	if ( ! $order instanceof WC_Order ) {
-		return 0;
-	}
-
-	$participant_quantity = 0;
-
-	foreach ( $order->get_items() as $item ) {
-		$product = $item->get_product();
-
-		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
-			continue;
-		}
-
-		$participant_quantity += (int) $item->get_quantity();
-	}
-
-	return max( 0, $participant_quantity );
+	return count( rytkoset_theme_get_paid_event_order_participant_contexts( $order ) );
 }
 
 /**
@@ -1160,7 +1311,14 @@ function rytkoset_theme_filter_paid_event_order_confirmation_fields( $show, $fie
 
 	$order = isset( $context['order'] ) && $context['order'] instanceof WC_Order ? $context['order'] : null;
 
-	return $show && $index <= rytkoset_theme_get_paid_event_visible_participant_field_limit( $order );
+	$contexts = rytkoset_theme_get_paid_event_order_participant_contexts( $order );
+	if ( ! isset( $contexts[ $index - 1 ] ) ) {
+		return false;
+	}
+	if ( str_ends_with( $field_id, '_friday_buffet' ) && 'tampere_2026' !== $contexts[ $index - 1 ]['mode'] ) {
+		return false;
+	}
+	return $show;
 }
 add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_paid_event_order_confirmation_fields', 10, 4 );
 
@@ -1257,13 +1415,9 @@ function rytkoset_theme_filter_paid_event_admin_order_fields( $fields, $order = 
 		return $fields;
 	}
 
-	$participant_quantity = rytkoset_theme_get_paid_event_visible_participant_field_limit( $order );
-
 	foreach ( $fields as $field_key => $field ) {
 		$field_id = is_array( $field ) && isset( $field['id'] ) ? (string) $field['id'] : (string) $field_key;
-		$index    = rytkoset_theme_get_paid_event_participant_index_from_field_id( $field_id );
-
-		if ( $index > $participant_quantity ) {
+		if ( ! rytkoset_theme_filter_paid_event_order_confirmation_fields( true, array( 'id' => $field_id ), array(), array( 'order' => $order ) ) ) {
 			unset( $fields[ $field_key ] );
 		}
 	}
@@ -1287,8 +1441,12 @@ function rytkoset_theme_cleanup_paid_event_extra_participant_order_meta( $order 
 	$max_participants     = rytkoset_theme_get_paid_event_max_participants();
 	$deleted_meta         = false;
 
-	for ( $index = $participant_quantity + 1; $index <= $max_participants; $index++ ) {
-		foreach ( rytkoset_theme_get_paid_event_participant_field_ids( $index ) as $field_id ) {
+	$contexts = rytkoset_theme_get_paid_event_order_participant_contexts( $order );
+	for ( $index = 1; $index <= $max_participants; $index++ ) {
+		$fields = $index > $participant_quantity
+			? rytkoset_theme_get_paid_event_participant_field_ids( $index )
+			: ( 'tampere_2026' !== $contexts[ $index - 1 ]['mode'] ? array( sprintf( 'rytkoset/participant_%d_friday_buffet', $index ) ) : array() );
+		foreach ( $fields as $field_id ) {
 			$meta_key = '_wc_other/' . $field_id;
 
 			if ( ! $order->meta_exists( $meta_key ) ) {
@@ -1318,7 +1476,7 @@ function rytkoset_theme_register_paid_event_order_metabox() {
 	if ( ! function_exists( 'wc_get_page_screen_id' ) || ! function_exists( 'wc_get_container' ) ) {
 		add_meta_box(
 			'rytkoset-tampere-2026-participants',
-			__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
+			__( 'Tapahtuman osallistujat', 'rytkoset-theme' ),
 			'rytkoset_theme_render_paid_event_order_participants_metabox',
 			'shop_order',
 			'side',
@@ -1339,7 +1497,7 @@ function rytkoset_theme_register_paid_event_order_metabox() {
 
 	add_meta_box(
 		'rytkoset-tampere-2026-participants',
-		__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
+		__( 'Tapahtuman osallistujat', 'rytkoset-theme' ),
 		'rytkoset_theme_render_paid_event_order_participants_metabox',
 		$screen,
 		'side',
@@ -1386,11 +1544,13 @@ function rytkoset_theme_render_paid_event_order_participants_metabox( $post_or_o
 			echo esc_html__( 'Ruokarajoitteet / allergiat:', 'rytkoset-theme' ) . ' ' . esc_html( $participant['diet'] );
 		}
 
-		echo '<br>';
-		echo esc_html__( 'Perjantain buffet:', 'rytkoset-theme' ) . ' ';
-		echo ! empty( $participant['friday_buffet'] )
-			? esc_html__( 'Kyllä', 'rytkoset-theme' )
-			: esc_html__( 'Ei', 'rytkoset-theme' );
+		if ( null !== $participant['friday_buffet'] ) {
+			echo '<br>';
+			echo esc_html__( 'Perjantain buffet:', 'rytkoset-theme' ) . ' ';
+			echo ! empty( $participant['friday_buffet'] )
+				? esc_html__( 'Kyllä', 'rytkoset-theme' )
+				: esc_html__( 'Ei', 'rytkoset-theme' );
+		}
 
 		echo '</li>';
 	}
@@ -1411,12 +1571,12 @@ function rytkoset_theme_add_paid_event_orders_column( $columns ) {
 		$new_columns[ $column_name ] = $column_label;
 
 		if ( 'order_status' === $column_name ) {
-			$new_columns['rytkoset_tampere_2026'] = __( 'Tampere 2026', 'rytkoset-theme' );
+			$new_columns['rytkoset_tampere_2026'] = __( 'Tapahtumaosallistujat', 'rytkoset-theme' );
 		}
 	}
 
 	if ( ! isset( $new_columns['rytkoset_tampere_2026'] ) ) {
-		$new_columns['rytkoset_tampere_2026'] = __( 'Tampere 2026', 'rytkoset-theme' );
+		$new_columns['rytkoset_tampere_2026'] = __( 'Tapahtumaosallistujat', 'rytkoset-theme' );
 	}
 
 	return $new_columns;
@@ -1767,14 +1927,14 @@ function rytkoset_theme_get_order_event_product_quantity( $order, $event_id ) {
  * @return array<int, array<string, mixed>>
  */
 function rytkoset_theme_get_event_order_notification_participants( $order, $event_id ) {
-	$product = rytkoset_theme_get_event_linked_product( $event_id );
+	$product_id = (int) get_post_meta( $event_id, rytkoset_theme_get_event_product_meta_key(), true );
 
 	if (
 		function_exists( 'rytkoset_theme_is_paid_event_registration_product' )
 		&& function_exists( 'rytkoset_theme_get_paid_event_order_participants' )
-		&& rytkoset_theme_is_paid_event_registration_product( $product )
+		&& rytkoset_theme_order_has_paid_event_participant_product( $order, $product_id )
 	) {
-		return rytkoset_theme_get_paid_event_order_participants( $order );
+		return rytkoset_theme_get_paid_event_order_participants( $order, $product_id );
 	}
 
 	$quantity     = max( 1, rytkoset_theme_get_order_event_product_quantity( $order, $event_id ) );

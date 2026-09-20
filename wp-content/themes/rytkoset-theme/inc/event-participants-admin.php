@@ -155,8 +155,6 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 		return array();
 	}
 
-	$has_participant_fields = rytkoset_theme_is_paid_event_registration_product( wc_get_product( $product_id ) );
-
 	$orders = rytkoset_theme_get_cached_paid_orders();
 
 	$rows = array();
@@ -170,13 +168,7 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 		$quantity          = 0;
 
 		foreach ( $order->get_items() as $item ) {
-			$item_product = $item->get_product();
-
-			if ( ! $item_product instanceof WC_Product ) {
-				continue;
-			}
-
-			if ( (int) $item_product->get_id() === $product_id || (int) $item_product->get_parent_id() === $product_id ) {
+			if ( in_array( $product_id, rytkoset_theme_get_order_item_product_reference_ids( $item ), true ) ) {
 				$order_has_product = true;
 				$quantity         += (int) $item->get_quantity();
 			}
@@ -199,8 +191,8 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 		$created       = wp_date( get_option( 'date_format' ), $order->get_date_created() ? $order->get_date_created()->getTimestamp() : null );
 		$edit_url      = (string) admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order->get_id() );
 
-		if ( $has_participant_fields ) {
-			$participants = rytkoset_theme_get_paid_event_order_participants( $order );
+		if ( rytkoset_theme_order_has_paid_event_participant_product( $order, $product_id ) ) {
+			$participants = rytkoset_theme_get_paid_event_order_participants( $order, $product_id );
 
 			if ( empty( $participants ) ) {
 				continue;
@@ -218,7 +210,7 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 					'diet'             => isset( $participant['diet'] ) ? (string) $participant['diet'] : '',
 					'notes'            => '',
 					'participant_type' => isset( $participant['participant_type'] ) ? (string) $participant['participant_type'] : '',
-					'friday_buffet'    => ! empty( $participant['friday_buffet'] ),
+					'friday_buffet'    => $participant['friday_buffet'],
 					'status'           => 'paid',
 					'status_label'     => $status_label,
 					'source'           => 'paid',
@@ -925,7 +917,7 @@ function rytkoset_theme_export_event_participants_csv() {
 				(string) ( $row['event_title'] ?? '' ),
 				(string) ( $row['name'] ?? '' ),
 				(string) ( $row['participant_type'] ?? '' ),
-				! empty( $row['friday_buffet'] ) ? __( 'Kyllä', 'rytkoset-theme' ) : __( 'Ei', 'rytkoset-theme' ),
+				isset( $row['friday_buffet'] ) ? ( $row['friday_buffet'] ? __( 'Kyllä', 'rytkoset-theme' ) : __( 'Ei', 'rytkoset-theme' ) ) : '',
 				(string) ( $row['email'] ?? '' ),
 				(string) ( $row['phone'] ?? '' ),
 				$details,
@@ -1173,9 +1165,9 @@ function rytkoset_theme_render_event_participants_admin_page() {
 							<td><?php echo '' !== (string) $row['participant_type'] ? esc_html( (string) $row['participant_type'] ) : '&mdash;'; ?></td>
 							<td>
 								<?php
-								echo ! empty( $row['friday_buffet'] )
-									? esc_html__( 'Kyllä', 'rytkoset-theme' )
-									: esc_html__( 'Ei', 'rytkoset-theme' );
+								echo isset( $row['friday_buffet'] )
+									? ( $row['friday_buffet'] ? esc_html__( 'Kyllä', 'rytkoset-theme' ) : esc_html__( 'Ei', 'rytkoset-theme' ) )
+									: '&mdash;';
 								?>
 							</td>
 							<?php if ( $show_event_column ) : ?>

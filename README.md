@@ -241,6 +241,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/woocommerce-digital-products.md` - digitaalisten tuotteiden MVP-malli
 - `docs/woocommerce-rytkosten-sukulainen-product.md` - painetun jäsenlehden tuotemalli
 - `docs/woocommerce-product-sync.md` - tuotteiden synkronointi ympäristöjen välillä
+- `docs/woocommerce-event-registration.md` - maksullisen tapahtuman osallistujakentät, tuoteasetukset ja rajat
 - `docs/woocommerce-event-product-link.md` - tapahtuman linkitys maksutuotteeseen
 - `docs/woocommerce-tampere-2026-product.md` - Tampere 2026 -osallistumismaksutuote
 - `docs/woocommerce-tampere-2026-checkout-fields.md` - Tampere 2026 checkout-kentät

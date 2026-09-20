@@ -1,5 +1,7 @@
 # WooCommerce: Tampere 2026 osallistumismaksutuote
 
+Uuden tapahtuman käyttöönotto: [maksullisen tapahtuman osallistujailmoittautuminen](woocommerce-event-registration.md). Tämä ohje kuvaa vanhan tapahtuman asetuksia.
+
 Tämä dokumentti kuvaa tiketin `#139` tavoitetilan ja toteutusmallin paikallisessa WordPress-ympäristössä.
 
 ## Rajaus tässä vaiheessa

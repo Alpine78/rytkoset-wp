@@ -27,6 +27,8 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertTrue( rytkoset_theme_is_paid_event_registration_product( $variation ) );
 		$this->assertSame( $parent, rytkoset_theme_get_paid_event_registration_parent_product( $variation ) );
 		$this->assertFalse( rytkoset_theme_is_paid_event_registration_product( $this->plain_product() ) );
+		rytkoset_test_register_product( 83, 'publish', 'Legacy parent' );
+		$this->assertTrue( rytkoset_theme_is_paid_event_registration_product( new WC_Product( array( '_parent_id' => 83, '_rytkoset_registration_mode' => 'tampere_2026' ), 84 ) ) );
 	}
 
 	public function test_legacy_order_participants_are_read_without_migration(): void {
@@ -61,6 +63,131 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'rytkoset_event_registration', $namespace );
 		$this->assertSame( array( $namespace ), $extension['required'] );
 		$this->assertSame( 2, $extension['properties'][ $namespace ]['properties']['participant_count']['minimum'] );
+	}
+
+	public function test_generic_product_inherits_mode_and_deadline_from_parent_without_legacy_sku(): void {
+		$parent = rytkoset_test_register_product( 901, 'publish', 'Tuleva tapahtuma', array( '_rytkoset_registration_mode' => 'event_participants' ) );
+		$child  = new WC_Product( array( '_parent_id' => 901 ), 902 );
+		$this->assertTrue( rytkoset_theme_is_paid_event_registration_product( $child ) );
+		$this->assertSame( '', rytkoset_theme_get_paid_event_registration_deadline( $child ) );
+		$parent->update_meta_data( '_rytkoset_registration_deadline', '2029-08-10' );
+		$this->assertSame( '2029-08-10', rytkoset_theme_get_paid_event_registration_deadline( $child ) );
+		$this->assertSame( '2026-07-30', rytkoset_theme_get_paid_event_registration_deadline( $this->registration_product() ) );
+	}
+
+	public function test_admin_opt_in_and_disable_preserve_settings_on_unrelated_saves(): void {
+		$product = $this->plain_product();
+		$_POST = array(
+			'rytkoset_paid_event_settings' => '1',
+			'_rytkoset_event_participants_enabled' => 'yes',
+			'_rytkoset_registration_deadline' => '2029-08-10',
+			'_rytkoset_registration_max_participants' => '3',
+		);
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( 'event_participants', rytkoset_theme_get_paid_event_registration_mode( $product ) );
+		$this->assertSame( 3, rytkoset_theme_get_paid_event_product_participant_limit( $product ) );
+		$_POST = array();
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( '2029-08-10', rytkoset_theme_get_paid_event_registration_deadline( $product ) );
+		$_POST = array( 'rytkoset_paid_event_settings' => '1' );
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertFalse( rytkoset_theme_is_paid_event_registration_product( $product ) );
+	}
+
+	public function test_admin_invalid_date_preserves_previous_date_and_clamps_limit(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants', '_rytkoset_registration_deadline' => '2029-08-10' ) );
+		$_POST = array(
+			'rytkoset_paid_event_settings' => '1',
+			'_rytkoset_event_participants_enabled' => 'yes',
+			'_rytkoset_registration_deadline' => '2029-02-31',
+			'_rytkoset_registration_max_participants' => '999',
+		);
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( '2029-08-10', rytkoset_theme_get_paid_event_registration_deadline( $product ) );
+		$this->assertSame( 10, rytkoset_theme_get_paid_event_product_participant_limit( $product ) );
+		$this->assertNotEmpty( WC_Admin_Meta_Boxes::$errors );
+	}
+
+	public function test_legacy_mode_cannot_be_removed_by_new_admin_checkbox(): void {
+		$product = $this->registration_product();
+		$_POST = array( 'rytkoset_paid_event_settings' => '1' );
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( 'tampere_2026', rytkoset_theme_get_paid_event_registration_mode( $product ) );
+		$this->assertSame( '2026-07-30', rytkoset_theme_get_paid_event_registration_deadline( $product ) );
+	}
+
+	public function test_limits_sum_variations_and_ignore_non_event_products(): void {
+		rytkoset_test_register_product( 901, 'publish', 'Tuleva tapahtuma', array( '_rytkoset_registration_mode' => 'event_participants', '_rytkoset_registration_max_participants' => 3 ) );
+		$cart = array(
+			array( 'data' => new WC_Product( array( '_parent_id' => 901 ), 902 ), 'quantity' => 2 ),
+			array( 'data' => new WC_Product( array( '_parent_id' => 901 ), 903 ), 'quantity' => 2 ),
+			array( 'data' => $this->plain_product(), 'quantity' => 99 ),
+		);
+		$errors = rytkoset_theme_get_paid_event_cart_limit_errors( $cart );
+		$this->assertCount( 1, $errors );
+		$this->assertStringContainsString( '3 osallistujaa', $errors[0] );
+		$cart[1]['quantity'] = 1;
+		$this->assertSame( array(), rytkoset_theme_get_paid_event_cart_limit_errors( $cart ) );
+	}
+
+	public function test_global_limit_is_enforced_by_store_api(): void {
+		$cart = new Rytkoset_Test_Cart();
+		$cart->items = array(
+			array( 'data' => new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 ), 'quantity' => 6 ),
+			array( 'data' => new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 902 ), 'quantity' => 5 ),
+		);
+		$errors = new WP_Error();
+		rytkoset_theme_validate_paid_event_store_api_cart( $errors, $cart );
+		$this->assertNotEmpty( $errors->get_error_codes() );
+		$this->assertStringContainsString( 'yhteensä enintään 10', $errors->get_error_message() );
+	}
+
+	public function test_order_snapshot_survives_product_opt_out(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 );
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Tuleva tapahtuma', 1 );
+		$order->meta['_wc_other/rytkoset/participant_1_name'] = 'Testi Osallistuja';
+		rytkoset_theme_snapshot_paid_event_order_items( $order );
+		$product->update_meta_data( '_rytkoset_registration_mode', '' );
+		$this->assertTrue( rytkoset_theme_is_paid_event_registration_order( $order ) );
+		$this->assertTrue( rytkoset_theme_order_has_paid_event_participant_product( $order, 901 ) );
+		$rows = rytkoset_theme_get_paid_event_order_participants( $order, 901 );
+		$this->assertSame( 'Testi Osallistuja', $rows[0]['name'] );
+		$this->assertNull( $rows[0]['friday_buffet'] );
+	}
+
+	public function test_mixed_events_keep_order_field_positions_and_legacy_choice(): void {
+		$generic = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 );
+		$legacy = new WC_Product( array( '_rytkoset_registration_mode' => 'tampere_2026' ), 902 );
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $generic, 'Tuleva', 1 );
+		$order->items[] = new Rytkoset_Test_Order_Item( $legacy, 'Vanha', 1 );
+		$order->meta['_wc_other/rytkoset/participant_1_name'] = 'Ensimmäinen';
+		$order->meta['_wc_other/rytkoset/participant_2_name'] = 'Toinen';
+		$order->meta['_wc_other/rytkoset/participant_2_friday_buffet'] = '1';
+		$this->assertSame( 'Toinen', rytkoset_theme_get_paid_event_order_participants( $order, 902 )[0]['name'] );
+		$this->assertTrue( rytkoset_theme_get_paid_event_order_participants( $order, 902 )[0]['friday_buffet'] );
+		$this->assertSame( array( 2 ), rytkoset_theme_get_paid_event_legacy_buffet_indices( array(
+			array( 'data' => $generic, 'quantity' => 1 ), array( 'data' => $legacy, 'quantity' => 1 ),
+		) ) );
+		$this->assertFalse( rytkoset_theme_filter_paid_event_order_confirmation_fields( true, array( 'id' => 'rytkoset/participant_1_friday_buffet' ), array(), array( 'order' => $order ) ) );
+		$this->assertTrue( rytkoset_theme_filter_paid_event_order_confirmation_fields( true, array( 'id' => 'rytkoset/participant_2_friday_buffet' ), array(), array( 'order' => $order ) ) );
+	}
+
+	public function test_cleanup_keeps_names_and_diets_but_removes_inapplicable_checkbox_meta(): void {
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 ), 'Uusi tapahtuma', 1 );
+		$order->meta = array(
+			'_wc_other/rytkoset/participant_1_name' => 'Testi',
+			'_wc_other/rytkoset/participant_1_diet' => 'Ruokavalio',
+			'_wc_other/rytkoset/participant_1_friday_buffet' => '1',
+			'_wc_other/rytkoset/participant_2_name' => 'Ylimääräinen',
+		);
+		rytkoset_theme_cleanup_paid_event_extra_participant_order_meta( $order );
+		$this->assertSame( array(
+			'_wc_other/rytkoset/participant_1_name' => 'Testi',
+			'_wc_other/rytkoset/participant_1_diet' => 'Ruokavalio',
+		), $order->meta );
 	}
 
 	// --- participant field-id helpers --------------------------------------
