@@ -60,6 +60,7 @@ require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
 require_once get_template_directory() . '/inc/woocommerce-empty-cart.php';
+require_once get_template_directory() . '/inc/woocommerce-checkout-session.php';
 require_once get_template_directory() . '/inc/woocommerce-structured-data.php';
 require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';

@@ -226,6 +226,12 @@ Vanha maksullinen variaatiotuote (SKU `tampere-2026-bussikyyti`, `inc/woocommerc
 - Maksun integrointi suoraan ilmoittautumiseen (peritään erikseen vasta varmistuksen jälkeen).
 - Bussipaikka-tuotteen ja tapahtuman tekninen linkitys (maksu hoidetaan manuaalisilla tilauksilla).
 
+## Ostoskori tilauksen jälkeen
+
+Onnistuneen tilauksen jälkeen ostoskorin pitää tyhjentyä myös kirjautuneella asiakkaalla. #642:n hyväksymistestissä löytyi WooCommercen kassapyyntöjen kilpailutilanne: ennen tilausvahvistusta alkanut taustapäivitys saattoi valmistua sen jälkeen ja tallentaa vanhan korin takaisin istuntoon. Teema estää vanhentuneen kassapäivityksen istuntotallennuksen. Uutta ostoskoria ei tyhjennetä tämän tarkistuksen yhteydessä.
+
+Paikallisessa toistokokeessa viivästetty taustapäivitys palautti ennen korjausta kaksi tuotetta valmistuneen tilauksen jälkeen. Korjauksen jälkeen sama kahdeksan sekunnin viivästyskoe jätti korin tyhjäksi. Myös heti oston jälkeen lisätty uusi tuote säilyi myöhäisen pyynnön valmistuessa. Lint ja 1 093 PHPUnit-testiä läpäisty (2 844 assertiota; ennestään tunnettu deprecation säilyy). Dev-julkaisutestissä tarkistetaan vielä korikuvakkeesta avattu ostoskori ja uuden tuotteen lisääminen oston jälkeen. Korjaus ei poista takautuvasti ennen korjausta jo palautuneita ostoskoreja; vanhan testikorin voi tyhjentää kerran ostoskorisivulla.
+
 ## Validointi ja julkaisutarkistus
 
 Paikalliset tarkistukset 20.9.2026:

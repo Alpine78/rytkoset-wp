@@ -357,6 +357,7 @@ class Rytkoset_Test_Cart {
 
 class Rytkoset_Test_WC {
 	public ?Rytkoset_Test_Cart $cart = null;
+	public ?object $session = null;
 }
 
 class WC_Admin_Meta_Boxes {
@@ -646,6 +647,16 @@ class WP_Error {
 
 /** Minimal REST request stand-in for chat handler integration tests. */
 class WP_REST_Request {
+	public function __construct( private string $method = 'GET', private string $route = '' ) {}
+
+	public function get_method(): string {
+		return $this->method;
+	}
+
+	public function get_route(): string {
+		return $this->route;
+	}
+
 	/** @var array<string,mixed> */
 	private array $params = array();
 	/** @var array<string,string> */
@@ -2043,6 +2054,7 @@ require_once $rytkoset_theme_inc . '/seo-meta.php';
 require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
 require_once $rytkoset_theme_inc . '/woocommerce-event-registration.php';
+require_once $rytkoset_theme_inc . '/woocommerce-checkout-session.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
