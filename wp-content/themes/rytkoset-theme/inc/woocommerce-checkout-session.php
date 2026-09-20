@@ -24,15 +24,22 @@ function rytkoset_theme_get_cart_clear_marker_key() {
 }
 
 /**
- * Schedules the marker after WooCommerce has persisted the emptied session.
+ * Clears checkout-only values and schedules the cart-clear marker.
  *
  * WooCommerce saves its session at shutdown priority 20. Marking the clear
  * before that save would miss requests that start while the old cart is still
  * in the database. The marker must live outside the session being overwritten.
+ * WooCommerce does not clear the Store API customer note with the cart, so it
+ * must be removed here before the next checkout is opened.
  *
  * @return void
  */
 function rytkoset_theme_schedule_cart_clear_marker() {
+	$session = function_exists( 'WC' ) && WC() ? WC()->session : null;
+	if ( $session && is_callable( array( $session, 'set' ) ) ) {
+		$session->set( 'store_api_customer_note', null );
+	}
+
 	add_action( 'shutdown', 'rytkoset_theme_record_cart_clear_marker', 21 );
 }
 add_action( 'woocommerce_cart_emptied', 'rytkoset_theme_schedule_cart_clear_marker' );

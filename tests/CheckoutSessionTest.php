@@ -17,7 +17,16 @@ final class CheckoutSessionTest extends Rytkoset_Theme_Test_Case {
 		WC()->session = new class() {
 			public string $id = 'customer-one';
 			public int $writes = 0;
+			public array $data = array( 'store_api_customer_note' => 'Edellisen tilauksen muistiinpano' );
 			public function get_customer_id(): string { return $this->id; }
+			public function get( string $key ) { return $this->data[ $key ] ?? null; }
+			public function set( string $key, $value ): void {
+				if ( null === $value ) {
+					unset( $this->data[ $key ] );
+					return;
+				}
+				$this->data[ $key ] = $value;
+			}
 			public function save_data(): void { ++$this->writes; }
 		};
 		add_action( 'shutdown', array( WC()->session, 'save_data' ), 20 );
@@ -89,6 +98,12 @@ final class CheckoutSessionTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 1, $observed_writes[0] );
 		$this->assertGreaterThan( 0, $observed_writes[1] );
 		$this->assertStringNotContainsString( 'customer-one', $key );
+	}
+
+	public function test_cart_clear_removes_the_previous_order_note(): void {
+		$this->assertSame( 'Edellisen tilauksen muistiinpano', WC()->session->get( 'store_api_customer_note' ) );
+		rytkoset_theme_schedule_cart_clear_marker();
+		$this->assertNull( WC()->session->get( 'store_api_customer_note' ) );
 	}
 
 	public function test_missing_start_time_does_not_discard_a_request(): void {
