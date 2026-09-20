@@ -1,7 +1,6 @@
 <?php
 /**
- * Tampere 2026 -osallistumismaksu: WooCommerce-tuotteen logiikka, kassan osallistujakentät,
- * tilausnäkymät, järjestäjäilmoitukset.
+ * Paid event registration: products, checkout participants, order views and notifications.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_registration_sku() {
+function rytkoset_theme_get_legacy_event_registration_sku() {
 	return 'tampere-2026-osallistumismaksu';
 }
 
@@ -23,7 +22,7 @@ function rytkoset_theme_get_tampere_2026_registration_sku() {
  * @param WC_Product|null $product WooCommerce product object.
  * @return bool
  */
-function rytkoset_theme_is_tampere_2026_registration_product( $product ) {
+function rytkoset_theme_is_paid_event_registration_product( $product ) {
 	if ( ! $product instanceof WC_Product ) {
 		return false;
 	}
@@ -34,7 +33,7 @@ function rytkoset_theme_is_tampere_2026_registration_product( $product ) {
 		return true;
 	}
 
-	if ( rytkoset_theme_get_tampere_2026_registration_sku() === (string) $product->get_sku() ) {
+	if ( rytkoset_theme_get_legacy_event_registration_sku() === (string) $product->get_sku() ) {
 		return true;
 	}
 
@@ -51,7 +50,7 @@ function rytkoset_theme_is_tampere_2026_registration_product( $product ) {
 	}
 
 	return 'tampere_2026' === $parent->get_meta( '_rytkoset_registration_mode', true )
-		|| rytkoset_theme_get_tampere_2026_registration_sku() === (string) $parent->get_sku();
+		|| rytkoset_theme_get_legacy_event_registration_sku() === (string) $parent->get_sku();
 }
 
 /**
@@ -60,8 +59,8 @@ function rytkoset_theme_is_tampere_2026_registration_product( $product ) {
  * @param WC_Product|null $product WooCommerce product object.
  * @return WC_Product|null
  */
-function rytkoset_theme_get_tampere_2026_registration_parent_product( $product ) {
-	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_get_paid_event_registration_parent_product( $product ) {
+	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return null;
 	}
 
@@ -81,7 +80,7 @@ function rytkoset_theme_get_tampere_2026_registration_parent_product( $product )
  *
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() {
+function rytkoset_theme_get_paid_event_registration_deadline_meta_key() {
 	return '_rytkoset_registration_deadline';
 }
 
@@ -90,7 +89,7 @@ function rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() {
  *
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_registration_default_deadline() {
+function rytkoset_theme_get_legacy_event_registration_default_deadline() {
 	return '2026-07-30';
 }
 
@@ -122,22 +121,22 @@ function rytkoset_theme_normalize_registration_deadline_date( $raw_date ) {
  * @param WC_Product|null $product WooCommerce product object.
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_registration_deadline( $product ) {
-	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_get_paid_event_registration_deadline( $product ) {
+	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return '';
 	}
 
-	$deadline_product = rytkoset_theme_get_tampere_2026_registration_parent_product( $product );
+	$deadline_product = rytkoset_theme_get_paid_event_registration_parent_product( $product );
 	$stored_deadline  = $deadline_product instanceof WC_Product
-		? $deadline_product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true )
-		: $product->get_meta( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), true );
+		? $deadline_product->get_meta( rytkoset_theme_get_paid_event_registration_deadline_meta_key(), true )
+		: $product->get_meta( rytkoset_theme_get_paid_event_registration_deadline_meta_key(), true );
 	$deadline         = rytkoset_theme_normalize_registration_deadline_date( (string) $stored_deadline );
 
 	if ( '' !== $deadline ) {
 		return $deadline;
 	}
 
-	return rytkoset_theme_get_tampere_2026_registration_default_deadline();
+	return rytkoset_theme_get_legacy_event_registration_default_deadline();
 }
 
 /**
@@ -148,8 +147,8 @@ function rytkoset_theme_get_tampere_2026_registration_deadline( $product ) {
  * @param WC_Product|null $product WooCommerce product object.
  * @return DateTimeImmutable|null
  */
-function rytkoset_theme_get_tampere_2026_registration_deadline_cutoff( $product ) {
-	$deadline = rytkoset_theme_get_tampere_2026_registration_deadline( $product );
+function rytkoset_theme_get_paid_event_registration_deadline_cutoff( $product ) {
+	$deadline = rytkoset_theme_get_paid_event_registration_deadline( $product );
 
 	if ( '' === $deadline ) {
 		return null;
@@ -170,8 +169,8 @@ function rytkoset_theme_get_tampere_2026_registration_deadline_cutoff( $product 
  * @param WC_Product|null $product WooCommerce product object.
  * @return bool
  */
-function rytkoset_theme_is_tampere_2026_registration_deadline_passed( $product ) {
-	$cutoff = rytkoset_theme_get_tampere_2026_registration_deadline_cutoff( $product );
+function rytkoset_theme_is_paid_event_registration_deadline_passed( $product ) {
+	$cutoff = rytkoset_theme_get_paid_event_registration_deadline_cutoff( $product );
 
 	if ( ! $cutoff instanceof \DateTimeImmutable ) {
 		return false;
@@ -188,8 +187,8 @@ function rytkoset_theme_is_tampere_2026_registration_deadline_passed( $product )
  * @param WC_Product|null $product WooCommerce product object.
  * @return bool
  */
-function rytkoset_theme_is_tampere_2026_registration_full( $product ) {
-	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_is_paid_event_registration_full( $product ) {
+	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return false;
 	}
 
@@ -206,16 +205,16 @@ function rytkoset_theme_is_tampere_2026_registration_full( $product ) {
  * @param WC_Product|null $product WooCommerce product object.
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $product ) {
-	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_get_paid_event_registration_unavailability_reason( $product ) {
+	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return '';
 	}
 
-	if ( rytkoset_theme_is_tampere_2026_registration_deadline_passed( $product ) ) {
+	if ( rytkoset_theme_is_paid_event_registration_deadline_passed( $product ) ) {
 		return 'deadline';
 	}
 
-	if ( rytkoset_theme_is_tampere_2026_registration_full( $product ) ) {
+	if ( rytkoset_theme_is_paid_event_registration_full( $product ) ) {
 		return 'full';
 	}
 
@@ -228,8 +227,8 @@ function rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $pr
  * @param WC_Product|null $product WooCommerce product object.
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product ) {
-	$reason = rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $product );
+function rytkoset_theme_get_paid_event_registration_unavailability_message( $product ) {
+	$reason = rytkoset_theme_get_paid_event_registration_unavailability_reason( $product );
 
 	if ( 'deadline' === $reason ) {
 		return __( 'Ilmoittautuminen on päättynyt.', 'rytkoset-theme' );
@@ -247,7 +246,7 @@ function rytkoset_theme_get_tampere_2026_registration_unavailability_message( $p
  *
  * @return void
  */
-function rytkoset_theme_render_tampere_2026_product_management_fields() {
+function rytkoset_theme_render_paid_event_product_management_fields() {
 	global $post;
 
 	if ( ! $post instanceof WP_Post || 'product' !== $post->post_type ) {
@@ -256,7 +255,7 @@ function rytkoset_theme_render_tampere_2026_product_management_fields() {
 
 	$product = wc_get_product( $post->ID );
 
-	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return;
 	}
 
@@ -264,19 +263,19 @@ function rytkoset_theme_render_tampere_2026_product_management_fields() {
 
 	woocommerce_wp_text_input(
 		array(
-			'id'          => rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(),
+			'id'          => rytkoset_theme_get_paid_event_registration_deadline_meta_key(),
 			'label'       => __( 'Ilmoittautumisen määräpäivä', 'rytkoset-theme' ),
 			'description' => __( 'Kapasiteetti tulee tämän tuotteen varastosaldosta. Ota varastonhallinta käyttöön, aseta osallistujapaikkojen määrä Stock quantity -kenttään ja pidä backorders pois päältä.', 'rytkoset-theme' ),
 			'desc_tip'    => false,
 			'type'        => 'date',
-			'value'       => rytkoset_theme_get_tampere_2026_registration_deadline( $product ),
+			'value'       => rytkoset_theme_get_paid_event_registration_deadline( $product ),
 		),
 		$product
 	);
 
 	echo '</div>';
 }
-add_action( 'woocommerce_product_options_inventory_product_data', 'rytkoset_theme_render_tampere_2026_product_management_fields' );
+add_action( 'woocommerce_product_options_inventory_product_data', 'rytkoset_theme_render_paid_event_product_management_fields' );
 
 /**
  * Saves Tampere 2026 product management settings.
@@ -284,32 +283,32 @@ add_action( 'woocommerce_product_options_inventory_product_data', 'rytkoset_them
  * @param WC_Product $product WooCommerce product object.
  * @return void
  */
-function rytkoset_theme_save_tampere_2026_product_management_fields( $product ) {
-	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_save_paid_event_product_management_fields( $product ) {
+	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return;
 	}
 
 	// phpcs:disable WordPress.Security.NonceVerification.Missing -- WooCommerce verifies the product edit nonce before this hook runs.
-	$raw_deadline = isset( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] )
-		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_tampere_2026_registration_deadline_meta_key() ] ) )
+	$raw_deadline = isset( $_POST[ rytkoset_theme_get_paid_event_registration_deadline_meta_key() ] )
+		? sanitize_text_field( wp_unslash( $_POST[ rytkoset_theme_get_paid_event_registration_deadline_meta_key() ] ) )
 		: '';
 	// phpcs:enable WordPress.Security.NonceVerification.Missing
 	$deadline = rytkoset_theme_normalize_registration_deadline_date( $raw_deadline );
 
 	if ( '' === $deadline ) {
-		$deadline = rytkoset_theme_get_tampere_2026_registration_default_deadline();
+		$deadline = rytkoset_theme_get_legacy_event_registration_default_deadline();
 	}
 
-	$product->update_meta_data( rytkoset_theme_get_tampere_2026_registration_deadline_meta_key(), $deadline );
+	$product->update_meta_data( rytkoset_theme_get_paid_event_registration_deadline_meta_key(), $deadline );
 }
-add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_tampere_2026_product_management_fields' );
+add_action( 'woocommerce_admin_process_product_object', 'rytkoset_theme_save_paid_event_product_management_fields' );
 
 /**
  * Returns the Tampere 2026 participant count from the current cart.
  *
  * @return int
  */
-function rytkoset_theme_get_tampere_2026_participant_count() {
+function rytkoset_theme_get_paid_event_participant_count() {
 	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 		return 0;
 	}
@@ -319,7 +318,7 @@ function rytkoset_theme_get_tampere_2026_participant_count() {
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 
-		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
 
@@ -334,8 +333,8 @@ function rytkoset_theme_get_tampere_2026_participant_count() {
  *
  * @return bool
  */
-function rytkoset_theme_cart_has_tampere_2026_registration() {
-	return rytkoset_theme_get_tampere_2026_participant_count() > 0;
+function rytkoset_theme_cart_has_paid_event_registration() {
+	return rytkoset_theme_get_paid_event_participant_count() > 0;
 }
 
 /**
@@ -343,7 +342,7 @@ function rytkoset_theme_cart_has_tampere_2026_registration() {
  *
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_checkout_notice_markup() {
+function rytkoset_theme_get_paid_event_checkout_notice_markup() {
 	$notice_text = html_entity_decode(
 		'<strong>Tampere 2026 sukukokous:</strong> Täytä jokaiselle osallistujalle nimi, mahdolliset ruokarajoitteet tai allergiat sekä perjantain buffet-illallisen valinta kohdassa Tilauksen lisätiedot.',
 		ENT_QUOTES,
@@ -363,14 +362,14 @@ function rytkoset_theme_get_tampere_2026_checkout_notice_markup() {
  * @param WC_Product|null $product        WooCommerce product object.
  * @return bool
  */
-function rytkoset_theme_filter_tampere_2026_product_purchasability( $is_purchasable, $product ) {
-	if ( ! $is_purchasable || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_filter_paid_event_product_purchasability( $is_purchasable, $product ) {
+	if ( ! $is_purchasable || ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return $is_purchasable;
 	}
 
-	return '' === rytkoset_theme_get_tampere_2026_registration_unavailability_reason( $product );
+	return '' === rytkoset_theme_get_paid_event_registration_unavailability_reason( $product );
 }
-add_filter( 'woocommerce_is_purchasable', 'rytkoset_theme_filter_tampere_2026_product_purchasability', 10, 2 );
+add_filter( 'woocommerce_is_purchasable', 'rytkoset_theme_filter_paid_event_product_purchasability', 10, 2 );
 
 /**
  * Filters availability text for the Tampere 2026 registration product.
@@ -379,23 +378,23 @@ add_filter( 'woocommerce_is_purchasable', 'rytkoset_theme_filter_tampere_2026_pr
  * @param WC_Product|null $product      WooCommerce product object.
  * @return string
  */
-function rytkoset_theme_filter_tampere_2026_product_availability_text( $availability, $product ) {
-	if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+function rytkoset_theme_filter_paid_event_product_availability_text( $availability, $product ) {
+	if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return $availability;
 	}
 
-	$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+	$message = rytkoset_theme_get_paid_event_registration_unavailability_message( $product );
 
 	return '' !== $message ? $message : $availability;
 }
-add_filter( 'woocommerce_get_availability_text', 'rytkoset_theme_filter_tampere_2026_product_availability_text', 10, 2 );
+add_filter( 'woocommerce_get_availability_text', 'rytkoset_theme_filter_paid_event_product_availability_text', 10, 2 );
 
 /**
  * Renders an explicit status message on the Tampere 2026 product page when needed.
  *
  * @return void
  */
-function rytkoset_theme_render_tampere_2026_product_page_notice() {
+function rytkoset_theme_render_paid_event_product_page_notice() {
 	if ( ! is_product() ) {
 		return;
 	}
@@ -406,7 +405,7 @@ function rytkoset_theme_render_tampere_2026_product_page_notice() {
 		return;
 	}
 
-	$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+	$message = rytkoset_theme_get_paid_event_registration_unavailability_message( $product );
 
 	if ( '' === $message ) {
 		return;
@@ -417,7 +416,7 @@ function rytkoset_theme_render_tampere_2026_product_page_notice() {
 		esc_html( $message )
 	);
 }
-add_action( 'woocommerce_single_product_summary', 'rytkoset_theme_render_tampere_2026_product_page_notice', 25 );
+add_action( 'woocommerce_single_product_summary', 'rytkoset_theme_render_paid_event_product_page_notice', 25 );
 
 /**
  * Prevents adding unavailable Tampere 2026 registrations to the cart.
@@ -426,14 +425,14 @@ add_action( 'woocommerce_single_product_summary', 'rytkoset_theme_render_tampere
  * @param int  $product_id Product ID.
  * @return bool
  */
-function rytkoset_theme_validate_tampere_2026_add_to_cart( $passed, $product_id ) {
+function rytkoset_theme_validate_paid_event_add_to_cart( $passed, $product_id ) {
 	$product = wc_get_product( $product_id );
 
-	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 		return $passed;
 	}
 
-	$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+	$message = rytkoset_theme_get_paid_event_registration_unavailability_message( $product );
 
 	if ( '' === $message ) {
 		return $passed;
@@ -445,14 +444,14 @@ function rytkoset_theme_validate_tampere_2026_add_to_cart( $passed, $product_id 
 
 	return false;
 }
-add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_tampere_2026_add_to_cart', 10, 2 );
+add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_paid_event_add_to_cart', 10, 2 );
 
 /**
  * Validates Tampere 2026 registrations already present in cart or checkout.
  *
  * @return void
  */
-function rytkoset_theme_validate_tampere_2026_cart_items() {
+function rytkoset_theme_validate_paid_event_cart_items() {
 	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 		return;
 	}
@@ -462,11 +461,11 @@ function rytkoset_theme_validate_tampere_2026_cart_items() {
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 
-		if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
 
-		$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+		$message = rytkoset_theme_get_paid_event_registration_unavailability_message( $product );
 
 		if ( '' !== $message ) {
 			$messages[ $message ] = true;
@@ -479,14 +478,14 @@ function rytkoset_theme_validate_tampere_2026_cart_items() {
 		}
 	}
 }
-add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_tampere_2026_cart_items' );
+add_action( 'woocommerce_check_cart_items', 'rytkoset_theme_validate_paid_event_cart_items' );
 
 /**
  * Returns the maximum number of Tampere 2026 participants supported in one order.
  *
  * @return int
  */
-function rytkoset_theme_get_tampere_2026_max_participants() {
+function rytkoset_theme_get_paid_event_max_participants() {
 	return 10;
 }
 
@@ -495,8 +494,8 @@ function rytkoset_theme_get_tampere_2026_max_participants() {
  *
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_store_api_namespace() {
-	return 'rytkoset_tampere_2026';
+function rytkoset_theme_get_paid_event_store_api_namespace() {
+	return 'rytkoset_event_registration';
 }
 
 /**
@@ -509,17 +508,17 @@ function rytkoset_theme_get_tampere_2026_store_api_namespace() {
  * @param array<int|string, array<string, mixed>> $cart_items WooCommerce cart items.
  * @return array<int, array<string, string>>
  */
-function rytkoset_theme_build_tampere_2026_cart_participant_lines( $cart_items ) {
+function rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items ) {
 	$lines = array();
 
 	foreach ( $cart_items as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 
-		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
 
-		$type_label = rytkoset_theme_get_tampere_2026_participant_type_label( $product );
+		$type_label = rytkoset_theme_get_paid_event_participant_type_label( $product );
 		$price      = html_entity_decode(
 			wp_strip_all_tags( wc_price( wc_get_price_including_tax( $product ) ) ),
 			ENT_QUOTES,
@@ -543,12 +542,12 @@ function rytkoset_theme_build_tampere_2026_cart_participant_lines( $cart_items )
  *
  * @return array<int, array<string, string>>
  */
-function rytkoset_theme_get_tampere_2026_cart_participant_lines() {
+function rytkoset_theme_get_paid_event_cart_participant_lines() {
 	if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 		return array();
 	}
 
-	return rytkoset_theme_build_tampere_2026_cart_participant_lines( WC()->cart->get_cart() );
+	return rytkoset_theme_build_paid_event_cart_participant_lines( WC()->cart->get_cart() );
 }
 
 /**
@@ -556,10 +555,10 @@ function rytkoset_theme_get_tampere_2026_cart_participant_lines() {
  *
  * @return array<string, mixed>
  */
-function rytkoset_theme_get_tampere_2026_store_api_cart_data() {
+function rytkoset_theme_get_paid_event_store_api_cart_data() {
 	return array(
-		'participant_count' => rytkoset_theme_get_tampere_2026_participant_count(),
-		'participants'      => rytkoset_theme_get_tampere_2026_cart_participant_lines(),
+		'participant_count' => rytkoset_theme_get_paid_event_participant_count(),
+		'participants'      => rytkoset_theme_get_paid_event_cart_participant_lines(),
 	);
 }
 
@@ -568,7 +567,7 @@ function rytkoset_theme_get_tampere_2026_store_api_cart_data() {
  *
  * @return array<string, mixed>
  */
-function rytkoset_theme_get_tampere_2026_store_api_cart_schema() {
+function rytkoset_theme_get_paid_event_store_api_cart_schema() {
 	return array(
 		'participant_count' => array(
 			'description' => __( 'Tampere 2026 -osallistujien määrä ostoskorissa.', 'rytkoset-theme' ),
@@ -596,7 +595,7 @@ function rytkoset_theme_get_tampere_2026_store_api_cart_schema() {
  *
  * @return void
  */
-function rytkoset_theme_register_tampere_2026_store_api_cart_data() {
+function rytkoset_theme_register_paid_event_store_api_cart_data() {
 	if (
 		! function_exists( 'woocommerce_store_api_register_endpoint_data' )
 		|| ! class_exists( '\Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema' )
@@ -607,9 +606,9 @@ function rytkoset_theme_register_tampere_2026_store_api_cart_data() {
 	woocommerce_store_api_register_endpoint_data(
 		array(
 			'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
-			'namespace'       => rytkoset_theme_get_tampere_2026_store_api_namespace(),
-			'data_callback'   => 'rytkoset_theme_get_tampere_2026_store_api_cart_data',
-			'schema_callback' => 'rytkoset_theme_get_tampere_2026_store_api_cart_schema',
+			'namespace'       => rytkoset_theme_get_paid_event_store_api_namespace(),
+			'data_callback'   => 'rytkoset_theme_get_paid_event_store_api_cart_data',
+			'schema_callback' => 'rytkoset_theme_get_paid_event_store_api_cart_schema',
 			'schema_type'     => ARRAY_A,
 		)
 	);
@@ -619,9 +618,9 @@ function rytkoset_theme_register_tampere_2026_store_api_cart_data() {
  * Registers Store API data after WooCommerce Blocks is available.
  */
 if ( did_action( 'woocommerce_blocks_loaded' ) ) {
-	rytkoset_theme_register_tampere_2026_store_api_cart_data();
+	rytkoset_theme_register_paid_event_store_api_cart_data();
 } else {
-	add_action( 'woocommerce_blocks_loaded', 'rytkoset_theme_register_tampere_2026_store_api_cart_data' );
+	add_action( 'woocommerce_blocks_loaded', 'rytkoset_theme_register_paid_event_store_api_cart_data' );
 }
 
 /**
@@ -633,19 +632,19 @@ if ( did_action( 'woocommerce_blocks_loaded' ) ) {
  *
  * @return void
  */
-function rytkoset_theme_enqueue_tampere_2026_checkout_participants() {
+function rytkoset_theme_enqueue_paid_event_checkout_participants() {
 	if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
 		return;
 	}
 
-	if ( ! rytkoset_theme_cart_has_tampere_2026_registration() ) {
+	if ( ! rytkoset_theme_cart_has_paid_event_registration() ) {
 		return;
 	}
 
-	$script_path = '/assets/js/tampere-checkout-participants.js';
+	$script_path = '/assets/js/event-checkout-participants.js';
 
 	wp_enqueue_script(
-		'rytkoset-tampere-checkout-participants',
+		'rytkoset-event-checkout-participants',
 		get_template_directory_uri() . $script_path,
 		array( 'wp-data' ),
 		rytkoset_theme_get_asset_version( get_template_directory() . $script_path ),
@@ -653,7 +652,7 @@ function rytkoset_theme_enqueue_tampere_2026_checkout_participants() {
 	);
 
 	$config = array(
-		'namespace' => rytkoset_theme_get_tampere_2026_store_api_namespace(),
+		'namespace' => rytkoset_theme_get_paid_event_store_api_namespace(),
 		'i18n'      => array(
 			/* translators: %d: participant number. */
 			'title'   => __( 'Osallistuja %d', 'rytkoset-theme' ),
@@ -663,12 +662,12 @@ function rytkoset_theme_enqueue_tampere_2026_checkout_participants() {
 	);
 
 	wp_add_inline_script(
-		'rytkoset-tampere-checkout-participants',
-		'window.rytkosetTampereParticipants = ' . wp_json_encode( $config ) . ';',
+		'rytkoset-event-checkout-participants',
+		'window.rytkosetEventParticipants = ' . wp_json_encode( $config ) . ';',
 		'before'
 	);
 }
-add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_tampere_2026_checkout_participants' );
+add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_paid_event_checkout_participants' );
 
 /**
  * Returns a JSON Schema fragment that matches an active participant field.
@@ -676,8 +675,8 @@ add_action( 'wp_enqueue_scripts', 'rytkoset_theme_enqueue_tampere_2026_checkout_
  * @param int $index Participant index starting from 1.
  * @return array<string, mixed>
  */
-function rytkoset_theme_get_tampere_2026_participant_active_schema( $index ) {
-	$namespace = rytkoset_theme_get_tampere_2026_store_api_namespace();
+function rytkoset_theme_get_paid_event_participant_active_schema( $index ) {
+	$namespace = rytkoset_theme_get_paid_event_store_api_namespace();
 
 	return array(
 		'type'       => 'object',
@@ -715,8 +714,8 @@ function rytkoset_theme_get_tampere_2026_participant_active_schema( $index ) {
  * @param int $index Participant index starting from 1.
  * @return array<string, mixed>
  */
-function rytkoset_theme_get_tampere_2026_participant_required_schema( $index ) {
-	return rytkoset_theme_get_tampere_2026_participant_active_schema( $index );
+function rytkoset_theme_get_paid_event_participant_required_schema( $index ) {
+	return rytkoset_theme_get_paid_event_participant_active_schema( $index );
 }
 
 /**
@@ -725,9 +724,9 @@ function rytkoset_theme_get_tampere_2026_participant_required_schema( $index ) {
  * @param int $index Participant index starting from 1.
  * @return array<string, mixed>
  */
-function rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ) {
+function rytkoset_theme_get_paid_event_participant_hidden_schema( $index ) {
 	return array(
-		'not' => rytkoset_theme_get_tampere_2026_participant_active_schema( $index ),
+		'not' => rytkoset_theme_get_paid_event_participant_active_schema( $index ),
 	);
 }
 
@@ -739,18 +738,18 @@ function rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ) {
  *
  * @return void
  */
-function rytkoset_theme_register_tampere_2026_checkout_fields() {
+function rytkoset_theme_register_paid_event_checkout_fields() {
 	if ( ! function_exists( 'woocommerce_register_additional_checkout_field' ) ) {
 		return;
 	}
 
-	$product_id = wc_get_product_id_by_sku( rytkoset_theme_get_tampere_2026_registration_sku() );
+	$product_id = wc_get_product_id_by_sku( rytkoset_theme_get_legacy_event_registration_sku() );
 
 	if ( ! $product_id ) {
 		return;
 	}
 
-	for ( $index = 1; $index <= rytkoset_theme_get_tampere_2026_max_participants(); $index++ ) {
+	for ( $index = 1; $index <= rytkoset_theme_get_paid_event_max_participants(); $index++ ) {
 		$name_field_id   = sprintf( 'rytkoset/participant_%d_name', $index );
 		$diet_field_id   = sprintf( 'rytkoset/participant_%d_diet', $index );
 		$buffet_field_id = sprintf( 'rytkoset/participant_%d_friday_buffet', $index );
@@ -762,8 +761,8 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 				'label'             => sprintf( __( 'Osallistuja %d: nimi', 'rytkoset-theme' ), $index ),
 				'location'          => 'order',
 				'type'              => 'text',
-				'required'          => rytkoset_theme_get_tampere_2026_participant_required_schema( $index ),
-				'hidden'            => rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ),
+				'required'          => rytkoset_theme_get_paid_event_participant_required_schema( $index ),
+				'hidden'            => rytkoset_theme_get_paid_event_participant_hidden_schema( $index ),
 				'sanitize_callback' => 'sanitize_text_field',
 				'attributes'        => array(
 					'autocomplete'   => sprintf( 'section-participant-%d-name new-password', $index ),
@@ -784,7 +783,7 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 				'location'          => 'order',
 				'type'              => 'text',
 				'required'          => false,
-				'hidden'            => rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ),
+				'hidden'            => rytkoset_theme_get_paid_event_participant_hidden_schema( $index ),
 				'sanitize_callback' => 'sanitize_text_field',
 				'attributes'        => array(
 					'autocomplete'   => sprintf( 'section-participant-%d-diet new-password', $index ),
@@ -803,13 +802,13 @@ function rytkoset_theme_register_tampere_2026_checkout_fields() {
 				'location'          => 'order',
 				'type'              => 'checkbox',
 				'required'          => false,
-				'hidden'            => rytkoset_theme_get_tampere_2026_participant_hidden_schema( $index ),
+				'hidden'            => rytkoset_theme_get_paid_event_participant_hidden_schema( $index ),
 				'sanitize_callback' => 'rest_sanitize_boolean',
 			)
 		);
 	}
 }
-add_action( 'woocommerce_init', 'rytkoset_theme_register_tampere_2026_checkout_fields' );
+add_action( 'woocommerce_init', 'rytkoset_theme_register_paid_event_checkout_fields' );
 
 /**
  * Reads an additional checkout field value from an order.
@@ -863,7 +862,7 @@ function rytkoset_theme_get_order_additional_checkout_field_bool( $order, $field
  * @param WC_Product|null $product WooCommerce product object.
  * @return string
  */
-function rytkoset_theme_get_tampere_2026_participant_type_label( $product ) {
+function rytkoset_theme_get_paid_event_participant_type_label( $product ) {
 	if ( ! $product instanceof WC_Product ) {
 		return '';
 	}
@@ -916,7 +915,7 @@ function rytkoset_theme_get_tampere_2026_participant_type_label( $product ) {
  * @param WC_Order $order WooCommerce order object.
  * @return array<int, string>
  */
-function rytkoset_theme_get_tampere_2026_order_participant_type_sequence( $order ) {
+function rytkoset_theme_get_paid_event_order_participant_type_sequence( $order ) {
 	if ( ! $order instanceof WC_Order ) {
 		return array();
 	}
@@ -926,11 +925,11 @@ function rytkoset_theme_get_tampere_2026_order_participant_type_sequence( $order
 	foreach ( $order->get_items() as $item ) {
 		$product = $item->get_product();
 
-		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
 
-		$type_label = rytkoset_theme_get_tampere_2026_participant_type_label( $product );
+		$type_label = rytkoset_theme_get_paid_event_participant_type_label( $product );
 
 		for ( $i = 0; $i < (int) $item->get_quantity(); $i++ ) {
 			$types[] = $type_label;
@@ -946,7 +945,7 @@ function rytkoset_theme_get_tampere_2026_order_participant_type_sequence( $order
  * @param WC_Order $order WooCommerce order object.
  * @return array<int, array<string, string>>
  */
-function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
+function rytkoset_theme_get_paid_event_order_participants( $order ) {
 	if ( ! $order instanceof WC_Order ) {
 		return array();
 	}
@@ -956,7 +955,7 @@ function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
 	foreach ( $order->get_items() as $item ) {
 		$product = $item->get_product();
 
-		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
 
@@ -968,7 +967,7 @@ function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
 	}
 
 	$participants      = array();
-	$participant_types = rytkoset_theme_get_tampere_2026_order_participant_type_sequence( $order );
+	$participant_types = rytkoset_theme_get_paid_event_order_participant_type_sequence( $order );
 
 	for ( $index = 1; $index <= $participant_count; $index++ ) {
 		$name   = trim(
@@ -1010,7 +1009,7 @@ function rytkoset_theme_get_tampere_2026_order_participants( $order ) {
  * @param WC_Order $order WooCommerce order object.
  * @return bool
  */
-function rytkoset_theme_is_tampere_2026_registration_order( $order ) {
+function rytkoset_theme_is_paid_event_registration_order( $order ) {
 	if ( ! $order instanceof WC_Order ) {
 		return false;
 	}
@@ -1018,7 +1017,7 @@ function rytkoset_theme_is_tampere_2026_registration_order( $order ) {
 	foreach ( $order->get_items() as $item ) {
 		$product = $item->get_product();
 
-		if ( rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			return true;
 		}
 	}
@@ -1032,7 +1031,7 @@ function rytkoset_theme_is_tampere_2026_registration_order( $order ) {
  * @param WC_Order $order WooCommerce order object.
  * @return int
  */
-function rytkoset_theme_get_tampere_2026_order_participant_quantity( $order ) {
+function rytkoset_theme_get_paid_event_order_participant_quantity( $order ) {
 	if ( ! $order instanceof WC_Order ) {
 		return 0;
 	}
@@ -1042,7 +1041,7 @@ function rytkoset_theme_get_tampere_2026_order_participant_quantity( $order ) {
 	foreach ( $order->get_items() as $item ) {
 		$product = $item->get_product();
 
-		if ( ! rytkoset_theme_is_tampere_2026_registration_product( $product ) ) {
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
 
@@ -1061,12 +1060,12 @@ function rytkoset_theme_get_tampere_2026_order_participant_quantity( $order ) {
  * @param WC_Order|null $order WooCommerce order object.
  * @return int
  */
-function rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order ) {
-	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+function rytkoset_theme_get_paid_event_visible_participant_field_limit( $order ) {
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_paid_event_registration_order( $order ) ) {
 		return 0;
 	}
 
-	return rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+	return rytkoset_theme_get_paid_event_order_participant_quantity( $order );
 }
 
 /**
@@ -1075,7 +1074,7 @@ function rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order
  * @param int $index Participant index.
  * @return array<int, string>
  */
-function rytkoset_theme_get_tampere_2026_participant_field_ids( $index ) {
+function rytkoset_theme_get_paid_event_participant_field_ids( $index ) {
 	$index = absint( $index );
 
 	return array(
@@ -1091,7 +1090,7 @@ function rytkoset_theme_get_tampere_2026_participant_field_ids( $index ) {
  * @param string $field_id Field ID or order meta key.
  * @return string
  */
-function rytkoset_theme_normalize_tampere_2026_participant_field_id( $field_id ) {
+function rytkoset_theme_normalize_paid_event_participant_field_id( $field_id ) {
 	$field_id = (string) $field_id;
 	$prefix   = '_wc_other/';
 
@@ -1108,8 +1107,8 @@ function rytkoset_theme_normalize_tampere_2026_participant_field_id( $field_id )
  * @param string $field_id Field ID or order meta key.
  * @return int Participant index, or 0 when the field is not a Tampere 2026 participant field.
  */
-function rytkoset_theme_get_tampere_2026_participant_index_from_field_id( $field_id ) {
-	$field_id = rytkoset_theme_normalize_tampere_2026_participant_field_id( $field_id );
+function rytkoset_theme_get_paid_event_participant_index_from_field_id( $field_id ) {
+	$field_id = rytkoset_theme_normalize_paid_event_participant_field_id( $field_id );
 
 	if ( ! preg_match( '/^rytkoset\/participant_(\d+)_(?:name|diet|friday_buffet)$/', $field_id, $matches ) ) {
 		return 0;
@@ -1151,9 +1150,9 @@ function rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $field
  * @param array<string, mixed> $context Confirmation context.
  * @return bool
  */
-function rytkoset_theme_filter_tampere_2026_order_confirmation_fields( $show, $field, $fields, $context ) {
+function rytkoset_theme_filter_paid_event_order_confirmation_fields( $show, $field, $fields, $context ) {
 	$field_id = rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields );
-	$index    = rytkoset_theme_get_tampere_2026_participant_index_from_field_id( $field_id );
+	$index    = rytkoset_theme_get_paid_event_participant_index_from_field_id( $field_id );
 
 	if ( $index < 1 ) {
 		return $show;
@@ -1161,9 +1160,9 @@ function rytkoset_theme_filter_tampere_2026_order_confirmation_fields( $show, $f
 
 	$order = isset( $context['order'] ) && $context['order'] instanceof WC_Order ? $context['order'] : null;
 
-	return $show && $index <= rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order );
+	return $show && $index <= rytkoset_theme_get_paid_event_visible_participant_field_limit( $order );
 }
-add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_tampere_2026_order_confirmation_fields', 10, 4 );
+add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_filter_paid_event_order_confirmation_fields', 10, 4 );
 
 /**
  * Hides Tampere 2026 diet fields from WooCommerce's own admin order emails.
@@ -1184,18 +1183,18 @@ add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_
  * @param array<string, mixed> $context Confirmation context.
  * @return bool
  */
-function rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email( $show, $field, $fields, $context ) {
+function rytkoset_theme_hide_paid_event_diet_fields_from_admin_email( $show, $field, $fields, $context ) {
 	if ( ! $show || empty( $context['sent_to_admin'] ) ) {
 		return $show;
 	}
 
-	$field_id = rytkoset_theme_normalize_tampere_2026_participant_field_id(
+	$field_id = rytkoset_theme_normalize_paid_event_participant_field_id(
 		rytkoset_theme_get_order_confirmation_checkout_field_id( $field, $fields )
 	);
 
 	return 1 !== preg_match( '/^rytkoset\/participant_\d+_diet$/', $field_id );
 }
-add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email', 10, 4 );
+add_filter( 'woocommerce_filter_fields_for_order_confirmation', 'rytkoset_theme_hide_paid_event_diet_fields_from_admin_email', 10, 4 );
 
 /**
  * Hides free-text event order notes while rendering an admin email table.
@@ -1213,7 +1212,7 @@ function rytkoset_theme_hide_event_customer_note_from_admin_email( $note, $order
 		return $note;
 	}
 
-	return rytkoset_theme_is_tampere_2026_registration_order( $order ) || ! empty( rytkoset_theme_get_order_paid_event_ids( $order ) )
+	return rytkoset_theme_is_paid_event_registration_order( $order ) || ! empty( rytkoset_theme_get_order_paid_event_ids( $order ) )
 		? ''
 		: $note;
 }
@@ -1253,16 +1252,16 @@ add_action( 'woocommerce_email_after_order_table', 'rytkoset_theme_end_event_adm
  * @param WC_Order|null        $order Order object.
  * @return array<string, mixed>
  */
-function rytkoset_theme_filter_tampere_2026_admin_order_fields( $fields, $order = null ) {
+function rytkoset_theme_filter_paid_event_admin_order_fields( $fields, $order = null ) {
 	if ( ! $order instanceof WC_Order ) {
 		return $fields;
 	}
 
-	$participant_quantity = rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order );
+	$participant_quantity = rytkoset_theme_get_paid_event_visible_participant_field_limit( $order );
 
 	foreach ( $fields as $field_key => $field ) {
 		$field_id = is_array( $field ) && isset( $field['id'] ) ? (string) $field['id'] : (string) $field_key;
-		$index    = rytkoset_theme_get_tampere_2026_participant_index_from_field_id( $field_id );
+		$index    = rytkoset_theme_get_paid_event_participant_index_from_field_id( $field_id );
 
 		if ( $index > $participant_quantity ) {
 			unset( $fields[ $field_key ] );
@@ -1271,7 +1270,7 @@ function rytkoset_theme_filter_tampere_2026_admin_order_fields( $fields, $order 
 
 	return $fields;
 }
-add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_tampere_2026_admin_order_fields', 20, 2 );
+add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_paid_event_admin_order_fields', 20, 2 );
 
 /**
  * Deletes hidden extra Tampere 2026 participant meta from new Store API orders.
@@ -1279,17 +1278,17 @@ add_filter( 'woocommerce_admin_shipping_fields', 'rytkoset_theme_filter_tampere_
  * @param WC_Order $order WooCommerce order object.
  * @return void
  */
-function rytkoset_theme_cleanup_tampere_2026_extra_participant_order_meta( $order ) {
+function rytkoset_theme_cleanup_paid_event_extra_participant_order_meta( $order ) {
 	if ( ! $order instanceof WC_Order ) {
 		return;
 	}
 
-	$participant_quantity = rytkoset_theme_get_tampere_2026_visible_participant_field_limit( $order );
-	$max_participants     = rytkoset_theme_get_tampere_2026_max_participants();
+	$participant_quantity = rytkoset_theme_get_paid_event_visible_participant_field_limit( $order );
+	$max_participants     = rytkoset_theme_get_paid_event_max_participants();
 	$deleted_meta         = false;
 
 	for ( $index = $participant_quantity + 1; $index <= $max_participants; $index++ ) {
-		foreach ( rytkoset_theme_get_tampere_2026_participant_field_ids( $index ) as $field_id ) {
+		foreach ( rytkoset_theme_get_paid_event_participant_field_ids( $index ) as $field_id ) {
 			$meta_key = '_wc_other/' . $field_id;
 
 			if ( ! $order->meta_exists( $meta_key ) ) {
@@ -1305,7 +1304,7 @@ function rytkoset_theme_cleanup_tampere_2026_extra_participant_order_meta( $orde
 		$order->save();
 	}
 }
-add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cleanup_tampere_2026_extra_participant_order_meta', 20 );
+add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cleanup_paid_event_extra_participant_order_meta', 20 );
 
 /**
  * Registers the Tampere 2026 participants metabox for order admin screens.
@@ -1315,12 +1314,12 @@ add_action( 'woocommerce_store_api_checkout_order_processed', 'rytkoset_theme_cl
  *
  * @return void
  */
-function rytkoset_theme_register_tampere_2026_order_metabox() {
+function rytkoset_theme_register_paid_event_order_metabox() {
 	if ( ! function_exists( 'wc_get_page_screen_id' ) || ! function_exists( 'wc_get_container' ) ) {
 		add_meta_box(
 			'rytkoset-tampere-2026-participants',
 			__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
-			'rytkoset_theme_render_tampere_2026_order_participants_metabox',
+			'rytkoset_theme_render_paid_event_order_participants_metabox',
 			'shop_order',
 			'side',
 			'default'
@@ -1341,13 +1340,13 @@ function rytkoset_theme_register_tampere_2026_order_metabox() {
 	add_meta_box(
 		'rytkoset-tampere-2026-participants',
 		__( 'Tampere 2026 osallistujat', 'rytkoset-theme' ),
-		'rytkoset_theme_render_tampere_2026_order_participants_metabox',
+		'rytkoset_theme_render_paid_event_order_participants_metabox',
 		$screen,
 		'side',
 		'default'
 	);
 }
-add_action( 'add_meta_boxes', 'rytkoset_theme_register_tampere_2026_order_metabox' );
+add_action( 'add_meta_boxes', 'rytkoset_theme_register_paid_event_order_metabox' );
 
 /**
  * Renders participant details inside the order admin metabox.
@@ -1355,7 +1354,7 @@ add_action( 'add_meta_boxes', 'rytkoset_theme_register_tampere_2026_order_metabo
  * @param mixed $post_or_order_object Either a WP_Post or WC_Order.
  * @return void
  */
-function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or_order_object ) {
+function rytkoset_theme_render_paid_event_order_participants_metabox( $post_or_order_object ) {
 	$order = rytkoset_theme_get_order_from_admin_screen_object( $post_or_order_object );
 
 	if ( ! $order instanceof WC_Order ) {
@@ -1363,7 +1362,7 @@ function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or
 		return;
 	}
 
-	$participants = rytkoset_theme_get_tampere_2026_order_participants( $order );
+	$participants = rytkoset_theme_get_paid_event_order_participants( $order );
 
 	if ( empty( $participants ) ) {
 		echo '<p>' . esc_html__( 'Tälle tilaukselle ei löytynyt osallistujatietoja.', 'rytkoset-theme' ) . '</p>';
@@ -1405,7 +1404,7 @@ function rytkoset_theme_render_tampere_2026_order_participants_metabox( $post_or
  * @param array<string, mixed> $columns Existing order list columns.
  * @return array<string, mixed>
  */
-function rytkoset_theme_add_tampere_2026_orders_column( $columns ) {
+function rytkoset_theme_add_paid_event_orders_column( $columns ) {
 	$new_columns = array();
 
 	foreach ( $columns as $column_name => $column_label ) {
@@ -1422,8 +1421,8 @@ function rytkoset_theme_add_tampere_2026_orders_column( $columns ) {
 
 	return $new_columns;
 }
-add_filter( 'manage_edit-shop_order_columns', 'rytkoset_theme_add_tampere_2026_orders_column' );
-add_filter( 'manage_woocommerce_page_wc-orders_columns', 'rytkoset_theme_add_tampere_2026_orders_column' );
+add_filter( 'manage_edit-shop_order_columns', 'rytkoset_theme_add_paid_event_orders_column' );
+add_filter( 'manage_woocommerce_page_wc-orders_columns', 'rytkoset_theme_add_paid_event_orders_column' );
 
 /**
  * Renders the Tampere 2026 order list column value.
@@ -1432,17 +1431,17 @@ add_filter( 'manage_woocommerce_page_wc-orders_columns', 'rytkoset_theme_add_tam
  * @param WC_Order $order       WooCommerce order object.
  * @return void
  */
-function rytkoset_theme_render_tampere_2026_orders_column( $column_name, $order ) {
+function rytkoset_theme_render_paid_event_orders_column( $column_name, $order ) {
 	if ( 'rytkoset_tampere_2026' !== $column_name ) {
 		return;
 	}
 
-	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_tampere_2026_registration_order( $order ) ) {
+	if ( ! $order instanceof WC_Order || ! rytkoset_theme_is_paid_event_registration_order( $order ) ) {
 		echo '&mdash;';
 		return;
 	}
 
-	$participant_quantity = rytkoset_theme_get_tampere_2026_order_participant_quantity( $order );
+	$participant_quantity = rytkoset_theme_get_paid_event_order_participant_quantity( $order );
 
 	if ( $participant_quantity < 1 ) {
 		echo '&mdash;';
@@ -1464,17 +1463,17 @@ function rytkoset_theme_render_tampere_2026_orders_column( $column_name, $order 
  * @param string $column_name Column name.
  * @return void
  */
-function rytkoset_theme_render_tampere_2026_orders_column_legacy( $column_name ) {
+function rytkoset_theme_render_paid_event_orders_column_legacy( $column_name ) {
 	global $the_order;
 
 	if ( ! $the_order instanceof WC_Order ) {
 		return;
 	}
 
-	rytkoset_theme_render_tampere_2026_orders_column( $column_name, $the_order );
+	rytkoset_theme_render_paid_event_orders_column( $column_name, $the_order );
 }
-add_action( 'manage_shop_order_posts_custom_column', 'rytkoset_theme_render_tampere_2026_orders_column_legacy', 25, 1 );
-add_action( 'manage_woocommerce_page_wc-orders_custom_column', 'rytkoset_theme_render_tampere_2026_orders_column', 25, 2 );
+add_action( 'manage_shop_order_posts_custom_column', 'rytkoset_theme_render_paid_event_orders_column_legacy', 25, 1 );
+add_action( 'manage_woocommerce_page_wc-orders_custom_column', 'rytkoset_theme_render_paid_event_orders_column', 25, 2 );
 
 /**
  * Returns true when the current site runs in a local or development environment.
@@ -1771,11 +1770,11 @@ function rytkoset_theme_get_event_order_notification_participants( $order, $even
 	$product = rytkoset_theme_get_event_linked_product( $event_id );
 
 	if (
-		function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' )
-		&& function_exists( 'rytkoset_theme_get_tampere_2026_order_participants' )
-		&& rytkoset_theme_is_tampere_2026_registration_product( $product )
+		function_exists( 'rytkoset_theme_is_paid_event_registration_product' )
+		&& function_exists( 'rytkoset_theme_get_paid_event_order_participants' )
+		&& rytkoset_theme_is_paid_event_registration_product( $product )
 	) {
-		return rytkoset_theme_get_tampere_2026_order_participants( $order );
+		return rytkoset_theme_get_paid_event_order_participants( $order );
 	}
 
 	$quantity     = max( 1, rytkoset_theme_get_order_event_product_quantity( $order, $event_id ) );

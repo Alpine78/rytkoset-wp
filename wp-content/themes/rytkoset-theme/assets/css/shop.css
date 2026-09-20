@@ -1559,7 +1559,7 @@ body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block
    Tampere 2026 checkout participant cards (#520): the three
    field wrappers draw the card frame, while the numbered header
    with participant type and price is injected by
-   assets/js/tampere-checkout-participants.js.
+   assets/js/event-checkout-participants.js.
    ============================================================ */
 
 #order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"] {

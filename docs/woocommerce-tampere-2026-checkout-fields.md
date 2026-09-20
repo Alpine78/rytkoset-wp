@@ -2,6 +2,8 @@
 
 Tämä dokumentti kuvaa tiketin `#140` toteutusmallin.
 
+**#642, vaihe 1:** PHP-moduuli on nyt `inc/woocommerce-event-registration.php`, funktiot käyttävät `paid_event`-nimiä ja kassaskripti `assets/js/event-checkout-participants.js` saa asetuksensa `window.rytkosetEventParticipants`-oliosta. Alla kuvattu Tampere-kassan toiminta ja tallennetut kenttätunnisteet säilyvät. Uuden tapahtuman käyttöönotto pelkillä ylläpidon asetuksilla ei vielä sisälly tähän vaiheeseen. PHP- ja JS-muutokset julkaistaan yhdessä; ennen julkaisua avattu kassa ladataan uudelleen.
+
 ## Tavoite
 
 Yksi maksaja voi ilmoittaa samalla tilauksella useamman osallistujan Tampereen sukukokoukseen.
@@ -38,7 +40,7 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Checkout-kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla.
 - Kentät aktivoituvat vain, jos ostoskorissa on Tampere 2026 -tuote tai jokin sen variaatioista.
 - Kenttien määrä perustuu Tampere 2026 -variaatioiden yhteenlaskettuun kappalemäärään.
-- Teema julkaisee tämän osallistujamäärän Checkout Blockille Store API:n `cart.extensions.rytkoset_tampere_2026.participant_count`-kentässä. Saman extensionin `participants`-lista sisältää korttiotsakkeissa käytettävän osallistujatyypin ja yksikköhinnan ostoskorijärjestyksessä. Muut ostoskorin tuotteet eivät vaikuta osallistujakenttien määrään tai kortteihin.
+- Teema julkaisee tämän osallistujamäärän Checkout Blockille Store API:n `cart.extensions.rytkoset_event_registration.participant_count`-kentässä. Saman extensionin `participants`-lista sisältää korttiotsakkeissa käytettävän osallistujatyypin ja yksikköhinnan ostoskorijärjestyksessä. Muut ostoskorin tuotteet eivät vaikuta osallistujakenttien määrään tai kortteihin.
 - Tunnistus tehdään ensisijaisesti parent-tuotteen SKU:lla `tampere-2026-osallistumismaksu`.
 - Kentät tallentuvat tilauksen lisäkentiksiin order-metana.
 - Piilotettuja ylimääräisiä osallistujakenttiä ei näytetä tilausvahvistuksessa, sähköposteissa tai WooCommerce-adminissa.
@@ -47,7 +49,7 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - Osallistujatiedot näytetään myös WooCommerce-adminissa tilauksen yhteydessä.
 - Osallistujatyyppi puretaan tilauksen rivien variaatioista samassa järjestyksessä kuin osallistujakohtaiset checkout-kentät.
 - Kenttien autocomplete on tarkoituksella rajattu pois, jotta selaimen autofill ei kirjoita nimiä ruokarajoitekenttiin.
-- Korttien otsakkeet tuottaa `assets/js/tampere-checkout-participants.js`, ja kehys-, mobiili- sekä tumman teeman tyylit ovat `assets/css/shop.css`-tiedostossa. Sama skripti injektoi korttien yläpuolelle **Osallistujat — Tampere 2026** -osio-otsikon ja ohjetekstin.
+- Korttien otsakkeet tuottaa `assets/js/event-checkout-participants.js`, ja kehys-, mobiili- sekä tumman teeman tyylit ovat `assets/css/shop.css`-tiedostossa. Sama skripti injektoi korttien yläpuolelle **Osallistujat — Tampere 2026** -osio-otsikon ja ohjetekstin.
 - Tuotekohtaiset lisätiedot ja mahdollinen tilausmuistiinpano näytetään ennen maksutapoja. Maksutavat ovat näin kassan viimeinen muokattava osio ennen ehtojen hyväksyntää ja teeman keltaista **Lähetä tilaus** -painiketta.
 
 ## Rajaus tässä vaiheessa
@@ -60,6 +62,16 @@ Osallistujatyyppi (`Aikuinen` tai `Lapsi 3-12 vuotta`) tulee tuotteen variaatios
 - ei erillistä tapahtumarekisteriä
 
 ## Testaus
+
+### #642:n ensimmäisen vaiheen tarkistus (19.9.2026)
+
+- PHPUnit: 1 069 testiä / 2 756 assertiota läpi; testikokoonpanon ennestään tunnettu deprecation-ilmoitus säilyy.
+- PHPCS ja teeman PHP-syntaksitarkistus läpi.
+- Paikallinen Docker-WordPress / Chromium: uusi Store API -nimiavaruus ja kassaskripti latautuvat, kaksi osallistujaa tuottaa kaksi kenttäryhmää ja korttiotsaketta, kolmatta kenttäryhmää ei näy.
+- Vaalea ja tumma teema leveyksillä 320, 390 ja 1 440 px: ei vaakavieritystä, kentät ovat täytettävissä ja näppäimistöfokus näkyy.
+- Vanhat tuote- ja tilausmetat tarkistettu regressiotesteillä. Maksamista, tilauksen tallennusta, ylläpitoa ja CSV-vientiä ei testattu selaimessa tässä refaktorointivaiheessa. Muutosta ei ole julkaistu `dev.rytkoset.net`-ympäristöön; siellä tehtävä päästä päähän -tarkistus jää seuraavaan vaiheeseen.
+
+### Kassan tarkistuslista
 
 - Lisää Tampere 2026 -tuotetta ostoskoriin yksi osallistuja
 - Lisää samaan ostoskoriin myös vähintään yksi muu tuote ja varmista, että kassalla näkyy edelleen vain yhden osallistujan kentät

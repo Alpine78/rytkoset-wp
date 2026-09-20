@@ -2017,7 +2017,7 @@ require_once $rytkoset_theme_inc . '/security.php';
 require_once $rytkoset_theme_inc . '/seo-meta.php';
 require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
-require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
+require_once $rytkoset_theme_inc . '/woocommerce-event-registration.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';

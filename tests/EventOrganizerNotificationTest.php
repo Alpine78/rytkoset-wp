@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the paid event organizer notification in inc/woocommerce-tampere-2026.php:
+ * Tests for the paid event organizer notification in inc/woocommerce-event-registration.php:
  * data minimization and the registration summary block (#643).
  *
  * @package Rytkoset\Tests
@@ -217,7 +217,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_1_diet' => array( 'label' => 'Ruokarajoitteet' ) );
 
 		$this->assertFalse(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_diet'],
 				$fields,
@@ -233,7 +233,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_1_diet' => array( 'label' => 'Ruokarajoitteet' ) );
 
 		$this->assertTrue(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_diet'],
 				$fields,
@@ -246,7 +246,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 
 		// The thank-you page and confirmation blocks pass no sent_to_admin flag at all.
 		$this->assertTrue(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_diet'],
 				$fields,
@@ -259,7 +259,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_1_name' => array( 'label' => 'Nimi' ) );
 
 		$this->assertTrue(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_name'],
 				$fields,
@@ -272,7 +272,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_9_name' => array( 'label' => 'Nimi' ) );
 
 		$this->assertFalse(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				false,
 				$fields['rytkoset/participant_9_name'],
 				$fields,

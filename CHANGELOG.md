@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Changed
+- #642, vaihe 1: maksullisen ilmoittautumisen PHP-moduuli ja kassaskripti nimetty `woocommerce-event-registration.php`- ja `event-checkout-participants.js`-tiedostoiksi. PHP-kutsut käyttävät `paid_event`-nimiä, Store API `rytkoset_event_registration`-nimiavaruutta ja skripti `rytkosetEventParticipants`-asetuksia. Vanhojen tuotteiden tunnistus, tilausten kenttätunnisteet ja kassan toiminta säilyvät. Tuoteasetusten ja tapahtumakohtaisten valintojen yleistäminen jatkuu seuraavassa vaiheessa. Päivitetty tekniset dokumentaatioviittaukset ja `CLAUDE.md`; lisätty vanhan datan yhteensopivuustestit.
+
 ### Added
 - #676: maksuttoman tapahtuman vapaaehtoinen muiden osallistujien sähköpostikenttä (oletuksena pois päältä), osoitteiden validointi ja rajat, viestinnän ja palautepyynnön vastaanottajien laajennus, neutraali puhuttelu sekä lähde- ja tietosuojatieto lisäosoitteiden viesteihin. Osoitteet näkyvät ylläpidossa ja CSV:ssä; Privacy Tools käsittelee myös lisäosallistujan omat vienti- ja poistopyynnöt, ja anonymisointi poistaa osoitteet. Osallistujamäärä ja WooCommerce-kassa säilyvät ennallaan. Päivitetty tapahtuma-, viestintä-, palaute- ja tietosuojaohjeet sekä `CLAUDE.md`.
 

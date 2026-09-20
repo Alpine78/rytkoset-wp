@@ -155,7 +155,7 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 		return array();
 	}
 
-	$is_tampere_2026 = rytkoset_theme_is_tampere_2026_registration_product( wc_get_product( $product_id ) );
+	$has_participant_fields = rytkoset_theme_is_paid_event_registration_product( wc_get_product( $product_id ) );
 
 	$orders = rytkoset_theme_get_cached_paid_orders();
 
@@ -199,8 +199,8 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 		$created       = wp_date( get_option( 'date_format' ), $order->get_date_created() ? $order->get_date_created()->getTimestamp() : null );
 		$edit_url      = (string) admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order->get_id() );
 
-		if ( $is_tampere_2026 ) {
-			$participants = rytkoset_theme_get_tampere_2026_order_participants( $order );
+		if ( $has_participant_fields ) {
+			$participants = rytkoset_theme_get_paid_event_order_participants( $order );
 
 			if ( empty( $participants ) ) {
 				continue;

@@ -326,7 +326,7 @@ if ( ! function_exists( 'rytkoset_theme_order_has_cancellation_exception_product
 			}
 
 			if (
-				( function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' ) && rytkoset_theme_is_tampere_2026_registration_product( $product ) )
+				( function_exists( 'rytkoset_theme_is_paid_event_registration_product' ) && rytkoset_theme_is_paid_event_registration_product( $product ) )
 				|| ( function_exists( 'rytkoset_theme_is_bus_transport_product' ) && rytkoset_theme_is_bus_transport_product( $product ) )
 			) {
 				$has_exception = true;
