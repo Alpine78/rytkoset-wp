@@ -27,6 +27,8 @@ function rytkoset_theme_product_sync_get_meta_keys() {
 		'_rytkoset_member_names_required',
 		'_rytkoset_registration_deadline',
 		'_rytkoset_registration_mode',
+		'_rytkoset_registration_max_participants',
+		'_rytkoset_registration_choice_label',
 	);
 
 	return apply_filters( 'rytkoset_theme_product_sync_meta_keys', $keys );

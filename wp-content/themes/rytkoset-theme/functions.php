@@ -55,11 +55,12 @@ require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-member-coupon.php';
 require_once get_template_directory() . '/inc/woocommerce-digital-magazine.php';
-require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
+require_once get_template_directory() . '/inc/woocommerce-event-registration.php';
 require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
 require_once get_template_directory() . '/inc/woocommerce-empty-cart.php';
+require_once get_template_directory() . '/inc/woocommerce-checkout-session.php';
 require_once get_template_directory() . '/inc/woocommerce-structured-data.php';
 require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
@@ -686,8 +687,8 @@ function rytkoset_theme_scripts() {
 					'checkoutNotes' => array_values(
 						array_filter(
 							array(
-								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()
-										? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
+								function_exists( 'rytkoset_theme_cart_has_paid_event_registration' ) && rytkoset_theme_cart_has_paid_event_registration()
+										? rytkoset_theme_get_paid_event_checkout_notice_markup()
 										: '',
 							)
 						)

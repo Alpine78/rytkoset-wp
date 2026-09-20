@@ -1775,14 +1775,14 @@ function rytkoset_theme_get_event_product_registration_deadline( $product ) {
 	if (
 		! class_exists( 'WC_Product' )
 		|| ! $product instanceof WC_Product
-		|| ! function_exists( 'rytkoset_theme_get_tampere_2026_registration_deadline' )
-		|| ! function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' )
-		|| ! rytkoset_theme_is_tampere_2026_registration_product( $product )
+		|| ! function_exists( 'rytkoset_theme_get_paid_event_registration_deadline' )
+		|| ! function_exists( 'rytkoset_theme_is_paid_event_registration_product' )
+		|| ! rytkoset_theme_is_paid_event_registration_product( $product )
 	) {
 		return '';
 	}
 
-	return rytkoset_theme_get_tampere_2026_registration_deadline( $product );
+	return rytkoset_theme_get_paid_event_registration_deadline( $product );
 }
 
 /**
@@ -1879,8 +1879,8 @@ function rytkoset_theme_get_event_product_unavailability_message( $event_id ) {
 		return '';
 	}
 
-	if ( function_exists( 'rytkoset_theme_get_tampere_2026_registration_unavailability_message' ) ) {
-		$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+	if ( function_exists( 'rytkoset_theme_get_paid_event_registration_unavailability_message' ) ) {
+		$message = rytkoset_theme_get_paid_event_registration_unavailability_message( $product );
 
 		if ( '' !== $message ) {
 			return $message;

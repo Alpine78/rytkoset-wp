@@ -241,12 +241,8 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/woocommerce-digital-products.md` - digitaalisten tuotteiden MVP-malli
 - `docs/woocommerce-rytkosten-sukulainen-product.md` - painetun jäsenlehden tuotemalli
 - `docs/woocommerce-product-sync.md` - tuotteiden synkronointi ympäristöjen välillä
+- `docs/woocommerce-event-registration.md` - maksullisen tapahtuman tuoteasetukset, osallistujat, lisävalinta, järjestäjäilmoitukset ja kuljetuksen maksu jälkikäteen
 - `docs/woocommerce-event-product-link.md` - tapahtuman linkitys maksutuotteeseen
-- `docs/woocommerce-tampere-2026-product.md` - Tampere 2026 -osallistumismaksutuote
-- `docs/woocommerce-tampere-2026-checkout-fields.md` - Tampere 2026 checkout-kentät
-- `docs/woocommerce-tampere-2026-management.md` - Tampere 2026 -hallinta
-- `docs/woocommerce-tampere-2026-notifications.md` - maksullisten tapahtumien järjestäjäilmoitukset
-- `docs/woocommerce-tampere-2026-bussikyyti.md` - bussikyydin ilmoittautuminen ja maksu jälkikäteen
 - `docs/woocommerce-mollie-payments.md` - lepäävä Mollie-maksujen palautusohje
 - `docs/woocommerce-mollie-go-live.md` - lepäävä Mollie dev→live -palautusohje
 - `docs/woocommerce-mollie-mobilepay.md` - lepäävä Mollie MobilePay -palautusohje

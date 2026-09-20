@@ -1,6 +1,6 @@
 <?php
 /**
- * Tests for the paid event organizer notification in inc/woocommerce-tampere-2026.php:
+ * Tests for the paid event organizer notification in inc/woocommerce-event-registration.php:
  * data minimization and the registration summary block (#643).
  *
  * @package Rytkoset\Tests
@@ -130,7 +130,26 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertStringContainsString( '1. Matti Meikäläinen', $message );
 		$this->assertStringContainsString( '2. Liisa Meikäläinen', $message );
-		$this->assertStringContainsString( 'perjantain buffet: kyllä', $message );
+		$this->assertStringContainsString( 'Perjantain buffet: Kyllä', $message );
+	}
+
+	public function test_message_uses_saved_generic_question_and_keeps_sensitive_text_out(): void {
+		$product = $this->registration_product( 900 );
+		$product->update_meta_data( '_rytkoset_registration_mode', 'event_participants' );
+		$product->update_meta_data( '_rytkoset_registration_choice_label', 'Yhteinen illallinen' );
+		$this->event( 10, 900 );
+		$order = $this->order( $product );
+		$order->meta['_wc_other/rytkoset/participant_1_choice'] = '1';
+		$order->meta['_wc_other/rytkoset/participant_2_choice'] = '0';
+		rytkoset_theme_snapshot_paid_event_order_items( $order );
+		$product->update_meta_data( '_rytkoset_registration_choice_label', 'Uusi kysymys' );
+		$message = rytkoset_theme_get_event_organizer_notification_message( $order, 10 );
+		$this->assertStringContainsString( 'Yhteinen illallinen: Kyllä', $message );
+		$this->assertStringContainsString( 'Yhteinen illallinen: Ei', $message );
+		$this->assertStringNotContainsString( 'Uusi kysymys', $message );
+		$this->assertStringNotContainsString( 'Perjantain buffet', $message );
+		$this->assertStringNotContainsString( 'Gluteeniton', $message );
+		$this->assertStringNotContainsString( 'pyörätuolipaikan', $message );
 	}
 
 	public function test_message_keeps_the_billing_contact_once_without_per_participant_contacts(): void {
@@ -217,7 +236,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_1_diet' => array( 'label' => 'Ruokarajoitteet' ) );
 
 		$this->assertFalse(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_diet'],
 				$fields,
@@ -233,7 +252,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_1_diet' => array( 'label' => 'Ruokarajoitteet' ) );
 
 		$this->assertTrue(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_diet'],
 				$fields,
@@ -246,7 +265,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 
 		// The thank-you page and confirmation blocks pass no sent_to_admin flag at all.
 		$this->assertTrue(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_diet'],
 				$fields,
@@ -259,7 +278,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_1_name' => array( 'label' => 'Nimi' ) );
 
 		$this->assertTrue(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				true,
 				$fields['rytkoset/participant_1_name'],
 				$fields,
@@ -272,7 +291,7 @@ final class EventOrganizerNotificationTest extends Rytkoset_Theme_Test_Case {
 		$fields = array( 'rytkoset/participant_9_name' => array( 'label' => 'Nimi' ) );
 
 		$this->assertFalse(
-			rytkoset_theme_hide_tampere_2026_diet_fields_from_admin_email(
+			rytkoset_theme_hide_paid_event_diet_fields_from_admin_email(
 				false,
 				$fields['rytkoset/participant_9_name'],
 				$fields,

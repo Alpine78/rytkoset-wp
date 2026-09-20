@@ -357,6 +357,7 @@ class Rytkoset_Test_Cart {
 
 class Rytkoset_Test_WC {
 	public ?Rytkoset_Test_Cart $cart = null;
+	public ?object $session = null;
 }
 
 class WC_Admin_Meta_Boxes {
@@ -377,11 +378,28 @@ class Rytkoset_Test_Order_Item {
 	private WC_Product $product;
 	private string $name;
 	private int $quantity;
+	private array $meta = array();
 
 	public function __construct( WC_Product $product, string $name = 'Jäsenmaksu', int $quantity = 1 ) {
 		$this->product  = $product;
 		$this->name     = $name;
 		$this->quantity = $quantity;
+	}
+
+	public function get_meta( string $key, bool $single = true ) {
+		return $this->meta[ $key ] ?? '';
+	}
+
+	public function update_meta_data( string $key, $value ): void {
+		$this->meta[ $key ] = $value;
+	}
+
+	public function save(): int {
+		return 1;
+	}
+
+	public function get_product_id(): int {
+		return $this->product->get_parent_id() ?: $this->product->get_id();
 	}
 
 	public function get_product(): WC_Product {
@@ -535,6 +553,14 @@ class WC_Order {
 		$this->notes[] = $note;
 	}
 
+	public function meta_exists( string $key ): bool {
+		return array_key_exists( $key, $this->meta );
+	}
+
+	public function delete_meta_data( string $key ): void {
+		unset( $this->meta[ $key ] );
+	}
+
 	public function save(): void {
 		++$this->save_count;
 	}
@@ -621,6 +647,16 @@ class WP_Error {
 
 /** Minimal REST request stand-in for chat handler integration tests. */
 class WP_REST_Request {
+	public function __construct( private string $method = 'GET', private string $route = '' ) {}
+
+	public function get_method(): string {
+		return $this->method;
+	}
+
+	public function get_route(): string {
+		return $this->route;
+	}
+
 	/** @var array<string,mixed> */
 	private array $params = array();
 	/** @var array<string,string> */
@@ -2017,7 +2053,8 @@ require_once $rytkoset_theme_inc . '/security.php';
 require_once $rytkoset_theme_inc . '/seo-meta.php';
 require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
-require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
+require_once $rytkoset_theme_inc . '/woocommerce-event-registration.php';
+require_once $rytkoset_theme_inc . '/woocommerce-checkout-session.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';

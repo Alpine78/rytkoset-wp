@@ -221,7 +221,7 @@ tilaukselle riippumatta siitä, sisälsikö tilaus digilehteä — tämä näkyi
 Tampere 2026 -osallistumismaksun tilauksissa harhaanjohtavana "Haluan
 digilehden lukuoikeuden…: Ei" -rivinä, vaikka tilauksessa ei ollut lainkaan
 digilehteä. Korjattu samalla kolmen vartijan mallilla kuin Tampere 2026
--osallistujakentät (`inc/woocommerce-tampere-2026.php`):
+-osallistujakentät (`inc/woocommerce-event-registration.php`):
 `rytkoset_theme_order_has_digital_magazine_product( $order )` tarkistaa onko
 tilauksella digilehteen linkitetty tuote, ja tätä käyttävät
 `woocommerce_filter_fields_for_order_confirmation` (piilottaa vahvistuksesta ja

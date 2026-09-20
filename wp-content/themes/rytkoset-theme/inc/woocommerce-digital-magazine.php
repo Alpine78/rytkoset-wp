@@ -683,7 +683,7 @@ function rytkoset_theme_order_has_digital_magazine_product( $order ) {
  * WooCommerce Blocks stores an unchecked hidden checkbox as `false` on every order regardless of
  * whether the field actually applied, which otherwise renders a misleading "…: Ei" line about
  * digital magazines on unrelated orders (e.g. a Tampere 2026 registration) — the same mechanism
- * already guarded for the Tampere 2026 participant fields in inc/woocommerce-tampere-2026.php.
+ * already guarded for the Tampere 2026 participant fields in inc/woocommerce-event-registration.php.
  *
  * @param bool                 $show    Whether WooCommerce would show the field.
  * @param array<string, mixed> $field   Field data.

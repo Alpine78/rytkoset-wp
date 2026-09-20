@@ -1,11 +1,11 @@
 /**
- * Tampere 2026 participant card headers on the checkout (#520).
+ * Paid event participant card headers on the checkout (#520).
  *
  * The participant fields are server-registered Block Checkout additional
- * fields (name, diet, buffet per participant). This script injects a header
+ * fields (name, diet and an optional yes/no question per participant). This script injects a header
  * with the participant number, participant type (adult/child variation) and
  * unit price above each participant's field group, using the participant
- * lines published in the `rytkoset_tampere_2026` Store API cart extension.
+ * lines published in the `rytkoset_event_registration` Store API cart extension.
  * The card framing itself is CSS (shop.css).
  *
  * The checkout block re-renders its field list on state changes, which
@@ -13,7 +13,7 @@
  * render pass like the membership row controls.
  */
 (function () {
-	const config = window.rytkosetTampereParticipants;
+	const config = window.rytkosetEventParticipants;
 
 	if ( ! config || ! window.wp || ! window.wp.data ) {
 		return;
@@ -116,6 +116,16 @@
 			}
 
 			const line = participants[ index - 1 ] || null;
+			const choiceInput = document.getElementById( 'order-rytkoset-participant_' + index + '_choice' );
+			const choiceWrapper = choiceInput ? choiceInput.closest( '.wc-block-components-checkbox' ) : null;
+			const choiceLabel = choiceWrapper ? choiceWrapper.querySelector( '.wc-block-components-checkbox__label' ) : null;
+			if ( choiceLabel && line && line.choice_label ) {
+				const text = i18n.choice.replace( '%1$d', String( index ) ).replace( '%2$s', line.choice_label );
+				if ( choiceLabel.textContent !== text ) {
+					choiceLabel.textContent = text;
+				}
+			}
+
 			const existing = wrapper.querySelector( '.rytkoset-participant-head' );
 			const head = buildHead( index, line );
 

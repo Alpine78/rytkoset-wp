@@ -20,8 +20,8 @@ ARIA-merkinnät on tarkistettu erikseen.
 | Tuotearkiston lajitteluvalikko (mukautettu listbox-painikepari): `aria-haspopup="listbox"`, `aria-expanded`, `aria-controls`, `aria-activedescendant`, listbox/option-roolit, nuolinäppäimet + Home/End | [`assets/js/shop-select.js:159`](../wp-content/themes/rytkoset-theme/assets/js/shop-select.js) | ✅ |
 | Tuotteen määräkenttä (mukautettu +/-): napit saavat `aria-label="Vähennä määrää"` / `"Lisää määrää"`, fokus näkyy konttireunan ja box-shadow-renkaan kautta (`.rytkoset-quantity:focus-within`) | [`assets/js/shop-select.js:382`](../wp-content/themes/rytkoset-theme/assets/js/shop-select.js), [`assets/css/shop.css:333`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ |
 | Cart-blockin määrävalitsin (WC Block): konttirenkainen fokus `:focus-within`-tilassa | [`assets/css/shop.css:462`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ |
-| Tampere 2026 -osallistujakentät (nimi, ruokavalio, buffet) | [`inc/woocommerce-tampere-2026.php:659`](../wp-content/themes/rytkoset-theme/inc/woocommerce-tampere-2026.php) | ✅ Rekisteröity `woocommerce_register_additional_checkout_field`-API:lla → WC tuottaa labelit, `aria-required` ja virheilmoitukset itse |
-| Tampere 2026 -kassailmoitus | [`inc/woocommerce-tampere-2026.php:387`](../wp-content/themes/rytkoset-theme/inc/woocommerce-tampere-2026.php) | ✅ `role="note"` |
+| Maksullisen tapahtuman osallistujakentät (nimi, ruokavalio, vapaaehtoinen kyllä/ei; vanhalla tuotteella buffet) | [`inc/woocommerce-event-registration.php:659`](../wp-content/themes/rytkoset-theme/inc/woocommerce-event-registration.php) | ✅ Rekisteröity `woocommerce_register_additional_checkout_field`-API:lla → WC tuottaa labelit, `aria-required` ja virheilmoitukset itse |
+| Maksullisen tapahtuman kassailmoitus | [`inc/woocommerce-event-registration.php:387`](../wp-content/themes/rytkoset-theme/inc/woocommerce-event-registration.php) | ✅ `role="note"` |
 | Jäsenrivit (nimi, sähköposti) + Lisää/Poista jäsen -painikkeet | [`assets/js/membership-checkout-rows.js`](../wp-content/themes/rytkoset-theme/assets/js/membership-checkout-rows.js) | ✅ Rekisteröity `woocommerce_register_additional_checkout_field`-API:lla; rivikohtaiset `aria-label`-tekstit poistopainikkeilla, `aria-live`-ilmoitukset lisäyksestä/poistosta, fokus siirtyy uuden rivin ensimmäiseen kenttään ja poiston jälkeen järkevään kontrolliin (#520) |
 | WooCommerce-painikkeiden fokus | [`assets/css/shop.css:200`](../wp-content/themes/rytkoset-theme/assets/css/shop.css) | ✅ `:focus-visible` korvaa default-outlinen `box-shadow: var(--shop-focus-ring)`-renkaalla |
 | Toimitustavan valinta **Lähetä/Nouto** (WC Blocks, näkyy kun nouto on käytössä) | [`assets/css/components.css`](../wp-content/themes/rytkoset-theme/assets/css/components.css) | ✅ Tummassa teemassa valittu vaihtoehto on täytetty sinisävyinen siru WC:n kovakoodatun `background: #fff` -taustan sijaan (#635); mitattu tekstikontrasti 9,14:1 valittuna ja 13,85:1 valitsemattomana, valinnan reunaviiva 4,90:1 |
@@ -52,7 +52,7 @@ korvaava ilmaisin on näkyvä ja kontrastiltaan riittävä (≥3:1).
 
 ## Tuotekohtaiset huomiot
 
-### Tampere 2026 osallistujakentät
+### Maksullisen tapahtuman osallistujakentät
 Osallistujakenttiä on 1–10. Tuotteen määrän (`quantity`) muutos näyttää/piilottaa
 kentät dynaamisesti (`hidden`-skeema). WC hoitaa kenttien näkyvyyden, mutta
 **varmistettava käytännössä**: kun määrää muutetaan, ruudunlukija ei automaattisesti
@@ -66,3 +66,9 @@ sähköposti); perhejäsenmaksulla kassa alkaa yhdestä pakollisesta rivistä ja
 (#520). Kenttien yläpuolelle injektoitu **Jäsentiedot**-osio-otsikko ja
 ohjeteksti (`assets/js/membership-checkout-rows.js`) selittää käytön —
 erillinen ylätiedote poistettiin, koska se toisti saman tiedon.
+
+## #642, vaihe 2 (20.9.2026)
+
+Osallistujakortti päättyy ruokarajoitekenttään tai tuotteen valinnaiseen kyllä/ei-kenttään; vanhalla tuotteella buffet-valintaan. Lisävalinnan kysymys päivitetään WooCommercen labelin tekstielementtiin, joten checkboxin ja labelin yhteys säilyy. `shop.css` sulkee kortin alareunan viimeisen näkyvän kentän mukaan ilman JavaScript-lisäluokkia. Kassalla käytetään yleistä otsikkoa **Tapahtuman osallistujat**, ja uuden tuotteen kortti näyttää tuotteen nimen sekä mahdollisen osallistujatyypin.
+
+Paikallisessa Chromiumissa tarkistettu vaalea ja tumma teema leveyksillä 320, 390 ja 1 440 px, näkyvä näppäimistöfokus, vaakavierityksen puuttuminen sekä uuden ja vanhan tuotteen kenttien kohdistuminen samassa korissa. Myös palvelimen osallistujarajan virheilmoitus todennettiin oikeassa kassassa. Dev-palvelimen hyväksymistarkistus on vielä tekemättä.
