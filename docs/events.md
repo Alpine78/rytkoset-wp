@@ -287,7 +287,7 @@ jolloin myös tapahtumakohtaiset lisävalinta- ja määräkentät näkyvät heti
 
 ### Järjestäjäilmoitus maksuttomasta ilmoittautumisesta (#638)
 
-Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmoitus, jos tapahtuman `Järjestäjäilmoitukset`-laatikkoon on asetettu vastaanottajia. Käytössä on täsmälleen sama vastaanottajakenttä kuin maksullisten tapahtumien tilausilmoituksissa (`docs/woocommerce-tampere-2026-notifications.md`), joten järjestäjät hallitaan yhdestä paikasta tapahtuman muokkausnäkymässä.
+Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmoitus, jos tapahtuman `Järjestäjäilmoitukset`-laatikkoon on asetettu vastaanottajia. Käytössä on täsmälleen sama vastaanottajakenttä kuin maksullisten tapahtumien tilausilmoituksissa (`docs/woocommerce-event-registration.md`), joten järjestäjät hallitaan yhdestä paikasta tapahtuman muokkausnäkymässä.
 
 - **Tyhjä kenttä tarkoittaa, ettei ilmoitusta lähetetä.** Varaosoitetta ei ole tarkoituksella, jotta osallistujan henkilötiedot eivät koskaan päädy osoitteeseen, jota kukaan ei ole valinnut tähän käyttöön. Sama sääntö on voimassa maksullisella polulla.
 - Viesti sisältää tapahtuman perustiedot sekä ilmoittautujan nimen ja sähköpostiosoitteen. **Ruokarajoitteet, lisätieto ja lisävalinta jätetään tarkoituksella pois** — ne katsotaan ylläpidosta, jotta sähköpostilla liikkuu mahdollisimman vähän henkilötietoa.
@@ -431,16 +431,9 @@ Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus muokata k
 
 Päätoimittaja-roolille **ei** anneta tapahtumaoikeuksia suoraan, koska kaikki päätoimittajat eivät järjestä tapahtumia. Rajattu lisärooli on ylläpidettävämpi.
 
-### Tampere 2026
+### Maksullisen tapahtuman osallistujat
 
-Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle erillisinä MVP-osina:
-
-- osallistumismaksutuote: `docs/woocommerce-tampere-2026-product.md`
-- checkoutin osallistujakentät: `docs/woocommerce-tampere-2026-checkout-fields.md`
-- määräpäivä ja kapasiteetti: `docs/woocommerce-tampere-2026-management.md`
-- maksullisten tapahtumien järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
-
-Tampere 2026 -osallistujat näkyvät yhteisessä osallistujalistassa (katso alla). Vanha `WooCommerce > Tampere 2026 osallistujat` -pikalinkkisivu poistettiin tiketissä `#194`, kun sama tieto on saatavilla rajatuilla oikeuksilla yhteisestä näkymästä.
+Tuotteen osallistujakentät, vapaaehtoinen kyllä/ei-valinta, määräpäivä, kapasiteetti ja järjestäjäilmoitukset: [maksullisen tapahtuman yleisohje](woocommerce-event-registration.md). Myös vanhat Tampere 2026 -tilaukset näkyvät yhteisessä **Tapahtumat → Osallistujat** -näkymässä. Vanha tapahtumakohtainen pikalinkkisivu poistettiin #194:ssa.
 
 ### Yleinen osallistujanäkymä
 

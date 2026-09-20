@@ -204,28 +204,30 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 					: __( 'Nimi puuttuu', 'rytkoset-theme' );
 
 				$rows[] = array(
-					'name'             => $participant_name,
-					'email'            => '',
-					'phone'            => '',
-					'diet'             => isset( $participant['diet'] ) ? (string) $participant['diet'] : '',
-					'notes'            => '',
-					'participant_type' => isset( $participant['participant_type'] ) ? (string) $participant['participant_type'] : '',
-					'friday_buffet'    => $participant['friday_buffet'],
-					'status'           => 'paid',
-					'status_label'     => $status_label,
-					'source'           => 'paid',
-					'origin'           => 'paid',
-					'origin_label'     => __( 'Maksullinen', 'rytkoset-theme' ),
-					'created'          => $created,
-					'contact_name'     => $contact_name,
-					'contact_email'    => $contact_email,
-					'edit_url'         => $edit_url,
-					'registration_id'  => 0,
-					'order_id'         => $order->get_id(),
-					'order_number'     => $order->get_order_number(),
-					'order_status'     => $order_status,
-					'event_id'         => $event_id,
-					'event_title'      => get_the_title( $event_id ),
+					'name'              => $participant_name,
+					'email'             => '',
+					'phone'             => '',
+					'diet'              => isset( $participant['diet'] ) ? (string) $participant['diet'] : '',
+					'notes'             => '',
+					'participant_type'  => isset( $participant['participant_type'] ) ? (string) $participant['participant_type'] : '',
+					'friday_buffet'     => $participant['friday_buffet'],
+					'paid_choice_label' => $participant['choice_label'],
+					'paid_choice'       => $participant['choice'],
+					'status'            => 'paid',
+					'status_label'      => $status_label,
+					'source'            => 'paid',
+					'origin'            => 'paid',
+					'origin_label'      => __( 'Maksullinen', 'rytkoset-theme' ),
+					'created'           => $created,
+					'contact_name'      => $contact_name,
+					'contact_email'     => $contact_email,
+					'edit_url'          => $edit_url,
+					'registration_id'   => 0,
+					'order_id'          => $order->get_id(),
+					'order_number'      => $order->get_order_number(),
+					'order_status'      => $order_status,
+					'event_id'          => $event_id,
+					'event_title'       => get_the_title( $event_id ),
 				);
 			}
 
@@ -871,7 +873,7 @@ function rytkoset_theme_export_event_participants_csv() {
 		__( 'Tapahtuma', 'rytkoset-theme' ),
 		__( 'Nimi', 'rytkoset-theme' ),
 		__( 'Osallistujatyyppi', 'rytkoset-theme' ),
-		__( 'Perjantain buffet', 'rytkoset-theme' ),
+		__( 'Maksullisen tapahtuman lisävalinta', 'rytkoset-theme' ),
 		__( 'Sähköposti', 'rytkoset-theme' ),
 		__( 'Puhelin', 'rytkoset-theme' ),
 		__( 'Ruokavalio / huomiot', 'rytkoset-theme' ),
@@ -917,7 +919,7 @@ function rytkoset_theme_export_event_participants_csv() {
 				(string) ( $row['event_title'] ?? '' ),
 				(string) ( $row['name'] ?? '' ),
 				(string) ( $row['participant_type'] ?? '' ),
-				isset( $row['friday_buffet'] ) ? ( $row['friday_buffet'] ? __( 'Kyllä', 'rytkoset-theme' ) : __( 'Ei', 'rytkoset-theme' ) ) : '',
+				rytkoset_theme_format_paid_event_choice( $row['paid_choice_label'] ?? '', $row['paid_choice'] ?? null ),
 				(string) ( $row['email'] ?? '' ),
 				(string) ( $row['phone'] ?? '' ),
 				$details,
@@ -1133,7 +1135,7 @@ function rytkoset_theme_render_event_participants_admin_page() {
 						<th scope="col"><?php echo esc_html( $quantity_label ); ?></th>
 					<?php endif; ?>
 					<th scope="col"><?php esc_html_e( 'Osallistujatyyppi', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Perjantain buffet', 'rytkoset-theme' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Maksullisen tapahtuman lisävalinta', 'rytkoset-theme' ); ?></th>
 					<?php if ( $show_event_column ) : ?>
 						<th scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
 					<?php endif; ?>
@@ -1165,9 +1167,8 @@ function rytkoset_theme_render_event_participants_admin_page() {
 							<td><?php echo '' !== (string) $row['participant_type'] ? esc_html( (string) $row['participant_type'] ) : '&mdash;'; ?></td>
 							<td>
 								<?php
-								echo isset( $row['friday_buffet'] )
-									? ( $row['friday_buffet'] ? esc_html__( 'Kyllä', 'rytkoset-theme' ) : esc_html__( 'Ei', 'rytkoset-theme' ) )
-									: '&mdash;';
+								$paid_choice = rytkoset_theme_format_paid_event_choice( $row['paid_choice_label'] ?? '', $row['paid_choice'] ?? null );
+								echo '' !== $paid_choice ? esc_html( $paid_choice ) : '&mdash;';
 								?>
 							</td>
 							<?php if ( $show_event_column ) : ?>

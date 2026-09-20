@@ -65,7 +65,7 @@ Jokaiselta osallistujalta näkyy:
 | Tapahtumakohtainen lisävalinta | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty lisävalinta; otsikkona käytetään tapahtuman kenttäotsikkoa |
 | Tapahtumakohtainen määrä | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty määräkenttä; otsikkona käytetään tapahtuman kenttäotsikkoa |
 | Osallistujatyyppi | Tapahtumatuotteen variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
-| Perjantain buffet | Osallistuuko henkilö perjantain buffet-illalliselle |
+| Maksullisen tapahtuman lisävalinta | Tilaushetken kysymys ja vastaus, esimerkiksi `Yhteinen illallinen: Kyllä` |
 | Sähköposti | Osallistujan sähköposti (ilmaisessa) tai yhteyshenkilön sähköposti (maksullisessa) |
 | Puhelin | Puhelinnumero |
 | Ruokavalio / huomiot | Ruokarajoitteet, allergiat ja lisätiedot |
@@ -113,7 +113,7 @@ Sarakkeet:
 | Tapahtuma | Tapahtuman otsikko |
 | Nimi | Osallistujan nimi |
 | Osallistujatyyppi | Osallistujakenttiä käyttävillä tapahtumilla tuotteen variaatio |
-| Perjantain buffet | Vanhoilla osallistujilla `Kyllä` tai `Ei`; uusilla yleiskäyttöisillä tapahtumilla tyhjä |
+| Maksullisen tapahtuman lisävalinta | Kysymys ja `Kyllä`/`Ei`; vanhoilla osallistujilla `Perjantain buffet: Kyllä/Ei`. Tyhjä ilman lisävalintaa |
 | Sähköposti | Osallistujan sähköposti |
 | Puhelin | Puhelinnumero |
 | Ruokavalio / huomiot | Ruokarajoitteet ja lisätiedot yhdistettynä |
@@ -149,8 +149,8 @@ Lähde: `event_registration` -sisältötyyppi. Meta-avain `_rytkoset_registratio
 
 Lähde: WooCommerce-tilaukset, joissa on tapahtuman meta-avaimeen `_rytkoset_event_product_id` tallennettu tuote. Status seuraa tilauksen WooCommerce-statusta.
 
-- **Tampere 2026**: käytetään olemassa olevaa moniosallistujarakennetta — tilauksen checkout-kentistä puretaan jokainen osallistuja erikseen omaksi riviksi. Osallistujatyyppi tulee tilauksen variaatiosta ja perjantain buffet-valinta checkout-kentästä.
-- **Muut maksulliset tapahtumat**: yksi rivi per tilaus, tiedot tilauksen laskutustiedoista.
+- **Osallistujakenttiä käyttävät tuotteet** (myös vanha Tampere-tuote): kassakentistä puretaan jokainen osallistuja omaksi riviksi. Osallistujatyyppi ja lisävalinnan kysymys luetaan tilausriviltä; vanhojen tilausten tuote- ja buffet-tunnistus säilyy.
+- **Tuotteet ilman osallistujakenttiä**: yksi rivi per tilaus, tiedot tilauksen laskutustiedoista.
 
 ### Yhtenäinen rivirakenne
 
@@ -160,6 +160,8 @@ choice        – maksuttoman ilmoittautumisen tapahtumakohtainen lisävalinta
 quantity      – maksuttoman ilmoittautumisen tapahtumakohtainen määrä
 participant_type – tapahtumatuotteen osallistujatyyppi
 friday_buffet – vanhoilla osallistujilla true/false; uusilla yleiskäyttöisillä tapahtumilla null
+paid_choice_label – maksullisen osallistujan tilaushetken kysymys (vanhalla tuotteella Perjantain buffet)
+paid_choice   – maksullisen osallistujan true/false tai null ilman kysymystä
 email         – sähköposti
 phone         – puhelinnumero
 diet          – ruokarajoitteet

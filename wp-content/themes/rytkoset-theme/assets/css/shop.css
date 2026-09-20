@@ -1627,16 +1627,16 @@ body.woocommerce-checkout .wp-block-woocommerce-checkout-actions-block .wc-block
   top: 18px; /* WooCommerce active-state default 6px + 12px wrapper padding. */
 }
 
-#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_friday_buffet"] {
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_friday_buffet"],
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_choice"] {
   padding-top: 14px;
   padding-bottom: 16px;
   border-bottom: 1.5px solid var(--color-border-neutral);
   border-radius: 0 0 var(--radius-l) var(--radius-l);
 }
 
-/* New events end each participant card at the diet field. Legacy events
-   retain their checkbox as the final field and keep its existing frame. */
-#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_diet"]:not(:has(+ [class*="_friday_buffet"])) {
+/* Without an enabled checkbox, the diet field closes the participant card. */
+#order.wc-block-components-address-form > [class*="address-form__rytkoset-participant_"][class*="_diet"]:not(:has(+ [class*="_friday_buffet"], + [class*="_choice"])) {
   padding-bottom: 16px;
   border-bottom: 1.5px solid var(--color-border-neutral);
   border-radius: 0 0 var(--radius-l) var(--radius-l);

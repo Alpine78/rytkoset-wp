@@ -48,6 +48,8 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 					'diet'             => 'Gluteeniton',
 					'participant_type' => '',
 					'friday_buffet'    => true,
+					'choice_label' => 'Perjantain buffet',
+					'choice' => true,
 				),
 			),
 			rytkoset_theme_get_paid_event_order_participants( $order )
@@ -167,7 +169,7 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 		$order->meta['_wc_other/rytkoset/participant_2_friday_buffet'] = '1';
 		$this->assertSame( 'Toinen', rytkoset_theme_get_paid_event_order_participants( $order, 902 )[0]['name'] );
 		$this->assertTrue( rytkoset_theme_get_paid_event_order_participants( $order, 902 )[0]['friday_buffet'] );
-		$this->assertSame( array( 2 ), rytkoset_theme_get_paid_event_legacy_buffet_indices( array(
+		$this->assertSame( array( 2 ), rytkoset_theme_get_paid_event_checkbox_indices( array(
 			array( 'data' => $generic, 'quantity' => 1 ), array( 'data' => $legacy, 'quantity' => 1 ),
 		) ) );
 		$this->assertFalse( rytkoset_theme_filter_paid_event_order_confirmation_fields( true, array( 'id' => 'rytkoset/participant_1_friday_buffet' ), array(), array( 'order' => $order ) ) );
@@ -188,6 +190,117 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 			'_wc_other/rytkoset/participant_1_name' => 'Testi',
 			'_wc_other/rytkoset/participant_1_diet' => 'Ruokavalio',
 		), $order->meta );
+	}
+
+	public function test_choice_is_opt_in_and_inherited_from_parent(): void {
+		$parent = rytkoset_test_register_product( 901, 'publish', 'Tuleva', array( '_rytkoset_registration_mode' => 'event_participants' ) );
+		$child = new WC_Product( array( '_parent_id' => 901 ), 902 );
+		$this->assertSame( '', rytkoset_theme_get_paid_event_choice_label( $child ) );
+		$parent->update_meta_data( '_rytkoset_registration_choice_label', 'Yhteinen illallinen' );
+		$this->assertSame( 'Yhteinen illallinen', rytkoset_theme_get_paid_event_choice_label( $child ) );
+		$parent->update_meta_data( '_rytkoset_registration_mode', '' );
+		$this->assertSame( '', rytkoset_theme_get_paid_event_choice_label( $child ) );
+		$this->assertSame( 'Perjantain buffet', rytkoset_theme_get_paid_event_choice_label( $this->registration_product() ) );
+	}
+
+	public function test_admin_sanitizes_choice_label_and_does_not_change_legacy_question(): void {
+		$product = $this->plain_product();
+		$_POST = array(
+			'rytkoset_paid_event_settings' => '1',
+			'_rytkoset_event_participants_enabled' => 'yes',
+			'_rytkoset_registration_choice_label' => '<b>Illallinen</b>',
+		);
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( 'Illallinen', rytkoset_theme_get_paid_event_choice_label( $product ) );
+		$_POST['_rytkoset_registration_choice_label'] = str_repeat( 'ä', 201 );
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( 200, mb_strlen( rytkoset_theme_get_paid_event_choice_label( $product ) ) );
+		$_POST['_rytkoset_registration_choice_label'] = array( 'invalid' );
+		rytkoset_theme_save_paid_event_product_management_fields( $product );
+		$this->assertSame( '', rytkoset_theme_get_paid_event_choice_label( $product ) );
+		$legacy = $this->registration_product();
+		rytkoset_theme_save_paid_event_product_management_fields( $legacy );
+		$this->assertSame( 'Perjantain buffet', rytkoset_theme_get_paid_event_choice_label( $legacy ) );
+	}
+
+	public function test_mixed_cart_positions_separate_generic_choice_from_legacy_buffet(): void {
+		$enabled = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants', '_rytkoset_registration_choice_label' => 'Illallinen' ) );
+		$disabled = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ) );
+		$cart = array(
+			array( 'data' => $this->plain_product(), 'quantity' => 3 ),
+			array( 'data' => $disabled, 'quantity' => 1 ),
+			array( 'data' => $enabled, 'quantity' => 2 ),
+			array( 'data' => $this->registration_product(), 'quantity' => 1 ),
+		);
+		$this->assertSame( array( 2, 3 ), rytkoset_theme_get_paid_event_checkbox_indices( $cart, true ) );
+		$this->assertSame( array( 4 ), rytkoset_theme_get_paid_event_checkbox_indices( $cart ) );
+	}
+
+	public function test_order_choice_preserves_question_and_both_answers_after_product_changes(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants', '_rytkoset_registration_choice_label' => 'Illallinen' ), 901 );
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Tuleva', 2 );
+		$order->meta = array(
+			'_wc_other/rytkoset/participant_1_name' => 'Yksi',
+			'_wc_other/rytkoset/participant_1_choice' => '1',
+			'_wc_other/rytkoset/participant_2_name' => 'Kaksi',
+			'_wc_other/rytkoset/participant_2_choice' => '0',
+		);
+		rytkoset_theme_snapshot_paid_event_order_items( $order );
+		$product->update_meta_data( '_rytkoset_registration_choice_label', 'Bussikyyti' );
+		$product->update_meta_data( '_rytkoset_registration_mode', '' );
+		$rows = rytkoset_theme_get_paid_event_order_participants( $order, 901 );
+		$this->assertSame( 'Illallinen', $rows[0]['choice_label'] );
+		$this->assertTrue( $rows[0]['choice'] );
+		$this->assertFalse( $rows[1]['choice'] );
+		$this->assertNull( $rows[0]['friday_buffet'] );
+		$this->assertSame( array( 'Yksi — Illallinen: Kyllä', 'Kaksi — Illallinen: Ei' ), rytkoset_theme_get_paid_event_order_choice_summary( $order ) );
+		$this->assertSame( array(), rytkoset_theme_get_paid_event_order_participants( $order, 902 ) );
+		rytkoset_theme_cleanup_paid_event_extra_participant_order_meta( $order );
+		$this->assertSame( '1', $order->meta['_wc_other/rytkoset/participant_1_choice'] );
+	}
+
+	public function test_enabling_choice_does_not_invent_answers_on_older_orders(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ) );
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Tuleva', 1 );
+		$order->meta['_wc_other/rytkoset/participant_1_name'] = 'Yksi';
+		$product->update_meta_data( '_rytkoset_registration_choice_label', 'Illallinen' );
+		$rows = rytkoset_theme_get_paid_event_order_participants( $order );
+		$this->assertSame( '', $rows[0]['choice_label'] );
+		$this->assertNull( $rows[0]['choice'] );
+		$this->assertSame( array(), rytkoset_theme_get_paid_event_order_choice_summary( $order ) );
+		// A forged hidden checkbox must not survive cleanup either.
+		$order->meta['_wc_other/rytkoset/participant_1_choice'] = '1';
+		rytkoset_theme_cleanup_paid_event_extra_participant_order_meta( $order );
+		$this->assertArrayNotHasKey( '_wc_other/rytkoset/participant_1_choice', $order->meta );
+	}
+
+	public function test_choice_summary_escapes_html_and_omits_legacy_duplicates(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants', '_rytkoset_registration_choice_label' => 'A & B' ) );
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Tuleva', 1 );
+		$order->items[] = new Rytkoset_Test_Order_Item( $this->registration_product(), 'Vanha', 1 );
+		$order->meta = array(
+			'_wc_other/rytkoset/participant_1_name' => '<b>Yksi</b>',
+			'_wc_other/rytkoset/participant_1_choice' => '1',
+			'_wc_other/rytkoset/participant_2_name' => 'Kaksi',
+			'_wc_other/rytkoset/participant_2_friday_buffet' => '1',
+		);
+		rytkoset_theme_snapshot_paid_event_order_items( $order );
+		ob_start();
+		rytkoset_theme_render_paid_event_order_choices( $order );
+		$html = ob_get_clean();
+		$this->assertStringContainsString( 'A &amp; B: Kyllä', $html );
+		$this->assertStringNotContainsString( '<b>', $html );
+		$this->assertStringNotContainsString( 'Perjantain buffet', $html );
+		ob_start();
+		rytkoset_theme_render_paid_event_order_choices( $order, false, true );
+		$plain = ob_get_clean();
+		$this->assertStringContainsString( 'Yksi — A & B: Kyllä', $plain );
+		$this->assertStringNotContainsString( '<b>', $plain );
+		$this->assertSame( '', rytkoset_theme_format_paid_event_choice( '', false ) );
+		$this->assertSame( '', rytkoset_theme_format_paid_event_choice( 'Question', null ) );
 	}
 
 	// --- participant field-id helpers --------------------------------------
@@ -221,6 +334,7 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 				'rytkoset/participant_2_name',
 				'rytkoset/participant_2_diet',
 				'rytkoset/participant_2_friday_buffet',
+				'rytkoset/participant_2_choice',
 			),
 			rytkoset_theme_get_paid_event_participant_field_ids( 2 )
 		);
@@ -256,9 +370,9 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertSame(
 			array(
-				array( 'type' => 'aikuinen', 'price' => '49,00 €' ),
-				array( 'type' => 'aikuinen', 'price' => '49,00 €' ),
-				array( 'type' => 'lapsi 3 12 vuotta', 'price' => '24,50 €' ),
+				array( 'type' => 'aikuinen', 'price' => '49,00 €', 'choice_label' => '' ),
+				array( 'type' => 'aikuinen', 'price' => '49,00 €', 'choice_label' => '' ),
+				array( 'type' => 'lapsi 3 12 vuotta', 'price' => '24,50 €', 'choice_label' => '' ),
 			),
 			$lines
 		);
