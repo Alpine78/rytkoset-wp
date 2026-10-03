@@ -206,6 +206,7 @@ Tärkeät polut:
 - `wp-content/mu-plugins/automation-by-klik.php` - Klikin hallinnoiman ylläpidon
   MU-pluginin repoitu kopio; ei automaattisesti deployattava teematiedosto
 - `docs/` - ominaisuus- ja ylläpitodokumentaatio
+- `newsletters/660-pilot/` - paikallinen uutiskirjeen HTML-luonnos ja pilotin havaintoloki (#660)
 - `.github/workflows/` - CI- ja deploy-workflowt
 - `CHANGELOG.md` - manuaalinen muutoshistoria
 - `AGENTS.md` - repo-ohjeet AI-avusteiseen kehitykseen
@@ -233,7 +234,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/digital-magazines.md` - digilehtien sisältö-, käyttöoikeus- ja hinnoittelumalli
 - `docs/jasenyys.md` - käyttäjän jäsenyystilan asettaminen
 - `docs/jasenille-rajatut-sivut.md` - vain jäsenille näkyvät sisältösivut
-- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
+- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio ja paikallisen HTML-tuontipilotin työnkulku
 - `docs/chat.md` - AI-tukichatin backend-proxy, widget ja ylläpito
 - `docs/woocommerce-setup.md` - WooCommercen perusasetukset
 - `docs/woocommerce-membership-products.md` - jäsenmaksutuotteet

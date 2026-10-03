@@ -404,7 +404,7 @@ WordPress admin-managed menus: `primary` (main menu), `footer`, `account` (user/
 
 `docs/` contains setup and maintenance guides for WooCommerce features. Read the relevant doc before making WooCommerce changes.
 
-`docs/newsletter.md` documents the AcyMailing footer signup setup, target list, My Account newsletter management, opt-in workflows and newsletter MVP boundaries.
+`docs/newsletter.md` documents the AcyMailing footer signup setup, target list, My Account newsletter management, opt-in workflows and newsletter MVP boundaries. HTML import pilot #660 uses `newsletters/660-pilot/template.html` as a standalone, table-based email draft outside the theme and deploy paths; `newsletters/660-pilot/README.md` tracks missing content and acceptance results. Essential styles are inline with literal theme colors for email compatibility; head CSS is progressive enhancement. The importer discards html/body attributes: keep `lang="fi"` on the outer table and body resets in a media query so the renderer preserves them. AcyMailing 11.1.0 locally supports empty paired `{unsubscribe}{/unsubscribe}` and `{readonline}{/readonline}` tags inside styled anchor hrefs; verify production rendering and a test subscriber's list-specific unsubscribe before sending. ZIPs are generated locally, ignored by git, and imported manually. No subscriber data, personal URLs or cron keys belong in the sources. Production import, email-client tests, a single 8-message batch every 30 minutes and license renewal decision remain acceptance work, not verified behavior.
 
 `docs/design-system.md` documents the theme's color tokens, radius/shadow/transition variables, layout, and component conventions. Read it before writing or modifying CSS.
 
