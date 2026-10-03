@@ -155,19 +155,19 @@ Ennen CSV-tuontia ota varmuuskopio, varmista suostumuksen peruste ja tee ensin p
 
 ## Lähetysasetukset ja rajat
 
-Tuotannon perusasetukset:
+Tuotannon aiemmin dokumentoidut perusasetukset (tarkista nykyiset arvot ylläpidosta):
 
 - AcyMailing Essential -lisenssi on kytketty vain tuotantoon.
 - Automaattiset tehtävät ja AcyMailingin oma web-cron ovat tuotannossa aktiivisia.
 - Kehitysympäristön automaattiset tehtävät pidetään deaktivoituina.
-- Jonoprosessi lähettää yhden 18 viestin erän tunnissa eli enintään noin 18 sähköpostia tunnissa.
+- Aiempi jonoprosessi-asetus on yksi 18 viestin erä tunnissa. Pilotin #660 tavoite on pienempi: **yksi 8 viestin erä 30 minuutin välein**, enintään 16 uutiskirjeviestiä tunnissa. Tuotannon asetuksen muuttamista ei ole vielä todennettu.
 - Viestien välinen odotus voi olla `0` sekuntia, koska tuntiraja tehdään eräkoon ja ajovälin avulla.
 - Lähetys on sallittu ympäri vuorokauden, ellei ylläpito erikseen rajaa lähetysaikaa.
 - Epäonnistuneita lähetyksiä yritetään enintään asetettu määrä; toistuvasti epäonnistuvia osoitteita ei pidä palauttaa aktiivisiksi ilman syyn selvitystä.
 - `Send a report`: vähintään `Only if an error occurs`.
 - `Save the report`: `Only if AcyMailing executes an action`.
 
-Esimerkiksi 180 vastaanottajan kampanja kestää noin 10 tuntia nopeudella 18 viestiä tunnissa. Kampanja kannattaa siksi lisätä jonoon riittävän aikaisin. AcyMailingin lisäksi myös muut sivuston sähköpostit käyttävät samaa palveluntarjoajan lähetyskapasiteettia, joten suurta uutiskirjelähetystä ei kannata ajoittaa samaan aikaan tapahtumien massaviestinnän kanssa.
+Esimerkiksi 180 vastaanottajan kampanja kestää noin 11–12 tuntia nopeudella 16 viestiä tunnissa. Kampanja kannattaa siksi lisätä jonoon riittävän aikaisin. AcyMailingin lisäksi myös muut sivuston sähköpostit käyttävät samaa palveluntarjoajan lähetyskapasiteettia, joten suurta uutiskirjelähetystä ei kannata ajoittaa samaan aikaan tapahtumien massaviestinnän kanssa. Testiviestit ja cron-raportitkin kuluttavat kapasiteettia; kaksi jäljelle jäävää viestiä tunnissa ei yksin takaa kaikkien sivuston viestien mahtumista rajaan.
 
 Tuotannossa cronin toiminta tunnistetaan kohdasta `AcyMailing > Asetukset > Jonoprosessi`:
 
@@ -176,6 +176,140 @@ Tuotannossa cronin toiminta tunnistetaan kohdasta `AcyMailing > Asetukset > Jono
 - raportissa näkyy käsiteltyjen, onnistuneiden ja epäonnistuneiden viestien määrä
 
 Erillistä cPanel-cronia ei tarvita niin kauan kuin AcyMailingin oma web-cron toimii ja lähetysjono etenee.
+
+## HTML-tuontipilotti #660
+
+Tavoite on kokeilla yhtä todellista uutiskirjettä paikallisesta HTML-lähteestä
+tuotannon AcyMailingiin ennen marraskuun 2026 lisenssiuusintaa. Ensimmäinen vaihe
+sisältää luonnospohjan ja tämän työnkulun. **Todellista kirjettä, tuotantotuontia,
+sähköpostiohjelmien toimivuutta tai lopullista lisenssipäätöstä ei ole vielä
+hyväksytty.** Havaintoloki: [newsletters/660-pilot/README.md](../newsletters/660-pilot/README.md).
+
+### 1. Hyväksy sisältö ja muokkaa lähdettä
+
+Lähde on `newsletters/660-pilot/template.html`. Täydennä hyväksytyt tekstit,
+otsikko ja pääpainikkeen teksti sekä `href`-kohde. Poista kaikki `[TÄYDENNÄ: ...]`
+-kohdat ja näkyvä luonnosvaroitus vasta sisältötarkistuksen jälkeen. Aseta
+kampanjan aihe ja esikatseluteksti AcyMailingissa erikseen. Älä keksi tapahtumia,
+päivämääriä tai jäsenetuja puuttuvan aineiston tilalle.
+
+Pohja käyttää yhtä enintään 600 px leveää palstaa, asettelutaulukoita
+(`role="presentation"`), inline-tyylejä ja tavallisia järjestelmäfontteja.
+Se ei lataa WordPress-teeman CSS:ää eikä käytä flex/grid-asettelua, JavaScriptiä,
+web-fontteja tai CSS-muuttujia. Sähköpostin literal-värit on otettu design
+systemistä: inline-arvot säilyttävät perusulkoasun myös ilman head-tyylejä.
+Mobiili- ja tumman tilan media queryt ovat lisäparannus, eivät peruslukemisen ehto.
+
+Nykyinen pohja on kuvaton, koska hyväksyttyä kuva-aineistoa ei ole vielä valittu.
+Jos kirjeeseen tulee kuva, lisää hyväksytty PNG/JPG-tiedosto `images/`-hakemistoon
+ja käytä esimerkiksi `src="images/kuva.jpg"`. Anna kuvalle kuvaava `alt`,
+leveysattribuutti sekä inline-tyyli `display: block; width: 100%; max-width: 536px;
+height: auto; border: 0;`. Lisää tarvittaessa saman levyinen asettelutaulukko
+Outlookia varten. Olennaisen tiedon pitää löytyä myös tekstinä kuvien ollessa
+estettyinä. Ulkoiset kuvat tarvitsevat julkisen tuotannon HTTPS-osoitteen.
+
+Pohjan dynaamiset linkit ovat:
+
+```html
+<a href="{readonline}{/readonline}">Lue selaimessa</a>
+<a href="{unsubscribe}{/unsubscribe}">Peruuta uutiskirjeen tilaus</a>
+```
+
+Paikallisen AcyMailing 11.1.0:n koodi korvaa tyhjät tunnisteparit URL-osoitteilla;
+ympäröivä linkki säilyttää inline-tyylinsä. Syntaksi tarkistettiin tiedostoista
+`back/dynamics/online/OnlineInsertion.php` ja
+`back/dynamics/subscription/SubscriptionInsertion.php`. Säilytä molemmat
+tunnisteparit; älä korvaa peruutusta kiinteällä sivu- tai Oma tili -linkillä.
+Vastaanottajakohtainen toiminta on todettava tuotannon testitilaajalla.
+
+### 2. Tarkista localhostissa
+
+Aja repon juuresta (Python 3:n vakio-HTTP-palvelin, ei lisäriippuvuuksia):
+
+```bash
+python3 -m http.server 8660 --bind 127.0.0.1 --directory newsletters/660-pilot
+```
+
+Avaa `http://localhost:8660/template.html`. Sammuta esikatselupalvelin
+`Ctrl+C`:llä tarkistuksen jälkeen.
+
+- Tarkista 320/375 px mobiilileveydet ja desktop: ei vaakavieritystä,
+  tekstit rivittyvät, painikkeen ja linkkien fokus näkyy näppäimistöllä.
+- Tarkista vaalea ja tumma tila sekä sisältö ilman kuvia ja head-tyylejä.
+- Avaa kaikki tavalliset linkit ja varmista tuotannon kohdeosoitteet.
+- Dynaamiset linkit ovat paikallisessa HTML-esikatselussa tunnisteita.
+  Selain ei yksin todenna niiden toimintaa eikä sähköpostiohjelmien ulkoasua.
+
+### 3. Pakkaa ZIP ja tuo malliksi
+
+ZIPin juuressa pitää olla `template.html`. [AcyMailingin tuontiohje](https://docs.acymailing.com/main-pages/templates/import)
+sallii lisäksi `css/`, `images/` ja `thumbnail.png`. Älä pakkaa luonnoshakemistoa
+ylätasoksi äläkä sisällytä README:tä tai havaintolokia ZIPiin.
+
+Kuvattoman pohjan pakkaus Linuxissa/WSL:ssä repon juuresta:
+
+```bash
+cd newsletters/660-pilot
+python3 -m zipfile -c ../660-pilot.zip template.html
+python3 -m zipfile -l ../660-pilot.zip
+```
+
+Jos olet lisännyt kuvat, lisää pakkauskomentoon `images` viimeiseksi argumentiksi.
+Lisää `css` tai `thumbnail.png` vain, jos ne ovat olemassa. Generoitu
+`newsletters/660-pilot.zip` ohitetaan gitissä; lähdetiedostot säilyvät versioituina.
+
+1. Kokeile tuonti ensin localhostin AcyMailingissa, automaattiset tehtävät pois
+   käytöstä. Paikallinen kokeilu ei tarvitse tuotannon tilaajarekisteriä.
+2. Kun sisältö on hyväksytty, avaa tuotannon `AcyMailing > Mallit / Templates >
+   Import` ja valitse ZIP. Tuonti on manuaalinen, erillään teeman deployista.
+3. Tarkista tuotannon plugin-versio, mallin tekstit, kuvat, CSS, painike ja linkit.
+   AcyMailing poimii HTML:n body-osan ja headin style-lohkot erilleen paikallisen
+   version tuontikoodissa; `<title>` asettaa mallin nimen. Ulomman taulukon
+   `lang="fi"` säilyttää sisältökielen, ja media queryssä oleva `body, html`
+   -sääntö säilyttää marginaalit ja taustavärin myös AcyMailingin muodostamassa
+   HTML:ssä. Pelkän `body`-säännön taustaväri poistetaan paikallisessa importterissa.
+   Älä luota headin muihin asetuksiin: tarkista kampanjan aihe,
+   esikatseluteksti, lähettäjä ja vastausosoite ylläpidossa.
+4. Luo tuodusta mallista luonnoskampanja. Pidä kohdelistan valinta ja varsinainen
+   lähetys erillään mallin tuonnista; tuonti ei ole hyväksymistestin tulos.
+5. Jos muokkaat HTML:ää AcyMailingin editorissa, tarkista tallennuksen jälkeen
+   uudelleen Outlookin ehdolliset kommentit, taulukot, luokat ja dynaamiset
+   tunnisteet. Editorin tallennuskierrosta ei ole vielä todennettu.
+
+### 4. Testaa oikeat sähköpostit ja henkilökohtaiset linkit
+
+Lähetä ylläpitäjän hyväksymiin testiosoitteisiin ja tarkista vähintään kahdessa
+erilaisessa sähköpostiohjelmassa, esimerkiksi Gmailissa ja Outlookissa, sekä
+puhelimella. Tarkista kuvat myös estettyinä. Varmista, ettei viestiin jää
+tunnisteita, localhost/dev-osoitteita tai luonnosmerkintöjä.
+
+Pelkkä mallin testilähetys ei riitä listakohtaisen peruutuksen hyväksyntään.
+Käytä erillistä testilistaa ja testitilaajaa, lähetä sille kampanja ja varmista,
+että henkilökohtainen peruutus koskee kampanjan listaa sekä että selainversio
+avautuu. Älä testaa peruutusta oikean tilaajan tunnisteilla. Säilytä havaintolokissa
+vain tekninen tulos ja sähköpostiohjelmien nimet/versiot.
+
+### 5. Todista jonon toiminta ja tee lisenssipäätös
+
+Pilotin tavoiteasetus: **Automatic only**, yksi erä ajossa, 8 viestiä erässä,
+lähetysväli vähintään 30 minuuttia. Tarkista kaikki kolme arvoa; useampi erä
+samassa ajossa kasvattaisi määrää. Essentialin automaattiset tehtävät ja cron
+tarvitaan, jotta selain voidaan sulkea. Tarkista nykyisen version kentät
+[jonoprosessin ohjeesta](https://docs.acymailing.com/setup/configuration/queue-process).
+
+Kokeile ensin erillisellä testikampanjalla ja hyväksytyillä testivastaanottajilla.
+Sulje lähettävä selain ja seuraa vähintään kahden peräkkäisen erän aikaleimoja,
+määriä ja cron-raporttia. Tarkista myös tunnin kokonaismäärä: palveluntarjoajan
+noin 18 viestin raja koskee muita WordPress-viestejäkin. Tarkista nykyinen raja
+palveluntarjoajalta ennen oikeaa lähetystä. Cron-raportit, testiviestit ja
+tapahtumaviestit on huomioitava; käytä tarvittaessa hitaampaa jonoa. Jos rajaa
+tai jonon toimintaa ei pystytä varmistamaan, jätä oikea kampanja luonnokseksi.
+
+Kirjaa pilotin jälkeen havaintolokiin päätös ja peruste: uusitaan AcyMailing
+Essential tai selvitetään The Newsletter Plugin -vaihto erillisenä työnä.
+Tarkista uusinnan ajantasainen lisenssihinta ja paketti; Sending Serviceä ei
+tarvita pelkän HTML-tuonnin takia. Hintaa tai lisenssipäätöstä ei lukita tässä
+ensimmäisessä vaiheessa.
 
 ## Footer-lomakkeen käyttöönotto
 
@@ -374,6 +508,6 @@ Kirjaa ensimmäisen lähetyksen jälkeen jatkoa varten:
 Tämä MVP ei sisällä:
 
 - AcyMailing-automaatioita tai kuittiviestejä
-- uutiskirjeen lähetyspohjaa tai SMTP-asetuksia
+- yleistä uutiskirjepohjajärjestelmää, automaattista HTML-tuontia tai SMTP-asetuksia; #660 lisää yhden paikallisen pilottiluonnoksen
 
 Paikallisessa plugin-koodissa ei ole mukana erillistä AcyMailing WooCommerce -integraatiolisäosaa. Checkout-opt-in toteutetaan siksi teeman kevyellä WooCommerce Blocks -hookilla.

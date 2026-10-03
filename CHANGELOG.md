@@ -7,6 +7,7 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 ## [Unreleased]
 
 ### Added
+- #660, vaihe 1: paikallinen taulukkopohjainen uutiskirjeen HTML-luonnos (`newsletters/660-pilot/`) sekä ZIP-tuonnin, testiviestien ja enintään 16 viestin tuntijonon tarkistusohjeet. Päivitetty `docs/newsletter.md`, README ja CLAUDE; generoidut ZIP-paketit ohitetaan versionhallinnassa. Todellinen sisältö, tuotantotuonti, sähköpostiohjelmien testit ja lisenssipäätös odottavat pilotin seuraavaa vaihetta.
 - #685: tapahtuman yhteinen valinta ottaa käyttöön osallistujien vapaaehtoiset sähköpostit sekä maksuttomassa lomakkeessa että linkitetyn osallistumistuotteen kassalla. Maksulliset osoitteet validoidaan, tallennetaan osallistujariveihin ja näytetään ylläpidossa sekä CSV:ssä. Tapahtumaviestintä ja palautepyyntö käyttävät osallistujan osoitetta tai ostajan varapolkua, poistavat saman osoitteen kaksoiskappaleet ja käyttävät neutraalia puhuttelua ristiriitaisilla nimillä. Osallistujan oma Privacy Tools -vienti ja anonymisointi kohdistuvat vain hänen riviinsä. Päivitetty tapahtuma-, kassa-, viestintä-, palaute-, osallistuja- ja tietosuojaohjeet sekä `CLAUDE.md`. Dev-hyväksyntä ja tietosuojavastaavan vahvistus odottavat.
 
 ### Changed
