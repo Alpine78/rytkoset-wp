@@ -151,6 +151,137 @@
   max-width: 100%;
 }
 
+
+/* Hallitussivu */
+.board-page {
+  display: grid;
+  gap: 2.5rem;
+}
+
+.board-page__intro {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text-mute);
+}
+
+.board-page__section {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.board-page__heading h2,
+.board-page__contact h2 {
+  margin: 0;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+.board-page__eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.board-page__lead,
+.board-page__members {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.board-page__person {
+  padding: 1.25rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-card);
+}
+
+.board-page__person--lead {
+  border-top: 4px solid var(--color-accent);
+}
+
+.board-page__role {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.board-page__person h3,
+.board-page__subheading {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.board-page__person p {
+  margin: 0.2rem 0 0;
+  color: var(--color-text-mute);
+}
+
+.board-page__members,
+.board-page__archive-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board-page__members li {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.85rem 1rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-neutral);
+  border-radius: var(--radius-medium);
+}
+
+.board-page__members span,
+.board-page__archive-list span {
+  color: var(--color-text-mute);
+}
+
+.board-page__section--archive {
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--color-border-neutral);
+}
+
+.board-page__section--archive > p {
+  margin: 0;
+}
+
+.board-page__archive-list li {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-border-neutral);
+}
+
+.board-page__contact {
+  padding: 1.25rem;
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-l);
+}
+
+.board-page__contact p {
+  margin: 0.4rem 0 0;
+}
+
+@media (min-width: 48rem) {
+  .board-page__lead,
+  .board-page__members {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .board-page__archive-list li {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+    gap: 1rem;
+  }
+}
+
 .article--event {
   gap: 2rem;
 }

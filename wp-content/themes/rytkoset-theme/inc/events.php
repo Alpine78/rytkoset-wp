@@ -1063,7 +1063,7 @@ function rytkoset_theme_event_collects_quantity( $event_id ) {
 }
 
 /**
- * Checks whether a free registration may collect other participants' emails.
+ * Checks whether an event collects optional participant email addresses.
  *
  * @param int $event_id Event ID.
  * @return bool
@@ -1225,10 +1225,10 @@ function rytkoset_theme_render_event_choice_field_metabox( $post ) {
 	<p>
 		<label for="rytkoset_event_collect_participant_emails">
 			<input type="checkbox" id="rytkoset_event_collect_participant_emails" name="rytkoset_event_collect_participant_emails" value="yes" <?php checked( rytkoset_theme_event_collects_participant_emails( $post->ID ) ); ?> />
-			<?php esc_html_e( 'Kysy muiden osallistujien sähköpostiosoitteet (vapaaehtoinen)', 'rytkoset-theme' ); ?>
+			<?php esc_html_e( 'Kysy osallistujien sähköpostiosoitteet (vapaaehtoinen)', 'rytkoset-theme' ); ?>
 		</label>
 	</p>
-	<p class="description"><?php esc_html_e( 'Vain maksuttomille ilmoittautumisille. Osoitteita käytetään tapahtumaviestintään ja palautepyyntöön. Vahvista tietosuojateksti ja käsittelyperuste ennen käyttöönottoa.', 'rytkoset-theme' ); ?></p>
+	<p class="description"><?php esc_html_e( 'Maksuttomassa lomakkeessa voi antaa muiden osallistujien osoitteet, linkitetyn maksutuotteen kassalla jokaisen osallistujan oman osoitteen. Osoitteita käytetään tapahtumaviestintään ja palautepyyntöön. Vahvista tietosuojateksti ja käsittelyperuste ennen käyttöönottoa.', 'rytkoset-theme' ); ?></p>
 	<?php
 }
 

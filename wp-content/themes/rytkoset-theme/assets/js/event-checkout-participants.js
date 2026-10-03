@@ -95,6 +95,11 @@
 
 			heading.appendChild( title );
 			heading.appendChild( intro );
+			const emailHelp = document.createElement( 'p' );
+			emailHelp.className = 'rytkoset-checkout-fields-heading__intro';
+			emailHelp.dataset.participantEmailHelp = 'true';
+			emailHelp.textContent = i18n.email_help;
+			heading.appendChild( emailHelp );
 		}
 
 		if ( heading.nextElementSibling !== firstWrapper ) {
@@ -106,6 +111,12 @@
 		const participants = getParticipants();
 
 		ensureHeading();
+		if ( heading ) {
+			const emailHelp = heading.querySelector( '[data-participant-email-help]' );
+			if ( emailHelp ) {
+				emailHelp.hidden = ! participants.some( ( line ) => line && line.collect_email );
+			}
+		}
 
 		for ( let index = 1; index <= Math.max( participants.length, 10 ); index++ ) {
 			const input = document.getElementById( 'order-rytkoset-participant_' + index + '_name' );

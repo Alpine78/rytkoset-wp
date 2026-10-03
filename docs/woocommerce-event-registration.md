@@ -1,11 +1,12 @@
 # Maksullisen tapahtuman osallistujailmoittautuminen
 
-Uuden maksullisen tapahtuman osallistujatiedot otetaan käyttöön tuotteen ja tapahtuman ylläpitoasetuksilla (#642). Ohje yhdistää aiemmat viisi Tampere 2026 -tuote-, kassa-, hallinta-, ilmoitus- ja bussikyytiopasta. Osallistujien sähköpostit kuuluvat erilliseen tikettiin #685.
+Uuden maksullisen tapahtuman osallistujatiedot otetaan käyttöön tuotteen ja tapahtuman ylläpitoasetuksilla (#642). Ohje yhdistää aiemmat viisi Tampere 2026 -tuote-, kassa-, hallinta-, ilmoitus- ja bussikyytiopasta.
 
 ## Käyttöönotto
 
 1. Luo WooCommerceen tavallinen tuote tai variaatiotuote. Aseta nimi, hinta ja tarvittaessa osallistujatyypit variaatioiksi. Aseta tuote virtuaaliseksi, jos siihen ei liity toimitusta.
 2. Valitse **Tuotetiedot → Varasto → Tapahtuman osallistujat**. Asetus on uusilla tuotteilla oletuksena pois päältä. Variaatiot käyttävät päätuotteen asetuksia.
+   Osallistujien sähköpostit otetaan käyttöön tapahtuman **Ilmoittautumisen lisävalinta** -laatikosta yhteisellä **Kysy osallistujien sähköpostiosoitteet** -valinnalla. Valinta on oletuksena pois päältä ja toimii sekä maksuttomassa lomakkeessa että tähän tapahtumaan linkitetyn osallistumistuotteen kassalla. Vahvista toisen henkilön osoitteen käsittelyperuste ja informointiteksti tietosuojasta vastaavan kanssa ennen tuotantokäyttöä.
 3. Aseta **Ilmoittautumisen määräpäivä**. Tyhjä kenttä tarkoittaa uudelle tapahtumatuotteelle, ettei määräpäivää ole. Päivä on voimassa loppuun saakka sivuston aikavyöhykkeessä. Virheellinen päivämäärä näyttää virheen ja säilyttää aiemman arvon.
 4. Aseta **Osallistujia enintään / tilaus** (1–10, oletus 10). Raja koskee päätuotteen kaikkien variaatioiden yhteistä määrää. Lisäksi yhden tilauksen kaikkien tapahtumatuotteiden yhteinen yläraja on 10. Raja tarkistetaan palvelimella myös Store API -kassalla.
 5. Aseta tapahtuman paikkamäärä WooCommercen varastonhallinnalla ja estä jälkitoimitukset. Tilauskohtainen osallistujaraja ei korvaa varastosaldoa.
@@ -16,7 +17,7 @@ Tavallinen tuote ilman osallistujakytkintä ei saa osallistujakenttiä. Samassa 
 
 ## Kassa ja ylläpito
 
-Yksi tuotekappale vastaa yhtä osallistujaa. Kassalla kysytään jokaisen osallistujan nimi ja vapaaehtoiset ruokarajoitteet tai allergiat. Ostajan yhteystiedot tulevat WooCommercen tavallisista laskutuskentistä.
+Yksi tuotekappale vastaa yhtä osallistujaa. Kassalla kysytään jokaisen osallistujan nimi ja vapaaehtoiset ruokarajoitteet tai allergiat. Tapahtuman sähköpostivalinnan ollessa käytössä kysytään lisäksi osallistujan vapaaehtoinen sähköpostiosoite. Tyhjä osoite sallitaan; virheellinen osoite estää tilauksen ja virhe nimeää kyseisen osallistujan kentän. Ostajan yhteystiedot tulevat WooCommercen tavallisista laskutuskentistä, eikä osallistujan osoite korvaa niitä.
 
 Kassan otsikko on **Tapahtuman osallistujat**. Jokaisella osallistujalla on numeroitu kortti, jonka otsakkeessa näkyvät tuotteen osallistujatyyppi tai nimi sekä yksikköhinta. Määrää muutetaan ostoskorissa. Nimikenttä on pakollinen, ruokarajoite ja mahdollinen lisävalinta vapaaehtoisia. Rasti tarkoittaa kyllä, tyhjä rasti ei. Kassakenttien automaattitäyttö on rajattu pois.
 
@@ -24,11 +25,11 @@ Lisävalinnan teksti tallennetaan tilausriville ostohetkellä. Tuotteen kysymyks
 
 Osallistujalistan ja CSV:n **Maksullisen tapahtuman lisävalinta** -sarake näyttää esimerkiksi `Osallistun yhteiselle illalliselle: Kyllä`. Vanha buffet-tieto näkyy samassa sarakkeessa muodossa `Perjantain buffet: Kyllä/Ei`; ilman kysymystä solu jää tyhjäksi. CSV:n sarakkeen paikka säilyy, mutta otsikko ja solun sisältö muuttuvat: päivitä mahdolliset sarakkeen nimeen tai pelkkään kyllä/ei-arvoon perustuvat jatkokäsittelyt.
 
-Osallistujat löytyvät tilauksen **Tapahtuman osallistujat** -laatikosta ja **Tapahtumat → Osallistujat** -näkymästä. Eri tapahtumien tuotteita sisältävässä tilauksessa kukin tapahtuma saa vain omat osallistujarivinsä. Sama rajaus koskee järjestäjäilmoitusta.
+Osallistujat ja heidän mahdolliset omat osoitteensa löytyvät tilauksen **Tapahtuman osallistujat** -laatikosta sekä **Tapahtumat → Osallistujat** -näkymästä ja CSV-viennistä. Eri tapahtumien tuotteita sisältävässä tilauksessa kukin tapahtuma saa vain omat osallistujarivinsä. Sama rajaus koskee järjestäjäilmoitusta. Vanhoilta tilauksilta osoite puuttuu ja viestintä käyttää ostajan laskutusosoitetta ja nimeä.
 
 Osallistujakytkimen poistaminen tuotteelta lopettaa uusien osallistujatietojen keruun. Jo tallennetun uuden tilauksen osallistujat säilyvät luettavina, koska tilausriville tallennetaan ostohetken ilmoittautumistapa. Käytä määräpäivää tai tuotteen saatavuutta ilmoittautumisen sulkemiseen: kytkimen poistaminen ei sulje tavallisen tuotteen myyntiä.
 
-Järjestäjäviestien vastaanottajat asetetaan tapahtumalle. Katso [järjestäjäilmoitukset](#järjestäjäilmoitukset). Osallistujien omia sähköpostiosoitteita ei tässä kerätä. WooCommerce-tietojen kohdennettu Privacy Tools -integraatio on avoimen #261:n tehtävä; maksuttomien ilmoittautumisten anonymisointi ei käsittele näitä tilauksia.
+Järjestäjäviestien vastaanottajat asetetaan tapahtumalle. Katso [järjestäjäilmoitukset](#järjestäjäilmoitukset). Osallistujan oma osoite toimii tapahtumaviestinnän ja palautepyynnön vastaanottajaosoitteena. Se ei laajenna WooCommercen tilausvahvistusten vastaanottajajoukkoa eikä lisää ketään uutiskirjeeseen; ostajalle lähtevä tilausvahvistus voi silti näyttää kassalla annetut osallistujatiedot. Privacy Tools löytää osallistujan oman osoitteen ja vie tai anonymisoi vain hänen osallistujarivinsä; ostajan tilaus- ja laskutustiedot säilyvät WooCommercen säilytyskäytännön mukaisesti. #261:n laajempi WooCommerce-tietoinventaario on edelleen erillinen työ.
 
 ## Ilmoittautumisen sulkeminen ja jälkihoito
 
@@ -40,10 +41,11 @@ Ilmoittautumisen päätyttyä aseta kataloginäkyvyydeksi **Piilotettu**, pidä 
 
 - Moduuli: `inc/woocommerce-event-registration.php`; kassaskripti: `assets/js/event-checkout-participants.js`.
 - Uuden tuotteen tila: `_rytkoset_registration_mode = event_participants`. Vanhat `tampere_2026`-tuotteet ja SKU `tampere-2026-osallistumismaksu` tunnistetaan edelleen.
-- Tuotemetat `_rytkoset_registration_deadline`, `_rytkoset_registration_max_participants` ja `_rytkoset_registration_choice_label` siirtyvät tuotesynkronoinnissa.
+- Tuotemetat `_rytkoset_registration_deadline`, `_rytkoset_registration_max_participants` ja `_rytkoset_registration_choice_label` siirtyvät tuotesynkronoinnissa. Sähköpostivalinta on tapahtuman metatieto, eikä sitä aseteta tai synkronoida tuotteella.
 - Kassakentät rekisteröidään ilman riippuvuutta vanhan tuotteen olemassaolosta. Näkyvyys ja pakollisuus perustuvat Store API:n `rytkoset_event_registration`-laajennukseen. `legacy_buffet_indices` rajaa vanhan buffet-kentän ja `choice_indices` uuden lisävalinnan oikeisiin osallistujariveihin myös sekakorissa. `participants` sisältää korttiotsakkeiden tyypin, hinnan ja kysymyksen (`choice_label`). JS-asetukset ovat `window.rytkosetEventParticipants`-oliossa. PHP ja JS julkaistaan yhdessä; ennen julkaisua avattu kassa ladataan uudelleen.
-- Vanhat `rytkoset/participant_N_name|diet|friday_buffet`-tunnisteet ja `_wc_other/`-tilausmetat säilyvät. Uusi valinta tallentuu `rytkoset/participant_N_choice`-kenttään samassa osallistujarivimallissa (N = 1–10). Palvelin poistaa uusilta Store API -tilauksilta piilotettujen valintojen ja ylimääräisten osallistujien metat. Vanhat tilaukset eivät vaadi migraatiota. #261:n tietoinventaarion tulee kattaa myös uusi `choice` sekä tilausriville tallennettu kysymysteksti; automaattista export-/eraser-kattavuutta ei tässä lisätä.
-- Uusien tilausten tuoteriveille tallennetaan `_rytkoset_registration_mode`, `_rytkoset_participant_type` ja `_rytkoset_registration_choice_label`. Vanhoille tilauksille käytetään edelleen tuotetunnistusta ilman migraatiota.
+- Vanhat `rytkoset/participant_N_name|diet|friday_buffet`-tunnisteet ja `_wc_other/`-tilausmetat säilyvät. Uudet `choice`- ja valinnainen `email`-kenttä käyttävät samaa osallistujarivimallia (N = 1–10). `email_indices` rajaa sähköpostikentät käytössä oleviin tuotteisiin. Palvelin poistaa piilotetut ja ylimääräiset kentät uusilta Store API -tilauksilta. Osallistujarivin lukija sivuuttaa sähköpostiarvon myös ennen poistoa, jos tilausriville tallennettu keruuvalinta on pois päältä. Vanhat tilaukset eivät vaadi migraatiota. `inc/woocommerce-event-privacy.php` käsittelee osallistujan oman osoitteen tietopyynnöt; #261 kattaa muun WooCommerce-tietoinventaarion.
+- Uusien tilausten tuoteriveille tallennetaan `_rytkoset_registration_mode`, `_rytkoset_participant_type`, `_rytkoset_registration_choice_label` ja sähköpostikeruun ostohetken tila `_rytkoset_registration_collect_emails`. Vanhoille tilauksille käytetään edelleen tuotetunnistusta ilman migraatiota. Jos sama maksutuote on linkitetty useaan tapahtumaan, sähköpostikenttä näkyy vain kaikkien linkitettyjen tapahtumien valinnan ollessa päällä; käytä eri tuotetta, jos tapahtumille tarvitaan eri asetukset.
+- Store API:n ostoskorivastaus tarkistaa sähköpostivalinnan kerran kutakin korissa olevaa maksutuotetta kohti, myös silloin kun tuotteesta on useita osallistujia tai variaatioita. Tämä vähentää toistuvia tapahtumahakuja; valinta luetaan uudelleen seuraavassa vastauksessa.
 - Vanhan tuotteen määräpäivän varapolku `2026-07-30` koskee vain vanhaa tilaa. Tampereen historiallinen tuote on virtuaalinen variaatiotuote (aikuinen 49 €, lapsi 3–12 vuotta 24,50 €); lauantain 29.8.2026 osallistumismaksu ja paikan päällä maksettava perjantain buffet ovat erillisiä. Ilmoittautumisaikaa jatkettiin ylläpidon tuotemeta-arvolla 14.8.2026 asti. Näitä arvoja ei käytetä uusien tapahtumien oletuksina.
 
 ## Järjestäjäilmoitukset
