@@ -1,5 +1,7 @@
 # Tapahtumakohtainen osallistujalista adminissa
 
+Maksullisen tapahtuman osallistujan oma vapaaehtoinen sähköpostiosoite näkyy osallistujarivin Sähköposti-sarakkeessa ja CSV-viennissä. Jos osoitetta ei annettu, ylläpito näyttää ostajan osoitteen tilaaja-merkinnällä. Vanhoja tilauksia ei tarvitse täydentää.
+
 #642:n yleiskäyttöiset maksulliset tapahtumat käyttävät samaa osallistujalistaa ja CSV-vientiä. Tuotteen osallistujakytkin, määräpäivä ja rajat on kuvattu [maksullisen tapahtuman ohjeessa](woocommerce-event-registration.md). Uusien tilausten osallistujarivit säilyvät myös tuotteen keruun myöhemmän poiskytkennän jälkeen. Eri tapahtumien tuotteita sisältävästä tilauksesta näytetään kullekin tapahtumalle vain siihen kuuluvat osallistujat.
 
 Tämä dokumentti kuvaa tikettien `#72` (näkymä), `#73` (CSV-vienti) ja `#665`

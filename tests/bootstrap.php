@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $GLOBALS['rytkoset_test_user_meta']    = array(); // [user_id][key] => value
 $GLOBALS['rytkoset_test_users']        = array(); // [user_id] => WP_User
 $GLOBALS['rytkoset_test_posts']        = array(); // [post_id] => WP_Post
+$GLOBALS['rytkoset_test_get_posts_calls'] = 0;
 $GLOBALS['rytkoset_test_permalink_failures'] = array(); // [post_id] => true
 $GLOBALS['rytkoset_test_parent_map']   = array(); // [child_id] => parent_id (magazine articles)
 $GLOBALS['rytkoset_test_mails']        = array(); // recorded wp_mail() calls
@@ -73,6 +74,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
+	$GLOBALS['rytkoset_test_get_posts_calls'] = 0;
 	$GLOBALS['rytkoset_test_permalink_failures'] = array();
 	$GLOBALS['rytkoset_test_parent_map']    = array();
 	$GLOBALS['rytkoset_test_mails']         = array();
@@ -1603,6 +1605,7 @@ function wpautop( $text ) {
 // ---------------------------------------------------------------------------
 
 function get_posts( $args = array() ) {
+	++$GLOBALS['rytkoset_test_get_posts_calls'];
 	$types  = (array) ( $args['post_type'] ?? 'post' );
 	$fields = $args['fields'] ?? '';
 	$parent = array_key_exists( 'post_parent', $args ) ? (int) $args['post_parent'] : null;
@@ -2054,6 +2057,7 @@ require_once $rytkoset_theme_inc . '/seo-meta.php';
 require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
 require_once $rytkoset_theme_inc . '/woocommerce-event-registration.php';
+require_once $rytkoset_theme_inc . '/woocommerce-event-privacy.php';
 require_once $rytkoset_theme_inc . '/woocommerce-checkout-session.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';

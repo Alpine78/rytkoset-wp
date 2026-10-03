@@ -539,9 +539,9 @@ Tapahtumaosio on testattu WCAG 2.1 AA -vaatimuksia vasten tiketissä #75. Seuraa
 
 Lomakkeen palvelinpuolen virheviestit ovat yleisiä ilmoituksia lomakkeen yläpuolella (`role="alert"`). HTML5 native validation hoitaa kenttäkohtaiset virheet ennen lähetystä.
 
-## Muiden osallistujien sähköpostiosoitteet (#676)
+## Osallistujien sähköpostiosoitteet (#676, #685)
 
-Tapahtuman **Ilmoittautumisen lisävalinta** -metaboksin **Kysy muiden osallistujien sähköpostiosoitteet** lisää maksuttomaan lomakkeeseen vapaaehtoisen tekstialueen, yksi osoite per rivi. Oletus on pois päältä. WooCommerce-kassa ei muutu.
+Tapahtuman **Ilmoittautumisen lisävalinta** -metaboksin **Kysy osallistujien sähköpostiosoitteet** on oletuksena pois päältä. Maksuttomassa lomakkeessa valinta lisää vapaaehtoisen muiden osallistujien osoitetekstialueen, yksi osoite per rivi. Maksullisessa tapahtumassa se lisää osallistujakohtaiset vapaaehtoiset sähköpostikentät kassalle, kun tapahtumaan on linkitetty osallistujatietoja keräävä WooCommerce-tuote (#685). Sama tuote kannattaa varata yhdelle tapahtumalle; jos tuote on linkitetty useaan tapahtumaan, kaikkien näiden tapahtumien pitää sallia osoitteiden keruu, jotta kentät näkyvät.
 
 Osoitteen saa antaa vain henkilön luvalla. Sitä käytetään vain tapahtumaviestintään ja palautepyyntöön. Määräkentän kanssa raja on henkilömäärä miinus yksi (ilmoittaja lasketaan mukaan); ilman määräkenttää oletusraja on 9, suodatin `rytkoset_theme_event_registration_max_additional_emails`. Syötteen tekninen pituusraja on 10 000 tavua. Virheellinen osoite tai ylitys palauttaa lomakkeelle virheen ennen tallennusta; kentät täytetään uudelleen nykyisen PRG-käytännön mukaisesti. Tyhjä kenttä sallitaan, oma osoite ja kirjainkoosta riippumattomat kaksoiskappaleet poistetaan.
 

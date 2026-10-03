@@ -27,7 +27,7 @@ Suodattimien jälkeen näkyy vastaanottajamäärä:
 
 > *"Viesti lisätään jonoon 23 vastaanottajalle (osoitteita puuttuu 2)."*
 
-Osoitteita puuttuvat osallistujat ohitetaan automaattisesti. Vastaanottajat deduplikoidaan sähköpostiosoitteen perusteella (sama yhteyshenkilö Tampere 2026 -tilauksessa lasketaan yhdeksi vastaanottajaksi).
+Osoitteita puuttuvat osallistujat ohitetaan automaattisesti. Maksullisen osallistujan oma vapaaehtoinen osoite on ensisijainen; sen puuttuessa käytetään ostajan laskutusosoitetta ja nimeä. Vastaanottajat deduplikoidaan kirjainkoosta riippumatta koko tapahtumassa, myös eri tilausten sekä maksuttoman ja maksullisen polun välillä. Ostajan osoitteeseen käytetään ostajan nimeä. Jos muuhun jaettuun osoitteeseen liittyy eri nimiä, `{nimi}` saa neutraalin arvon `osallistuja`. Toisen henkilön osoitteeseen lähtevä viesti sisältää tiedon osoitteen lähteestä ja tietosuojasta.
 
 **Aktiivinen vastaanottajajoukko (`#665`):** vastaanottajalistasta rajataan aina
 pois ne WooCommerce-tilaukset, joiden status on `cancelled`, `refunded` tai

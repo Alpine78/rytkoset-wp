@@ -205,7 +205,7 @@ function rytkoset_theme_get_event_paid_participants( $event_id ) {
 
 				$rows[] = array(
 					'name'              => $participant_name,
-					'email'             => '',
+					'email'             => (string) ( $participant['email'] ?? '' ),
 					'phone'             => '',
 					'diet'              => isset( $participant['diet'] ) ? (string) $participant['diet'] : '',
 					'notes'             => '',

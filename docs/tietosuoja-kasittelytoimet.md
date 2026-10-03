@@ -58,6 +58,13 @@ Tuotantotiedot, sopimukset ja vastuuhenkilön hyväksyntä todennetaan jatkotike
 
 Oikeudellinen pohja: [yleisen tietosuoja-asetuksen 30 artikla](https://eur-lex.europa.eu/legal-content/FI/TXT/?uri=CELEX:32016R0679). Tämä luonnos on tarkistettava tietosuojasta vastaavan henkilön tai juristin kanssa ennen hyväksymistä.
 
+## Maksullisen tapahtuman osallistujan sähköposti (#685)
+
+- Lähde: ostaja antaa vapaaehtoisen osoitteen osallistujan nimen yhteydessä. Tapahtumakohtainen keruu on oletuksena pois päältä; sama valinta ohjaa myös maksutonta lomaketta. Ostajaa ohjeistetaan hankkimaan lupa ja informoimaan osallistujaa. Käsittelyperuste ja informointiteksti on vahvistettava tietosuojasta vastaavan kanssa ennen tuotantokäyttöä.
+- Käyttö: kyseisen tapahtuman viestintä ja palautepyyntö; ei uutiskirjettä eikä tilausvahvistusta osallistujalle. Ostajan tilausvahvistuksessa voivat näkyä hänen kassalla antamansa osallistujatiedot. Vastaanottajat deduplikoidaan, ja eri nimiin liitetty jaettu osoite saa neutraalin puhuttelun.
+- Säilytys: osallistujan osoite ja muut osallistujakentät ovat WooCommerce-tilauksessa. Maksuttoman ilmoittautumisen 12 kuukauden siivous ei koske tilausta. Tilauksen kirjanpitotiedot säilyvät niitä koskevan velvoitteen ajan.
+- Tietopyyntö: osallistujan oma osoite löytää Privacy Tools -viennissä vain hänen osallistujarivinsä. Poisto anonymisoi vain vastaavan nimen ja ruokarajoitteen sekä poistaa osoitteen, mutta säilyttää ostajan laskutus- ja muiden osallistujien tiedot. Jonossa olevat viestit tarkistetaan erikseen.
+
 ## Maksuttoman tapahtuman lisäosallistujien sähköpostit (#676)
 
 - Tietoryhmä: ilmoittajan vapaaehtoisesti antamat muiden osallistujien sähköpostiosoitteet. Ei lisäosallistujien nimiä. Kenttä on oletuksena pois käytöstä; osoite annetaan vain henkilön luvalla.

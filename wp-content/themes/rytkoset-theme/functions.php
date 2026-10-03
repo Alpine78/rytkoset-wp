@@ -56,6 +56,7 @@ require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-member-coupon.php';
 require_once get_template_directory() . '/inc/woocommerce-digital-magazine.php';
 require_once get_template_directory() . '/inc/woocommerce-event-registration.php';
+require_once get_template_directory() . '/inc/woocommerce-event-privacy.php';
 require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';

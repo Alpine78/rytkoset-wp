@@ -331,6 +331,41 @@ function rytkoset_theme_get_paid_event_choice_label( $product ) {
 	return mb_substr( sanitize_text_field( (string) $product->get_meta( '_rytkoset_registration_choice_label', true ) ), 0, 200 );
 }
 
+/** Returns whether every event linked to this product enables participant emails. */
+function rytkoset_theme_paid_event_collects_participant_emails( $product ) {
+	$product = rytkoset_theme_get_paid_event_registration_parent_product( $product );
+	if ( ! $product instanceof WC_Product || ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
+		return false;
+	}
+
+	$event_ids = get_posts(
+		array(
+			'post_type'      => 'rytkoset_event',
+			'post_status'    => array( 'publish', 'private' ),
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query'     => array(
+				array(
+					'key'   => rytkoset_theme_get_event_product_meta_key(),
+					'value' => $product->get_id(),
+				),
+			),
+		)
+	);
+
+	if ( empty( $event_ids ) ) {
+		return false;
+	}
+
+	foreach ( $event_ids as $event_id ) {
+		if ( ! rytkoset_theme_event_collects_participant_emails( $event_id ) ) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /**
  * Formats a question and its answer without confusing an absent field with No.
  *
@@ -647,6 +682,45 @@ function rytkoset_theme_get_paid_event_checkbox_indices( $cart_items, $generic_c
 	return $indices;
 }
 
+/** Resolves each event product's email setting once for the current cart. */
+function rytkoset_theme_get_paid_event_email_collection_map( $cart_items ) {
+	$collection = array();
+	foreach ( $cart_items as $cart_item ) {
+		$product = $cart_item['data'] ?? null;
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
+			continue;
+		}
+		$parent     = rytkoset_theme_get_paid_event_registration_parent_product( $product );
+		$product_id = $parent->get_id();
+		if ( ! array_key_exists( $product_id, $collection ) ) {
+			$collection[ $product_id ] = rytkoset_theme_paid_event_collects_participant_emails( $product );
+		}
+	}
+	return $collection;
+}
+
+/** Returns checkout indices for products that ask participant addresses. */
+function rytkoset_theme_get_paid_event_email_indices( $cart_items, $collection = null ) {
+	$collection = $collection ?? rytkoset_theme_get_paid_event_email_collection_map( $cart_items );
+	$indices    = array();
+	$index      = 0;
+	foreach ( $cart_items as $cart_item ) {
+		$product = $cart_item['data'] ?? null;
+		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
+			continue;
+		}
+		$product_id = rytkoset_theme_get_paid_event_registration_parent_product( $product )->get_id();
+		$quantity   = max( 0, (int) ( $cart_item['quantity'] ?? 0 ) );
+		for ( $i = 0; $i < $quantity && $index < rytkoset_theme_get_paid_event_max_participants(); $i++ ) {
+			++$index;
+			if ( ! empty( $collection[ $product_id ] ) ) {
+				$indices[] = $index;
+			}
+		}
+	}
+	return $indices;
+}
+
 /**
  * Matches cart positions with an enabled generic choice or legacy buffet field.
  *
@@ -679,6 +753,7 @@ function rytkoset_theme_snapshot_paid_event_order_items( $order ) {
 		if ( '' !== $mode ) {
 			$item->update_meta_data( '_rytkoset_registration_mode', $mode );
 			$item->update_meta_data( '_rytkoset_registration_choice_label', rytkoset_theme_get_paid_event_choice_label( $item->get_product() ) );
+			$item->update_meta_data( '_rytkoset_registration_collect_emails', rytkoset_theme_paid_event_collects_participant_emails( $item->get_product() ) ? 'yes' : 'no' );
 			$item->update_meta_data( '_rytkoset_participant_type', rytkoset_theme_get_paid_event_participant_type_label( $item->get_product() ) );
 			$item->save();
 		}
@@ -710,10 +785,11 @@ function rytkoset_theme_get_paid_event_order_participant_contexts( $order ) {
 			$type = rytkoset_theme_get_paid_event_participant_type_label( $item->get_product() );
 		}
 		$context = array(
-			'mode'         => $mode,
-			'type'         => $type,
-			'choice_label' => 'tampere_2026' === $mode ? __( 'Perjantain buffet', 'rytkoset-theme' ) : (string) $item->get_meta( '_rytkoset_registration_choice_label', true ),
-			'product_ids'  => rytkoset_theme_get_order_item_product_reference_ids( $item ),
+			'mode'           => $mode,
+			'type'           => $type,
+			'collect_emails' => 'yes' === $item->get_meta( '_rytkoset_registration_collect_emails', true ),
+			'choice_label'   => 'tampere_2026' === $mode ? __( 'Perjantain buffet', 'rytkoset-theme' ) : (string) $item->get_meta( '_rytkoset_registration_choice_label', true ),
+			'product_ids'    => rytkoset_theme_get_order_item_product_reference_ids( $item ),
 		);
 		for ( $i = 0; $i < (int) $item->get_quantity(); $i++ ) {
 			$contexts[] = $context;
@@ -764,10 +840,12 @@ function rytkoset_theme_get_paid_event_store_api_namespace() {
  * participant N. Used by the checkout participant card UI.
  *
  * @param array<int|string, array<string, mixed>> $cart_items WooCommerce cart items.
- * @return array<int, array<string, string>>
+ * @param array<int, bool>|null $collection Resolved email settings by parent product ID.
+ * @return array<int, array<string, string|bool>>
  */
-function rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items ) {
-	$lines = array();
+function rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items, $collection = null ) {
+	$collection = $collection ?? rytkoset_theme_get_paid_event_email_collection_map( $cart_items );
+	$lines      = array();
 
 	foreach ( $cart_items as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
@@ -775,6 +853,7 @@ function rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items ) {
 		if ( ! rytkoset_theme_is_paid_event_registration_product( $product ) ) {
 			continue;
 		}
+		$product_id = rytkoset_theme_get_paid_event_registration_parent_product( $product )->get_id();
 
 		$type_label = rytkoset_theme_get_paid_event_participant_type_label( $product );
 		if ( 'event_participants' === rytkoset_theme_get_paid_event_registration_mode( $product ) ) {
@@ -790,9 +869,10 @@ function rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items ) {
 
 		for ( $i = 0; $i < $quantity && count( $lines ) < rytkoset_theme_get_paid_event_max_participants(); $i++ ) {
 			$lines[] = array(
-				'type'         => $type_label,
-				'price'        => $price,
-				'choice_label' => 'event_participants' === rytkoset_theme_get_paid_event_registration_mode( $product ) ? rytkoset_theme_get_paid_event_choice_label( $product ) : '',
+				'type'          => $type_label,
+				'price'         => $price,
+				'choice_label'  => 'event_participants' === rytkoset_theme_get_paid_event_registration_mode( $product ) ? rytkoset_theme_get_paid_event_choice_label( $product ) : '',
+				'collect_email' => ! empty( $collection[ $product_id ] ),
 			);
 		}
 	}
@@ -819,11 +899,14 @@ function rytkoset_theme_get_paid_event_cart_participant_lines() {
  * @return array<string, mixed>
  */
 function rytkoset_theme_get_paid_event_store_api_cart_data() {
+	$cart_items = function_exists( 'WC' ) && WC()->cart ? WC()->cart->get_cart() : array();
+	$collection = rytkoset_theme_get_paid_event_email_collection_map( $cart_items );
 	return array(
 		'participant_count'     => rytkoset_theme_get_paid_event_participant_count(),
-		'legacy_buffet_indices' => rytkoset_theme_get_paid_event_checkbox_indices( function_exists( 'WC' ) && WC()->cart ? WC()->cart->get_cart() : array() ),
-		'participants'          => rytkoset_theme_get_paid_event_cart_participant_lines(),
-		'choice_indices'        => rytkoset_theme_get_paid_event_checkbox_indices( function_exists( 'WC' ) && WC()->cart ? WC()->cart->get_cart() : array(), true ),
+		'legacy_buffet_indices' => rytkoset_theme_get_paid_event_checkbox_indices( $cart_items ),
+		'participants'          => rytkoset_theme_build_paid_event_cart_participant_lines( $cart_items, $collection ),
+		'choice_indices'        => rytkoset_theme_get_paid_event_checkbox_indices( $cart_items, true ),
+		'email_indices'         => rytkoset_theme_get_paid_event_email_indices( $cart_items, $collection ),
 	);
 }
 
@@ -844,6 +927,11 @@ function rytkoset_theme_get_paid_event_store_api_cart_schema() {
 			'readonly' => true,
 			'items'    => array( 'type' => 'integer' ),
 		),
+		'email_indices'         => array(
+			'type'     => 'array',
+			'readonly' => true,
+			'items'    => array( 'type' => 'integer' ),
+		),
 		'participant_count'     => array(
 			'description' => __( 'Tapahtumaosallistujien määrä ostoskorissa.', 'rytkoset-theme' ),
 			'type'        => 'integer',
@@ -857,9 +945,10 @@ function rytkoset_theme_get_paid_event_store_api_cart_schema() {
 			'items'       => array(
 				'type'       => 'object',
 				'properties' => array(
-					'type'         => array( 'type' => 'string' ),
-					'price'        => array( 'type' => 'string' ),
-					'choice_label' => array( 'type' => 'string' ),
+					'type'          => array( 'type' => 'string' ),
+					'price'         => array( 'type' => 'string' ),
+					'choice_label'  => array( 'type' => 'string' ),
+					'collect_email' => array( 'type' => 'boolean' ),
 				),
 			),
 		),
@@ -931,11 +1020,12 @@ function rytkoset_theme_enqueue_paid_event_checkout_participants() {
 		'namespace' => rytkoset_theme_get_paid_event_store_api_namespace(),
 		'i18n'      => array(
 			/* translators: %d: participant number. */
-			'title'   => __( 'Osallistuja %d', 'rytkoset-theme' ),
+			'title'      => __( 'Osallistuja %d', 'rytkoset-theme' ),
 			/* translators: 1: participant number, 2: optional yes/no question. */
-			'choice'  => __( 'Osallistuja %1$d: %2$s (valinnainen)', 'rytkoset-theme' ),
-			'heading' => __( 'Tapahtuman osallistujat', 'rytkoset-theme' ),
-			'intro'   => __( 'Täytä jokaiselle osallistujalle nimi ja mahdolliset ruokarajoitteet tai allergiat.', 'rytkoset-theme' ),
+			'choice'     => __( 'Osallistuja %1$d: %2$s (valinnainen)', 'rytkoset-theme' ),
+			'heading'    => __( 'Tapahtuman osallistujat', 'rytkoset-theme' ),
+			'intro'      => __( 'Täytä jokaiselle osallistujalle nimi ja mahdolliset ruokarajoitteet tai allergiat.', 'rytkoset-theme' ),
+			'email_help' => __( 'Anna osoite vain osallistujan luvalla. Sitä käytetään tapahtumainfoon ja palautepyyntöön, ei uutiskirjeisiin. Kerro osallistujalle tietosuojaselosteesta.', 'rytkoset-theme' ),
 		),
 	);
 
@@ -1008,6 +1098,41 @@ function rytkoset_theme_get_paid_event_participant_hidden_schema( $index ) {
 	);
 }
 
+/** Returns the Store API condition for an enabled participant email field. */
+function rytkoset_theme_get_paid_event_email_schema( $index ) {
+	$schema                                   = rytkoset_theme_get_paid_event_participant_active_schema( $index );
+	$namespace                                = rytkoset_theme_get_paid_event_store_api_namespace();
+	$extension                                = &$schema['properties']['cart']['properties']['extensions']['properties'][ $namespace ];
+	$extension['properties']['email_indices'] = array(
+		'type'     => 'array',
+		'contains' => array( 'const' => (int) $index ),
+	);
+	$extension['required'][]                  = 'email_indices';
+	return $schema;
+}
+
+/** Preserves malformed input for validation instead of silently fixing it. */
+function rytkoset_theme_sanitize_paid_event_participant_email( $value ) {
+	$value = trim( (string) $value );
+	return is_email( $value ) ? sanitize_email( $value ) : $value;
+}
+
+/** Validates a nonempty participant address before WooCommerce stores it. */
+function rytkoset_theme_validate_paid_event_participant_email( $value, $field ) {
+	$value = trim( (string) $value );
+	if ( '' === $value || is_email( $value ) ) {
+		return null;
+	}
+	return new WP_Error(
+		'invalid_paid_event_participant_email',
+		sprintf(
+			/* translators: %s: checkout field label. */
+			__( 'Tarkista kentän ”%s” sähköpostiosoite.', 'rytkoset-theme' ),
+			$field['label']
+		)
+	);
+}
+
 /**
  * Registers participant fields for the paid event registration checkout flow.
  *
@@ -1062,6 +1187,28 @@ function rytkoset_theme_register_paid_event_checkout_fields() {
 					'data-lpignore'  => 'true',
 					'data-1p-ignore' => 'true',
 					'maxLength'      => 200,
+				),
+			)
+		);
+
+		woocommerce_register_additional_checkout_field(
+			array(
+				'id'                => sprintf( 'rytkoset/participant_%d_email', $index ),
+				/* translators: %d: participant number. */
+				'label'             => sprintf( __( 'Osallistuja %d: sähköposti', 'rytkoset-theme' ), $index ),
+				/* translators: %d: participant number. */
+				'optionalLabel'     => sprintf( __( 'Osallistuja %d: sähköposti (vapaaehtoinen)', 'rytkoset-theme' ), $index ),
+				'location'          => 'order',
+				'type'              => 'text',
+				'required'          => false,
+				'hidden'            => array( 'not' => rytkoset_theme_get_paid_event_email_schema( $index ) ),
+				'sanitize_callback' => 'rytkoset_theme_sanitize_paid_event_participant_email',
+				'validate_callback' => 'rytkoset_theme_validate_paid_event_participant_email',
+				'attributes'        => array(
+					'autocomplete'   => sprintf( 'section-participant-%d-email new-password', $index ),
+					'data-lpignore'  => 'true',
+					'data-1p-ignore' => 'true',
+					'maxLength'      => 254,
 				),
 			)
 		);
@@ -1234,6 +1381,9 @@ function rytkoset_theme_get_paid_event_order_participants( $order, $product_id =
 				sprintf( 'rytkoset/participant_%d_diet', $index )
 			)
 		);
+		$email  = $context['collect_emails']
+			? trim( rytkoset_theme_get_order_additional_checkout_field_value( $order, sprintf( 'rytkoset/participant_%d_email', $index ) ) )
+			: '';
 		$buffet = rytkoset_theme_get_order_additional_checkout_field_bool(
 			$order,
 			sprintf( 'rytkoset/participant_%d_friday_buffet', $index )
@@ -1248,12 +1398,13 @@ function rytkoset_theme_get_paid_event_order_participants( $order, $product_id =
 			$choice = 'tampere_2026' === $context['mode'] ? $buffet : rytkoset_theme_get_order_additional_checkout_field_bool( $order, sprintf( 'rytkoset/participant_%d_choice', $index ) );
 		}
 
-		if ( '' === $name && '' === $diet && ! $buffet ) {
+		if ( '' === $name && '' === $diet && '' === $email && ! $buffet ) {
 			continue;
 		}
 
 		$participants[] = array(
 			'name'             => $name,
+			'email'            => is_email( $email ) ? $email : '',
 			'diet'             => $diet,
 			'participant_type' => $type,
 			'friday_buffet'    => $buffet,
@@ -1363,6 +1514,7 @@ function rytkoset_theme_get_paid_event_participant_field_ids( $index ) {
 	return array(
 		sprintf( 'rytkoset/participant_%d_name', $index ),
 		sprintf( 'rytkoset/participant_%d_diet', $index ),
+		sprintf( 'rytkoset/participant_%d_email', $index ),
 		sprintf( 'rytkoset/participant_%d_friday_buffet', $index ),
 		sprintf( 'rytkoset/participant_%d_choice', $index ),
 	);
@@ -1394,7 +1546,7 @@ function rytkoset_theme_normalize_paid_event_participant_field_id( $field_id ) {
 function rytkoset_theme_get_paid_event_participant_index_from_field_id( $field_id ) {
 	$field_id = rytkoset_theme_normalize_paid_event_participant_field_id( $field_id );
 
-	if ( ! preg_match( '/^rytkoset\/participant_(\d+)_(?:name|diet|friday_buffet|choice)$/', $field_id, $matches ) ) {
+	if ( ! preg_match( '/^rytkoset\/participant_(\d+)_(?:name|diet|email|friday_buffet|choice)$/', $field_id, $matches ) ) {
 		return 0;
 	}
 
@@ -1452,6 +1604,9 @@ function rytkoset_theme_filter_paid_event_order_confirmation_fields( $show, $fie
 		return false;
 	}
 	if ( str_ends_with( $field_id, '_choice' ) && ( '' === $contexts[ $index - 1 ]['choice_label'] || 'tampere_2026' === $contexts[ $index - 1 ]['mode'] ) ) {
+		return false;
+	}
+	if ( str_ends_with( $field_id, '_email' ) && ! $contexts[ $index - 1 ]['collect_emails'] ) {
 		return false;
 	}
 
@@ -1680,6 +1835,9 @@ function rytkoset_theme_render_paid_event_order_participants_metabox( $post_or_o
 		if ( '' !== $participant['diet'] ) {
 			echo '<br>';
 			echo esc_html__( 'Ruokarajoitteet / allergiat:', 'rytkoset-theme' ) . ' ' . esc_html( $participant['diet'] );
+		}
+		if ( '' !== $participant['email'] ) {
+			echo '<br>' . esc_html__( 'Sähköposti:', 'rytkoset-theme' ) . ' ' . esc_html( $participant['email'] );
 		}
 
 		$choice_text = rytkoset_theme_format_paid_event_choice( $participant['choice_label'], $participant['choice'] );

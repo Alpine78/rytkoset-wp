@@ -13,6 +13,8 @@ aktiivisilta osallistujilta tulevien tapahtumien kehittämiseksi. Palaute ei
 liity uutiskirjeeseen tai markkinointiin, eikä sitä kytketä kehenkään
 yksittäiseen osallistujaan.
 
+Palautepyyntö käyttää tapahtumaviestinnän samaa vastaanottajahakua. Maksullisen osallistujan vapaaehtoinen oma sähköpostiosoite saa pyynnön, ja ilman sitä käytetään ostajan yhteystietoja. Sama osoite saa vain yhden pyynnön, vaikka se esiintyisi eri tilauksissa tai maksuttomassa ilmoittautumisessa. Ristiriitaisilla nimillä käytetään neutraalia puhuttelua.
+
 ## Sijainti
 
 - Tapahtuman muokkausnäkymä: **Palautekysely**-laatikko (asetukset)

@@ -30,18 +30,30 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 	// "Peruttu" filter. This same trimmed set is the safe base for a future
 	// feedback request.
 	$rows = rytkoset_theme_filter_active_event_participants( $rows, $status_filter );
+	return rytkoset_theme_build_event_messaging_recipients( $rows );
+}
+
+/** Builds unique event recipients from normalized participant rows. */
+function rytkoset_theme_build_event_messaging_recipients( $rows ) {
 
 	$recipients = array();
 	$skipped    = 0;
 
+	$name_sources     = array();
+	$conflicted_names = array();
 	foreach ( $rows as $row ) {
-		$email = trim( (string) ( $row['email'] ?? '' ) );
-		$name  = trim( (string) ( $row['name'] ?? '' ) );
+		$email         = trim( (string) ( $row['email'] ?? '' ) );
+		$name          = trim( (string) ( $row['name'] ?? '' ) );
+		$contact_email = trim( (string) ( $row['contact_email'] ?? '' ) );
+		$is_contact    = '' !== $email && '' !== $contact_email && 0 === strcasecmp( $email, $contact_email );
 
 		if ( '' === $email ) {
 			// Keep the recipient's name paired with the address we actually use.
-			$email = trim( (string) ( $row['contact_email'] ?? '' ) );
-			$name  = trim( (string) ( $row['contact_name'] ?? '' ) );
+			$email      = $contact_email;
+			$is_contact = true;
+		}
+		if ( $is_contact ) {
+			$name = trim( (string) ( $row['contact_name'] ?? '' ) );
 		}
 
 		if ( '' === $email || ! is_email( $email ) ) {
@@ -51,7 +63,19 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 
 		$email_key = strtolower( $email );
 
+		$source = $is_contact ? 2 : 1;
 		if ( isset( $recipients[ $email_key ] ) ) {
+			if ( $is_contact ) {
+				unset( $recipients[ $email_key ]['additional_participant'] );
+			}
+			if ( $source > $name_sources[ $email_key ] ) {
+				$recipients[ $email_key ]['name'] = $name;
+				$name_sources[ $email_key ]       = $source;
+				unset( $conflicted_names[ $email_key ] );
+			} elseif ( $source === $name_sources[ $email_key ] && ! isset( $conflicted_names[ $email_key ] ) && 0 !== strcasecmp( $recipients[ $email_key ]['name'], $name ) ) {
+				$recipients[ $email_key ]['name'] = '';
+				$conflicted_names[ $email_key ]   = true;
+			}
 			continue;
 		}
 
@@ -60,6 +84,10 @@ function rytkoset_theme_get_event_messaging_recipients( $event_id, $status_filte
 			'name'        => $name,
 			'event_title' => (string) ( $row['event_title'] ?? '' ),
 		);
+		if ( ! $is_contact && 'paid' === ( $row['source'] ?? '' ) ) {
+			$recipients[ $email_key ]['additional_participant'] = true;
+		}
+		$name_sources[ $email_key ] = $source;
 	}
 
 	// Add unnamed recipients after the primary pass so a person's own registration wins.

@@ -45,6 +45,7 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 			array(
 				array(
 					'name'             => 'Testi Osallistuja',
+					'email'            => '',
 					'diet'             => 'Gluteeniton',
 					'participant_type' => '',
 					'friday_buffet'    => true,
@@ -65,6 +66,93 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'rytkoset_event_registration', $namespace );
 		$this->assertSame( array( $namespace ), $extension['required'] );
 		$this->assertSame( 2, $extension['properties'][ $namespace ]['properties']['participant_count']['minimum'] );
+	}
+
+	public function test_email_opt_in_targets_only_matching_cart_positions_and_rejects_invalid_address(): void {
+		$enabled = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 );
+		$disabled = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 902 );
+		rytkoset_test_register_post( 81, 'rytkoset_event', 'Maksullinen tapahtuma' );
+		update_post_meta( 81, rytkoset_theme_get_event_product_meta_key(), 901 );
+		update_post_meta( 81, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$cart = array(
+			array( 'data' => $disabled, 'quantity' => 1 ),
+			array( 'data' => $enabled, 'quantity' => 2 ),
+		);
+		$this->assertSame( array( 2, 3 ), rytkoset_theme_get_paid_event_email_indices( $cart ) );
+		$this->assertSame( 2, rytkoset_theme_get_paid_event_email_schema( 2 )['properties']['cart']['properties']['extensions']['properties'][ rytkoset_theme_get_paid_event_store_api_namespace() ]['properties']['email_indices']['contains']['const'] );
+		$this->assertNull( rytkoset_theme_validate_paid_event_participant_email( '', array( 'label' => 'Osallistuja 2: sähköposti' ) ) );
+		$this->assertNull( rytkoset_theme_validate_paid_event_participant_email( 'henkilo@example.test', array( 'label' => 'Osallistuja 2: sähköposti' ) ) );
+		$this->assertInstanceOf( WP_Error::class, rytkoset_theme_validate_paid_event_participant_email( 'ei-osoite', array( 'label' => 'Osallistuja 2: sähköposti' ) ) );
+		$this->assertSame( 'foo<script>@example.test', rytkoset_theme_sanitize_paid_event_participant_email( 'foo<script>@example.test' ) );
+		$this->assertInstanceOf( WP_Error::class, rytkoset_theme_validate_paid_event_participant_email( rytkoset_theme_sanitize_paid_event_participant_email( 'foo<script>@example.test' ), array( 'label' => 'Osallistuja 2: sähköposti' ) ) );
+	}
+
+	public function test_paid_participant_email_stays_with_its_order_position(): void {
+		$enabled = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 );
+		rytkoset_test_register_post( 81, 'rytkoset_event', 'Maksullinen tapahtuma' );
+		update_post_meta( 81, rytkoset_theme_get_event_product_meta_key(), 901 );
+		update_post_meta( 81, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$order = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $enabled, 'Tapahtuma', 2 );
+		$order->meta['_wc_other/rytkoset/participant_1_name'] = 'Ensimmäinen';
+		$order->meta['_wc_other/rytkoset/participant_2_name'] = 'Toinen';
+		$order->meta['_wc_other/rytkoset/participant_2_email'] = 'toinen@example.test';
+		rytkoset_theme_snapshot_paid_event_order_items( $order );
+		$rows = rytkoset_theme_get_paid_event_order_participants( $order );
+		$this->assertSame( '', $rows[0]['email'] );
+		$this->assertSame( 'toinen@example.test', $rows[1]['email'] );
+		$this->assertSame( 'yes', $order->items[0]->get_meta( '_rytkoset_registration_collect_emails', true ) );
+	}
+
+	public function test_disabled_email_collection_ignores_stale_order_values(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 );
+		$order   = new WC_Order();
+		$order->items[] = new Rytkoset_Test_Order_Item( $product, 'Tapahtuma', 2 );
+		$order->meta = array(
+			'_wc_other/rytkoset/participant_1_email' => 'stale@example.test',
+			'_wc_other/rytkoset/participant_2_name'  => 'Toinen',
+			'_wc_other/rytkoset/participant_2_email' => 'toinen@example.test',
+		);
+		rytkoset_theme_snapshot_paid_event_order_items( $order );
+
+		$this->assertSame( 'no', $order->items[0]->get_meta( '_rytkoset_registration_collect_emails', true ) );
+		$this->assertSame( array( 'Toinen' ), array_column( rytkoset_theme_get_paid_event_order_participants( $order ), 'name' ) );
+		$this->assertSame( '', rytkoset_theme_get_paid_event_order_participants( $order )[0]['email'] );
+		rytkoset_theme_cleanup_paid_event_extra_participant_order_meta( $order );
+		$this->assertArrayNotHasKey( '_wc_other/rytkoset/participant_1_email', $order->meta );
+		$this->assertArrayNotHasKey( '_wc_other/rytkoset/participant_2_email', $order->meta );
+	}
+
+	public function test_cart_email_setting_lookup_runs_once_per_parent_product(): void {
+		$parent = rytkoset_test_register_product( 901, 'publish', 'Tapahtuma', array( '_rytkoset_registration_mode' => 'event_participants' ) );
+		rytkoset_test_register_post( 81, 'rytkoset_event', 'Tapahtuma' );
+		update_post_meta( 81, rytkoset_theme_get_event_product_meta_key(), 901 );
+		update_post_meta( 81, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$cart = new Rytkoset_Test_Cart();
+		$cart->items = array(
+			array( 'data' => $parent, 'quantity' => 2 ),
+			array( 'data' => new WC_Product( array( '_parent_id' => 901 ), 902 ), 'quantity' => 2 ),
+		);
+		WC()->cart = $cart;
+
+		$data = rytkoset_theme_get_paid_event_store_api_cart_data();
+		$this->assertSame( 1, $GLOBALS['rytkoset_test_get_posts_calls'] );
+		$this->assertSame( array( 1, 2, 3, 4 ), $data['email_indices'] );
+		$this->assertSame( array( true, true, true, true ), array_column( $data['participants'], 'collect_email' ) );
+	}
+
+	public function test_shared_event_setting_controls_free_and_paid_collection(): void {
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'event_participants' ), 901 );
+		rytkoset_test_register_post( 81, 'rytkoset_event', 'Maksullinen tapahtuma' );
+		update_post_meta( 81, rytkoset_theme_get_event_product_meta_key(), 901 );
+		$this->assertFalse( rytkoset_theme_event_collects_participant_emails( 81 ) );
+		$this->assertFalse( rytkoset_theme_paid_event_collects_participant_emails( $product ) );
+		update_post_meta( 81, '_rytkoset_event_collect_participant_emails', 'yes' );
+		$this->assertTrue( rytkoset_theme_event_collects_participant_emails( 81 ) );
+		$this->assertTrue( rytkoset_theme_paid_event_collects_participant_emails( $product ) );
+		rytkoset_test_register_post( 82, 'rytkoset_event', 'Toinen tapahtuma' );
+		update_post_meta( 82, rytkoset_theme_get_event_product_meta_key(), 901 );
+		$this->assertFalse( rytkoset_theme_paid_event_collects_participant_emails( $product ) );
 	}
 
 	public function test_generic_product_inherits_mode_and_deadline_from_parent_without_legacy_sku(): void {
@@ -333,6 +421,7 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 			array(
 				'rytkoset/participant_2_name',
 				'rytkoset/participant_2_diet',
+				'rytkoset/participant_2_email',
 				'rytkoset/participant_2_friday_buffet',
 				'rytkoset/participant_2_choice',
 			),
@@ -370,9 +459,9 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 
 		$this->assertSame(
 			array(
-				array( 'type' => 'aikuinen', 'price' => '49,00 €', 'choice_label' => '' ),
-				array( 'type' => 'aikuinen', 'price' => '49,00 €', 'choice_label' => '' ),
-				array( 'type' => 'lapsi 3 12 vuotta', 'price' => '24,50 €', 'choice_label' => '' ),
+				array( 'type' => 'aikuinen', 'price' => '49,00 €', 'choice_label' => '', 'collect_email' => false ),
+				array( 'type' => 'aikuinen', 'price' => '49,00 €', 'choice_label' => '', 'collect_email' => false ),
+				array( 'type' => 'lapsi 3 12 vuotta', 'price' => '24,50 €', 'choice_label' => '', 'collect_email' => false ),
 			),
 			$lines
 		);
