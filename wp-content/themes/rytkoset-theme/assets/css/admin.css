@@ -1,0 +1,111 @@
+/*
+ * wp-admin appearance: association brand colors and fonts.
+ * Deliberately small: only CSS variables, the Manrope font and the
+ * side/top bar colors. Plugin screens keep their own layout.
+ */
+
+@font-face {
+	font-family: "Manrope";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("../fonts/manrope-latin.woff2") format("woff2");
+}
+
+:root {
+	--rytkoset-admin-primary: #0f4c81;
+	--rytkoset-admin-primary-dark: #0b315b;
+	--rytkoset-admin-primary-deeper: #08254a;
+	--rytkoset-admin-accent: #fbbf24;
+	--rytkoset-admin-bg: #f5f5f5;
+
+	/* WordPress core admin theme color tokens (buttons, links, focus). */
+	--wp-admin-theme-color: var(--rytkoset-admin-primary);
+	--wp-admin-theme-color-darker-10: var(--rytkoset-admin-primary-dark);
+	--wp-admin-theme-color-darker-20: var(--rytkoset-admin-primary-deeper);
+}
+
+body.wp-admin,
+body.wp-admin #wpbody-content,
+body.wp-admin .wp-core-ui,
+body.wp-admin input,
+body.wp-admin select,
+body.wp-admin textarea,
+body.wp-admin button {
+	font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body.wp-admin #wpcontent,
+body.wp-admin #wpfooter {
+	background-color: var(--rytkoset-admin-bg);
+}
+
+/* Top bar and side menu. */
+#wpadminbar {
+	background: var(--rytkoset-admin-primary-deeper);
+}
+
+#adminmenuback,
+#adminmenuwrap,
+#adminmenu {
+	background: var(--rytkoset-admin-primary-dark);
+}
+
+#adminmenu li.menu-top:hover,
+#adminmenu li.opensub > a.menu-top,
+#adminmenu li > a.menu-top:focus {
+	background-color: var(--rytkoset-admin-primary);
+}
+
+#adminmenu li.wp-has-current-submenu a.wp-has-current-submenu,
+#adminmenu li.current a.menu-top,
+.folded #adminmenu li.wp-has-current-submenu,
+.folded #adminmenu li.current.menu-top {
+	background: var(--rytkoset-admin-primary);
+	box-shadow: inset 4px 0 0 var(--rytkoset-admin-accent);
+}
+
+#adminmenu .wp-submenu,
+#adminmenu .wp-has-current-submenu .wp-submenu,
+#adminmenu a.wp-has-current-submenu:focus + .wp-submenu {
+	background: var(--rytkoset-admin-primary-deeper);
+}
+
+/* Cards and dashboard widgets. */
+body.wp-admin .postbox,
+body.wp-admin .stuffbox {
+	border-radius: 10px;
+	border-color: rgba(0, 0, 0, 0.1);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+body.wp-admin .postbox .postbox-header {
+	border-radius: 10px 10px 0 0;
+}
+
+/* Buttons. */
+body.wp-admin .button,
+body.wp-admin .button-primary {
+	border-radius: 8px;
+}
+
+body.wp-admin .button-primary {
+	background: var(--rytkoset-admin-primary);
+	border-color: var(--rytkoset-admin-primary);
+}
+
+body.wp-admin .button-primary:hover,
+body.wp-admin .button-primary:focus {
+	background: var(--rytkoset-admin-primary-dark);
+	border-color: var(--rytkoset-admin-primary-dark);
+}
+
+/* Keep keyboard focus clearly visible. */
+body.wp-admin a:focus-visible,
+body.wp-admin .button:focus-visible,
+body.wp-admin input:focus-visible,
+body.wp-admin select:focus-visible,
+body.wp-admin textarea:focus-visible {
+	outline: 2px solid var(--rytkoset-admin-primary);
+	outline-offset: 2px;
+}
