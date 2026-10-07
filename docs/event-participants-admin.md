@@ -1,6 +1,6 @@
 # Tapahtumakohtainen osallistujalista adminissa
 
-Maksullisen tapahtuman osallistujan oma vapaaehtoinen sähköpostiosoite näkyy osallistujarivin Sähköposti-sarakkeessa ja CSV-viennissä. Jos osoitetta ei annettu, ylläpito näyttää ostajan osoitteen tilaaja-merkinnällä. Vanhoja tilauksia ei tarvitse täydentää.
+Maksullisen tapahtuman osallistujan oma vapaaehtoinen sähköpostiosoite näkyy osallistujarivillä nimen alla ja CSV-viennin Sähköposti-sarakkeessa. Jos osoitetta ei annettu, ylläpito näyttää ostajan osoitteen tilaaja-merkinnällä. Vanhoja tilauksia ei tarvitse täydentää.
 
 #642:n yleiskäyttöiset maksulliset tapahtumat käyttävät samaa osallistujalistaa ja CSV-vientiä. Tuotteen osallistujakytkin, määräpäivä ja rajat on kuvattu [maksullisen tapahtuman ohjeessa](woocommerce-event-registration.md). Uusien tilausten osallistujarivit säilyvät myös tuotteen keruun myöhemmän poiskytkennän jälkeen. Eri tapahtumien tuotteita sisältävästä tilauksesta näytetään kullekin tapahtumalle vain siihen kuuluvat osallistujat.
 
@@ -49,40 +49,43 @@ Näkymässä voi suodattaa osallistujia statuksen perusteella:
 
 ### Yhteenveto
 
-Suodattimien yläpuolella näkyy osallistujamäärä eriteltynä lähteen mukaan: kuinka moni on ilmoittautunut lomakkeella ja kuinka moni WooCommercen kautta.
+Suodattimien alla on **Yhteenveto**-laatikko (#695). Sen kortit näyttävät:
 
-Kun valitulla tapahtumalla on tapahtumakohtainen lisävalinta, näkymä näyttää
-lisäksi valinnan otsikolla nimetyn yhteenvedon. Peruutetut ilmoittautumiset
+- osallistujien kokonaismäärän eriteltynä maksullisiin ja maksuttomiin
+- määrän kustakin näkyvästä tilasta (esimerkiksi Valmistunut, Odottaa maksua, Peruttu). Tilanimet ovat samat kuin taulukossa. WooCommercen tilojen Käsittelyssä ja Valmistunut yhdistäminen yhdeksi "Maksettu"-tilaksi odottaa hallituksen päätöstä.
+- ruokavaliotietojen määrän pitopalvelua varten (rivit, joilla ruokavaliokenttä on täytetty)
+
+Kun valitulla tapahtumalla on tapahtumakohtainen lisävalinta, laatikossa on
+lisäksi valinnan otsikolla nimetty yhteenveto. Peruutetut ilmoittautumiset
 ohitetaan. Jos määräkenttä on käytössä, yhteenveto laskee tallennetut määrät;
-muuten se laskee ilmoittautumiset. Yhteenvedossa näkyy kokonaismäärä ja erittely
-valinnan mukaan.
+muuten se laskee ilmoittautumiset.
+
+Laatikon painikkeet: **Lähetä viesti näille osallistujille** avaa `Tapahtumat > Viestintä` -sivun samalla tapahtuma- ja tilarajauksella, ja **Vie CSV** lataa listan.
 
 ### Taulukko
 
-Jokaiselta osallistujalta näkyy:
+Taulukossa on kuusi perussaraketta (#695). Puhelinnumero ei näy taulukossa, mutta se on CSV-viennissä ja ilmoittautumisen tai tilauksen muokkausnäkymässä. Tyhjä solu jätetään tyhjäksi.
 
 | Sarake | Selite |
 | --- | --- |
-| Nimi | Osallistujan nimi |
+| Nimi | Osallistujan nimi. Alla osallistujan oma sähköposti, jos se on tallennettu (maksuttomassa ilmoittautumisessa tai maksullisen tapahtuman vapaaehtoisessa osallistujakohtaisessa kentässä); muuten tilaajan sähköposti merkinnällä "(tilaaja)". Nimen alla ovat aina näkyvät rivitoiminnot: **Avaa tilaus #N** (maksullinen) tai **Muokkaa** (maksuton) sekä maksuttomilla riveillä **Peru osallistuminen** / **Palauta ilmoittautuminen** |
+| Tapahtuma | Tapahtuman nimi linkkinä (vain "Kaikki tapahtumat" -näkymässä) |
 | Tapahtumakohtainen lisävalinta | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty lisävalinta; otsikkona käytetään tapahtuman kenttäotsikkoa |
 | Tapahtumakohtainen määrä | Näkyy vain, kun yksittäiselle tapahtumalle on määritetty määräkenttä; otsikkona käytetään tapahtuman kenttäotsikkoa |
-| Osallistujatyyppi | Tapahtumatuotteen variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
-| Maksullisen tapahtuman lisävalinta | Tilaushetken kysymys ja vastaus, esimerkiksi `Yhteinen illallinen: Kyllä` |
-| Sähköposti | Osallistujan sähköposti (ilmaisessa) tai yhteyshenkilön sähköposti (maksullisessa) |
-| Puhelin | Puhelinnumero |
+| Tyyppi | Tapahtumatuotteen variaatiosta tuleva osallistujatyyppi, esimerkiksi `Aikuinen` tai `Lapsi 3-12 vuotta` |
+| Lisävalinta | Maksullisen tapahtuman tilaushetken kysymys ja vastaus, esimerkiksi `Yhteinen illallinen: Kyllä` |
 | Ruokavalio / huomiot | Ruokarajoitteet, allergiat ja lisätiedot |
-| Status | Osallistumisen tila |
-| Lähde | `Verkkolomake` tai `Käsin lisätty` maksuttomille, `Maksullinen` WooCommerce-riveille. Lähde ilman tallennettua metaa (ennen `#665` luodut rivit) näytetään muodossa `Verkkolomake`. |
-| Tapahtuma | Tapahtuman nimi linkkinä (vain "Kaikki tapahtumat" -näkymässä) |
+| Tila | Tilamerkki ja sen alla lähde: `Verkkolomake` tai `Käsin lisätty` maksuttomille, `Maksullinen` WooCommerce-riveille. Lähde ilman tallennettua metaa (ennen `#665` luodut rivit) näytetään muodossa `Verkkolomake`. Tilamerkin väri ja muoto tukevat tekstiä: vihreä pallo = vahvistettu tai maksettu (Valmistunut, Käsittelyssä), keltainen rengas = odottaa, punainen neliö = maksu epäonnistui, harmaa pallo = peruttu tai hyvitetty |
 | Ilmoittautunut | Ilmoittautumisen tai tilauksen luontipäivä |
-| Toiminnot | `Muokkaa`-linkki (`event_registration`-postille tai WooCommerce-tilaukselle) sekä `event_registration`-riveillä **Peru osallistuminen** / **Palauta ilmoittautuminen** -painike |
+
+Alle 782 px:n näytöllä rivit näkyvät kortteina, joissa jokaisen tiedon edessä on sarakkeen nimi. Otsakerivi piilotetaan silloin vain visuaalisesti, ja taulukon ARIA-roolit säilyttävät ruudunlukijalle sarakeotsakkeet. Suodattimet näkyvät myös mobiilissa.
 
 Jos tapahtumalla ei ole yhtään osallistujaa valituilla suodattimilla, taulukko näyttää "Ei osallistujia valitulla suodatuksella".
 
 ### Osallistumisen peruminen ja palauttaminen
 
 `event_registration`-riveillä (sekä verkkolomake- että käsin lisätyt) on
-Toiminnot-sarakkeessa vahvistusta vaativa toiminto:
+nimen alla vahvistusta vaativa rivitoiminto:
 
 - **Peru osallistuminen** vaihtaa tilaksi `cancelled` (**Peruttu**). Tietuetta ei
   poisteta eikä siirretä roskakoriin, joten muutos on korjattavissa ja
@@ -203,12 +206,14 @@ Pääfunktiot:
 - `rytkoset_theme_get_all_events_participants($status_filter)` — kerää osallistujat kaikista tapahtumista
 - `rytkoset_theme_register_event_participants_admin_page()` — rekisteröi adminisivun
 - `rytkoset_theme_render_event_participants_admin_page()` — renderöi sivun
+- `rytkoset_theme_get_event_participants_overview($rows)` — Yhteenveto-laatikon luvut: kokonaismäärä, maksulliset/maksuttomat, tilakohtaiset määrät ja ruokavaliotiedot (#695)
+- `rytkoset_theme_get_event_participant_status_variant($row)` — tilamerkin värimuunnelma (`success` / `warning` / `error` / `neutral`) maksuttoman ilmoittautumisen tilasta tai tilauksen tilasta (#695)
 - `rytkoset_theme_render_event_participants_export_form()` — renderöi CSV-vientipainikkeen
 - `rytkoset_theme_export_event_participants_csv()` — `admin_post`-handleri, joka tuottaa CSV-tiedoston
 - `rytkoset_theme_render_event_participants_anonymization_form()` — renderöi tapahtumakohtaisen anonymisointilomakkeen
 - `rytkoset_theme_handle_event_free_registrations_anonymization()` — `admin_post`-handleri, joka anonymisoi valitun tapahtuman maksuttomat ilmoittautumiset
 - `rytkoset_theme_get_event_participants_add_url()` / `rytkoset_theme_render_event_participants_add_button()` — "Lisää osallistuja" -painike ja sen kohde-URL (esivalittu tapahtuma)
-- `rytkoset_theme_render_event_registration_cancel_action()` — Toiminnot-sarakkeen Peru/Palauta-lomake yhdelle riville
+- `rytkoset_theme_render_event_registration_cancel_action()` — nimen alla näkyvä Peru/Palauta-lomake yhdelle riville
 - `rytkoset_theme_handle_event_registration_cancel_toggle()` — `admin_post`-handleri (`rytkoset_toggle_event_registration_status`), joka vaihtaa tilan `cancelled` ⇄ `confirmed`
 - `rytkoset_theme_render_event_registration_toggle_notice()` — Peru/Palauta-toiminnon palaute
 - `rytkoset_theme_get_event_feedback_inactive_order_statuses()` — WooCommerce-statukset (`cancelled` / `refunded` / `failed`), joita ei koskaan oteta viestinnän tai palautepyynnön vastaanottajiksi
