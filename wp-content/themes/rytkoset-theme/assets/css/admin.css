@@ -156,6 +156,69 @@ body.wp-admin a:active {
 	color: var(--ra-primary-dark);
 }
 
+/* ---------- Page titles (#700) ----------
+ * The brand serif only for the main page title; everything else stays Manrope. */
+@font-face {
+	font-family: "Newsreader";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("../fonts/newsreader-latin.woff2") format("woff2");
+}
+
+body.wp-admin .wrap > h1,
+body.wp-admin .wrap h1.wp-heading-inline {
+	color: var(--ra-text);
+	font-family: "Newsreader", Georgia, serif;
+	font-size: 26px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+/* ---------- Media library grid (#700) ----------
+ * FRAGILE: media-views markup (.attachment, .attachment-preview, .check). */
+body.wp-admin .attachment-preview {
+	border-radius: var(--ra-radius-m);
+	background: var(--ra-surface-muted);
+	overflow: hidden;
+}
+
+/* Selected and active items get the brand ring, also in the library's grid mode
+ * (core's .media-frame.mode-grid rule is more specific). Keyboard focus keeps
+ * core's own ring so it stays distinguishable from selection. */
+body.wp-admin.wp-core-ui .media-frame .attachment.details:not(:focus),
+body.wp-admin.wp-core-ui .media-frame .attachment.selected:not(:focus) {
+	border-radius: var(--ra-radius-m);
+	box-shadow: inset 0 0 0 3px var(--ra-surface), inset 0 0 0 6px var(--ra-primary);
+}
+
+body.wp-admin .wp-list-table.media .media-icon img {
+	border-radius: var(--ra-radius-s);
+}
+
+/* ---------- Customizer controls (#700) ----------
+ * The stylesheet is also enqueued on customize_controls_enqueue_scripts. The
+ * Customizer body is not .wp-admin, so it gets its own selectors. */
+#customize-controls,
+#customize-controls input,
+#customize-controls select,
+#customize-controls textarea,
+#customize-controls button {
+	font-family: var(--ra-font-body);
+}
+
+#customize-controls .customize-control-description,
+#customize-controls .description {
+	max-width: 75ch;
+	color: var(--ra-text-mute);
+	font-style: normal;
+}
+
+#customize-controls textarea {
+	min-height: 12rem;
+	resize: vertical;
+}
+
 /* ---------- Focus on the dark bars ----------
  * Elsewhere core's own focus rings stay and pick up the brand color from the
  * tokens above. Only the dark bars get an amber ring, which core's blue would
