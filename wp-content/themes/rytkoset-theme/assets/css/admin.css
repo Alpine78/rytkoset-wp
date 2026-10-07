@@ -2,7 +2,8 @@
  * wp-admin appearance, slice 1 of the admin redesign (#690, #691).
  * Pure CSS on top of WordPress core admin styles: tokens, font, admin bar,
  * side menu, buttons, focus on dark bars, notices and metabox cards.
- * Tables, forms and the dashboard layout follow in later slices.
+ * Slice 2 (#692) adds list tables, filter chips, form fields and WooCommerce
+ * status marks. The dashboard layout follows in a later slice.
  *
  * FRAGILE  = depends on a core or plugin detail that has changed before.
  *            Re-check after major WordPress or plugin updates
@@ -31,6 +32,7 @@
 	--ra-primary-deeper: #08254a;
 	--ra-primary-light: #3b76a8;
 	--ra-primary-soft: #eef4fa;
+	--ra-selected-bg: #dbe7f3;
 	--ra-accent: #fbbf24;
 
 	/* surfaces + text */
@@ -44,6 +46,7 @@
 	--ra-menu-text: #c9d6e5;
 	--ra-menu-divider: rgba(255, 255, 255, 0.16);
 	--ra-border: rgba(0, 0, 0, 0.1);
+	--ra-border-control: #7b8494; /* form controls: 3.8:1 on white (WCAG 1.4.11) */
 
 	/* status: text / background / line */
 	--ra-success: #166534;
@@ -58,6 +61,8 @@
 	--ra-info: #0b315b;
 	--ra-info-bg: #e8f0f8;
 	--ra-info-line: #3b76a8;
+	--ra-neutral: #374151;
+	--ra-neutral-bg: #eef0f3;
 
 	--ra-focus-on-dark: #fbbf24;
 
@@ -75,8 +80,8 @@
 	--ra-shadow-raised: 0 4px 14px rgba(8, 37, 74, 0.1);
 	--ra-shadow-dropdown: 0 8px 24px rgba(8, 37, 74, 0.16);
 
-	/* controls */
-	--ra-control-h: 36px;
+	/* controls: WordPress 7 core buttons and fields are 40 px, list toolbars 32 px */
+	--ra-control-h: 40px;
 	--ra-control-h-touch: 44px;
 
 	/* WordPress core and block editor tokens (names verified against WP 7.1 core CSS) */
@@ -322,7 +327,7 @@ body.wp-admin .button-primary:focus {
 }
 
 /* .button-compact (list search and bulk actions) keeps core's 32 px on desktop
- * so it lines up with core's 32 px fields until the form slice (#692). */
+ * so it lines up with core's 32 px list toolbar fields. */
 body.wp-admin.wp-core-ui .button.button-small {
 	min-height: 28px;
 	line-height: 26px;
@@ -546,6 +551,222 @@ body:not(.is-dragging-metaboxes) #dashboard-widgets .postbox-container .empty-co
 #rytkoset-digital-magazine-products .inside select {
 	box-sizing: border-box;
 	max-width: 100%;
+}
+
+/* ---------- List tables (#692) ---------- */
+body.wp-admin .widefat {
+	border: 1px solid var(--ra-border);
+	border-radius: var(--ra-radius-l);
+	box-shadow: var(--ra-shadow-card);
+}
+
+body.wp-admin .widefat thead th,
+body.wp-admin .widefat thead td,
+body.wp-admin .widefat tfoot th,
+body.wp-admin .widefat tfoot td {
+	background: var(--ra-surface-alt);
+	border-color: var(--ra-border);
+	color: var(--ra-text);
+	font-size: var(--ra-text-sm);
+	font-weight: 700;
+}
+
+body.wp-admin .widefat thead tr:first-child > :first-child {
+	border-top-left-radius: var(--ra-radius-l);
+}
+
+body.wp-admin .widefat thead tr:first-child > :last-child {
+	border-top-right-radius: var(--ra-radius-l);
+}
+
+body.wp-admin .widefat thead th a {
+	color: var(--ra-text);
+}
+
+body.wp-admin .striped > tbody > :nth-child(odd) {
+	background: var(--ra-surface-alt);
+}
+
+body.wp-admin .wp-list-table tbody tr:hover {
+	background: var(--ra-primary-soft);
+}
+
+/* Checked row: tint + bar, so selection is not shown by color alone. */
+body.wp-admin .wp-list-table tbody tr:has(.check-column input:checked) {
+	background: var(--ra-selected-bg);
+}
+
+body.wp-admin .wp-list-table tbody tr:has(.check-column input:checked) > :first-child {
+	box-shadow: inset 3px 0 0 var(--ra-primary);
+}
+
+body.wp-admin .row-title {
+	color: var(--ra-primary);
+	font-weight: 700;
+}
+
+/* Hierarchical post types (Digilehdet: magazine > article). Core prints tr.level-N. */
+body.wp-admin .wp-list-table tr.level-1 .row-title,
+body.wp-admin .wp-list-table tr.level-2 .row-title {
+	font-weight: 600;
+}
+
+/* Row actions always visible: occasional users do not discover hover-only links. */
+body.wp-admin .wp-list-table .row-actions {
+	position: static;
+	left: auto;
+	color: var(--ra-text-mute);
+}
+
+/* Status filters (All | Published | Draft) as chips. font-size 0 hides the " |"
+ * text separators; each link restores its own size. */
+body.wp-admin ul.subsubsub {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+body.wp-admin ul.subsubsub li {
+	font-size: 0;
+}
+
+body.wp-admin ul.subsubsub a {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-height: 32px;
+	padding: 0 12px;
+	border: 1px solid var(--ra-border-control);
+	border-radius: 999px;
+	background: var(--ra-surface);
+	color: var(--ra-text);
+	font-size: var(--ra-text-sm);
+	line-height: 1;
+}
+
+body.wp-admin ul.subsubsub a:hover {
+	border-color: var(--ra-primary);
+	color: var(--ra-primary);
+}
+
+body.wp-admin ul.subsubsub a.current {
+	border-color: var(--ra-primary);
+	background: var(--ra-primary);
+	color: var(--ra-text-inverted);
+}
+
+body.wp-admin ul.subsubsub a .count,
+body.wp-admin ul.subsubsub a.current .count {
+	color: inherit;
+	font-weight: 500;
+}
+
+body.wp-admin .tablenav .tablenav-pages,
+body.wp-admin .tablenav .displaying-num {
+	color: var(--ra-text-mute);
+}
+
+/* ---------- Form fields (#692) ----------
+ * Core heights are kept (40 px, 32 px in list toolbars); only the border reaches
+ * the 3:1 non-text contrast and the states get brand colors. */
+body.wp-admin input[type="text"],
+body.wp-admin input[type="email"],
+body.wp-admin input[type="search"],
+body.wp-admin input[type="number"],
+body.wp-admin input[type="date"],
+body.wp-admin input[type="time"],
+body.wp-admin input[type="url"],
+body.wp-admin input[type="tel"],
+body.wp-admin input[type="password"],
+body.wp-admin select,
+body.wp-admin textarea {
+	border-color: var(--ra-border-control);
+	border-radius: var(--ra-radius-m);
+	color: var(--ra-text);
+}
+
+body.wp-admin input[type="checkbox"],
+body.wp-admin input[type="radio"] {
+	border-color: var(--ra-border-control);
+}
+
+body.wp-admin input:disabled,
+body.wp-admin select:disabled,
+body.wp-admin textarea:disabled,
+body.wp-admin input[readonly] {
+	border-color: var(--ra-border);
+	background: var(--ra-surface-muted);
+	color: var(--ra-text-mute);
+}
+
+/* Error state for core (.form-invalid) and own fields (aria-invalid). The error
+ * message itself stays text next to the field. */
+body.wp-admin .form-invalid input,
+body.wp-admin .form-invalid select,
+body.wp-admin .form-invalid textarea,
+body.wp-admin input[aria-invalid="true"],
+body.wp-admin select[aria-invalid="true"],
+body.wp-admin textarea[aria-invalid="true"] {
+	border-color: var(--ra-error-line);
+	background-color: var(--ra-error-bg);
+}
+
+/* Core sets the required-field error border with !important (forms.css). */
+body.wp-admin .form-invalid .form-required,
+body.wp-admin .form-invalid.form-required input,
+body.wp-admin .form-invalid.form-required select {
+	border-color: var(--ra-error-line) !important;
+}
+
+body.wp-admin p.description,
+body.wp-admin .form-table td .description {
+	max-width: 75ch;
+	color: var(--ra-text-mute);
+}
+
+/* ---------- WooCommerce status marks (#692) ----------
+ * FRAGILE: WooCommerce classes (stable since 3.3). WooCommerce 11.1's own colors
+ * already pass AA except the "On backorder" text (#eaa600, about 2.1:1); this
+ * aligns all marks with the theme's status tokens. The status word stays, so the
+ * color only supports it. */
+body.wp-admin mark.order-status {
+	border-radius: 999px;
+	background: var(--ra-neutral-bg);
+	color: var(--ra-neutral);
+	font-weight: 700;
+}
+
+body.wp-admin mark.order-status.status-completed {
+	background: var(--ra-success-bg);
+	color: var(--ra-success);
+}
+
+body.wp-admin mark.order-status.status-processing {
+	background: var(--ra-info-bg);
+	color: var(--ra-info);
+}
+
+body.wp-admin mark.order-status.status-pending,
+body.wp-admin mark.order-status.status-on-hold {
+	background: var(--ra-warning-bg);
+	color: var(--ra-warning);
+}
+
+body.wp-admin mark.order-status.status-failed {
+	background: var(--ra-error-bg);
+	color: var(--ra-error);
+}
+
+body.wp-admin mark.instock {
+	color: var(--ra-success);
+}
+
+body.wp-admin mark.outofstock {
+	color: var(--ra-error);
+}
+
+body.wp-admin mark.onbackorder {
+	color: var(--ra-warning);
 }
 
 /* ---------- Narrow screens (core breakpoint 782px) ---------- */
