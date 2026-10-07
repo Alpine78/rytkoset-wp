@@ -71,6 +71,7 @@ $GLOBALS['rytkoset_test_hooks'] = array(); // [tag] => array of array{0:int prio
  */
 function rytkoset_test_reset(): void {
 	$_POST = array();
+	$GLOBALS['rytkoset_test_enqueued_styles'] = array();
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
@@ -1923,6 +1924,15 @@ function get_template_directory() {
 
 function get_template_directory_uri() {
 	return 'https://rytkoset.test/wp-content/themes/rytkoset-theme';
+}
+
+// Records enqueued styles by handle so tests can assert what an enqueue callback loaded.
+function wp_enqueue_style( $handle, $src = '', $deps = array(), $ver = false, $media = 'all' ) {
+	$GLOBALS['rytkoset_test_enqueued_styles'][ $handle ] = array(
+		'src'  => $src,
+		'deps' => $deps,
+		'ver'  => $ver,
+	);
 }
 
 function get_theme_mod( $name, $default_value = false ) {

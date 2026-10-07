@@ -1,0 +1,475 @@
+/*
+ * wp-admin appearance, slice 1 of the admin redesign (#690, #691).
+ * Pure CSS on top of WordPress core admin styles: tokens, font, admin bar,
+ * side menu, buttons, focus on dark bars, notices and metabox cards.
+ * Tables, forms and the dashboard layout follow in later slices.
+ *
+ * FRAGILE  = depends on a core or plugin detail that has changed before.
+ *            Re-check after major WordPress or plugin updates
+ *            (checklist in docs/admin-ulkoasu.md).
+ * Emergency switch: define( 'RYTKOSET_DISABLE_ADMIN_APPEARANCE', true ); in wp-config.php.
+ */
+
+/* ---------- Font: self-hosted only ---------- */
+@font-face {
+	font-family: "Manrope";
+	font-style: normal;
+	font-weight: 400 700;
+	font-display: swap;
+	src: url("../fonts/manrope-latin.woff2") format("woff2");
+}
+
+/* ---------- Tokens ----------
+ * Also set on body.wp-admin: WordPress defines the color scheme variables on
+ * body.admin-color-*, and a value set on body wins over one inherited from :root.
+ * Without this the block editor's Save button stays core blue. */
+:root,
+:root body.wp-admin {
+	/* brand */
+	--ra-primary: #0f4c81;
+	--ra-primary-dark: #0b315b;
+	--ra-primary-deeper: #08254a;
+	--ra-primary-light: #3b76a8;
+	--ra-primary-soft: #eef4fa;
+	--ra-accent: #fbbf24;
+
+	/* surfaces + text */
+	--ra-bg: #f5f5f5;
+	--ra-surface: #ffffff;
+	--ra-surface-alt: #f9fafb;
+	--ra-surface-muted: #edf2f7;
+	--ra-text: #1f2933;
+	--ra-text-mute: #5b6577;
+	--ra-text-inverted: #ffffff;
+	--ra-menu-text: #c9d6e5;
+	--ra-menu-divider: rgba(255, 255, 255, 0.16);
+	--ra-border: rgba(0, 0, 0, 0.1);
+
+	/* status: text / background / line */
+	--ra-success: #166534;
+	--ra-success-bg: #dcfce7;
+	--ra-success-line: #16a34a;
+	--ra-warning: #854d0e;
+	--ra-warning-bg: #fef3c7;
+	--ra-warning-line: #d97706;
+	--ra-error: #991b1b;
+	--ra-error-bg: #fee2e2;
+	--ra-error-line: #b42318;
+	--ra-info: #0b315b;
+	--ra-info-bg: #e8f0f8;
+	--ra-info-line: #3b76a8;
+
+	--ra-focus-on-dark: #fbbf24;
+
+	/* type */
+	--ra-font-body: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	--ra-text-xs: 12px;
+	--ra-text-sm: 13px;
+	--ra-text-base: 14px;
+
+	/* shape + depth */
+	--ra-radius-s: 4px;
+	--ra-radius-m: 8px;
+	--ra-radius-l: 10px;
+	--ra-shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06);
+	--ra-shadow-dropdown: 0 8px 24px rgba(8, 37, 74, 0.16);
+
+	/* controls */
+	--ra-control-h: 36px;
+	--ra-control-h-touch: 44px;
+
+	/* WordPress core and block editor tokens (names verified against WP 7.1 core CSS) */
+	--wp-admin-theme-color: var(--ra-primary);
+	--wp-admin-theme-color--rgb: 15, 76, 129;
+	--wp-admin-theme-color-darker-10: var(--ra-primary-dark);
+	--wp-admin-theme-color-darker-10--rgb: 11, 49, 91;
+	--wp-admin-theme-color-darker-20: var(--ra-primary-deeper);
+	--wp-admin-theme-color-darker-20--rgb: 8, 37, 74;
+	--wp-components-color-accent: var(--ra-primary);
+	--wp-components-color-accent-darker-10: var(--ra-primary-dark);
+	--wp-components-color-accent-darker-20: var(--ra-primary-deeper);
+}
+
+/* ---------- Block editor brand color ----------
+ * FRAGILE. WordPress 7's editor theme provider writes its brand variables as an
+ * inline style on a hash-named root element and picks the color from a hardcoded
+ * list of core scheme names, so neither the tokens above nor a custom admin color
+ * scheme reach it. !important on the variables is the only CSS way past the inline
+ * style. Only brand variables are overridden; neutral and status colors stay core.
+ * Re-check after WordPress updates: if the Save button turns core blue again, the
+ * attribute below no longer matches. */
+body.wp-admin .block-editor__container [style*="--wp-admin-theme-color"] {
+	--wp-admin-theme-color: var(--ra-primary) !important;
+	--wp-admin-theme-color--rgb: 15, 76, 129 !important;
+	--wp-admin-theme-color-darker-10: var(--ra-primary-dark) !important;
+	--wp-admin-theme-color-darker-10--rgb: 11, 49, 91 !important;
+	--wp-admin-theme-color-darker-20: var(--ra-primary-deeper) !important;
+	--wp-admin-theme-color-darker-20--rgb: 8, 37, 74 !important;
+	--wpds-color-background-interactive-brand-strong: var(--ra-primary) !important;
+	--wpds-color-background-interactive-brand-strong-active: var(--ra-primary-dark) !important;
+	--wpds-color-background-interactive-brand-weak-active: #dbe7f3 !important;
+	--wpds-color-background-surface-brand: var(--ra-primary-soft) !important;
+	--wpds-color-background-thumb-brand: var(--ra-primary) !important;
+	--wpds-color-background-thumb-brand-active: var(--ra-primary) !important;
+	--wpds-color-foreground-interactive-brand: var(--ra-primary) !important;
+	--wpds-color-foreground-interactive-brand-active: var(--ra-primary-deeper) !important;
+	--wpds-color-stroke-focus: var(--ra-primary) !important;
+	--wpds-color-stroke-interactive-brand: var(--ra-primary) !important;
+	--wpds-color-stroke-interactive-brand-active: var(--ra-primary-dark) !important;
+	--wpds-color-stroke-surface-brand: #a9c1d9 !important;
+	--wpds-color-stroke-surface-brand-strong: var(--ra-primary) !important;
+}
+
+/* ---------- Base ---------- */
+body.wp-admin,
+body.wp-admin .wp-core-ui,
+body.wp-admin input,
+body.wp-admin select,
+body.wp-admin textarea,
+body.wp-admin button:not(.dashicons) {
+	font-family: var(--ra-font-body);
+}
+
+html.wp-toolbar,
+body.wp-admin,
+body.wp-admin #wpcontent,
+body.wp-admin #wpfooter {
+	background-color: var(--ra-bg);
+}
+
+body.wp-admin {
+	color: var(--ra-text);
+}
+
+/* 14 px only for body copy and metabox content; plugin widgets keep core sizes. */
+body.wp-admin #wpbody-content p,
+body.wp-admin .postbox .inside {
+	font-size: var(--ra-text-base);
+}
+
+body.wp-admin a {
+	color: var(--ra-primary);
+}
+
+body.wp-admin a:hover,
+body.wp-admin a:active {
+	color: var(--ra-primary-dark);
+}
+
+/* ---------- Focus on the dark bars ----------
+ * Elsewhere core's own focus rings stay and pick up the brand color from the
+ * tokens above. Only the dark bars get an amber ring, which core's blue would
+ * not show against. */
+#adminmenu a:focus-visible,
+#wpadminbar a:focus-visible,
+#wpadminbar .ab-item:focus-visible,
+#collapse-button:focus-visible {
+	outline: 2px solid var(--ra-focus-on-dark);
+	outline-offset: -2px;
+}
+
+/* ---------- Admin bar ---------- */
+#wpadminbar {
+	background: var(--ra-primary-deeper);
+}
+
+#wpadminbar .ab-item,
+#wpadminbar a.ab-item {
+	color: var(--ra-text-inverted);
+}
+
+#wpadminbar .ab-icon,
+#wpadminbar .ab-icon::before,
+#wpadminbar .ab-item::before {
+	color: var(--ra-menu-text);
+}
+
+#wpadminbar li:hover > .ab-item,
+#wpadminbar li.hover > .ab-item,
+#wpadminbar .ab-item:focus {
+	background: var(--ra-primary-dark);
+	color: var(--ra-text-inverted);
+}
+
+#wpadminbar .ab-sub-wrapper,
+#wpadminbar .quicklinks .menupop ul.ab-submenu {
+	background: var(--ra-primary-dark);
+	box-shadow: var(--ra-shadow-dropdown);
+}
+
+/* ---------- Side menu ---------- */
+#adminmenuback,
+#adminmenuwrap,
+#adminmenu {
+	background: var(--ra-primary-dark);
+}
+
+#adminmenu a,
+#adminmenu div.wp-menu-image::before,
+#collapse-button {
+	color: var(--ra-menu-text);
+}
+
+/* Core color schemes give the collapse button their own hover/focus background
+ * (red in Midnight), which the amber focus ring would not contrast with. */
+#adminmenuwrap #collapse-button:hover,
+#adminmenuwrap #collapse-button:focus {
+	background: var(--ra-primary);
+	color: var(--ra-text-inverted);
+}
+
+#adminmenu li.menu-top:hover,
+#adminmenu li.opensub > a.menu-top,
+#adminmenu li > a.menu-top:focus {
+	background-color: var(--ra-primary);
+	color: var(--ra-text-inverted);
+}
+
+#adminmenu li.menu-top:hover div.wp-menu-image::before {
+	color: var(--ra-text-inverted);
+}
+
+/* Current section: fill + amber bar + bold, so location is not shown by color alone. */
+#adminmenu li.wp-has-current-submenu a.wp-has-current-submenu,
+#adminmenu li.current a.menu-top,
+.folded #adminmenu li.wp-has-current-submenu,
+.folded #adminmenu li.current.menu-top {
+	background: var(--ra-primary);
+	color: var(--ra-text-inverted);
+	font-weight: 700;
+	box-shadow: inset 4px 0 0 var(--ra-accent);
+}
+
+#adminmenu li.wp-has-current-submenu div.wp-menu-image::before,
+#adminmenu li.current div.wp-menu-image::before {
+	color: var(--ra-text-inverted);
+}
+
+#adminmenu .wp-submenu,
+#adminmenu .wp-has-current-submenu .wp-submenu,
+#adminmenu a.wp-has-current-submenu:focus + .wp-submenu {
+	background: var(--ra-primary-deeper);
+}
+
+#adminmenu .wp-submenu a {
+	color: var(--ra-menu-text);
+}
+
+#adminmenu .wp-submenu a:hover,
+#adminmenu .wp-submenu a:focus {
+	color: var(--ra-text-inverted);
+	background: var(--ra-primary-dark);
+}
+
+#adminmenu .wp-submenu li.current a,
+#adminmenu .wp-submenu li.current a:hover {
+	color: var(--ra-text-inverted);
+	font-weight: 700;
+	box-shadow: inset 3px 0 0 var(--ra-accent);
+}
+
+/* Existing core separators drawn as a thin line; core height and margin are kept. */
+#adminmenu li.wp-menu-separator {
+	background: linear-gradient(var(--ra-menu-divider), var(--ra-menu-divider)) center / calc(100% - 24px) 1px no-repeat;
+}
+
+/* Count bubbles: amber with dark text instead of alarm red, also on the current
+ * item and on hover, where core color schemes switch them to their own colors. */
+#adminmenu .awaiting-mod,
+#adminmenu .update-plugins,
+#adminmenu .menu-counter,
+body.wp-admin #adminmenu li a.wp-has-current-submenu .update-plugins,
+body.wp-admin #adminmenu li.current a .awaiting-mod,
+body.wp-admin #adminmenu li.menu-top:hover > a .update-plugins,
+body.wp-admin #adminmenu li:hover a .awaiting-mod {
+	background: var(--ra-accent);
+	color: var(--ra-primary-deeper);
+	font-weight: 700;
+}
+
+/* ---------- Buttons ---------- */
+body.wp-admin .button,
+body.wp-admin .button-secondary {
+	min-height: var(--ra-control-h);
+	line-height: calc(var(--ra-control-h) - 2px);
+	padding: 0 14px;
+	border: 1px solid var(--ra-primary);
+	border-radius: var(--ra-radius-m);
+	background: var(--ra-surface);
+	color: var(--ra-primary);
+	font-weight: 600;
+}
+
+body.wp-admin .button:hover,
+body.wp-admin .button-secondary:hover {
+	background: var(--ra-primary-soft);
+	border-color: var(--ra-primary-dark);
+	color: var(--ra-primary-dark);
+}
+
+body.wp-admin .button-primary {
+	background: var(--ra-primary);
+	border-color: var(--ra-primary);
+	color: var(--ra-text-inverted);
+}
+
+body.wp-admin .button-primary:hover,
+body.wp-admin .button-primary:focus {
+	background: var(--ra-primary-dark);
+	border-color: var(--ra-primary-dark);
+	color: var(--ra-text-inverted);
+}
+
+/* .button-compact (list search and bulk actions) keeps core's 32 px on desktop
+ * so it lines up with core's 32 px fields until the form slice (#692). */
+body.wp-admin.wp-core-ui .button.button-small {
+	min-height: 28px;
+	line-height: 26px;
+	padding: 0 10px;
+	font-size: var(--ra-text-sm);
+}
+
+body.wp-admin .button[disabled],
+body.wp-admin .button:disabled,
+body.wp-admin .button.disabled {
+	background: var(--ra-surface-muted);
+	border-color: var(--ra-border);
+	color: var(--ra-text-mute);
+	cursor: not-allowed;
+}
+
+/* "Add new" on list screens is the page's main action. Only the first one is
+ * primary: Products has "Add new product" + "Import" + "Export". */
+body.wp-admin .wrap .page-title-action {
+	min-height: var(--ra-control-h);
+	line-height: calc(var(--ra-control-h) - 2px);
+	padding: 0 14px;
+	border: 1px solid var(--ra-primary);
+	border-radius: var(--ra-radius-m);
+	background: var(--ra-primary);
+	color: var(--ra-text-inverted);
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+body.wp-admin .wrap .page-title-action:hover {
+	background: var(--ra-primary-dark);
+	border-color: var(--ra-primary-dark);
+	color: var(--ra-text-inverted);
+}
+
+body.wp-admin .wrap .page-title-action ~ .page-title-action {
+	background: var(--ra-surface);
+	color: var(--ra-primary);
+	font-weight: 600;
+}
+
+body.wp-admin .wrap .page-title-action ~ .page-title-action:hover {
+	background: var(--ra-primary-soft);
+	color: var(--ra-primary-dark);
+}
+
+/* Destructive links in core (Move to trash, Delete permanently). */
+body.wp-admin a.submitdelete,
+body.wp-admin .button-link-delete,
+body.wp-admin .row-actions .trash a,
+body.wp-admin .row-actions .delete a {
+	color: var(--ra-error-line);
+	text-decoration: underline;
+}
+
+/* ---------- Notices ---------- */
+body.wp-admin .notice,
+body.wp-admin div.updated,
+body.wp-admin div.error {
+	border: 1px solid var(--ra-border);
+	border-left-width: 4px;
+	border-radius: var(--ra-radius-m);
+	box-shadow: none;
+	background: var(--ra-surface);
+	color: var(--ra-text);
+}
+
+body.wp-admin .notice-success,
+body.wp-admin div.updated {
+	background: var(--ra-success-bg);
+	border-color: var(--ra-success-line);
+}
+
+body.wp-admin .notice-warning {
+	background: var(--ra-warning-bg);
+	border-color: var(--ra-warning-line);
+}
+
+body.wp-admin .notice-error,
+body.wp-admin div.error {
+	background: var(--ra-error-bg);
+	border-color: var(--ra-error-line);
+}
+
+body.wp-admin .notice-info {
+	background: var(--ra-info-bg);
+	border-color: var(--ra-info-line);
+}
+
+/* ---------- Cards (metaboxes, dashboard widgets) ---------- */
+body.wp-admin .postbox,
+body.wp-admin .stuffbox {
+	border: 1px solid var(--ra-border);
+	border-radius: var(--ra-radius-l);
+	box-shadow: var(--ra-shadow-card);
+	background: var(--ra-surface);
+}
+
+body.wp-admin .postbox .postbox-header {
+	border-bottom-color: var(--ra-border);
+	border-radius: var(--ra-radius-l) var(--ra-radius-l) 0 0;
+}
+
+body.wp-admin .postbox.closed .postbox-header {
+	border-radius: var(--ra-radius-l);
+}
+
+/* min-width + wrapping: a long one-word title such as "Järjestäjäilmoitukset"
+ * would otherwise push the header buttons past the editor sidebar edge. */
+body.wp-admin .postbox .hndle,
+body.wp-admin #poststuff .postbox h2 {
+	min-width: 0;
+	overflow-wrap: anywhere;
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--ra-text);
+}
+
+/* Reorder arrows confuse at rest; they appear on hover and keyboard focus. */
+body.wp-admin .postbox .handle-order-higher,
+body.wp-admin .postbox .handle-order-lower {
+	opacity: 0;
+}
+
+body.wp-admin .postbox-header:hover .handle-order-higher,
+body.wp-admin .postbox-header:hover .handle-order-lower,
+body.wp-admin .postbox-header:focus-within .handle-order-higher,
+body.wp-admin .postbox-header:focus-within .handle-order-lower {
+	opacity: 1;
+}
+
+/* Theme metaboxes whose selects were wider than the editor sidebar. */
+#rytkoset_event_feedback .inside select,
+#rytkoset_event_feedback .inside input,
+#rytkoset_event_feedback .inside textarea,
+#rytkoset-digital-magazine-products .inside select {
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+/* ---------- Narrow screens (core breakpoint 782px) ---------- */
+@media screen and (max-width: 782px) {
+	body.wp-admin.wp-core-ui .button,
+	body.wp-admin.wp-core-ui .button.button-compact,
+	body.wp-admin.wp-core-ui .button.button-small,
+	body.wp-admin .wrap .page-title-action {
+		min-height: var(--ra-control-h-touch);
+		line-height: calc(var(--ra-control-h-touch) - 2px);
+	}
+}
