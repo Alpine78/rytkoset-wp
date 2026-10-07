@@ -2,6 +2,9 @@
 /**
  * Admin appearance: association brand colors and fonts in wp-admin.
  *
+ * Plan and slices: GitHub epic #690. Operations and post-update checks:
+ * docs/admin-ulkoasu.md.
+ *
  * @package rytkoset-theme
  */
 
@@ -9,15 +12,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! function_exists( 'rytkoset_theme_admin_appearance_should_load' ) ) {
+	/**
+	 * Decides whether the admin stylesheet loads.
+	 *
+	 * The constant is the emergency switch for wp-config.php; the filter is
+	 * for code. Either one can turn the restyling off.
+	 *
+	 * @param bool $disabled_by_constant Whether RYTKOSET_DISABLE_ADMIN_APPEARANCE is true.
+	 * @return bool
+	 */
+	function rytkoset_theme_admin_appearance_should_load( $disabled_by_constant ) {
+		if ( $disabled_by_constant ) {
+			return false;
+		}
+
+		return (bool) apply_filters( 'rytkoset_theme_enable_admin_appearance', true );
+	}
+}
+
 if ( ! function_exists( 'rytkoset_theme_enqueue_admin_appearance' ) ) {
 	/**
 	 * Loads the admin stylesheet after WordPress's own admin color scheme.
-	 *
-	 * The `rytkoset_theme_enable_admin_appearance` filter can switch the
-	 * restyling off without removing the code.
 	 */
 	function rytkoset_theme_enqueue_admin_appearance() {
-		if ( ! apply_filters( 'rytkoset_theme_enable_admin_appearance', true ) ) {
+		$disabled_by_constant = defined( 'RYTKOSET_DISABLE_ADMIN_APPEARANCE' ) && RYTKOSET_DISABLE_ADMIN_APPEARANCE;
+
+		if ( ! rytkoset_theme_admin_appearance_should_load( $disabled_by_constant ) ) {
 			return;
 		}
 
