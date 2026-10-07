@@ -1452,6 +1452,23 @@ function wp_get_post_parent_id( $post = 0 ) {
 /**
  * Capability check controlled by $GLOBALS['rytkoset_test_caps'] (defaults to denied).
  */
+// Form attribute helpers with WordPress's own string comparison semantics.
+function selected( $selected, $current = true, $display = true ) {
+	$result = (string) $selected === (string) $current ? " selected='selected'" : '';
+	if ( $display ) {
+		echo $result; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed literal.
+	}
+	return $result;
+}
+
+function checked( $checked, $current = true, $display = true ) {
+	$result = (string) $checked === (string) $current ? " checked='checked'" : '';
+	if ( $display ) {
+		echo $result; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed literal.
+	}
+	return $result;
+}
+
 function current_user_can( $capability, ...$args ) {
 	return ! empty( $GLOBALS['rytkoset_test_caps'][ $capability ] );
 }
