@@ -762,6 +762,105 @@ function rytkoset_theme_snapshot_paid_event_order_items( $order ) {
 add_action( 'woocommerce_store_api_checkout_update_order_meta', 'rytkoset_theme_snapshot_paid_event_order_items' );
 
 /**
+ * Hides the technical snapshot keys from the admin order item view (#703).
+ *
+ * The admin view lists underscore-prefixed item meta unless the key is in this
+ * list; customer-facing views already hide them by prefix.
+ *
+ * @param array $hidden_keys Hidden order item meta keys.
+ * @return array
+ */
+function rytkoset_theme_hide_paid_event_order_item_meta( $hidden_keys ) {
+	$hidden_keys   = is_array( $hidden_keys ) ? $hidden_keys : array();
+	$hidden_keys[] = '_rytkoset_registration_mode';
+	$hidden_keys[] = '_rytkoset_registration_collect_emails';
+	return $hidden_keys;
+}
+add_filter( 'woocommerce_hidden_order_itemmeta', 'rytkoset_theme_hide_paid_event_order_item_meta' );
+
+/**
+ * Returns readable admin labels for the snapshot keys that stay visible.
+ *
+ * @return array<string, string>
+ */
+function rytkoset_theme_get_paid_event_order_item_meta_labels() {
+	return array(
+		'_rytkoset_participant_type'          => __( 'Osallistujatyyppi', 'rytkoset-theme' ),
+		'_rytkoset_registration_choice_label' => __( 'Lisävalinnan kysymys', 'rytkoset-theme' ),
+	);
+}
+
+/**
+ * Replaces raw snapshot meta keys with readable labels in the order item view.
+ *
+ * @param string $display_key Display key.
+ * @param object $meta        Meta object with a `key` property.
+ * @return string
+ */
+function rytkoset_theme_label_paid_event_order_item_meta_key( $display_key, $meta ) {
+	$labels = rytkoset_theme_get_paid_event_order_item_meta_labels();
+	$key    = is_object( $meta ) && isset( $meta->key ) ? (string) $meta->key : '';
+
+	return isset( $labels[ $key ] ) ? $labels[ $key ] : $display_key;
+}
+add_filter( 'woocommerce_order_item_display_meta_key', 'rytkoset_theme_label_paid_event_order_item_meta_key', 10, 2 );
+
+/**
+ * Normalizes an order item meta display value for comparison.
+ *
+ * @param mixed $value Display value, possibly wrapped in paragraph markup.
+ * @return string
+ */
+function rytkoset_theme_normalize_order_item_meta_display_value( $value ) {
+	return mb_strtolower( trim( wp_strip_all_tags( (string) $value ) ) );
+}
+
+/**
+ * Drops the participant type snapshot from an item's display when the line
+ * already shows the same type as its variation attribute.
+ *
+ * WooCommerce stores variation attributes as visible item meta, so a variable
+ * participation product would otherwise list "Osallistujatyyppi" twice. The
+ * snapshot stays when the attribute shows a different value, for example after
+ * a global attribute term was renamed, because the snapshot is what was bought.
+ *
+ * @param array $formatted_meta Formatted meta keyed by meta ID.
+ * @return array
+ */
+function rytkoset_theme_dedupe_paid_event_participant_type_meta( $formatted_meta ) {
+	if ( ! is_array( $formatted_meta ) ) {
+		return $formatted_meta;
+	}
+
+	$attribute_values = array();
+	foreach ( $formatted_meta as $meta ) {
+		$key = is_object( $meta ) && isset( $meta->key ) ? (string) $meta->key : '';
+		if ( in_array( $key, array( 'osallistujatyyppi', 'pa_osallistujatyyppi' ), true ) ) {
+			$display            = isset( $meta->display_value ) ? $meta->display_value : ( isset( $meta->value ) ? $meta->value : '' );
+			$attribute_values[] = rytkoset_theme_normalize_order_item_meta_display_value( $display );
+		}
+	}
+
+	if ( empty( $attribute_values ) ) {
+		return $formatted_meta;
+	}
+
+	return array_filter(
+		$formatted_meta,
+		static function ( $meta ) use ( $attribute_values ) {
+			if ( ! is_object( $meta ) || ! isset( $meta->key ) || '_rytkoset_participant_type' !== $meta->key ) {
+				return true;
+			}
+
+			$value = rytkoset_theme_normalize_order_item_meta_display_value( isset( $meta->value ) ? $meta->value : '' );
+
+			return '' === $value || ! in_array( $value, $attribute_values, true );
+		}
+	);
+}
+add_filter( 'woocommerce_order_item_get_formatted_meta_data', 'rytkoset_theme_dedupe_paid_event_participant_type_meta' );
+
+/**
  * Expands saved order lines in the same order as the checkout participant fields.
  *
  * @param WC_Order $order Order to read.
