@@ -233,4 +233,43 @@ final class EventParticipantsAdminTest extends Rytkoset_Theme_Test_Case {
 		$this->assertEmpty( rytkoset_theme_get_event_feedback_recipients( 10 )['recipients'] );
 	}
 
+	public function test_status_variant_maps_free_and_paid_states(): void {
+		$this->assertSame( 'success', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'free', 'status' => 'confirmed' ) ) );
+		$this->assertSame( 'warning', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'free', 'status' => 'pending' ) ) );
+		$this->assertSame( 'neutral', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'free', 'status' => 'cancelled' ) ) );
+		$this->assertSame( 'success', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'wc-processing' ) ) );
+		$this->assertSame( 'success', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'completed' ) ) );
+		$this->assertSame( 'warning', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'on-hold' ) ) );
+		$this->assertSame( 'error', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'failed' ) ) );
+		$this->assertSame( 'neutral', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'refunded' ) ) );
+	}
+
+	public function test_overview_counts_sources_statuses_and_diets(): void {
+		$rows = array(
+			array( 'source' => 'paid', 'order_status' => 'processing', 'status_label' => 'Käsittelyssä', 'diet' => 'Laktoositon' ),
+			array( 'source' => 'paid', 'order_status' => 'processing', 'status_label' => 'Käsittelyssä', 'diet' => '' ),
+			array( 'source' => 'free', 'status' => 'pending', 'status_label' => 'Odottaa', 'diet' => ' ' ),
+			'not-a-row',
+		);
+
+		$overview = rytkoset_theme_get_event_participants_overview( $rows );
+
+		$this->assertSame( 3, $overview['total'] );
+		$this->assertSame( 2, $overview['paid'] );
+		$this->assertSame( 1, $overview['free'] );
+		$this->assertSame( 1, $overview['diet'] );
+		$this->assertSame(
+			array(
+				'Käsittelyssä' => array(
+					'count'   => 2,
+					'variant' => 'success',
+				),
+				'Odottaa'      => array(
+					'count'   => 1,
+					'variant' => 'warning',
+				),
+			),
+			$overview['statuses']
+		);
+	}
 }

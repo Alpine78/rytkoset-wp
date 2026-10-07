@@ -18,7 +18,8 @@ Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin
 | 2 | #692 | Listataulukot, suodatinsirut, lomakekentät, WooCommercen tilamerkit | Tehty |
 | 3a | #693 | Kojelaudan asettelu ja vaimennus | Tehty |
 | 3b | #694 | Kojelaudan omat widgetit ja roolikohtainen näkyvyys | Odottaa |
-| 4a–4d | #695–#698 | Omat näkymät: Osallistujat, Viestintä ja Palaute, Verkkojäsenyydet, Digilehdet | Odottaa |
+| 4a | #695 | Oma näkymä: Tapahtumat > Osallistujat (tilamerkit, yhteenvetokortit, mobiilin korttirivit) | Tehty |
+| 4b–4d | #696–#698 | Omat näkymät: Viestintä ja Palaute, Verkkojäsenyydet, Digilehdet | Odottaa |
 | 5 | #699 | Valikon ryhmittely ja roolit | Vaatii hallituksen päätöksen |
 | 6 | #700 | Viimeistely: Newsreader-sivuotsikot, mediaruudukko, editor-tyylit, mukauttaja | Tehty |
 

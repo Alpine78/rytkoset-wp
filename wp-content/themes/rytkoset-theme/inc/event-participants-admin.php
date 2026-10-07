@@ -505,6 +505,85 @@ function rytkoset_theme_get_event_participant_choice_summary( $rows, $has_quanti
 }
 
 /**
+ * Maps a participant row's status to a status badge variant (#695).
+ *
+ * The status label itself is kept as is; merging WooCommerce's "Processing"
+ * and "Completed" into one "Paid" word is a separate board decision.
+ *
+ * @param array $row Participant row.
+ * @return string success|warning|error|neutral
+ */
+function rytkoset_theme_get_event_participant_status_variant( $row ) {
+	if ( isset( $row['source'] ) && 'paid' === $row['source'] ) {
+		$status = isset( $row['order_status'] ) ? preg_replace( '/^wc-/', '', (string) $row['order_status'] ) : '';
+		$map    = array(
+			'completed'  => 'success',
+			'processing' => 'success',
+			'pending'    => 'warning',
+			'on-hold'    => 'warning',
+			'failed'     => 'error',
+		);
+	} else {
+		$status = isset( $row['status'] ) ? (string) $row['status'] : '';
+		$map    = array(
+			'confirmed' => 'success',
+			'pending'   => 'warning',
+		);
+	}
+
+	return isset( $map[ $status ] ) ? $map[ $status ] : 'neutral';
+}
+
+/**
+ * Builds the summary cards for the participants admin page (#695).
+ *
+ * @param array $rows Participant rows.
+ * @return array{total:int,free:int,paid:int,statuses:array<string,array{count:int,variant:string}>,diet:int}
+ */
+function rytkoset_theme_get_event_participants_overview( $rows ) {
+	$overview = array(
+		'total'    => 0,
+		'free'     => 0,
+		'paid'     => 0,
+		'statuses' => array(),
+		'diet'     => 0,
+	);
+
+	foreach ( $rows as $row ) {
+		if ( ! is_array( $row ) ) {
+			continue;
+		}
+
+		++$overview['total'];
+
+		if ( isset( $row['source'] ) && 'paid' === $row['source'] ) {
+			++$overview['paid'];
+		} else {
+			++$overview['free'];
+		}
+
+		$label = isset( $row['status_label'] ) ? trim( (string) $row['status_label'] ) : '';
+
+		if ( '' !== $label ) {
+			if ( ! isset( $overview['statuses'][ $label ] ) ) {
+				$overview['statuses'][ $label ] = array(
+					'count'   => 0,
+					'variant' => rytkoset_theme_get_event_participant_status_variant( $row ),
+				);
+			}
+
+			++$overview['statuses'][ $label ]['count'];
+		}
+
+		if ( '' !== trim( (string) ( $row['diet'] ?? '' ) ) ) {
+			++$overview['diet'];
+		}
+	}
+
+	return $overview;
+}
+
+/**
  * Renders the CSV export form for the unified event participants admin page.
  *
  * @param int    $selected_event  Selected event ID (0 for all events).
@@ -677,7 +756,7 @@ function rytkoset_theme_render_event_registration_cancel_action( $registration_i
 		? __( 'Palautetaanko ilmoittautuminen vahvistetuksi?', 'rytkoset-theme' )
 		: __( 'Perutaanko tämän osallistujan ilmoittautuminen? Tietuetta ei poisteta.', 'rytkoset-theme' );
 	?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline; margin-left:8px;" onsubmit="return window.confirm('<?php echo esc_js( $confirm ); ?>');">
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;" onsubmit="return window.confirm('<?php echo esc_js( $confirm ); ?>');">
 		<input type="hidden" name="action" value="rytkoset_toggle_event_registration_status" />
 		<input type="hidden" name="registration_id" value="<?php echo esc_attr( (string) $registration_id ); ?>" />
 		<input type="hidden" name="target_status" value="<?php echo esc_attr( $target ); ?>" />
@@ -978,17 +1057,7 @@ function rytkoset_theme_render_event_participants_admin_page() {
 		? rytkoset_theme_get_event_participants( $selected_event, $selected_status )
 		: rytkoset_theme_get_all_events_participants( $selected_status );
 
-	$total_count = count( $rows );
-	$free_count  = 0;
-	$paid_count  = 0;
-
-	foreach ( $rows as $row ) {
-		if ( isset( $row['source'] ) && 'paid' === $row['source'] ) {
-			++$paid_count;
-		} else {
-			++$free_count;
-		}
-	}
+	$overview = rytkoset_theme_get_event_participants_overview( $rows );
 
 	$has_choice_column   = $selected_event > 0 && rytkoset_theme_event_has_choice_field( $selected_event );
 	$has_quantity_column = $selected_event > 0 && rytkoset_theme_event_collects_quantity( $selected_event );
@@ -1000,21 +1069,30 @@ function rytkoset_theme_render_event_participants_admin_page() {
 			'total'     => 0,
 			'breakdown' => array(),
 		);
-	$summary_total       = $choice_summary['total'];
-	$choice_breakdown    = $choice_summary['breakdown'];
+	$show_event_column   = 0 === $selected_event;
+	$messaging_url       = add_query_arg(
+		array(
+			'post_type' => 'rytkoset_event',
+			'page'      => 'rytkoset-event-messaging',
+			'event_id'  => $selected_event,
+			'status'    => $selected_status,
+		),
+		admin_url( 'edit.php' )
+	);
 
 	?>
 	<div class="wrap">
 		<h1 class="wp-heading-inline"><?php esc_html_e( 'Tapahtumien osallistujat', 'rytkoset-theme' ); ?></h1>
 		<?php rytkoset_theme_render_event_participants_add_button( $selected_event ); ?>
 		<hr class="wp-header-end" />
-		<p><?php esc_html_e( 'Valitse tapahtuma nähdäksesi sekä maksuttomat että maksulliset ilmoittautumiset yhtenäisenä listana. Sivuston ulkopuolella (esimerkiksi puhelimitse) ilmoittautuneen voi lisätä "Lisää osallistuja" -painikkeella; peruminen ei poista tietuetta.', 'rytkoset-theme' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Maksuttomat ja maksulliset ilmoittautumiset samassa listassa. Sivuston ulkopuolella (esimerkiksi puhelimitse) ilmoittautuneen voi lisätä "Lisää osallistuja" -painikkeella. Peruminen ei poista tietuetta.', 'rytkoset-theme' ); ?></p>
 		<?php rytkoset_theme_render_event_participants_anonymization_notice(); ?>
 		<?php rytkoset_theme_render_event_registration_toggle_notice(); ?>
 
 		<div class="tablenav top">
-			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-				<form method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
+			<?php // Not .actions: core hides .tablenav.top .actions below 782 px, which would remove the filters. ?>
+			<div class="alignleft ra-toolbar">
+				<form method="get" class="ra-actions">
 					<input type="hidden" name="post_type" value="rytkoset_event" />
 					<input type="hidden" name="page" value="rytkoset-event-participants" />
 
@@ -1051,30 +1129,45 @@ function rytkoset_theme_render_event_participants_admin_page() {
 
 					<?php submit_button( __( 'Suodata', 'rytkoset-theme' ), 'secondary', '', false ); ?>
 				</form>
-
-				<?php rytkoset_theme_render_event_participants_export_form( $selected_event, $selected_status ); ?>
-
-				<p class="description">
-					<?php
-					echo esc_html(
-						sprintf(
-							/* translators: 1: total, 2: free count, 3: paid count */
-							__( 'Yhteensä %1$d osallistujaa (maksuttomat %2$d, maksulliset %3$d).', 'rytkoset-theme' ),
-							$total_count,
-							$free_count,
-							$paid_count
-						)
-					);
-					?>
-				</p>
 			</div>
 			<br class="clear" />
 		</div>
 
-		<?php if ( $has_choice_column ) : ?>
-			<div class="postbox" style="margin-top:16px; max-width:760px;">
-				<div class="inside">
-					<h2>
+		<div class="postbox" id="rytkoset-event-participants-summary">
+			<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'Yhteenveto', 'rytkoset-theme' ); ?></h2></div>
+			<div class="inside">
+				<ul class="ra-summary">
+					<li class="ra-summary__item">
+						<span class="ra-summary__value"><?php echo esc_html( (string) $overview['total'] ); ?></span>
+						<span class="ra-summary__label">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: 1: paid count, 2: free count */
+									_n( 'osallistuja (maksulliset %1$d, maksuttomat %2$d)', 'osallistujaa (maksulliset %1$d, maksuttomat %2$d)', $overview['total'], 'rytkoset-theme' ),
+									$overview['paid'],
+									$overview['free']
+								)
+							);
+							?>
+						</span>
+					</li>
+					<?php foreach ( $overview['statuses'] as $status_label => $status_data ) : ?>
+						<li class="ra-summary__item">
+							<span class="ra-summary__value"><?php echo esc_html( (string) $status_data['count'] ); ?></span>
+							<span class="ra-summary__label"><?php echo esc_html( $status_label ); ?></span>
+						</li>
+					<?php endforeach; ?>
+					<?php if ( $overview['diet'] > 0 ) : ?>
+						<li class="ra-summary__item">
+							<span class="ra-summary__value"><?php echo esc_html( (string) $overview['diet'] ); ?></span>
+							<span class="ra-summary__label"><?php echo esc_html( _n( 'ruokavaliotieto', 'ruokavaliotietoa', $overview['diet'], 'rytkoset-theme' ) ); ?></span>
+						</li>
+					<?php endif; ?>
+				</ul>
+
+				<?php if ( $has_choice_column ) : ?>
+					<h3>
 						<?php
 						echo esc_html(
 							sprintf(
@@ -1084,183 +1177,156 @@ function rytkoset_theme_render_event_participants_admin_page() {
 							)
 						);
 						?>
-					</h2>
-					<p>
-						<strong>
-							<?php
-							if ( $has_quantity_column ) {
-								echo esc_html(
-									sprintf(
-										/* translators: 1: quantity field label, 2: total quantity */
-										__( '%1$s yhteensä: %2$d', 'rytkoset-theme' ),
-										$quantity_label,
-										$summary_total
-									)
-								);
-							} else {
-								echo esc_html(
-									sprintf(
-										/* translators: %d: total registrations */
-										__( 'Ilmoittautumisia yhteensä: %d', 'rytkoset-theme' ),
-										$summary_total
-									)
-								);
-							}
-							?>
-						</strong>
-						<span class="description"><?php esc_html_e( '(peruutetut eivät mukana)', 'rytkoset-theme' ); ?></span>
-					</p>
-					<?php if ( ! empty( $choice_breakdown ) ) : ?>
-						<ul style="margin-left:1.5em; list-style:disc;">
-							<?php foreach ( $choice_breakdown as $choice_name => $choice_units ) : ?>
-								<li><?php echo esc_html( $choice_name . ': ' . $choice_units ); ?></li>
-							<?php endforeach; ?>
-						</ul>
+					</h3>
+					<ul class="ra-summary">
+						<li class="ra-summary__item">
+							<span class="ra-summary__value"><?php echo esc_html( (string) $choice_summary['total'] ); ?></span>
+							<span class="ra-summary__label">
+								<?php
+								echo $has_quantity_column
+									/* translators: %s: quantity field label */
+									? esc_html( sprintf( __( '%s yhteensä', 'rytkoset-theme' ), $quantity_label ) )
+									: esc_html( _n( 'ilmoittautuminen yhteensä', 'ilmoittautumista yhteensä', $choice_summary['total'], 'rytkoset-theme' ) );
+								?>
+							</span>
+						</li>
+						<?php foreach ( $choice_summary['breakdown'] as $choice_name => $choice_units ) : ?>
+							<li class="ra-summary__item">
+								<span class="ra-summary__value"><?php echo esc_html( (string) $choice_units ); ?></span>
+								<span class="ra-summary__label"><?php echo esc_html( (string) $choice_name ); ?></span>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+					<p class="description"><?php esc_html_e( 'Peruutetut eivät ole mukana valintojen yhteenvedossa.', 'rytkoset-theme' ); ?></p>
+				<?php endif; ?>
+
+				<div class="ra-actions ra-actions--spaced">
+					<?php if ( $overview['total'] > 0 ) : ?>
+						<a class="button button-primary" href="<?php echo esc_url( $messaging_url ); ?>"><?php esc_html_e( 'Lähetä viesti näille osallistujille', 'rytkoset-theme' ); ?></a>
 					<?php endif; ?>
+					<?php rytkoset_theme_render_event_participants_export_form( $selected_event, $selected_status ); ?>
 				</div>
 			</div>
-		<?php endif; ?>
+		</div>
 
 		<?php rytkoset_theme_render_event_participants_anonymization_form( $selected_event ); ?>
 
-		<?php $show_event_column = 0 === $selected_event; ?>
-		<table class="widefat striped">
-			<thead>
-				<tr>
-					<th scope="col"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></th>
+		<?php // Explicit roles keep table semantics when the cells are restyled as cards on narrow screens. ?>
+		<table class="widefat striped ra-responsive-table" role="table">
+			<thead role="rowgroup">
+				<tr role="row">
+					<th role="columnheader" scope="col" class="column-primary"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></th>
+					<?php if ( $show_event_column ) : ?>
+						<th role="columnheader" scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
+					<?php endif; ?>
 					<?php if ( $has_choice_column ) : ?>
-						<th scope="col"><?php echo esc_html( $choice_label ); ?></th>
+						<th role="columnheader" scope="col"><?php echo esc_html( $choice_label ); ?></th>
 					<?php endif; ?>
 					<?php if ( $has_quantity_column ) : ?>
-						<th scope="col"><?php echo esc_html( $quantity_label ); ?></th>
+						<th role="columnheader" scope="col"><?php echo esc_html( $quantity_label ); ?></th>
 					<?php endif; ?>
-					<th scope="col"><?php esc_html_e( 'Osallistujatyyppi', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Maksullisen tapahtuman lisävalinta', 'rytkoset-theme' ); ?></th>
-					<?php if ( $show_event_column ) : ?>
-						<th scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
-					<?php endif; ?>
-					<th scope="col"><?php esc_html_e( 'Sähköposti', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Puhelin', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Ruokavalio / huomiot', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Lähde', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Status', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Ilmoittautunut', 'rytkoset-theme' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Toiminnot', 'rytkoset-theme' ); ?></th>
+					<th role="columnheader" scope="col"><?php esc_html_e( 'Tyyppi', 'rytkoset-theme' ); ?></th>
+					<th role="columnheader" scope="col"><?php esc_html_e( 'Lisävalinta', 'rytkoset-theme' ); ?></th>
+					<th role="columnheader" scope="col"><?php esc_html_e( 'Ruokavalio / huomiot', 'rytkoset-theme' ); ?></th>
+					<th role="columnheader" scope="col"><?php esc_html_e( 'Tila', 'rytkoset-theme' ); ?></th>
+					<th role="columnheader" scope="col"><?php esc_html_e( 'Ilmoittautunut', 'rytkoset-theme' ); ?></th>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody role="rowgroup">
 				<?php if ( empty( $rows ) ) : ?>
-					<?php $empty_colspan = ( $show_event_column ? 11 : 10 ) + ( $has_choice_column ? 1 : 0 ) + ( $has_quantity_column ? 1 : 0 ); ?>
-					<tr>
-						<td colspan="<?php echo esc_attr( (string) $empty_colspan ); ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
+					<?php $empty_colspan = 6 + ( $show_event_column ? 1 : 0 ) + ( $has_choice_column ? 1 : 0 ) + ( $has_quantity_column ? 1 : 0 ); ?>
+					<tr role="row">
+						<td role="cell" colspan="<?php echo esc_attr( (string) $empty_colspan ); ?>"><?php esc_html_e( 'Ei osallistujia valitulla suodatuksella.', 'rytkoset-theme' ); ?></td>
 					</tr>
 				<?php else : ?>
 					<?php foreach ( $rows as $row ) : ?>
-						<tr>
-							<td><?php echo esc_html( (string) $row['name'] ); ?></td>
-							<?php if ( $has_choice_column ) : ?>
-								<td><?php echo '' !== (string) ( $row['choice'] ?? '' ) ? esc_html( (string) $row['choice'] ) : '&mdash;'; ?></td>
-							<?php endif; ?>
-							<?php if ( $has_quantity_column ) : ?>
-								<td><?php echo esc_html( (string) max( 1, (int) ( $row['quantity'] ?? 1 ) ) ); ?></td>
-							<?php endif; ?>
-							<td><?php echo '' !== (string) $row['participant_type'] ? esc_html( (string) $row['participant_type'] ) : '&mdash;'; ?></td>
-							<td>
-								<?php
-								$paid_choice = rytkoset_theme_format_paid_event_choice( $row['paid_choice_label'] ?? '', $row['paid_choice'] ?? null );
-								echo '' !== $paid_choice ? esc_html( $paid_choice ) : '&mdash;';
-								?>
+						<?php
+						$row_email   = (string) ( $row['email'] ?? '' );
+						$row_contact = (string) ( $row['contact_email'] ?? '' );
+						$details     = trim( (string) ( $row['diet'] ?? '' ) );
+
+						if ( '' !== (string) ( $row['notes'] ?? '' ) ) {
+							$details = trim( $details . "\n" . (string) $row['notes'] );
+						}
+
+						$paid_choice       = rytkoset_theme_format_paid_event_choice( $row['paid_choice_label'] ?? '', $row['paid_choice'] ?? null );
+						$origin_label      = isset( $row['origin_label'] ) && '' !== (string) $row['origin_label']
+							? (string) $row['origin_label']
+							: ( 'paid' === $row['source'] ? __( 'Maksullinen', 'rytkoset-theme' ) : __( 'Maksuton', 'rytkoset-theme' ) );
+						$registration_id   = isset( $row['registration_id'] ) ? (int) $row['registration_id'] : 0;
+						$has_cancel_action = 'paid' !== $row['source'] && $registration_id > 0;
+						$event_link        = '';
+
+						if ( $show_event_column && ! empty( $row['event_id'] ) ) {
+							$event_link = add_query_arg(
+								array(
+									'post_type' => 'rytkoset_event',
+									'page'      => 'rytkoset-event-participants',
+									'event_id'  => (int) $row['event_id'],
+									'status'    => $selected_status,
+								),
+								admin_url( 'edit.php' )
+							);
+						}
+						?>
+						<tr role="row">
+							<td role="cell" class="column-primary" data-colname="<?php esc_attr_e( 'Nimi', 'rytkoset-theme' ); ?>">
+								<strong><?php echo esc_html( (string) $row['name'] ); ?></strong>
+								<?php if ( '' !== $row_email ) : ?>
+									<span class="ra-sub"><a href="mailto:<?php echo esc_attr( $row_email ); ?>"><?php echo esc_html( $row_email ); ?></a></span>
+								<?php elseif ( '' !== $row_contact ) : ?>
+									<span class="ra-sub"><a href="mailto:<?php echo esc_attr( $row_contact ); ?>"><?php echo esc_html( $row_contact ); ?></a> (<?php esc_html_e( 'tilaaja', 'rytkoset-theme' ); ?>)</span>
+								<?php endif; ?>
+								<?php if ( '' !== (string) $row['edit_url'] || $has_cancel_action ) : ?>
+									<div class="row-actions">
+										<?php if ( '' !== (string) $row['edit_url'] ) : ?>
+											<span class="edit"><a href="<?php echo esc_url( (string) $row['edit_url'] ); ?>">
+												<?php
+												echo 'paid' === $row['source']
+													/* translators: %s: order number */
+													? esc_html( sprintf( __( 'Avaa tilaus #%s', 'rytkoset-theme' ), (string) $row['order_number'] ) )
+													: esc_html__( 'Muokkaa', 'rytkoset-theme' );
+												?>
+											</a><?php echo $has_cancel_action ? ' | ' : ''; ?></span>
+										<?php endif; ?>
+										<?php if ( $has_cancel_action ) : ?>
+											<span class="trash">
+												<?php
+												rytkoset_theme_render_event_registration_cancel_action(
+													$registration_id,
+													(string) $row['status'],
+													$selected_event,
+													$selected_status
+												);
+												?>
+											</span>
+										<?php endif; ?>
+									</div>
+								<?php endif; ?>
 							</td>
 							<?php if ( $show_event_column ) : ?>
-								<td>
-									<?php
-									$event_id_for_row = isset( $row['event_id'] ) ? (int) $row['event_id'] : 0;
-
-									if ( $event_id_for_row > 0 ) {
-										$event_link = add_query_arg(
-											array(
-												'post_type' => 'rytkoset_event',
-												'page'     => 'rytkoset-event-participants',
-												'event_id' => $event_id_for_row,
-												'status'   => $selected_status,
-											),
-											admin_url( 'edit.php' )
-										);
-										echo '<a href="' . esc_url( $event_link ) . '">' . esc_html( (string) $row['event_title'] ) . '</a>';
-									} else {
-										echo '&mdash;';
-									}
-									?>
+								<td role="cell" data-colname="<?php esc_attr_e( 'Tapahtuma', 'rytkoset-theme' ); ?>">
+									<?php if ( '' !== $event_link ) : ?>
+										<a href="<?php echo esc_url( $event_link ); ?>"><?php echo esc_html( (string) $row['event_title'] ); ?></a>
+									<?php endif; ?>
 								</td>
 							<?php endif; ?>
-								<td>
-									<?php if ( '' !== (string) $row['email'] ) : ?>
-										<a href="mailto:<?php echo esc_attr( (string) $row['email'] ); ?>"><?php echo esc_html( (string) $row['email'] ); ?></a>
-									<?php elseif ( '' !== (string) $row['contact_email'] ) : ?>
-										<a href="mailto:<?php echo esc_attr( (string) $row['contact_email'] ); ?>"><?php echo esc_html( (string) $row['contact_email'] ); ?></a>
-										<span class="description">(<?php esc_html_e( 'tilaaja', 'rytkoset-theme' ); ?>)</span>
-									<?php else : ?>
-										&mdash;
-									<?php endif; ?>
-								</td>
-								<td>
-									<?php if ( '' !== (string) $row['phone'] ) : ?>
-										<a href="tel:<?php echo esc_attr( preg_replace( '/\s+/', '', (string) $row['phone'] ) ); ?>"><?php echo esc_html( (string) $row['phone'] ); ?></a>
-									<?php else : ?>
-										&mdash;
-									<?php endif; ?>
-								</td>
-								<td>
-									<?php
-									$details = trim( (string) $row['diet'] );
-									if ( '' !== (string) $row['notes'] ) {
-										$details = trim( $details . "\n" . (string) $row['notes'] );
-									}
-									echo '' !== $details ? esc_html( $details ) : '&mdash;';
-									?>
-								</td>
-								<td>
-									<?php
-									$row_source_label = isset( $row['origin_label'] ) && '' !== (string) $row['origin_label']
-										? (string) $row['origin_label']
-										: ( 'paid' === $row['source']
-											? __( 'Maksullinen', 'rytkoset-theme' )
-											: __( 'Maksuton', 'rytkoset-theme' ) );
-									echo esc_html( $row_source_label );
-									?>
-								</td>
-								<td><?php echo esc_html( (string) $row['status_label'] ); ?></td>
-								<td><?php echo esc_html( (string) $row['created'] ); ?></td>
-								<td>
-									<?php if ( '' !== (string) $row['edit_url'] ) : ?>
-										<a href="<?php echo esc_url( (string) $row['edit_url'] ); ?>">
-											<?php
-											echo 'paid' === $row['source']
-												? esc_html( '#' . (string) $row['order_number'] )
-												: esc_html__( 'Muokkaa', 'rytkoset-theme' );
-											?>
-										</a>
-									<?php endif; ?>
-									<?php
-									$registration_id_for_row = isset( $row['registration_id'] ) ? (int) $row['registration_id'] : 0;
-
-									if ( 'paid' !== $row['source'] && $registration_id_for_row > 0 ) {
-										rytkoset_theme_render_event_registration_cancel_action(
-											$registration_id_for_row,
-											(string) $row['status'],
-											$selected_event,
-											$selected_status
-										);
-									} elseif ( '' === (string) $row['edit_url'] ) {
-										echo '&mdash;';
-									}
-									?>
-								</td>
-							</tr>
-						<?php endforeach; ?>
-					<?php endif; ?>
-				</tbody>
-			</table>
+							<?php if ( $has_choice_column ) : ?>
+								<td role="cell" data-colname="<?php echo esc_attr( $choice_label ); ?>"><?php echo esc_html( (string) ( $row['choice'] ?? '' ) ); ?></td>
+							<?php endif; ?>
+							<?php if ( $has_quantity_column ) : ?>
+								<td role="cell" data-colname="<?php echo esc_attr( $quantity_label ); ?>"><?php echo esc_html( (string) max( 1, (int) ( $row['quantity'] ?? 1 ) ) ); ?></td>
+							<?php endif; ?>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Tyyppi', 'rytkoset-theme' ); ?>"><?php echo esc_html( (string) $row['participant_type'] ); ?></td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Lisävalinta', 'rytkoset-theme' ); ?>"><?php echo esc_html( $paid_choice ); ?></td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Ruokavalio / huomiot', 'rytkoset-theme' ); ?>"><?php echo esc_html( $details ); ?></td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Tila', 'rytkoset-theme' ); ?>"><span class="ra-cell"><span class="ra-badge ra-badge--<?php echo esc_attr( rytkoset_theme_get_event_participant_status_variant( $row ) ); ?>"><?php echo esc_html( (string) $row['status_label'] ); ?></span><span class="ra-sub"><?php echo esc_html( $origin_label ); ?></span></span></td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Ilmoittautunut', 'rytkoset-theme' ); ?>"><?php echo esc_html( (string) $row['created'] ); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				<?php endif; ?>
+			</tbody>
+		</table>
 	</div>
 	<?php
 }

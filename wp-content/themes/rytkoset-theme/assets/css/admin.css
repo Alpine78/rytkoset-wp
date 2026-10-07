@@ -842,3 +842,185 @@ body.wp-admin mark.onbackorder {
 		line-height: calc(var(--ra-control-h-touch) - 2px);
 	}
 }
+
+/* ---------- Own screens (#695) ----------
+ * Helpers printed by the theme's own admin pages (Tapahtumat > Osallistujat first). */
+
+.ra-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 0;
+}
+
+.ra-toolbar {
+	margin-bottom: 8px;
+}
+
+.ra-cell {
+	display: block;
+}
+
+.ra-actions--spaced {
+	margin-top: 16px;
+}
+
+.ra-actions form {
+	margin: 0;
+}
+
+.ra-summary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ra-summary__item {
+	margin: 0;
+	padding: 12px 14px;
+	border: 1px solid var(--ra-border);
+	border-radius: var(--ra-radius-m);
+	background: var(--ra-surface-alt);
+}
+
+.ra-summary__value {
+	display: block;
+	color: var(--ra-text);
+	font-size: 20px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+.ra-summary__label {
+	display: block;
+	margin-top: 2px;
+	color: var(--ra-text-mute);
+	font-size: var(--ra-text-sm);
+}
+
+.ra-sub {
+	display: block;
+	margin-top: 2px;
+	color: var(--ra-text-mute);
+	font-size: var(--ra-text-sm);
+}
+
+/* Status badge: text plus shape, so the state is not told by color alone.
+ * Dot = ok/neutral, ring = waiting, square = error. */
+.ra-badge {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: var(--ra-neutral-bg);
+	color: var(--ra-neutral);
+	font-size: var(--ra-text-xs);
+	font-weight: 700;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.ra-badge::before {
+	content: "";
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.ra-badge--success {
+	background: var(--ra-success-bg);
+	color: var(--ra-success);
+}
+
+.ra-badge--warning {
+	background: var(--ra-warning-bg);
+	color: var(--ra-warning);
+}
+
+.ra-badge--warning::before {
+	width: 8px;
+	height: 8px;
+	border: 2px solid currentColor;
+	background: transparent;
+	box-sizing: border-box;
+}
+
+.ra-badge--error {
+	background: var(--ra-error-bg);
+	color: var(--ra-error);
+}
+
+.ra-badge--error::before {
+	border-radius: 1px;
+}
+
+/* Row actions in the theme's own tables are always visible, like list tables. */
+.ra-responsive-table .row-actions {
+	position: static;
+	left: auto;
+	padding-top: 4px;
+	color: var(--ra-text-mute);
+}
+
+/* Own tables (not WP_List_Table) become stacked cards on narrow screens.
+ * Every cell carries data-colname for its label. */
+@media screen and (max-width: 782px) {
+	/* Visually hidden, still announced as column headers. */
+	.ra-responsive-table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	.ra-responsive-table,
+	.ra-responsive-table tbody,
+	.ra-responsive-table tr,
+	.ra-responsive-table td {
+		display: block;
+		width: auto;
+	}
+
+	.ra-responsive-table tr {
+		padding: 10px 0;
+		border-bottom: 1px solid var(--ra-border);
+	}
+
+	.ra-responsive-table td {
+		display: grid;
+		grid-template-columns: 38% minmax(0, 1fr);
+		gap: 8px;
+		padding: 4px 12px;
+		overflow-wrap: anywhere;
+	}
+
+	.ra-responsive-table td::before {
+		content: attr(data-colname);
+		color: var(--ra-text-mute);
+		font-size: var(--ra-text-sm);
+		font-weight: 700;
+	}
+
+	.ra-responsive-table td.column-primary,
+	.ra-responsive-table td[colspan] {
+		display: block;
+	}
+
+	.ra-responsive-table td.column-primary::before,
+	.ra-responsive-table td[colspan]::before {
+		content: none;
+	}
+
+	.ra-responsive-table td:empty {
+		display: none;
+	}
+}
