@@ -513,4 +513,65 @@ final class PaidEventRegistrationTest extends Rytkoset_Theme_Test_Case {
 			rytkoset_theme_format_wp_mail_failure( 'not-an-error' )
 		);
 	}
+
+	public function test_admin_order_item_view_hides_technical_snapshot_keys(): void {
+		$hidden = apply_filters( 'woocommerce_hidden_order_itemmeta', array( '_qty' ) );
+
+		$this->assertContains( '_qty', $hidden );
+		$this->assertContains( '_rytkoset_registration_mode', $hidden );
+		$this->assertContains( '_rytkoset_registration_collect_emails', $hidden );
+		$this->assertNotContains( '_rytkoset_participant_type', $hidden );
+		$this->assertNotContains( '_rytkoset_registration_choice_label', $hidden );
+	}
+
+	public function test_admin_order_item_view_labels_visible_snapshot_keys(): void {
+		$label = static fn( string $key ): string => apply_filters(
+			'woocommerce_order_item_display_meta_key',
+			$key,
+			(object) array( 'key' => $key ),
+			null
+		);
+
+		$this->assertSame( 'Osallistujatyyppi', $label( '_rytkoset_participant_type' ) );
+		$this->assertSame( 'Lisävalinnan kysymys', $label( '_rytkoset_registration_choice_label' ) );
+		$this->assertSame( 'Koko', $label( 'Koko' ) );
+	}
+
+	public function test_participant_type_snapshot_is_dropped_when_variation_attribute_is_shown(): void {
+		$meta = array(
+			10 => (object) array( 'key' => 'osallistujatyyppi', 'value' => 'Aikuinen' ),
+			11 => (object) array( 'key' => '_rytkoset_participant_type', 'value' => 'Aikuinen' ),
+			12 => (object) array( 'key' => '_rytkoset_registration_choice_label', 'value' => 'Kylpyläkäynti' ),
+		);
+
+		$result = apply_filters( 'woocommerce_order_item_get_formatted_meta_data', $meta, null );
+
+		$this->assertSame( array( 10, 12 ), array_keys( $result ) );
+	}
+
+	public function test_participant_type_snapshot_is_dropped_for_matching_global_attribute(): void {
+		$meta = array(
+			20 => (object) array( 'key' => 'pa_osallistujatyyppi', 'value' => 'aikuinen', 'display_value' => "<p>Aikuinen</p>\n" ),
+			21 => (object) array( 'key' => '_rytkoset_participant_type', 'value' => 'Aikuinen' ),
+		);
+
+		$this->assertSame( array( 20 ), array_keys( apply_filters( 'woocommerce_order_item_get_formatted_meta_data', $meta, null ) ) );
+	}
+
+	public function test_participant_type_snapshot_stays_when_attribute_value_differs(): void {
+		$meta = array(
+			30 => (object) array( 'key' => 'pa_osallistujatyyppi', 'value' => 'aikuinen', 'display_value' => '<p>Täysi-ikäinen</p>' ),
+			31 => (object) array( 'key' => '_rytkoset_participant_type', 'value' => 'Aikuinen' ),
+		);
+
+		$this->assertSame( array( 30, 31 ), array_keys( apply_filters( 'woocommerce_order_item_get_formatted_meta_data', $meta, null ) ) );
+	}
+
+	public function test_participant_type_snapshot_stays_without_variation_attribute(): void {
+		$meta = array(
+			11 => (object) array( 'key' => '_rytkoset_participant_type', 'value' => 'Aikuinen' ),
+		);
+
+		$this->assertSame( array( 11 ), array_keys( apply_filters( 'woocommerce_order_item_get_formatted_meta_data', $meta, null ) ) );
+	}
 }
