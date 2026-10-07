@@ -5,7 +5,8 @@ Hallintapaneelin ulkoasu tuo wp-adminin samaan ilmeeseen julkisen sivuston kanss
 ## Tiedostot
 
 - `wp-content/themes/rytkoset-theme/inc/admin-appearance.php` lataa tyylin `admin_enqueue_scripts`-koukussa WordPressin oman `colors`-tyylin jälkeen.
-- `wp-content/themes/rytkoset-theme/assets/css/admin.css` sisältää kaikki tyylit. Arvot ovat `--ra-*`-muuttujissa tiedoston alussa.
+- `wp-content/themes/rytkoset-theme/assets/css/admin.css` sisältää kaikki tyylit. Arvot ovat `--ra-*`-muuttujissa tiedoston alussa. Sama tiedosto ladataan myös mukauttajaan (`customize_controls_enqueue_scripts`).
+- `wp-content/themes/rytkoset-theme/assets/css/editor-style.css` antaa lohkoeditorin sisällölle julkisen sivun perustekstin (`system-ui`-fonttipino, tekstiväri, riviväli, linkkiväri). Se lisätään editorin asetuksiin `block_editor_settings_all`-suotimella eikä `add_theme_support( 'editor-styles' )` -kutsulla, koska tuki vaihtaisi Ulkoasu-valikon Lohkomallit-kohdan koko sivustoeditoriksi. Julkinen sivu ei käytä Manropea eikä Newsreaderia leipätekstissä, joten editori ei käytä niitäkään. Hätäkatkaisin poistaa myös editor-tyylin.
 
 Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin, laskureiden ja painikkeiden värit pysyvät samoina, vaikka käyttäjä olisi valinnut profiilissaan toisen väriasetelman. Väriasetelma voi silti vaikuttaa yksittäisiin kohtiin, joita tyyli ei kata. Väriasetelman valinnan poisto kuuluu viipaleeseen #699.
 
@@ -19,7 +20,7 @@ Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin
 | 3b | #694 | Kojelaudan omat widgetit ja roolikohtainen näkyvyys | Odottaa |
 | 4a–4d | #695–#698 | Omat näkymät: Osallistujat, Viestintä ja Palaute, Verkkojäsenyydet, Digilehdet | Odottaa |
 | 5 | #699 | Valikon ryhmittely ja roolit | Vaatii hallituksen päätöksen |
-| 6 | #700 | Viimeistely | Valinnainen |
+| 6 | #700 | Viimeistely: Newsreader-sivuotsikot, mediaruudukko, editor-tyylit, mukauttaja | Tehty |
 
 ## Hätäkatkaisin
 

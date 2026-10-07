@@ -59,6 +59,32 @@ final class AdminAppearanceTest extends Rytkoset_Theme_Test_Case {
 		$this->assertArrayNotHasKey( 'rytkoset-admin', $GLOBALS['rytkoset_test_enqueued_styles'] );
 	}
 
+	public function test_stylesheet_also_loads_in_customizer(): void {
+		$callbacks = array_column( $GLOBALS['rytkoset_test_hooks']['customize_controls_enqueue_scripts'] ?? array(), 1 );
+
+		$this->assertContains( 'rytkoset_theme_enqueue_admin_appearance', $callbacks );
+	}
+
+	public function test_editor_content_styles_mirror_public_text_by_default(): void {
+		$settings = rytkoset_theme_add_admin_editor_content_styles( array( 'styles' => array( array( 'css' => 'core' ) ) ) );
+
+		$this->assertCount( 2, $settings['styles'] );
+		$this->assertSame( 'core', $settings['styles'][0]['css'] );
+		$this->assertStringContainsString( 'system-ui', $settings['styles'][1]['css'] );
+		$this->assertSame( 'theme', $settings['styles'][1]['__unstableType'] );
+	}
+
+	public function test_editor_content_styles_follow_the_filter_switch(): void {
+		$disable = static fn() => false;
+		add_filter( 'rytkoset_theme_enable_admin_appearance', $disable );
+
+		try {
+			$this->assertSame( array( 'styles' => array() ), rytkoset_theme_add_admin_editor_content_styles( array( 'styles' => array() ) ) );
+		} finally {
+			remove_filter( 'rytkoset_theme_enable_admin_appearance', $disable );
+		}
+	}
+
 	public function test_filter_cannot_override_constant(): void {
 		$enable = static fn() => true;
 		add_filter( 'rytkoset_theme_enable_admin_appearance', $enable );
