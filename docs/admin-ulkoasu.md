@@ -15,7 +15,7 @@ Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin
 | ------- | ------- | ------- | ---- |
 | 1 | #691 | Tokenit, Manrope, ylä- ja sivupalkki, painikkeet, ilmoitukset, metaboxit, lohkoeditorin brändiväri | Tehty |
 | 2 | #692 | Listataulukot, suodatinsirut, lomakekentät, WooCommercen tilamerkit | Tehty |
-| 3a | #693 | Kojelaudan asettelu ja vaimennus | Odottaa |
+| 3a | #693 | Kojelaudan asettelu ja vaimennus | Tehty |
 | 3b | #694 | Kojelaudan omat widgetit ja roolikohtainen näkyvyys | Odottaa |
 | 4a–4d | #695–#698 | Omat näkymät: Osallistujat, Viestintä ja Palaute, Verkkojäsenyydet, Digilehdet | Odottaa |
 | 5 | #699 | Valikon ryhmittely ja roolit | Vaatii hallituksen päätöksen |
@@ -41,6 +41,8 @@ Vakio ohittaa myös suotimen. Koodista tyylin saa pois suotimella `rytkoset_them
 4. **Näppäimistöfokus** näkyy keltaisena ylä- ja sivupalkissa ja sinisenä muualla.
 5. **WooCommercen tilamerkit** (Käsittelyssä, Valmistunut, Odottaa maksua…) ja varastotekstit käyttävät teeman tilavärejä. Ne perustuvat WooCommercen luokkiin `mark.order-status.status-*`, `mark.instock` ja `mark.outofstock`.
 6. **Listanäkymien rivitoiminnot** (Muokkaa, Pikamuokkaus, Siirrä roskakoriin) näkyvät ilman hoveria.
+7. **Kojelauta** on yli 1500 px:n näytöllä kahdessa sarakkeessa, eikä tyhjiä "Raahaa laatikot tähän" -alueita näy, paitsi raahauksen aikana. Säännöt toistavat WordPressin `dashboard.css`:n 800–1499 px:n sääntöjä ja nojaavat body-luokkaan `is-dragging-metaboxes`. Jos käyttäjä valitsee sarakemäärän Näyttöasetuksista, sitä ei ohiteta.
+8. **Kojelaudan vaimennetut laatikot** tunnistetaan id:llä (WordPress, WooCommerce, Rank Math). Jos pluginin id muuttuu, laatikko vain lakkaa olemasta vaimennettu.
 
 ## Tunnetut rajaukset
 
