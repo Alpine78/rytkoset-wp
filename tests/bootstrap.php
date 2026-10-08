@@ -2108,6 +2108,7 @@ require_once $rytkoset_theme_inc . '/event-registration-summary.php';
 require_once $rytkoset_theme_inc . '/event-feedback.php';
 require_once $rytkoset_theme_inc . '/email.php';
 require_once $rytkoset_theme_inc . '/gallery-albums.php';
+require_once $rytkoset_theme_inc . '/media-usage.php';
 
 // functions.php pulls in the remaining inc modules (icons, share, customizer-contact, …) and
 // defines the shared theme helpers (asset version, gallery alt fallback, order-status mapping,
