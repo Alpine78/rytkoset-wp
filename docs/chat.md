@@ -296,7 +296,7 @@ rajaus on dokumentoitu tiedostossa `docs/woocommerce-paytrail.md`.
 
 Ennen tätä kokonaisuutta kulusuojien osumat eivät näkyneet ylläpitäjälle mitenkään tuotannossa: `rytkoset_theme_chat_log_error()` kirjoittaa lokiin vain `WP_DEBUG`-tilassa, eikä rate limit -osumia kirjattu mihinkään. Kevyet koontilaskurit näyttävät suoraan wp-adminissa, käytetäänkö chattia, osuuko joku rate limitiin, toimiiko Mistral-yhteys ja tuottaako prompt-välimuistikoe mitattavia osumia — ilman palvelimen lokien tarkistamista.
 
-**Näkyvyys:** WordPressin Dashboard-widget **"Tukichatti"** (`rytkoset_theme_chat_register_dashboard_widget()`, koukku `wp_dashboard_setup`), näkyy vain `manage_options`-käyttäjille. Widget näyttää chatin tilan, prompt-välimuistin ympäristökohtaisen päällä/pois-tilan, lähetettyjen viestien, rate limit -osumien ja sivunlukujen määrät, Mistral-/yhteysvirheet sekä prompt-välimuistin syötetokenien ja osumien koonnin.
+**Näkyvyys:** WordPressin Dashboard-widget **"Tukichatti"** (`rytkoset_theme_chat_register_dashboard_widget()`, koukku `wp_dashboard_setup`), näkyy vain `manage_options`-käyttäjille. Widget näyttää chatin tilan tilamerkkinä (Käytössä / Pois päältä / Ei käytössä, #694) ja **Tekniset tiedot** -avattavan takana prompt-välimuistin ympäristökohtaisen päällä/pois-tilan, lähetettyjen viestien, rate limit -osumien ja sivunlukujen määrät, Mistral-/yhteysvirheet sekä prompt-välimuistin syötetokenien ja osumien koonnin.
 
 **Tallennus:** erilliset `wp_options`-rivit (`autoload = false`) päivitetään olemassa olevissa päätöspisteissä — ei erillistä seurantajärjestelmää:
 
