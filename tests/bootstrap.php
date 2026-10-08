@@ -1469,6 +1469,17 @@ function checked( $checked, $current = true, $display = true ) {
 	return $result;
 }
 
+// Post type object with the capabilities the theme checks; every type maps to core's post caps.
+function get_post_type_object( $post_type ) {
+	return (object) array(
+		'name' => (string) $post_type,
+		'cap'  => (object) array(
+			'create_posts' => 'edit_posts',
+			'edit_posts'   => 'edit_posts',
+		),
+	);
+}
+
 function current_user_can( $capability, ...$args ) {
 	return ! empty( $GLOBALS['rytkoset_test_caps'][ $capability ] );
 }
@@ -2073,6 +2084,7 @@ require_once $rytkoset_theme_inc . '/woocommerce-membership.php';
 require_once $rytkoset_theme_inc . '/woocommerce-member-coupon.php';
 require_once $rytkoset_theme_inc . '/digital-magazines.php';
 require_once $rytkoset_theme_inc . '/digital-magazine-access.php';
+require_once $rytkoset_theme_inc . '/digital-magazines-admin.php';
 require_once $rytkoset_theme_inc . '/woocommerce-digital-magazine.php';
 require_once $rytkoset_theme_inc . '/members-only-pages.php';
 require_once $rytkoset_theme_inc . '/events.php';

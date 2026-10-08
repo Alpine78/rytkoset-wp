@@ -63,13 +63,17 @@ Sisällysluetteloa ei tallenneta erilliseen kenttään. Lehden sivu muodostaa si
 4. Jätä vanhempi tyhjäksi.
 5. Kirjoita lehden johdanto tai kuvaus editoriin.
 6. Lisää halutessasi ote ja artikkelikuva.
-7. Valitse **Käyttöoikeus**-laatikosta lehden käyttöoikeusmalli.
+7. Valitse **Myynti ja käyttöoikeus** -laatikosta lehden käyttöoikeusmalli.
 8. Julkaise lehti.
 
 Jos käyttöoikeus jätetään oletukseen, lehti on kaikille ilmainen. Käyttöoikeus
 asetetaan vain lehdelle; lehden jutut perivät emolehden käyttöoikeusmallin.
 
 ## Jutun lisääminen lehteen
+
+Helpoin tapa (#698): valitse `Digilehdet`-listassa lehden riviltä **Lisää juttu tähän lehteen** tai avaa lehti ja paina **Jutut**-laatikon samannimistä painiketta. Uusi juttu avautuu lehti valmiiksi vanhempana.
+
+Käsin:
 
 1. Avaa `Digilehdet > Lisää uusi`.
 2. Kirjoita jutun otsikko.
@@ -79,6 +83,16 @@ asetetaan vain lehdelle; lehden jutut perivät emolehden käyttöoikeusmallin.
 6. Julkaise juttu.
 
 Suositeltu järjestysnumerointi on esimerkiksi `10`, `20`, `30`. Silloin väliin voi lisätä myöhemmin uusia juttuja ilman kaikkien numeroiden muuttamista.
+
+## Digilehtien lista ja lehden muokkaus ylläpidossa (#698)
+
+- **Tyyppi**-sarake näyttää tilamerkin **Lehti** tai **Juttu**. Jutun alla on sen lehden nimi, joten konteksti säilyy myös haussa ja suodatuksessa.
+- **Juttuja**-sarake näyttää lehden juttujen määrän (kaikki muokattavat tilat, ei roskakoria) ja **Järjestys** jutun järjestysnumeron.
+- Lehden riville tulee rivitoiminto **Lisää juttu tähän lehteen**, jos käyttäjä saa muokata lehteä ja luoda digilehtiä. Roskakorissa olevalle lehdelle toimintoa ei näytetä.
+- Rank Mathin korkea **SEO Details** -sarake piilotetaan kerran, kun käyttäjä avaa listan ensimmäisen kerran. Sen voi palauttaa Näyttöasetuksista, ja valinta säilyy. **Pillar Content** -näkymä on poistettu.
+- Tallennetun lehden muokkausnäkymässä on **Jutut**-laatikko: jutut järjestyksessä muokkauslinkkeineen, julkaisemattomien tila sekä **Lisää juttu tähän lehteen** -painike. Toisen käyttäjän yksityiset jutut näkyvät laatikossa ja Juttuja-sarakkeen määrässä vain, jos käyttäjä saa muokata niitä.
+- Käyttöoikeusmalli ja maksutuotteet ovat samassa **Myynti ja käyttöoikeus** -laatikossa. Maksutuotteet-osa näyttää vain valitun käyttöoikeusmallin tuotekentät: normaalihintatuotteen malleissa "Kaikille maksullinen" ja "Jäsenhinta + normaalihinta", jäsenhintatuotteen vain jälkimmäisessä. Ilmaisessa ja vain jäsenille -mallissa laatikossa lukee, ettei malli käytä maksutuotteita. Piilotetut valinnat säilyvät tallennettuina. Ilman JavaScriptiä kaikki kentät näkyvät.
+- Listan "Lisää uusi digilehti tai juttu" -painikkeen teksti on ennallaan, koska sama nimike näkyy myös valikossa ja editorissa.
 
 ## Julkinen näkymä
 
@@ -128,7 +142,7 @@ hoitaa maksamisen. Sisältö pysyy digilehdessä — tuote on vain maksuväline.
 
 ### Tuotteen linkitys lehteen
 
-1. Avaa lehti (ylälehti) ja etsi **Maksutuotteet**-laatikko.
+1. Avaa lehti (ylälehti) ja etsi **Myynti ja käyttöoikeus** -laatikon Maksutuotteet-osa.
 2. Valitse **Normaalihintatuote** ja tarvittaessa **Jäsenhintatuote**. Vain
    julkaistut tuotteet kelpaavat.
 3. Tallenna lehti.

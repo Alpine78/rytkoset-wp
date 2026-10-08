@@ -611,9 +611,16 @@ body:not(.is-dragging-metaboxes) #dashboard-widgets .postbox-container .empty-co
 #rytkoset_event_feedback .inside select,
 #rytkoset_event_feedback .inside input,
 #rytkoset_event_feedback .inside textarea,
-#rytkoset-digital-magazine-products .inside select {
+#rytkoset-digital-magazine-access .inside select {
 	box-sizing: border-box;
 	max-width: 100%;
+}
+
+/* Product links share the access box (#698); separate the two parts. */
+.rytkoset-magazine-products__heading {
+	margin: 1.25em 0 0;
+	padding-top: 1em;
+	border-top: 1px solid var(--ra-border);
 }
 
 /* ---------- List tables (#692) ---------- */
