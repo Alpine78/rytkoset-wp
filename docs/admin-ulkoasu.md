@@ -17,7 +17,7 @@ Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin
 | 1 | #691 | Tokenit, Manrope, ylä- ja sivupalkki, painikkeet, ilmoitukset, metaboxit, lohkoeditorin brändiväri | Tehty |
 | 2 | #692 | Listataulukot, suodatinsirut, lomakekentät, WooCommercen tilamerkit | Tehty |
 | 3a | #693 | Kojelaudan asettelu ja vaimennus | Tehty |
-| 3b | #694 | Kojelaudan omat widgetit ja roolikohtainen näkyvyys | Odottaa |
+| 3b | #694 | Kojelaudan omat widgetit ja roolikohtainen näkyvyys | Tehty |
 | 4a | #695 | Oma näkymä: Tapahtumat > Osallistujat (tilamerkit, yhteenvetokortit, mobiilin korttirivit) | Tehty |
 | 4b–4d | #696–#698 | Omat näkymät: Viestintä ja Palaute, Verkkojäsenyydet, Digilehdet | Odottaa |
 | 5 | #699 | Valikon ryhmittely ja roolit | Vaatii hallituksen päätöksen |
@@ -45,6 +45,11 @@ Vakio ohittaa myös suotimen. Koodista tyylin saa pois suotimella `rytkoset_them
 6. **Listanäkymien rivitoiminnot** (Muokkaa, Pikamuokkaus, Siirrä roskakoriin) näkyvät ilman hoveria.
 7. **Kojelauta** on yli 1500 px:n näytöllä kahdessa sarakkeessa, eikä tyhjiä "Raahaa laatikot tähän" -alueita näy, paitsi raahauksen aikana. Säännöt toistavat WordPressin `dashboard.css`:n 800–1499 px:n sääntöjä ja nojaavat body-luokkaan `is-dragging-metaboxes`. Jos käyttäjä valitsee sarakemäärän Näyttöasetuksista, sitä ei ohiteta.
 8. **Kojelaudan vaimennetut laatikot** tunnistetaan id:llä (WordPress, WooCommerce, Rank Math). Jos pluginin id muuttuu, laatikko vain lakkaa olemasta vaimennettu.
+9. **Pikatoiminnot** (#694) näyttää yleisimmät tehtävät isoina painikkeina: Lisää tapahtuma, Osallistujat, Viestintä, Lisää albumi, Uusi blogikirjoitus ja Tilaukset. Painike näkyy vain, jos käyttäjällä on oikeus sen kohteeseen: tapahtumajärjestäjä näkee kolme tapahtumatehtävää, kauppapäällikkö albumin, blogikirjoituksen ja tilaukset, ylläpitäjä kaikki. Ilman yhtään sallittua toimintoa laatikkoa ei näytetä. Tilaukset-painike avaa WooCommercen tilauslistan (HPOS tai perinteinen).
+10. **Tulevat tapahtumat** (#694) näyttää enintään viisi tulevaa julkaistua tapahtumaa päivämäärineen ja ilmoittautuneiden määrineen (maksuttomat ja maksulliset yhteensä, sama laskenta kuin järjestäjän ilmoituksissa). Tapahtuman nimi avaa sen osallistujalistan. Tapahtuma näkyy tapahtumapäivän loppuun asti. Laatikko näkyy käyttäjille, joilla on `edit_others_event_registrations`-oikeus (ylläpitäjä ja tapahtumajärjestäjä).
+11. **Tukichatti-laatikko** näyttää tilan ensin tilamerkkinä (Käytössä, Pois päältä, Ei käytössä) ja ohjeen sen muuttamiseen. Tekniset luvut ovat **Tekniset tiedot** -avattavan takana.
+12. **Tekniset laatikot piilotetaan muilta kuin ylläpitäjiltä** (`manage_options`): Site Health, PHP- ja selainkehotteet, WordPress-tapahtumat ja -uutiset sekä Rank Mathin laatikko. Toiminta ja WooCommercen tilalaatikko säilyvät. Listaa voi muuttaa suotimella `rytkoset_theme_dashboard_technical_widgets`.
+13. **Paytrailin testitila- ja valuuttailmoitus** näkyy vain käyttäjille, jotka voivat muuttaa WooCommercen asetuksia (`manage_woocommerce`: ylläpitäjä ja kauppapäällikkö). Muita pluginien ilmoituksia ei piiloteta: piilotus tehdään vain erikseen tunnistetuille ilmoituksille, jotta toimintaan vaikuttavat virheet eivät katoa. Paikallisesti tarkistettuna tapahtumajärjestäjä ei nähnyt muita plugin-ilmoituksia.
 
 ## Tunnetut rajaukset
 

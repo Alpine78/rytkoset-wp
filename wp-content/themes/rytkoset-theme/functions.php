@@ -46,6 +46,7 @@ require_once get_template_directory() . '/inc/seo-meta.php';
 require_once get_template_directory() . '/inc/structured-data.php';
 require_once get_template_directory() . '/inc/login.php';
 require_once get_template_directory() . '/inc/admin-appearance.php';
+require_once get_template_directory() . '/inc/admin-dashboard.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/user-membership.php';
 require_once get_template_directory() . '/inc/member-newsletter.php';

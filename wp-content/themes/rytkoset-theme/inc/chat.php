@@ -1486,6 +1486,40 @@ if ( ! function_exists( 'rytkoset_theme_chat_register_dashboard_widget' ) ) {
 add_action( 'wp_dashboard_setup', 'rytkoset_theme_chat_register_dashboard_widget' );
 
 /**
+ * Returns the chat's status for the dashboard widget (#694): a short label,
+ * a badge variant and an explanation of how to change it.
+ *
+ * @param bool $is_configured Whether the API key and endpoint are set.
+ * @param bool $is_enabled    Whether the Customizer toggle is on.
+ * @return array{label: string, variant: string, hint: string}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_dashboard_status' ) ) {
+	function rytkoset_theme_chat_get_dashboard_status( $is_configured, $is_enabled ) {
+		if ( ! $is_configured ) {
+			return array(
+				'label'   => __( 'Ei käytössä', 'rytkoset-theme' ),
+				'variant' => 'neutral',
+				'hint'    => __( 'API-avain puuttuu (wp-config.php).', 'rytkoset-theme' ),
+			);
+		}
+
+		if ( ! $is_enabled ) {
+			return array(
+				'label'   => __( 'Pois päältä', 'rytkoset-theme' ),
+				'variant' => 'warning',
+				'hint'    => __( 'Kytketään päälle kohdasta Ulkoasu → Mukauta → Tukichatti.', 'rytkoset-theme' ),
+			);
+		}
+
+		return array(
+			'label'   => __( 'Käytössä', 'rytkoset-theme' ),
+			'variant' => 'success',
+			'hint'    => '',
+		);
+	}
+}
+
+/**
  * Tulostaa Dashboard-widgetin sisällön: chatin tila, lähetetyt viestit,
  * rate limit -osumat ja viimeisin Mistral-/upstream-virhe.
  *
@@ -1494,19 +1528,19 @@ add_action( 'wp_dashboard_setup', 'rytkoset_theme_chat_register_dashboard_widget
 if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 	function rytkoset_theme_chat_render_dashboard_widget() {
 		$config = rytkoset_theme_chat_get_config();
-
-		if ( ! $config['is_configured'] ) {
-			$status = __( 'Ei käytössä — API-avain puuttuu (wp-config.php).', 'rytkoset-theme' );
-		} elseif ( ! rytkoset_theme_chat_admin_enabled() ) {
-			$status = __( 'Pois päältä (Ulkoasu → Mukauta → Tukichatti).', 'rytkoset-theme' );
-		} else {
-			$status = __( 'Käytössä.', 'rytkoset-theme' );
-		}
+		$status = rytkoset_theme_chat_get_dashboard_status( (bool) $config['is_configured'], rytkoset_theme_chat_admin_enabled() );
 
 		$stats                = rytkoset_theme_chat_get_usage_stats();
 		$prompt_cache_enabled = '' !== $config['prompt_cache_key'] && rytkoset_theme_chat_endpoint_is_mistral( $config['endpoint'] );
 
-		echo '<p><strong>' . esc_html__( 'Tila:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $status ) . '</p>';
+		// Status first; the counters are for troubleshooting and sit behind a disclosure (#694).
+		echo '<p><span class="ra-badge ra-badge--' . esc_attr( $status['variant'] ) . '">' . esc_html( $status['label'] ) . '</span>';
+		if ( '' !== $status['hint'] ) {
+			echo ' <span class="ra-sub">' . esc_html( $status['hint'] ) . '</span>';
+		}
+		echo '</p>';
+
+		echo '<details class="rytkoset-chat-stats-details"><summary>' . esc_html__( 'Tekniset tiedot', 'rytkoset-theme' ) . '</summary>';
 		echo '<p><strong>' . esc_html__( 'Mistral prompt-välimuisti:', 'rytkoset-theme' ) . '</strong> ' . esc_html( $prompt_cache_enabled ? __( 'Käytössä.', 'rytkoset-theme' ) : __( 'Pois käytöstä.', 'rytkoset-theme' ) ) . '</p>';
 
 		echo '<ul>';
@@ -1562,6 +1596,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 		echo '</li>';
 
 		echo '</ul>';
+		echo '</details>';
 	}
 }
 

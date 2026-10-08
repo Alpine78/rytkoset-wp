@@ -594,17 +594,85 @@ body:not(.is-dragging-metaboxes) #dashboard-widgets .postbox-container .empty-co
 	font-weight: 600;
 }
 
-/* The association's own widgets (IDs from wp_add_dashboard_widget() in inc/chat.php
- * and inc/member-newsletter.php). */
+/* The association's own widgets (IDs from wp_add_dashboard_widget() in inc/chat.php,
+ * inc/member-newsletter.php and inc/admin-dashboard.php). */
 #rytkoset_chat_stats,
-#rytkoset_member_newsletter_status {
+#rytkoset_member_newsletter_status,
+#rytkoset_quick_actions,
+#rytkoset_upcoming_events {
 	border-color: var(--ra-primary-light);
 	box-shadow: var(--ra-shadow-raised);
 }
 
 #rytkoset_chat_stats .postbox-header,
-#rytkoset_member_newsletter_status .postbox-header {
+#rytkoset_member_newsletter_status .postbox-header,
+#rytkoset_quick_actions .postbox-header,
+#rytkoset_upcoming_events .postbox-header {
 	background: var(--ra-primary-soft);
+}
+
+/* Dashboard widgets (#694) */
+.rytkoset-quick-actions {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 8px;
+	margin: 0;
+}
+
+.rytkoset-quick-actions li {
+	margin: 0;
+}
+
+.rytkoset-quick-actions__link {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	min-height: var(--ra-control-h-touch);
+	height: 100%;
+	box-sizing: border-box;
+	padding: 10px 12px;
+	border: 1px solid var(--ra-border);
+	border-radius: var(--ra-radius-m);
+	background: var(--ra-surface-alt);
+	color: var(--ra-primary);
+	font-weight: 600;
+	line-height: 1.3;
+	text-decoration: none;
+}
+
+.rytkoset-quick-actions__link:hover {
+	border-color: var(--ra-primary-light);
+	background: var(--ra-primary-soft);
+	color: var(--ra-primary);
+}
+
+.rytkoset-quick-actions__link .dashicons {
+	flex: none;
+}
+
+.rytkoset-upcoming-events {
+	margin: 0;
+}
+
+.rytkoset-upcoming-events li {
+	margin: 0;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--ra-border);
+}
+
+.rytkoset-upcoming-events li:last-child {
+	border-bottom: 0;
+}
+
+.rytkoset-upcoming-events__title {
+	display: block;
+	font-weight: 600;
+}
+
+.rytkoset-chat-stats-details summary {
+	min-height: var(--ra-control-h-touch);
+	line-height: var(--ra-control-h-touch);
+	cursor: pointer;
 }
 
 /* Theme metaboxes whose selects were wider than the editor sidebar. */

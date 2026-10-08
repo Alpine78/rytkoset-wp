@@ -106,6 +106,8 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 	$GLOBALS['rytkoset_test_cron_events']   = array();
 	$GLOBALS['rytkoset_test_dashboard_widgets'] = array();
+	$GLOBALS['rytkoset_test_removed_meta_boxes'] = array();
+	$GLOBALS['rytkoset_test_post_type_create_caps'] = array();
 	$GLOBALS['rytkoset_test_http_responses'] = array();
 	$GLOBALS['rytkoset_test_http_requests']  = array();
 
@@ -1265,6 +1267,10 @@ function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_
 	$GLOBALS['rytkoset_test_dashboard_widgets'][ (string) $widget_id ] = $callback;
 }
 
+function remove_meta_box( $id, $screen, $context ): void {
+	$GLOBALS['rytkoset_test_removed_meta_boxes'][] = (string) $screen . ':' . (string) $context . ':' . (string) $id;
+}
+
 function number_format_i18n( $number, $decimals = 0 ): string {
 	return number_format( (float) $number, (int) $decimals, ',', ' ' );
 }
@@ -1471,10 +1477,13 @@ function checked( $checked, $current = true, $display = true ) {
 
 // Post type object with the capabilities the theme checks; every type maps to core's post caps.
 function get_post_type_object( $post_type ) {
+	// Tests may give a post type its own create capability; default edit_posts.
+	$create = $GLOBALS['rytkoset_test_post_type_create_caps'][ (string) $post_type ] ?? 'edit_posts';
+
 	return (object) array(
 		'name' => (string) $post_type,
 		'cap'  => (object) array(
-			'create_posts' => 'edit_posts',
+			'create_posts' => $create,
 			'edit_posts'   => 'edit_posts',
 		),
 	);
