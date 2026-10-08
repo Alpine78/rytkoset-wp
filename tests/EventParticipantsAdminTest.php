@@ -272,4 +272,28 @@ final class EventParticipantsAdminTest extends Rytkoset_Theme_Test_Case {
 			$overview['statuses']
 		);
 	}
+
+	public function test_csv_line_keeps_crafted_cell_in_one_column(): void {
+		$crafted = 'Matti \\";=1+1;\\"';
+		$line    = array( 'Kesäjuhla', rytkoset_theme_csv_neutralize_formula( $crafted ), rytkoset_theme_csv_neutralize_formula( '=HYPERLINK("x")' ) );
+
+		$handle = fopen( 'php://memory', 'w+' );
+		rytkoset_theme_write_event_participants_csv_line( $handle, $line );
+		rewind( $handle );
+		$written = (string) stream_get_contents( $handle );
+		fclose( $handle );
+
+		$cells = str_getcsv( rtrim( $written, "\n" ), ';', '"', '' );
+		$this->assertCount( 3, $cells );
+		$this->assertSame( $crafted, $cells[1] );
+		$this->assertSame( "'=HYPERLINK(\"x\")", $cells[2] );
+
+		// PHP's default backslash escape splits the same cell, which is the bug.
+		$legacy = fopen( 'php://memory', 'w+' );
+		fputcsv( $legacy, $line, ';', '"', '\\' );
+		rewind( $legacy );
+		$legacy_cells = str_getcsv( rtrim( (string) stream_get_contents( $legacy ), "\n" ), ';', '"', '' );
+		fclose( $legacy );
+		$this->assertNotCount( 3, $legacy_cells );
+	}
 }
