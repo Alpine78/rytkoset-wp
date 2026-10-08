@@ -111,6 +111,8 @@ Suodattimien vieressä on **Vie CSV** -painike, joka lataa osallistujat CSV-tied
 
 Tiedosto on UTF-8-koodattu BOM-merkillä, joten Excel ja LibreOffice tunnistavat ääkköset suoraan. Erottimena on puolipiste (`;`), joka soveltuu suomalaiseen Excel-asetukseen.
 
+Kaavamerkillä (`=`, `+`, `-`, `@`) alkavat solut neutraloidaan heittomerkillä, ja rivit kirjoitetaan RFC 4180 -lainauksella ilman PHP:n kenoviivaescapea (#718), jottei osallistujan itse kirjoittama kenoviiva ja lainausmerkki voi hajottaa solua useaksi sarakkeeksi ja ohittaa neutralointia.
+
 Sarakkeet:
 
 | Sarake | Sisältö |

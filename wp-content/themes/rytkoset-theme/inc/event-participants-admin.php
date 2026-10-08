@@ -899,6 +899,21 @@ function rytkoset_theme_csv_neutralize_formula( $value ) {
 }
 
 /**
+ * Writes one participant CSV line (#718).
+ *
+ * The empty escape character keeps RFC 4180 quoting: with PHP's default
+ * backslash escape a crafted name could split into extra cells and smuggle an
+ * un-neutralized formula past rytkoset_theme_csv_neutralize_formula().
+ *
+ * @param resource           $handle Open file handle.
+ * @param array<int, string> $line   Cells.
+ * @return void
+ */
+function rytkoset_theme_write_event_participants_csv_line( $handle, $line ) {
+	fputcsv( $handle, $line, ';', '"', '' );
+}
+
+/**
  * Sends the unified event participant list as a CSV download.
  *
  * @return void
@@ -973,7 +988,7 @@ function rytkoset_theme_export_event_participants_csv() {
 		$header_columns[] = $quantity_label;
 	}
 
-	fputcsv( $output, $header_columns, ';' );
+	rytkoset_theme_write_event_participants_csv_line( $output, $header_columns );
 
 	foreach ( $rows as $row ) {
 		$details = trim( (string) ( $row['diet'] ?? '' ) );
@@ -1020,7 +1035,7 @@ function rytkoset_theme_export_event_participants_csv() {
 			$cells[] = rytkoset_theme_csv_neutralize_formula( (string) max( 1, (int) ( $row['quantity'] ?? 1 ) ) );
 		}
 
-		fputcsv( $output, $cells, ';' );
+		rytkoset_theme_write_event_participants_csv_line( $output, $cells );
 	}
 
 	fclose( $output );
