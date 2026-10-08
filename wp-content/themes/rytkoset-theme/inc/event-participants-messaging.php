@@ -618,6 +618,66 @@ function rytkoset_theme_register_event_messaging_admin_page() {
 add_action( 'admin_menu', 'rytkoset_theme_register_event_messaging_admin_page' );
 
 /**
+ * Combines queued jobs and the sent log into one list for the admin page (#696).
+ *
+ * Queued jobs come first, newest log entries after them.
+ *
+ * @param array $queue Queue jobs.
+ * @param array $log   Log entries.
+ * @return array<int, array{subject:string,event_title:string,sender_name:string,status_label:string,variant:string,recipients:int,sent:int,failed:int,skipped:int,time:string}>
+ */
+function rytkoset_theme_get_event_messaging_overview_rows( $queue, $log ) {
+	$rows = array();
+
+	foreach ( (array) $queue as $job ) {
+		if ( ! is_array( $job ) ) {
+			continue;
+		}
+
+		$pending = rytkoset_theme_get_event_messaging_pending_recipient_count( $job );
+		$total   = isset( $job['recipients'] ) && is_array( $job['recipients'] ) ? count( $job['recipients'] ) : 0;
+		$rows[]  = array(
+			'subject'      => (string) ( $job['subject'] ?? '' ),
+			'event_title'  => (string) ( $job['event_title'] ?? '' ),
+			'sender_name'  => (string) ( $job['sender_name'] ?? '' ),
+			'status_label' => 0 === $pending
+				? __( 'Valmis', 'rytkoset-theme' )
+				/* translators: 1: messages still waiting, 2: all recipients of the job */
+				: sprintf( __( 'Jonossa, %1$d / %2$d jäljellä', 'rytkoset-theme' ), $pending, $total ),
+			'variant'      => 0 === $pending ? 'success' : 'info',
+			'recipients'   => $total,
+			'sent'         => (int) ( $job['sent_count'] ?? 0 ),
+			'failed'       => (int) ( $job['failed_count'] ?? 0 ),
+			'skipped'      => (int) ( $job['skipped_count'] ?? 0 ),
+			'time'         => (string) ( $job['created_at'] ?? '' ),
+		);
+	}
+
+	foreach ( (array) $log as $entry ) {
+		if ( ! is_array( $entry ) ) {
+			continue;
+		}
+
+		$sent   = (int) ( $entry['sent_count'] ?? 0 );
+		$failed = (int) ( $entry['failed_count'] ?? 0 );
+		$rows[] = array(
+			'subject'      => (string) ( $entry['subject'] ?? '' ),
+			'event_title'  => (string) ( $entry['event_title'] ?? '' ),
+			'sender_name'  => (string) ( $entry['sender_name'] ?? '' ),
+			'status_label' => $failed > 0 && 0 === $sent ? __( 'Epäonnistui', 'rytkoset-theme' ) : __( 'Lähetetty', 'rytkoset-theme' ),
+			'variant'      => $failed > 0 ? ( 0 === $sent ? 'error' : 'warning' ) : 'success',
+			'recipients'   => $sent + $failed,
+			'sent'         => $sent,
+			'failed'       => $failed,
+			'skipped'      => (int) ( $entry['skipped_count'] ?? 0 ),
+			'time'         => (string) ( $entry['timestamp'] ?? '' ),
+		);
+	}
+
+	return $rows;
+}
+
+/**
  * Renders the bulk messaging admin page.
  */
 function rytkoset_theme_render_event_messaging_admin_page() {
@@ -660,10 +720,21 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 	$hourly_limit      = rytkoset_theme_get_event_messaging_hourly_limit();
 	$available_attempt = max( 0, $hourly_limit - count( $recent_attempts ) );
 
+	$participants_url = add_query_arg(
+		array(
+			'post_type' => 'rytkoset_event',
+			'page'      => 'rytkoset-event-participants',
+			'event_id'  => $selected_event,
+			'status'    => $selected_status,
+		),
+		admin_url( 'edit.php' )
+	);
+	$overview_rows    = rytkoset_theme_get_event_messaging_overview_rows( $queue_entries, rytkoset_theme_get_event_messaging_log( 20 ) );
+
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Tapahtumien viestintä', 'rytkoset-theme' ); ?></h1>
-		<p><?php esc_html_e( 'Lisää sähköpostiviesti tapahtuman osallistujien lähetysjonoon. Suodata ensin vastaanottajat, kirjoita viesti ja vahvista jonotus.', 'rytkoset-theme' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Lisää sähköpostiviesti tapahtuman osallistujien lähetysjonoon kolmessa vaiheessa.', 'rytkoset-theme' ); ?></p>
 
 		<?php if ( 'queued' === $notice ) : ?>
 			<div class="notice notice-success is-dismissible">
@@ -707,233 +778,227 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 			</div>
 		<?php endif; ?>
 
-		<div class="tablenav top">
-			<div class="alignleft actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-				<form method="get" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0;">
-					<input type="hidden" name="post_type" value="rytkoset_event" />
-					<input type="hidden" name="page" value="rytkoset-event-messaging" />
+		<div class="ra-steps">
+			<div class="postbox" id="rytkoset-messaging-recipients">
+				<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'Valitse vastaanottajat', 'rytkoset-theme' ); ?></h2></div>
+				<div class="inside">
+					<form method="get" id="rytkoset-event-messaging-filter" class="ra-actions">
+						<input type="hidden" name="post_type" value="rytkoset_event" />
+						<input type="hidden" name="page" value="rytkoset-event-messaging" />
 
-					<label for="rytkoset-event-messaging-event">
-						<?php esc_html_e( 'Tapahtuma:', 'rytkoset-theme' ); ?>
-					</label>
-					<select name="event_id" id="rytkoset-event-messaging-event">
-						<option value="0"><?php esc_html_e( 'Kaikki tapahtumat', 'rytkoset-theme' ); ?></option>
-						<?php foreach ( $events as $event ) : ?>
-							<?php
-							$event_date   = rytkoset_theme_get_event_date_display( $event->ID );
-							$option_label = $event->post_title;
+						<?php // Before the selects so the advance notice (WCAG 3.2.2) is read first; event-messaging-admin.js links it with aria-describedby. ?>
+						<p class="description hide-if-no-js" id="rytkoset-event-messaging-filter-help"><?php esc_html_e( 'Vastaanottajat päivittyvät heti, kun valitset tapahtuman tai tilan. Sivu latautuu uudelleen; kirjoittamasi viesti säilyy.', 'rytkoset-theme' ); ?></p>
 
-							if ( '' !== $event_date ) {
-								$option_label .= ' (' . $event_date . ')';
-							}
-							?>
-							<option value="<?php echo esc_attr( $event->ID ); ?>" <?php selected( $selected_event, $event->ID ); ?>>
-								<?php echo esc_html( $option_label ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
+						<label for="rytkoset-event-messaging-event">
+							<?php esc_html_e( 'Tapahtuma:', 'rytkoset-theme' ); ?>
+						</label>
+						<select name="event_id" id="rytkoset-event-messaging-event">
+							<option value="0"><?php esc_html_e( 'Kaikki tapahtumat', 'rytkoset-theme' ); ?></option>
+							<?php foreach ( $events as $event ) : ?>
+								<?php
+								$event_date   = rytkoset_theme_get_event_date_display( $event->ID );
+								$option_label = $event->post_title;
 
-					<label for="rytkoset-event-messaging-status">
-						<?php esc_html_e( 'Status:', 'rytkoset-theme' ); ?>
-					</label>
-					<select name="status" id="rytkoset-event-messaging-status">
-						<?php foreach ( $status_options as $value => $label ) : ?>
-							<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $selected_status, $value ); ?>>
-								<?php echo esc_html( $label ); ?>
-							</option>
-						<?php endforeach; ?>
-					</select>
+								if ( '' !== $event_date ) {
+									$option_label .= ' (' . $event_date . ')';
+								}
+								?>
+								<option value="<?php echo esc_attr( $event->ID ); ?>" <?php selected( $selected_event, $event->ID ); ?>>
+									<?php echo esc_html( $option_label ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
 
-					<?php submit_button( __( 'Päivitä vastaanottajat', 'rytkoset-theme' ), 'secondary', '', false ); ?>
-				</form>
+						<label for="rytkoset-event-messaging-status">
+							<?php esc_html_e( 'Status:', 'rytkoset-theme' ); ?>
+						</label>
+						<select name="status" id="rytkoset-event-messaging-status">
+							<?php foreach ( $status_options as $value => $label ) : ?>
+								<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $selected_status, $value ); ?>>
+									<?php echo esc_html( $label ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
 
-				<p class="description">
-					<?php
-					echo esc_html(
-						sprintf(
-							/* translators: 1: recipient count, 2: skipped count */
-							_n(
-								'Viesti lisätään jonoon %1$d vastaanottajalle (osoitteita puuttuu %2$d).',
-								'Viesti lisätään jonoon %1$d vastaanottajalle (osoitteita puuttuu %2$d).',
-								$recipient_count,
-								'rytkoset-theme'
-							),
-							$recipient_count,
-							$skipped_count
-						)
-					);
-					?>
-				</p>
+						<?php // Without JavaScript the explicit button remains; with it the page updates on change (see the advisory text). ?>
+						<?php submit_button( __( 'Päivitä vastaanottajat', 'rytkoset-theme' ), 'secondary hide-if-js', '', false ); ?>
+					</form>
+					<div class="notice notice-warning inline" id="rytkoset-event-messaging-filter-error" role="alert" hidden>
+						<p><?php esc_html_e( 'Kirjoittamaasi viestiä ei voitu tallentaa selaimeen, joten sivua ei päivitetty. Kopioi viesti talteen ja paina Päivitä vastaanottajat. Lähetys on pois käytöstä, kunnes vastaanottajat on päivitetty.', 'rytkoset-theme' ); ?></p>
+					</div>
+
+					<div class="notice notice-info inline">
+						<p>
+							<strong>
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: %d: recipient count */
+										_n( '%d vastaanottaja.', '%d vastaanottajaa.', $recipient_count, 'rytkoset-theme' ),
+										$recipient_count
+									)
+								);
+								?>
+							</strong>
+							<?php if ( $skipped_count > 0 ) : ?>
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: %d: participants without an email address */
+										_n( '%d osallistujalta puuttuu sähköpostiosoite.', '%d osallistujalta puuttuu sähköpostiosoite.', $skipped_count, 'rytkoset-theme' ),
+										$skipped_count
+									)
+								);
+								?>
+							<?php endif; ?>
+							<a href="<?php echo esc_url( $participants_url ); ?>"><?php esc_html_e( 'Näytä osallistujat', 'rytkoset-theme' ); ?></a>
+						</p>
+					</div>
+				</div>
 			</div>
-			<br class="clear" />
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="rytkoset-event-messaging-form">
+				<input type="hidden" name="action" value="rytkoset_send_event_participants_message" />
+				<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $selected_event ); ?>" />
+				<input type="hidden" name="status" value="<?php echo esc_attr( $selected_status ); ?>" />
+				<?php wp_nonce_field( 'rytkoset_send_event_participants_message', 'rytkoset_event_messaging_nonce' ); ?>
+
+				<div class="postbox" id="rytkoset-messaging-compose">
+					<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'Kirjoita viesti', 'rytkoset-theme' ); ?></h2></div>
+					<div class="inside">
+						<table class="form-table" role="presentation">
+							<tbody>
+								<tr>
+									<th scope="row">
+										<label for="rytkoset-event-messaging-subject"><?php esc_html_e( 'Aihe', 'rytkoset-theme' ); ?></label>
+									</th>
+									<td>
+										<input
+											type="text"
+											name="subject"
+											id="rytkoset-event-messaging-subject"
+											class="large-text"
+											required
+											maxlength="200"
+										/>
+									</td>
+								</tr>
+								<tr>
+									<th scope="row">
+										<label for="rytkoset-event-messaging-body"><?php esc_html_e( 'Viesti', 'rytkoset-theme' ); ?></label>
+									</th>
+									<td>
+										<textarea
+											name="body"
+											id="rytkoset-event-messaging-body"
+											rows="10"
+											class="large-text"
+											required
+										></textarea>
+										<p class="description">
+											<?php
+											echo wp_kses(
+												__( 'Voit käyttää placeholdereita: <code>{nimi}</code> korvautuu osallistujan nimellä, <code>{tapahtuma}</code> tapahtuman otsikolla ja <code>{palautelinkki}</code> valitun tapahtuman palautelomakkeen osoitteella (toimii vain kun yksi tapahtuma on valittuna). Viesti lähetetään tekstimuotoisena.', 'rytkoset-theme' ),
+												array( 'code' => array() )
+											);
+											?>
+										</p>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<?php
+				$button_label = 0 === $recipient_count
+					? __( 'Ei vastaanottajia', 'rytkoset-theme' )
+					: sprintf(
+						/* translators: %d: recipient count */
+						_n(
+							'Lisää jonoon %d vastaanottajalle',
+							'Lisää jonoon %d vastaanottajalle',
+							$recipient_count,
+							'rytkoset-theme'
+						),
+						$recipient_count
+					);
+
+				$confirm_message = sprintf(
+					/* translators: 1: recipient count, 2: hourly limit */
+					__( 'Lisätäänkö viesti jonoon %1$d vastaanottajalle? Jono lähettää enintään %2$d viestiä tunnissa.', 'rytkoset-theme' ),
+					$recipient_count,
+					$hourly_limit
+				);
+				?>
+				<div class="postbox" id="rytkoset-messaging-send">
+					<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'Lisää lähetysjonoon', 'rytkoset-theme' ); ?></h2></div>
+					<div class="inside">
+						<div class="ra-actions">
+							<button
+								type="submit"
+								id="rytkoset-event-messaging-submit"
+								class="button button-primary"
+								<?php disabled( 0 === $recipient_count ); ?>
+								onclick="return confirm(<?php echo wp_json_encode( $confirm_message ); ?>);"
+							>
+								<?php echo esc_html( $button_label ); ?>
+							</button>
+							<span class="description">
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: 1: hourly limit, 2: available send attempts */
+										__( 'Jono lähettää enintään %1$d viestiä 60 minuutin aikana. Vapaita lähetyksiä nyt: %2$d.', 'rytkoset-theme' ),
+										$hourly_limit,
+										$available_attempt
+									)
+								);
+								?>
+							</span>
+						</div>
+					</div>
+				</div>
+			</form>
 		</div>
 
 		<?php if ( function_exists( 'rytkoset_theme_render_event_feedback_queue_section' ) ) : ?>
 			<?php rytkoset_theme_render_event_feedback_queue_section( $selected_event ); ?>
 		<?php endif; ?>
 
-		<h2><?php esc_html_e( 'Viesti', 'rytkoset-theme' ); ?></h2>
+		<h2><?php esc_html_e( 'Lähetysjono ja loki', 'rytkoset-theme' ); ?></h2>
 
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="max-width: 760px;">
-			<input type="hidden" name="action" value="rytkoset_send_event_participants_message" />
-			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $selected_event ); ?>" />
-			<input type="hidden" name="status" value="<?php echo esc_attr( $selected_status ); ?>" />
-			<?php wp_nonce_field( 'rytkoset_send_event_participants_message', 'rytkoset_event_messaging_nonce' ); ?>
-
-			<table class="form-table" role="presentation">
-				<tbody>
-					<tr>
-						<th scope="row">
-							<label for="rytkoset-event-messaging-subject"><?php esc_html_e( 'Aihe', 'rytkoset-theme' ); ?></label>
-						</th>
-						<td>
-							<input
-								type="text"
-								name="subject"
-								id="rytkoset-event-messaging-subject"
-								class="regular-text"
-								required
-								maxlength="200"
-							/>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row">
-							<label for="rytkoset-event-messaging-body"><?php esc_html_e( 'Viesti', 'rytkoset-theme' ); ?></label>
-						</th>
-						<td>
-							<textarea
-								name="body"
-								id="rytkoset-event-messaging-body"
-								rows="10"
-								class="large-text"
-								required
-							></textarea>
-							<p class="description">
-								<?php
-								echo wp_kses(
-									__( 'Voit käyttää placeholdereita: <code>{nimi}</code> korvautuu osallistujan nimellä, <code>{tapahtuma}</code> tapahtuman otsikolla ja <code>{palautelinkki}</code> valitun tapahtuman palautelomakkeen osoitteella (toimii vain kun yksi tapahtuma on valittuna). Viesti lähetetään tekstimuotoisena.', 'rytkoset-theme' ),
-									array( 'code' => array() )
-								);
-								?>
-							</p>
-						</td>
-					</tr>
-				</tbody>
-			</table>
-
-			<?php
-			$button_label = 0 === $recipient_count
-				? __( 'Ei vastaanottajia', 'rytkoset-theme' )
-				: sprintf(
-					/* translators: %d: recipient count */
-					_n(
-						'Lisää jonoon %d vastaanottajalle',
-						'Lisää jonoon %d vastaanottajalle',
-						$recipient_count,
-						'rytkoset-theme'
-					),
-					$recipient_count
-				);
-
-			$confirm_message = sprintf(
-				/* translators: 1: recipient count, 2: hourly limit */
-				__( 'Lisätäänkö viesti jonoon %1$d vastaanottajalle? Jono lähettää enintään %2$d viestiä tunnissa.', 'rytkoset-theme' ),
-				$recipient_count,
-				$hourly_limit
-			);
-			?>
-			<p class="submit">
-				<button
-					type="submit"
-					class="button button-primary"
-					<?php disabled( 0 === $recipient_count ); ?>
-					onclick="return confirm(<?php echo wp_json_encode( $confirm_message ); ?>);"
-				>
-					<?php echo esc_html( $button_label ); ?>
-				</button>
-			</p>
-		</form>
-
-		<h2><?php esc_html_e( 'Lähetysjono', 'rytkoset-theme' ); ?></h2>
-		<p class="description">
-			<?php
-			echo esc_html(
-				sprintf(
-					/* translators: 1: hourly limit, 2: available send attempts */
-					__( 'Jono lähettää enintään %1$d viestiä 60 minuutin aikana. Vapaita lähetyksiä tällä hetkellä: %2$d.', 'rytkoset-theme' ),
-					$hourly_limit,
-					$available_attempt
-				)
-			);
-			?>
-		</p>
-
-		<?php if ( empty( $queue_entries ) ) : ?>
-			<p><?php esc_html_e( 'Ei jonossa olevia viestejä.', 'rytkoset-theme' ); ?></p>
+		<?php if ( empty( $overview_rows ) ) : ?>
+			<p><?php esc_html_e( 'Ei jonossa olevia tai lähetettyjä viestejä.', 'rytkoset-theme' ); ?></p>
 		<?php else : ?>
-			<table class="widefat striped">
-				<thead>
-					<tr>
-						<th scope="col"><?php esc_html_e( 'Luotu', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Lähettäjä', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Aihe', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Tila', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Jonossa', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Lähetetty', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Epäonnistunut', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Ohitettu', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Viimeksi lähetetty', 'rytkoset-theme' ); ?></th>
+			<?php // Explicit roles keep table semantics when the cells are restyled as cards on narrow screens. ?>
+			<table class="widefat striped ra-responsive-table rytkoset-messaging-table" role="table">
+				<thead role="rowgroup">
+					<tr role="row">
+						<th role="columnheader" scope="col" class="column-primary"><?php esc_html_e( 'Aihe', 'rytkoset-theme' ); ?></th>
+						<th role="columnheader" scope="col"><?php esc_html_e( 'Tila', 'rytkoset-theme' ); ?></th>
+						<th role="columnheader" scope="col"><?php esc_html_e( 'Vastaanottajia', 'rytkoset-theme' ); ?></th>
+						<th role="columnheader" scope="col"><?php esc_html_e( 'Aika', 'rytkoset-theme' ); ?></th>
 					</tr>
 				</thead>
-				<tbody>
-					<?php foreach ( $queue_entries as $entry ) : ?>
-						<tr>
-							<td><?php echo esc_html( (string) ( $entry['created_at'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['sender_name'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['event_title'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['subject'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( rytkoset_theme_get_event_messaging_job_status_label( $entry ) ); ?></td>
-							<td><?php echo esc_html( (string) rytkoset_theme_get_event_messaging_pending_recipient_count( $entry ) ); ?></td>
-							<td><?php echo esc_html( (string) ( (int) ( $entry['sent_count'] ?? 0 ) ) ); ?></td>
-							<td><?php echo esc_html( (string) ( (int) ( $entry['failed_count'] ?? 0 ) ) ); ?></td>
-							<td><?php echo esc_html( (string) ( (int) ( $entry['skipped_count'] ?? 0 ) ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['last_sent_at'] ?? '' ) ); ?></td>
-						</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-		<?php endif; ?>
-
-		<h2><?php esc_html_e( 'Lähetysloki', 'rytkoset-theme' ); ?></h2>
-		<?php $log_entries = rytkoset_theme_get_event_messaging_log( 20 ); ?>
-
-		<?php if ( empty( $log_entries ) ) : ?>
-			<p><?php esc_html_e( 'Ei lähetettyjä viestejä.', 'rytkoset-theme' ); ?></p>
-		<?php else : ?>
-			<table class="widefat striped">
-				<thead>
-					<tr>
-						<th scope="col"><?php esc_html_e( 'Aika', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Lähettäjä', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Tapahtuma', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Aihe', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Lähetetty', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Epäonnistunut', 'rytkoset-theme' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Ohitettu', 'rytkoset-theme' ); ?></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php foreach ( $log_entries as $entry ) : ?>
-						<tr>
-							<td><?php echo esc_html( (string) ( $entry['timestamp'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['sender_name'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['event_title'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( $entry['subject'] ?? '' ) ); ?></td>
-							<td><?php echo esc_html( (string) ( (int) ( $entry['sent_count'] ?? 0 ) ) ); ?></td>
-							<td><?php echo esc_html( (string) ( (int) ( $entry['failed_count'] ?? 0 ) ) ); ?></td>
-							<td><?php echo esc_html( (string) ( (int) ( $entry['skipped_count'] ?? 0 ) ) ); ?></td>
+				<tbody role="rowgroup">
+					<?php foreach ( $overview_rows as $row ) : ?>
+						<tr role="row">
+							<td role="cell" class="column-primary" data-colname="<?php esc_attr_e( 'Aihe', 'rytkoset-theme' ); ?>">
+								<strong><?php echo esc_html( $row['subject'] ); ?></strong>
+								<span class="ra-sub"><?php echo esc_html( implode( ' · ', array_filter( array( $row['event_title'], $row['sender_name'] ) ) ) ); ?></span>
+							</td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Tila', 'rytkoset-theme' ); ?>">
+								<span class="ra-cell">
+									<span class="ra-badge ra-badge--<?php echo esc_attr( $row['variant'] ); ?>"><?php echo esc_html( $row['status_label'] ); ?></span>
+									<?php if ( $row['failed'] > 0 || $row['skipped'] > 0 ) : ?>
+										<?php /* translators: 1: sent count, 2: failed count, 3: skipped count */ ?>
+										<span class="ra-sub"><?php echo esc_html( sprintf( __( 'Lähetetty %1$d, epäonnistui %2$d, ohitettu %3$d', 'rytkoset-theme' ), $row['sent'], $row['failed'], $row['skipped'] ) ); ?></span>
+									<?php endif; ?>
+								</span>
+							</td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Vastaanottajia', 'rytkoset-theme' ); ?>"><?php echo esc_html( (string) $row['recipients'] ); ?></td>
+							<td role="cell" data-colname="<?php esc_attr_e( 'Aika', 'rytkoset-theme' ); ?>"><?php echo esc_html( $row['time'] ); ?></td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>
@@ -942,6 +1007,30 @@ function rytkoset_theme_render_event_messaging_admin_page() {
 	</div>
 	<?php
 }
+
+/**
+ * Loads the messaging page script: updates recipients on filter change and keeps
+ * the message draft across that reload (#696).
+ *
+ * @param string $hook_suffix Admin page hook.
+ * @return void
+ */
+function rytkoset_theme_enqueue_event_messaging_admin_script( $hook_suffix ) {
+	if ( 'rytkoset_event_page_rytkoset-event-messaging' !== $hook_suffix ) {
+		return;
+	}
+
+	$path = get_template_directory() . '/assets/js/event-messaging-admin.js';
+
+	wp_enqueue_script(
+		'rytkoset-event-messaging-admin',
+		get_template_directory_uri() . '/assets/js/event-messaging-admin.js',
+		array(),
+		rytkoset_theme_get_asset_version( $path ),
+		true
+	);
+}
+add_action( 'admin_enqueue_scripts', 'rytkoset_theme_enqueue_event_messaging_admin_script' );
 
 /**
  * Handles the bulk message form: validates input, queues recipients,

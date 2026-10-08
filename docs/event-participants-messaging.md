@@ -16,16 +16,34 @@ Ylläpitäjä ja tapahtumajärjestäjä voivat lisätä sähköpostiviestin tapa
 
 ## Mitä sivu sisältää
 
+Sivu etenee kolmena numeroituna vaiheena (#696): **1. Valitse vastaanottajat**,
+**2. Kirjoita viesti** ja **3. Lisää lähetysjonoon**. Vaiheiden jälkeen tulevat
+mahdollinen Palautekysely-osio ja yhteinen **Lähetysjono ja loki** -taulukko.
+
 ### Suodattimet
 
-Sivun yläosassa on samat suodattimet kuin osallistujalistalla:
+Ensimmäisessä vaiheessa on samat suodattimet kuin osallistujalistalla:
 
 - **Tapahtuma:** yksittäinen tapahtuma tai `Kaikki tapahtumat`
 - **Status:** kaikki, jokin yksittäinen rekisteröintistatus (`pending`/`confirmed`/`cancelled`) tai `Maksulliset` (WooCommerce-tilaukset)
 
-Suodattimien jälkeen näkyy vastaanottajamäärä:
+Vastaanottajat päivittyvät heti, kun tapahtumaa tai statusta vaihtaa: sivu
+latautuu uudelleen. Valintojen yläpuolella oleva ohjeteksti kertoo tästä
+etukäteen (WCAG 3.2.2), ja se on liitetty molempiin valintoihin
+`aria-describedby`-määritteellä, joten ruudunlukija lukee sen ennen valintaa.
+Jo kirjoitettu aihe ja viesti säilyvät uudelleenlatauksen yli välilehden
+`sessionStorage`-muistissa, ja kohdistus palaa vaihdettuun valintaan.
+Lähetetty viesti poistetaan muistista. Ilman JavaScriptiä suodattimen
+vieressä on **Päivitä vastaanottajat** -painike.
 
-> *"Viesti lisätään jonoon 23 vastaanottajalle (osoitteita puuttuu 2)."*
+Jos selain ei salli viestin tallentamista (esim. estetty selaintallennus),
+sivua ei ladata uudelleen, koska kirjoitettu viesti katoaisi. Tilalle tulee
+varoitus ja **Päivitä vastaanottajat** -painike, ja lähetyspainike poistuu
+käytöstä, koska lähetyslomake käyttäisi yhä vanhaa rajausta.
+
+Suodattimien alla oleva tietolaatikko kertoo vastaanottajamäärän ja
+osoitteettomat osallistujat sekä linkin **Näytä osallistujat**, joka avaa
+osallistujalistan samalla tapahtuma- ja statussuodatuksella.
 
 Osoitteita puuttuvat osallistujat ohitetaan automaattisesti. Maksullisen osallistujan oma vapaaehtoinen osoite on ensisijainen; sen puuttuessa käytetään ostajan laskutusosoitetta ja nimeä. Vastaanottajat deduplikoidaan kirjainkoosta riippumatta koko tapahtumassa, myös eri tilausten sekä maksuttoman ja maksullisen polun välillä. Ostajan osoitteeseen käytetään ostajan nimeä. Jos muuhun jaettuun osoitteeseen liittyy eri nimiä, `{nimi}` saa neutraalin arvon `osallistuja`. Toisen henkilön osoitteeseen lähtevä viesti sisältää tiedon osoitteen lähteestä ja tietosuojasta.
 
@@ -59,7 +77,7 @@ Esim. *"Hei {nimi}, tervetuloa tapahtumaan {tapahtuma}!"* lähetetään yksilöl
 
 ### Lähetys ja jono
 
-Lähetyspainike on muodossa "Lisää jonoon X vastaanottajalle" ja näyttää tarkistuksen ennen jonotusta. Jos vastaanottajia on 0, painike on disabloitu.
+Kolmannessa vaiheessa lähetyspainike on muodossa "Lisää jonoon X vastaanottajalle" ja näyttää tarkistuksen ennen jonotusta. Painikkeen alla kerrotaan tuntiraja ja tällä hetkellä vapaiden lähetysten määrä. Jos vastaanottajia on 0, painike on disabloitu.
 
 Nimikorjaus koskee uusia jonotuksia. Jo jonossa oleviin viesteihin vastaanottajien nimet on tallennettu jonotuksen yhteydessä.
 
@@ -73,48 +91,31 @@ WP-Cron käynnistyy normaalisti sivulatausten yhteydessä. Tuotannossa lähetyks
 
 Lähettäjäksi tulee WordPressin oletusosoite (admin_email). Vastauksia varten viestiin lisätään `Reply-To`-otsake, joka on lähettävän käyttäjän sähköpostiosoite.
 
-### Lähetysjonon tila
+### Lähetysjono ja loki
 
-Sivulla näkyy lähetysjonon taulukko ennen lokia:
-
-| Sarake | Sisältö |
-| --- | --- |
-| Luotu | Jonotyön luontiaika |
-| Lähettäjä | Jonotyön luonut käyttäjä |
-| Tapahtuma | Tapahtuman otsikko (tai "Kaikki tapahtumat") |
-| Aihe | Sähköpostin aihe |
-| Tila | `Jonossa` tai `Käsittelyssä` |
-| Jonossa | Odottavien vastaanottajien määrä |
-| Lähetetty | Onnistuneiden lähetysten määrä |
-| Epäonnistunut | Epäonnistuneiden lähetysten määrä |
-| Ohitettu | Osallistujat, joilta puuttui osoite |
-| Viimeksi lähetetty | Viimeisin vastaanottajakohtainen lähetysaika |
-
-### Lähetysloki
-
-Sivun alaosassa näkyy taulukko viimeisestä 20 valmistuneesta jonotyöstä:
+Sivun alaosassa on yksi taulukko (#696), jossa ovat ensin jonossa olevat työt
+ja sitten viimeiset 20 valmistunutta lähetystä:
 
 | Sarake | Sisältö |
 | --- | --- |
-| Aika | Jonotyön valmistumisaika |
-| Lähettäjä | Lähetyksen tehnyt käyttäjä |
-| Tapahtuma | Tapahtuman otsikko (tai "Kaikki tapahtumat") |
-| Aihe | Sähköpostin aihe |
-| Lähetetty | Onnistuneiden lähetysten määrä |
-| Epäonnistunut | `wp_mail()`-tason epäonnistumiset |
-| Ohitettu | Osallistujat, joilta puuttui osoite |
+| Aihe | Sähköpostin aihe; alla tapahtuman otsikko (tai "Kaikki tapahtumat") ja lähettäjä |
+| Tila | Tilamerkki: sininen **Jonossa, X / Y jäljellä**, vihreä **Lähetetty** tai **Valmis**, keltainen **Lähetetty** kun osa epäonnistui ja punainen **Epäonnistui** kun yksikään ei mennyt perille. Alla epäonnistuneiden ja ohitettujen (ei osoitetta) määrät, kun niitä on |
+| Vastaanottajia | Työn vastaanottajien kokonaismäärä |
+| Aika | Jonossa olevalla työllä luontiaika, valmiilla valmistumisaika |
+
+Kapealla näytöllä taulukon rivit näkyvät kortteina sarakeotsikoineen.
 
 Lokia tallennetaan max 50 viimeisintä merkintää WordPressin option-taulukkoon avaimella `rytkoset_event_messaging_log`. Vanhin merkintä poistuu, kun uusi tulee tilalle (FIFO).
 
 ### Palautekysely-osio (#666)
 
 Kun yksittäinen tapahtuma on valittuna (ei `Kaikki tapahtumat`), tapahtuman
-palautekysely ei ole `Ei palautekyselyä` -tilassa ja tapahtuma on ohi, viesti-
-lomakkeen yläpuolelle ilmestyy oma "Palautekysely"-osio. Se näyttää
+palautekysely ei ole `Ei palautekyselyä` -tilassa ja tapahtuma on ohi, kolmen
+vaiheen alapuolelle ilmestyy oma "Palautekysely"-osio. Se näyttää
 vastaanottajaerittelyn (osallistujarivit / yksilölliset osoitteet / ilman
 osoitetta jäävät) ja "Lisää palautepyyntö jonoon" -painikkeen, joka lähettää
 kiinteän aihe-/runkomallin (tapahtuman johdantoteksti + `{palautelinkki}`)
-samaan jonoon kuin yllä oleva yleinen viestilomake. Painike katoaa, kun
+samaan jonoon kuin yläpuolella oleva yleinen viestilomake. Painike katoaa, kun
 palautepyyntö on jo jonotettu tälle tapahtumalle (`_rytkoset_event_feedback_queued_at`).
 
 ## Oikeudet
@@ -136,6 +137,8 @@ Pääfunktiot:
 - `rytkoset_theme_process_event_messaging_queue()` — WP-Cron-prosessori, joka purkaa jonoa 18 viestiä / rullaava 60 minuuttia -rajalla
 - `rytkoset_theme_get_event_messaging_send_attempts()` — lukee viimeisen tunnin lähetysyritykset `rytkoset_event_messaging_send_attempts`-optiosta
 - `rytkoset_theme_append_event_messaging_log($entry)` / `rytkoset_theme_get_event_messaging_log($limit)` — lokin tallennus ja haku
+- `rytkoset_theme_get_event_messaging_overview_rows($queue, $log)` — yhdistää jonon ja lokin taulukon riveiksi tilamerkkeineen (#696)
+- `rytkoset_theme_enqueue_event_messaging_admin_script()` — lataa `assets/js/event-messaging-admin.js`:n vain Viestintä-sivulle: suodattimen automaattinen päivitys, luonnoksen ja kohdistuksen säilytys (#696)
 
 Vastaanottajien haku hyödyntää [`event-participants-admin.php`](../wp-content/themes/rytkoset-theme/inc/event-participants-admin.php):n olemassa olevia funktioita `rytkoset_theme_get_event_participants()` ja `rytkoset_theme_get_all_events_participants()`. Rivit ajetaan `rytkoset_theme_filter_active_event_participants()`-funktion läpi ennen vastaanottajien muodostamista.
 

@@ -961,6 +961,12 @@ body.wp-admin mark.onbackorder {
 	border-radius: 1px;
 }
 
+/* Informational state or category (#696, #698). */
+.ra-badge--info {
+	background: var(--ra-info-bg);
+	color: var(--ra-info);
+}
+
 /* Row actions in the theme's own tables are always visible, like list tables. */
 .ra-responsive-table .row-actions {
 	position: static;
@@ -1023,4 +1029,87 @@ body.wp-admin mark.onbackorder {
 	.ra-responsive-table td:empty {
 		display: none;
 	}
+}
+
+/* ---------- Messaging and feedback (#696) ---------- */
+/* The advance notice sits on its own row above the filter selects. */
+#rytkoset-event-messaging-filter-help {
+	flex-basis: 100%;
+	max-width: none;
+	margin: 0 0 4px;
+}
+
+/* Long event titles must not widen the filter past a narrow screen. */
+#rytkoset-event-messaging-filter select {
+	min-width: 0;
+	max-width: 100%;
+}
+
+/* The long feedback queue button wraps instead of widening a 320 px screen. */
+body.wp-admin.wp-core-ui .button.rytkoset-feedback-queue-button {
+	max-width: 100%;
+	height: auto;
+	min-height: var(--ra-control-h);
+	padding-top: 6px;
+	padding-bottom: 6px;
+	line-height: 1.4;
+	white-space: normal;
+	text-align: center;
+}
+
+@media screen and (max-width: 782px) {
+	body.wp-admin.wp-core-ui .button.rytkoset-feedback-queue-button {
+		min-height: var(--ra-control-h-touch);
+	}
+}
+
+/* "Jonossa, 1000 / 1000 jäljellä" must wrap instead of widening a 320 px card. */
+.rytkoset-messaging-table .ra-badge {
+	white-space: normal;
+}
+
+/* Numbered steps: the number is decoration, the heading text carries the meaning. */
+.ra-steps {
+	counter-reset: ra-step;
+}
+
+.ra-steps .postbox .hndle::before {
+	counter-increment: ra-step;
+	content: counter(ra-step);
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	margin-right: 10px;
+	border-radius: 50%;
+	background: var(--ra-primary);
+	color: var(--ra-text-inverted);
+	font-size: var(--ra-text-sm);
+}
+
+.ra-steps .postbox .postbox-header .hndle {
+	justify-content: flex-start;
+}
+
+.ra-steps .notice.inline {
+	margin: 14px 0 0;
+}
+
+.rytkoset-feedback-table .rytkoset-feedback-table__rating {
+	width: 80px;
+}
+
+.rytkoset-feedback-table .rytkoset-feedback-table__actions {
+	width: 90px;
+}
+
+.rytkoset-feedback-table__score {
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.rytkoset-feedback-table .rytkoset-feedback-table__text {
+	white-space: pre-wrap;
 }
