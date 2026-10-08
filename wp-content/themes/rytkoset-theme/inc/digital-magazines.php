@@ -228,7 +228,7 @@ function rytkoset_theme_register_digital_magazine_access_metabox( $post ) {
 
 	add_meta_box(
 		'rytkoset-digital-magazine-access',
-		__( 'Käyttöoikeus', 'rytkoset-theme' ),
+		__( 'Myynti ja käyttöoikeus', 'rytkoset-theme' ),
 		'rytkoset_theme_render_digital_magazine_access_metabox',
 		'digital_magazine',
 		'side',
@@ -266,6 +266,13 @@ function rytkoset_theme_render_digital_magazine_access_metabox( $post ) {
 		<?php esc_html_e( 'Asetetaan vain lehdelle. Jutut perivät emolehden käyttöoikeusmallin.', 'rytkoset-theme' ); ?>
 	</p>
 	<?php
+	/**
+	 * Renders more fields in the same box, below the access mode (#698).
+	 * inc/woocommerce-digital-magazine.php adds the product links here.
+	 *
+	 * @param WP_Post $post Edited magazine.
+	 */
+	do_action( 'rytkoset_theme_digital_magazine_access_metabox_after', $post );
 }
 
 /**
