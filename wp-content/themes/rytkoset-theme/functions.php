@@ -28,6 +28,7 @@ require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 require_once get_template_directory() . '/inc/youtube-privacy.php';
 require_once get_template_directory() . '/inc/media-library.php';
+require_once get_template_directory() . '/inc/media-usage.php';
 require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/home-highlight.php';

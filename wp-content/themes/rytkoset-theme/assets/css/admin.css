@@ -1120,3 +1120,18 @@ body.wp-admin.wp-core-ui .button.rytkoset-feedback-queue-button {
 .rytkoset-feedback-table .rytkoset-feedback-table__text {
 	white-space: pre-wrap;
 }
+
+/* ---------- Media usage (#702) ---------- */
+.rytkoset-media-usage {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rytkoset-media-usage li {
+	margin: 0 0 2px;
+}
+
+.rytkoset-media-in-use {
+	color: var(--ra-text-mute);
+}
