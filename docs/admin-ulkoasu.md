@@ -8,7 +8,7 @@ Hallintapaneelin ulkoasu tuo wp-adminin samaan ilmeeseen julkisen sivuston kanss
 - `wp-content/themes/rytkoset-theme/assets/css/admin.css` sisältää kaikki tyylit. Arvot ovat `--ra-*`-muuttujissa tiedoston alussa. Sama tiedosto ladataan myös mukauttajaan (`customize_controls_enqueue_scripts`).
 - `wp-content/themes/rytkoset-theme/assets/css/editor-style.css` antaa lohkoeditorin sisällölle julkisen sivun perustekstin (`system-ui`-fonttipino, tekstiväri, riviväli, linkkiväri). Se lisätään editorin asetuksiin `block_editor_settings_all`-suotimella eikä `add_theme_support( 'editor-styles' )` -kutsulla, koska tuki vaihtaisi Ulkoasu-valikon Lohkomallit-kohdan koko sivustoeditoriksi. Julkinen sivu ei käytä Manropea eikä Newsreaderia leipätekstissä, joten editori ei käytä niitäkään. Hätäkatkaisin poistaa myös editor-tyylin.
 
-Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin, laskureiden ja painikkeiden värit pysyvät samoina, vaikka käyttäjä olisi valinnut profiilissaan toisen väriasetelman. Väriasetelma voi silti vaikuttaa yksittäisiin kohtiin, joita tyyli ei kata. Väriasetelman valinnan poisto kuuluu viipaleeseen #699.
+Tyyli koskee kaikkia hallinnan käyttäjiä. Väriasetelman valinta on poistettu profiilista (#699), ja kaikille käytetään WordPressin oletusasetelmaa, joten värit ovat kaikilla samat. Käyttäjän aiemmin tallentama valinta säilyy ja palautuu, jos hätäkatkaisin otetaan käyttöön.
 
 ## Viipaleet
 
@@ -20,7 +20,7 @@ Tyyli koskee kaikkia hallinnan käyttäjiä. Ylä- ja sivupalkin, sijaintimerkin
 | 3b | #694 | Kojelaudan omat widgetit ja roolikohtainen näkyvyys | Tehty |
 | 4a | #695 | Oma näkymä: Tapahtumat > Osallistujat (tilamerkit, yhteenvetokortit, mobiilin korttirivit) | Tehty |
 | 4b–4d | #696–#698 | Omat näkymät: Viestintä ja Palaute, Verkkojäsenyydet, Digilehdet | Tehty |
-| 5 | #699 | Valikon ryhmittely ja roolit | Vaatii hallituksen päätöksen |
+| 5 | #699 | Valikon ryhmittely ja roolit | Tehty |
 | 6 | #700 | Viimeistely: Newsreader-sivuotsikot, mediaruudukko, editor-tyylit, mukauttaja | Tehty |
 
 ## Hätäkatkaisin
@@ -50,6 +50,12 @@ Vakio ohittaa myös suotimen. Koodista tyylin saa pois suotimella `rytkoset_them
 11. **Tukichatti-laatikko** näyttää tilan ensin tilamerkkinä (Käytössä, Pois päältä, Ei käytössä) ja ohjeen sen muuttamiseen. Tekniset luvut ovat **Tekniset tiedot** -avattavan takana.
 12. **Tekniset laatikot piilotetaan muilta kuin ylläpitäjiltä** (`manage_options`): Site Health, PHP- ja selainkehotteet, WordPress-tapahtumat ja -uutiset sekä Rank Mathin laatikko. Toiminta ja WooCommercen tilalaatikko säilyvät. Listaa voi muuttaa suotimella `rytkoset_theme_dashboard_technical_widgets`.
 13. **Paytrailin testitila- ja valuuttailmoitus** näkyy vain käyttäjille, jotka voivat muuttaa WooCommercen asetuksia (`manage_woocommerce`: ylläpitäjä ja kauppapäällikkö). Muita pluginien ilmoituksia ei piiloteta: piilotus tehdään vain erikseen tunnistetuille ilmoituksille, jotta toimintaan vaikuttavat virheet eivät katoa. Paikallisesti tarkistettuna tapahtumajärjestäjä ei nähnyt muita plugin-ilmoituksia.
+14. **Sivuvalikko on ryhmitelty** (#699): Ohjausnäkymä, sitten **Toiminta** (Tapahtumat, Uutiskirje, foorumit), **Sisältö** (Sivut, Artikkelit, Albumit, Digilehdet, Media, Kommentit), **Kauppa** (WooCommerce, Tuotteet, Maksut, Analytiikka, Markkinointi) ja **Ylläpito** (Käyttäjät tai Profiili, Ulkoasu, Lisäosat, Työkalut, Asetukset, Rank Math, ACF ja uudet lisäosat). Jokainen näkee edelleen vain kohdat, joihin hänellä on oikeus; ryhmä, josta käyttäjä ei näe mitään, jää kokonaan pois otsikkoineen. Ryhmäotsikot ovat oikeita otsikoita (`h2`), jotka myös ruudunlukija lukee; WordPress tulostaa erottimet tyhjinä, joten teeman pieni skripti lisää otsikon heti valikon jälkeen. Kun valikko on taitettu kuvakkeiksi (myös automaattisesti 783–960 px:n näytöllä), otsikko piilotetaan näkyvistä mutta ruudunlukija lukee sen edelleen. Ilman tätä tyyliä (hätäkatkaisin) otsikoita ei lisätä, ja ryhmät erottuvat pelkkinä viivoina. Ryhmiä ja kohtia voi muuttaa suotimella `rytkoset_theme_admin_menu_groups`.
+15. **AcyMailing näkyy valikossa nimellä Uutiskirje.** Lisäosan omat sivut ovat ennallaan.
+16. **Yläpalkista on poistettu Rank Math ja Kommentit** muilta kuin ylläpitäjiltä.
+17. **Väriasetelman valinta on poistettu profiilista**, ja kaikki näkevät WordPressin oletusasetelman, jotta brändivärit ovat kaikille samat. Käyttäjän aiempi valinta säilyy tallennettuna, ja hätäkatkaisin palauttaa sen.
+18. **Roolinimet ovat suomeksi myös käyttäjälistan suodattimissa:** Avainmestari, Valvoja, Osallistuja, Katsoja, Estetty ja Tapahtumien järjestäjä.
+19. **Roolien vaihtaminen on vain ylläpitäjillä.** Käyttäjälistan roolinvaihtovalikot näkyivät jo valmiiksi vain ylläpitäjille. Profiilissa bbPressin foorumiroolin valinta ja teeman **Tapahtumien järjestäjä** -valinta näkyvät nyt vain käyttäjille, joilla on oikeus vaihtaa rooleja (`promote_users`). Aiemmin kauppapäällikkö näki molemmat asiakkaan profiilissa, ja tapahtumajärjestäjän valinta myös tallentui, vaikka se antaa pääsyn osallistujien henkilötietoihin.
 
 ## Tunnetut rajaukset
 

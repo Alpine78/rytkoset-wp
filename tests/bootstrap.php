@@ -184,6 +184,19 @@ class WP_User {
 	public function exists(): bool {
 		return $this->ID > 0;
 	}
+
+	/** @var string[] Roles, for tests that add or remove a secondary role. */
+	public array $roles = array();
+
+	public function add_role( $role ): void {
+		if ( ! in_array( $role, $this->roles, true ) ) {
+			$this->roles[] = (string) $role;
+		}
+	}
+
+	public function remove_role( $role ): void {
+		$this->roles = array_values( array_diff( $this->roles, array( (string) $role ) ) );
+	}
 }
 
 class WP_Post {
@@ -1265,6 +1278,10 @@ function update_meta_cache( $meta_type, $object_ids ) {
 
 function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_callback = null, $callback_args = null, $context = 'normal', $priority = 'core' ): void {
 	$GLOBALS['rytkoset_test_dashboard_widgets'][ (string) $widget_id ] = $callback;
+}
+
+function wp_print_inline_script_tag( $data, $attributes = array() ): void {
+	echo '<script>' . $data . '</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Test bootstrap.
 }
 
 function remove_meta_box( $id, $screen, $context ): void {
