@@ -342,6 +342,64 @@ body.wp-admin .wp-list-table.media .media-icon img {
 	background: linear-gradient(var(--ra-menu-divider), var(--ra-menu-divider)) center / calc(100% - 24px) 1px no-repeat;
 }
 
+/* Menu group headings (#699). inc/admin-menu.php adds an h2 to each group separator.
+ * When the menu is folded to icons the heading is moved off screen, like the item
+ * names, so screen readers still announce it. */
+#adminmenu li.ra-sep {
+	height: auto;
+	min-height: 15px;
+	margin: 14px 0 2px;
+	background: none;
+}
+
+#adminmenu .ra-sep__label {
+	margin: 0;
+	padding: 0 12px 4px;
+	color: var(--ra-menu-text);
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.4;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.folded #adminmenu li.ra-sep {
+	height: 5px;
+	min-height: 0;
+	margin: 0 0 6px;
+	background: linear-gradient(var(--ra-menu-divider), var(--ra-menu-divider)) center / calc(100% - 24px) 1px no-repeat;
+}
+
+.folded #adminmenu .ra-sep__label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* 783-960 px: core folds the menu to icons (.auto-fold); below that it opens full width. */
+@media only screen and (min-width: 783px) and (max-width: 960px) {
+	.auto-fold #adminmenu li.ra-sep {
+		height: 5px;
+		min-height: 0;
+		margin: 0 0 6px;
+		background: linear-gradient(var(--ra-menu-divider), var(--ra-menu-divider)) center / calc(100% - 24px) 1px no-repeat;
+	}
+
+	.auto-fold #adminmenu .ra-sep__label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+}
+
 /* Count bubbles: amber with dark text instead of alarm red, also on the current
  * item and on hover, where core color schemes switch them to their own colors. */
 #adminmenu .awaiting-mod,

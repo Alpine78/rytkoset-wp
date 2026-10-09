@@ -230,13 +230,15 @@ function rytkoset_theme_get_event_organizer_role_nonce_action( $user_id ) {
  *
  * The checkbox toggles the event_organizer role as a secondary role so a user can be, for
  * example, Päätoimittaja and Event Organizer at the same time. It leaves the WordPress primary
- * role (the normal role dropdown) untouched. Shown only to users who can edit users.
+ * role (the normal role dropdown) untouched. Shown only to users who can change roles
+ * (promote_users): WooCommerce gives shop managers edit_users for customers, which must
+ * not let them hand out event organizer access to participant data (#699).
  *
  * @param WP_User $user The user being edited.
  * @return void
  */
 function rytkoset_theme_render_user_event_organizer_field( $user ) {
-	if ( ! current_user_can( 'edit_users' ) || ! $user instanceof WP_User ) {
+	if ( ! $user instanceof WP_User || ! current_user_can( 'promote_users' ) || ! current_user_can( 'promote_user', $user->ID ) ) {
 		return;
 	}
 
@@ -284,7 +286,7 @@ add_action( 'edit_user_profile', 'rytkoset_theme_render_user_event_organizer_fie
 function rytkoset_theme_save_user_event_organizer_field( $user_id ) {
 	$user_id = (int) $user_id;
 
-	if ( ! current_user_can( 'edit_users' ) || ! current_user_can( 'edit_user', $user_id ) ) {
+	if ( ! current_user_can( 'promote_users' ) || ! current_user_can( 'promote_user', $user_id ) ) {
 		return;
 	}
 

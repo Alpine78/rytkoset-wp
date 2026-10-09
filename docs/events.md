@@ -421,7 +421,7 @@ Antaminen:
 2. Etsi osio **Tapahtumien järjestäjä** ja rastita **Tapahtumien järjestäjä (Event Organizer)**.
 3. Tallenna käyttäjä.
 
-Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus muokata käyttäjiä (`edit_users`). Rastin poisto poistaa vain Event Organizer -lisäroolin; käyttäjän muut roolit säilyvät.
+Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus vaihtaa käyttäjien rooleja (`promote_users`, käytännössä ylläpitäjä). Pelkkä käyttäjien muokkausoikeus (`edit_users`) ei riitä, koska WooCommerce antaa sen kauppapäällikölle asiakkaiden muokkaamista varten (#699). Rastin poisto poistaa vain Event Organizer -lisäroolin; käyttäjän muut roolit säilyvät.
 
 **Milloin mitäkin roolia käytetään:**
 
