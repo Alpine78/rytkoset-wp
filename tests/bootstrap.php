@@ -1280,6 +1280,24 @@ function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_
 	$GLOBALS['rytkoset_test_dashboard_widgets'][ (string) $widget_id ] = $callback;
 }
 
+function untrailingslashit( $value ) {
+	return rtrim( (string) $value, '/\\' );
+}
+
+function username_exists( $username ) {
+	foreach ( $GLOBALS['rytkoset_test_users'] as $user ) {
+		if ( $user->user_login === (string) $username ) {
+			return $user->ID;
+		}
+	}
+
+	return false;
+}
+
+function wp_rand( $min = 0, $max = 0 ) {
+	return null !== ( $GLOBALS['rytkoset_test_wp_rand'] ?? null ) ? (int) array_shift( $GLOBALS['rytkoset_test_wp_rand'] ) : random_int( (int) $min, (int) $max );
+}
+
 function wp_print_inline_script_tag( $data, $attributes = array() ): void {
 	echo '<script>' . $data . '</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Test bootstrap.
 }
