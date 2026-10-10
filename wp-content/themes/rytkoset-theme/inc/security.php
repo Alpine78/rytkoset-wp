@@ -371,3 +371,198 @@ if ( ! function_exists( 'rytkoset_theme_filter_registration_spam' ) ) {
 	}
 }
 add_filter( 'registration_errors', 'rytkoset_theme_filter_registration_spam', 10, 3 );
+
+if ( ! function_exists( 'rytkoset_theme_text_contains_personal_id' ) ) {
+	/**
+	 * Tells whether a text contains something shaped like a Finnish personal
+	 * identity code (henkilötunnus, #726).
+	 *
+	 * Matches ddmmyy with a valid day and month, a century sign (-, +, A-F,
+	 * U-Y), three digits and a check character, in any case and also inside a
+	 * longer string. The check character is not validated: a mistyped code is
+	 * still personal data.
+	 *
+	 * @param string $text Text to inspect, e.g. a username.
+	 * @return bool
+	 */
+	function rytkoset_theme_text_contains_personal_id( $text ) {
+		// No word boundaries: a code is personal data also when glued to other characters.
+		return 1 === preg_match( '/(?:0[1-9]|[12][0-9]|3[01])(?:0[1-9]|1[0-2])[0-9]{2}[-+A-FU-Y][0-9]{3}[0-9A-Y]/i', (string) $text );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_block_personal_id_usernames_enabled' ) ) {
+	/**
+	 * Tells whether usernames shaped like a personal identity code are blocked.
+	 *
+	 * @return bool
+	 */
+	function rytkoset_theme_block_personal_id_usernames_enabled() {
+		// Deliberately independent of rytkoset_theme_enable_security_hardening: this is
+		// personal data protection, not spam hardening.
+		/**
+		 * Filters whether new usernames shaped like a personal identity code are blocked (#726).
+		 *
+		 * @param bool $enabled Whether the block is on.
+		 */
+		return (bool) apply_filters( 'rytkoset_theme_block_personal_id_usernames', true );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_get_personal_id_username_error' ) ) {
+	/**
+	 * Returns the error shown when a typed username looks like a personal identity code.
+	 *
+	 * @return string
+	 */
+	function rytkoset_theme_get_personal_id_username_error() {
+		return __( 'Käyttäjätunnus näyttää henkilötunnukselta. Valitse toinen tunnus: käyttäjätunnus näkyy sivuston ylläpidossa, eikä henkilötunnusta saa käyttää siinä.', 'rytkoset-theme' );
+	}
+}
+
+if ( ! function_exists( 'rytkoset_theme_reject_personal_id_username' ) ) {
+	/**
+	 * Rejects a typed username shaped like a personal identity code on
+	 * WordPress registration and WooCommerce account creation.
+	 *
+	 * WooCommerce runs woocommerce_registration_errors also for usernames it
+	 * generated itself; those are replaced earlier in
+	 * rytkoset_theme_replace_generated_personal_id_username(), so only typed
+	 * usernames reach this error.
+	 *
+	 * @param WP_Error $errors   Registration errors.
+	 * @param string   $username Username.
+	 * @return WP_Error
+	 */
+	function rytkoset_theme_reject_personal_id_username( $errors, $username ) {
+		if ( $errors instanceof WP_Error && rytkoset_theme_block_personal_id_usernames_enabled() && rytkoset_theme_text_contains_personal_id( $username ) ) {
+			$errors->add( 'rytkoset_personal_id_username', rytkoset_theme_get_personal_id_username_error() );
+		}
+
+		return $errors;
+	}
+}
+add_filter( 'registration_errors', 'rytkoset_theme_reject_personal_id_username', 10, 2 );
+add_filter( 'woocommerce_registration_errors', 'rytkoset_theme_reject_personal_id_username', 10, 2 );
+
+if ( ! function_exists( 'rytkoset_theme_reject_personal_id_username_in_admin' ) ) {
+	/**
+	 * Rejects the same usernames when an administrator adds a user. Existing
+	 * users are not touched: WordPress does not change a login on update.
+	 *
+	 * @param WP_Error $errors Errors (passed by reference by core).
+	 * @param bool     $update Whether an existing user is updated.
+	 * @param stdClass $user   User data about to be saved.
+	 * @return void
+	 */
+	function rytkoset_theme_reject_personal_id_username_in_admin( $errors, $update, $user ) {
+		if ( $update || ! is_object( $user ) || ! isset( $user->user_login ) ) {
+			return;
+		}
+
+		rytkoset_theme_reject_personal_id_username( $errors, (string) $user->user_login );
+	}
+}
+add_action( 'user_profile_update_errors', 'rytkoset_theme_reject_personal_id_username_in_admin', 10, 3 );
+
+if ( ! function_exists( 'rytkoset_theme_replace_generated_personal_id_username' ) ) {
+	/**
+	 * Replaces a username WooCommerce generated from a name or an email address
+	 * when it looks like a personal identity code. The customer did not choose
+	 * it, so showing them an error would not help.
+	 *
+	 * @param string               $username      Generated username.
+	 * @param string               $email         New customer email address.
+	 * @param array<string, mixed> $new_user_args New user args, maybe with first and last name.
+	 * @return string
+	 */
+	function rytkoset_theme_replace_generated_personal_id_username( $username, $email = '', $new_user_args = array() ) {
+		if ( ! rytkoset_theme_block_personal_id_usernames_enabled() ) {
+			return $username;
+		}
+
+		// The username is already sanitized, which drops a "+" century sign, so the
+		// sources it was built from (email local part, first and last name) are checked too.
+		$at      = strrpos( (string) $email, '@' );
+		$sources = array(
+			(string) $username,
+			false !== $at ? substr( (string) $email, 0, $at ) : (string) $email,
+			(string) ( $new_user_args['first_name'] ?? '' ),
+			(string) ( $new_user_args['last_name'] ?? '' ),
+		);
+
+		if ( ! rytkoset_theme_text_contains_personal_id( implode( ' ', $sources ) ) ) {
+			return $username;
+		}
+
+		for ( $attempt = 0; $attempt < 20; $attempt++ ) {
+			$candidate = 'asiakas-' . str_pad( (string) wp_rand( 0, 999999 ), 6, '0', STR_PAD_LEFT );
+
+			if ( ! username_exists( $candidate ) ) {
+				return $candidate;
+			}
+		}
+
+		return 'asiakas-' . wp_generate_password( 12, false );
+	}
+}
+add_filter( 'woocommerce_new_customer_username', 'rytkoset_theme_replace_generated_personal_id_username', 10, 3 );
+
+if ( ! function_exists( 'rytkoset_theme_prevent_personal_id_user_insert' ) ) {
+	/**
+	 * Last line of defence for new users created without a form, e.g. through
+	 * the REST API (/wp/v2/users), WP-CLI or another plugin calling
+	 * wp_insert_user() directly. Returning an empty array makes core stop with
+	 * its own error. Updates of existing users are never touched.
+	 *
+	 * The raw requested login is checked too, because core's sanitizing drops a
+	 * "+" century sign from the stored one.
+	 *
+	 * @param array<string, mixed> $data     User data about to be inserted.
+	 * @param bool                 $update   Whether an existing user is updated.
+	 * @param int|null             $user_id  User ID, null for a new user.
+	 * @param array<string, mixed> $userdata Raw data passed to wp_insert_user().
+	 * @return array<string, mixed>
+	 */
+	function rytkoset_theme_prevent_personal_id_user_insert( $data, $update, $user_id = null, $userdata = array() ) {
+		if ( $update || ! is_array( $data ) || ! rytkoset_theme_block_personal_id_usernames_enabled() ) {
+			return $data;
+		}
+
+		$logins = (string) ( $data['user_login'] ?? '' ) . ' ' . ( is_array( $userdata ) ? (string) ( $userdata['user_login'] ?? '' ) : '' );
+
+		return rytkoset_theme_text_contains_personal_id( $logins ) ? array() : $data;
+	}
+}
+add_filter( 'wp_pre_insert_user_data', 'rytkoset_theme_prevent_personal_id_user_insert', 10, 4 );
+
+if ( ! function_exists( 'rytkoset_theme_reject_personal_id_rest_user' ) ) {
+	/**
+	 * Gives a REST user creation a clear 400 error instead of the generic
+	 * insert failure from rytkoset_theme_prevent_personal_id_user_insert().
+	 *
+	 * Runs before the endpoint callback: core's users controller does not check
+	 * a WP_Error returned from rest_pre_insert_user.
+	 *
+	 * @param mixed           $response Response so far (null to continue).
+	 * @param array           $handler  Route handler.
+	 * @param WP_REST_Request $request  Request.
+	 * @return mixed
+	 */
+	function rytkoset_theme_reject_personal_id_rest_user( $response, $handler, $request ) {
+		if ( null !== $response || ! is_object( $request ) || ! method_exists( $request, 'get_route' ) || ! rytkoset_theme_block_personal_id_usernames_enabled() ) {
+			return $response;
+		}
+
+		if ( 'POST' !== $request->get_method() || '/wp/v2/users' !== untrailingslashit( $request->get_route() ) ) {
+			return $response;
+		}
+
+		if ( rytkoset_theme_text_contains_personal_id( (string) $request->get_param( 'username' ) ) ) {
+			return new WP_Error( 'rytkoset_personal_id_username', rytkoset_theme_get_personal_id_username_error(), array( 'status' => 400 ) );
+		}
+
+		return $response;
+	}
+}
+add_filter( 'rest_request_before_callbacks', 'rytkoset_theme_reject_personal_id_rest_user', 10, 3 );
