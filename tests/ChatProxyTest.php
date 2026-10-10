@@ -320,19 +320,9 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa', $context );
 		$this->assertStringContainsString( '/kauppa/sukulehdet/rytkosten-sukulainen-nro-9/', $context );
 		$this->assertStringContainsString( 'Se on painettu lehti eikä digilehti', $context );
-		$this->assertStringContainsString( 'Hallituskausi on 2023-2026', $context );
-		$this->assertStringContainsString( 'Esa Rytkönen (jäsen, Espoo / Maaninka)', $context );
-		$this->assertStringContainsString( 'Mikko Rytkönen (suvun esimies, Runni)', $context );
-		$this->assertStringContainsString( 'Antti Rytkönen (puheenjohtaja, Tampere)', $context );
-		$this->assertStringContainsString( 'Eeli Rytkönen (Kinnulanlahti / Maaninka)', $context );
-		$this->assertStringContainsString( 'Eeva-Liisa Ryhänen (jäsen, Helsinki)', $context );
-		$this->assertStringContainsString( 'Ilkka Rytkönen (jäsen / rytkoset.net ylläpitäjä, Kuopio)', $context );
-		$this->assertStringContainsString( 'Juha Rytkönen (jäsen, Maavesi / Joroinen)', $context );
-		$this->assertStringContainsString( 'Mauri Rytkönen (jäsen, Helsinki)', $context );
-		$this->assertStringContainsString( 'Tapani Rytkönen (sihteeri, Pieksämäki)', $context );
-		$this->assertStringContainsString( 'Kimmo Tuulenkari (jäsen, Kajaani)', $context );
-		$this->assertStringContainsString( 'äläkä lisää muita nimiä', $context );
-		$this->assertStringNotContainsString( 'Jari Rytkönen', $context );
+		$this->assertStringContainsString( 'nykyinen hallitus ja aiempi hallitus 2023–2026', $context );
+		$this->assertStringContainsString( 'Käytä hallituskysymyksissä tämän sivun ajantasaista sisältöä', $context );
+		$this->assertStringNotContainsString( 'Esa Rytkönen (jäsen, Espoo / Maaninka)', $context );
 		$this->assertStringContainsString( 'Maksa / yritä uudelleen -painike', $context );
 		$this->assertStringContainsString( 'upotettuja YouTube-videoita omassa Videot-osiossaan', $context );
 		$this->assertStringContainsString( 'Älä väitä, ettei sivustolla ole videoita', $context );
@@ -346,9 +336,9 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Blogikirjoituksia voi ehdottaa tai lähettää', $prompt );
 		$this->assertStringContainsString( 'Sukukirjaa voi lainata eri kirjastoista', $prompt );
 		$this->assertStringContainsString( 'Rytkösten sukulainen nro 9 on julkaistu ja myynnissä verkkokaupassa', $prompt );
-		$this->assertStringContainsString( 'Antti Rytkönen (puheenjohtaja, Tampere)', $prompt );
+		$this->assertStringContainsString( 'Käytä hallituskysymyksissä tämän sivun ajantasaista sisältöä', $prompt );
 		$this->assertStringContainsString( 'Kun käyttäjä pyytää henkilölistaa tai hallituksen kokoonpanoa', $prompt );
-		$this->assertStringContainsString( 'Kimmo Tuulenkari (jäsen, Kajaani)', $prompt );
+		$this->assertStringNotContainsString( 'Kimmo Tuulenkari (jäsen, Kajaani)', $prompt );
 		$this->assertStringNotContainsString( 'Pertti Rytkönen', $prompt );
 	}
 

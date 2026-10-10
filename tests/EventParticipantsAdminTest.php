@@ -190,4 +190,110 @@ final class EventParticipantsAdminTest extends Rytkoset_Theme_Test_Case {
 		// The cancelled free row is kept on purpose; a dead order still drops.
 		$this->assertSame( array( 'Peruttu maksuton' ), $kept );
 	}
+
+	public function test_additional_emails_expand_messages_and_feedback_without_extra_participant_rows(): void {
+		rytkoset_test_register_post( 10, 'rytkoset_event', 'Sukujuhla' );
+		$keys = rytkoset_theme_get_event_registration_meta_keys();
+		foreach ( array( 101 => 'maija@example.test', 102 => 'friend@example.test', 103 => 'cancelled@example.test' ) as $id => $email ) {
+			rytkoset_test_register_post( $id, 'event_registration', 'Ilmoittautuminen' );
+			update_post_meta( $id, $keys['event_id'], 10 );
+			update_post_meta( $id, $keys['name'], 102 === $id ? 'Ystävä' : 'Maija' );
+			update_post_meta( $id, $keys['email'], $email );
+			update_post_meta( $id, $keys['status'], 103 === $id ? 'cancelled' : 'confirmed' );
+		}
+		update_post_meta( 101, $keys['quantity'], 3 );
+		update_post_meta( 101, $keys['additional_emails'], array( 'friend@example.test', 'extra@example.test' ) );
+		update_post_meta( 102, $keys['additional_emails'], array( 'extra@example.test' ) );
+		update_post_meta( 103, $keys['additional_emails'], array( 'excluded@example.test' ) );
+		$rows = rytkoset_theme_get_event_free_participants( 10 );
+		$this->assertCount( 3, $rows );
+		$summary = rytkoset_theme_get_event_participant_choice_summary( $rows, true );
+		$this->assertSame( 4, $summary['total'] );
+		$result = rytkoset_theme_get_event_messaging_recipients( 10 );
+		$this->assertCount( 3, $result['recipients'] );
+		$this->assertSame( 'Ystävä', $result['recipients']['friend@example.test']['name'] );
+		$this->assertSame( '', $result['recipients']['extra@example.test']['name'] );
+		$this->assertSame( $result['recipients'], rytkoset_theme_get_event_feedback_recipients( 10 )['recipients'] );
+		$this->assertArrayNotHasKey( 'excluded@example.test', $result['recipients'] );
+		$this->assertSame( 'Hei osallistuja!', rytkoset_theme_personalize_event_message( 'Hei {nimi}!', '', 'Sukujuhla' ) );
+
+		rytkoset_theme_enqueue_event_messaging_job( array( 'event_id' => 10, 'recipients' => $result['recipients'], 'subject' => 'Info', 'body' => 'Hei {nimi}!', 'reply_to' => 'organizer@example.test' ) );
+		rytkoset_theme_process_event_messaging_queue();
+		$this->assertCount( 3, $GLOBALS['rytkoset_test_mails'] );
+		foreach ( $GLOBALS['rytkoset_test_mails'] as $mail ) {
+			if ( 'extra@example.test' === $mail['to'] ) {
+				$this->assertStringContainsString( 'Hei osallistuja!', $mail['message'] );
+				$this->assertStringContainsString( 'ilmoittautunut henkilö antoi sähköpostiosoitteesi', $mail['message'] );
+			} else {
+				$this->assertStringNotContainsString( 'ilmoittautunut henkilö antoi sähköpostiosoitteesi', $mail['message'] );
+			}
+		}
+		update_post_meta( 101, $keys['status'], 'cancelled' );
+		update_post_meta( 102, $keys['status'], 'cancelled' );
+		$this->assertEmpty( rytkoset_theme_get_event_feedback_recipients( 10 )['recipients'] );
+	}
+
+	public function test_status_variant_maps_free_and_paid_states(): void {
+		$this->assertSame( 'success', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'free', 'status' => 'confirmed' ) ) );
+		$this->assertSame( 'warning', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'free', 'status' => 'pending' ) ) );
+		$this->assertSame( 'neutral', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'free', 'status' => 'cancelled' ) ) );
+		$this->assertSame( 'success', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'wc-processing' ) ) );
+		$this->assertSame( 'success', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'completed' ) ) );
+		$this->assertSame( 'warning', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'on-hold' ) ) );
+		$this->assertSame( 'error', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'failed' ) ) );
+		$this->assertSame( 'neutral', rytkoset_theme_get_event_participant_status_variant( array( 'source' => 'paid', 'order_status' => 'refunded' ) ) );
+	}
+
+	public function test_overview_counts_sources_statuses_and_diets(): void {
+		$rows = array(
+			array( 'source' => 'paid', 'order_status' => 'processing', 'status_label' => 'Käsittelyssä', 'diet' => 'Laktoositon' ),
+			array( 'source' => 'paid', 'order_status' => 'processing', 'status_label' => 'Käsittelyssä', 'diet' => '' ),
+			array( 'source' => 'free', 'status' => 'pending', 'status_label' => 'Odottaa', 'diet' => ' ' ),
+			'not-a-row',
+		);
+
+		$overview = rytkoset_theme_get_event_participants_overview( $rows );
+
+		$this->assertSame( 3, $overview['total'] );
+		$this->assertSame( 2, $overview['paid'] );
+		$this->assertSame( 1, $overview['free'] );
+		$this->assertSame( 1, $overview['diet'] );
+		$this->assertSame(
+			array(
+				'Käsittelyssä' => array(
+					'count'   => 2,
+					'variant' => 'success',
+				),
+				'Odottaa'      => array(
+					'count'   => 1,
+					'variant' => 'warning',
+				),
+			),
+			$overview['statuses']
+		);
+	}
+
+	public function test_csv_line_keeps_crafted_cell_in_one_column(): void {
+		$crafted = 'Matti \\";=1+1;\\"';
+		$line    = array( 'Kesäjuhla', rytkoset_theme_csv_neutralize_formula( $crafted ), rytkoset_theme_csv_neutralize_formula( '=HYPERLINK("x")' ) );
+
+		$handle = fopen( 'php://memory', 'w+' );
+		rytkoset_theme_write_event_participants_csv_line( $handle, $line );
+		rewind( $handle );
+		$written = (string) stream_get_contents( $handle );
+		fclose( $handle );
+
+		$cells = str_getcsv( rtrim( $written, "\n" ), ';', '"', '' );
+		$this->assertCount( 3, $cells );
+		$this->assertSame( $crafted, $cells[1] );
+		$this->assertSame( "'=HYPERLINK(\"x\")", $cells[2] );
+
+		// PHP's default backslash escape splits the same cell, which is the bug.
+		$legacy = fopen( 'php://memory', 'w+' );
+		fputcsv( $legacy, $line, ';', '"', '\\' );
+		rewind( $legacy );
+		$legacy_cells = str_getcsv( rtrim( (string) stream_get_contents( $legacy ), "\n" ), ';', '"', '' );
+		fclose( $legacy );
+		$this->assertNotCount( 3, $legacy_cells );
+	}
 }

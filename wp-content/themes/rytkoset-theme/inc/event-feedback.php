@@ -944,6 +944,92 @@ function rytkoset_theme_get_event_feedback_submit_nonce_action() {
 }
 
 /**
+ * Creates a random one-time token for a rendered feedback form.
+ *
+ * The token is not tied to a person, session or response. Its only purpose is
+ * to make one rendered form idempotent when a browser sends the same POST more
+ * than once.
+ *
+ * @return string
+ */
+function rytkoset_theme_create_event_feedback_submission_token() {
+	return wp_generate_password( 32, false, false );
+}
+
+/**
+ * Returns the option name used to claim a feedback submission token.
+ *
+ * Hashing keeps the random form token out of the options table while the event
+ * ID prevents an otherwise valid token from being replayed for another event.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $token    Submitted one-time token.
+ * @return string
+ */
+function rytkoset_theme_get_event_feedback_submission_option_name( $event_id, $token ) {
+	return 'rytkoset_evt_fb_once_' . hash( 'sha256', absint( $event_id ) . '|' . $token );
+}
+
+/**
+ * Atomically claims a feedback form's one-time submission token.
+ *
+ * add_option() relies on the database's unique option_name index, so only one
+ * of two concurrent requests can claim the same token. The short-lived marker
+ * contains no response content or visitor identifier.
+ *
+ * @param int    $event_id Event post ID.
+ * @param string $token    Submitted one-time token.
+ * @return bool True when this request claimed the token.
+ */
+function rytkoset_theme_claim_event_feedback_submission( $event_id, $token ) {
+	$event_id = absint( $event_id );
+	$token    = sanitize_text_field( $token );
+
+	if ( $event_id <= 0 || 1 !== preg_match( '/^[A-Za-z0-9]{32}$/', $token ) ) {
+		return false;
+	}
+
+	$option_name = rytkoset_theme_get_event_feedback_submission_option_name( $event_id, $token );
+	$expires_at  = time() + ( 2 * DAY_IN_SECONDS );
+	$claimed     = add_option( $option_name, $expires_at, '', false );
+
+	if ( ! $claimed ) {
+		$previous_expiry = (int) get_option( $option_name, 0 );
+
+		if ( $previous_expiry > 0 && $previous_expiry <= time() ) {
+			delete_option( $option_name );
+			$claimed = add_option( $option_name, $expires_at, '', false );
+		}
+	}
+
+	if ( $claimed ) {
+		wp_schedule_single_event( $expires_at, 'rytkoset_cleanup_event_feedback_submission', array( $option_name ) );
+	}
+
+	return $claimed;
+}
+
+/**
+ * Removes an expired feedback submission marker.
+ *
+ * @param string $option_name Claimed option name passed by WP-Cron.
+ */
+function rytkoset_theme_cleanup_event_feedback_submission( $option_name ) {
+	$option_name = sanitize_key( $option_name );
+
+	if ( 0 !== strpos( $option_name, 'rytkoset_evt_fb_once_' ) ) {
+		return;
+	}
+
+	$expires_at = (int) get_option( $option_name, 0 );
+
+	if ( $expires_at <= time() ) {
+		delete_option( $option_name );
+	}
+}
+add_action( 'rytkoset_cleanup_event_feedback_submission', 'rytkoset_theme_cleanup_event_feedback_submission' );
+
+/**
  * Returns the 1–5 rating scale labels shown on the public feedback form.
  *
  * Presentation only: the stored response is still the plain integer, so
@@ -1009,9 +1095,11 @@ function rytkoset_theme_render_event_feedback_form( $event_id, $error_code = '' 
 	$questions     = rytkoset_theme_get_event_feedback_text_questions();
 	$rating_failed = ( 'arvio' === $error_code );
 	$rating_help   = $id_base . '-rating-help';
+	$submit_token  = rytkoset_theme_create_event_feedback_submission_token();
 	?>
 	<form method="post" action="<?php echo esc_url( rytkoset_theme_get_event_feedback_public_url( $event_id ) ); ?>" class="event-feedback-form">
 		<input type="hidden" name="rytkoset_event_feedback_submit" value="1" />
+		<input type="hidden" name="rytkoset_event_feedback_submission_token" value="<?php echo esc_attr( $submit_token ); ?>" />
 		<input type="text" name="feedback_website" value="" autocomplete="off" tabindex="-1" aria-hidden="true" style="display:none" />
 		<?php wp_nonce_field( rytkoset_theme_get_event_feedback_submit_nonce_action(), 'rytkoset_event_feedback_submit_nonce' ); ?>
 
@@ -1106,10 +1194,16 @@ function rytkoset_theme_render_event_feedback_form( $event_id, $error_code = '' 
 		</div>
 
 		<div class="event-feedback-actions">
-			<button type="submit" class="event-feedback-submit">
-				<span><?php esc_html_e( 'Lähetä palaute', 'rytkoset-theme' ); ?></span>
+			<button
+				type="submit"
+				class="event-feedback-submit"
+				data-submitting-label="<?php esc_attr_e( 'Lähetetään…', 'rytkoset-theme' ); ?>"
+				data-submitting-status="<?php esc_attr_e( 'Palautetta lähetetään.', 'rytkoset-theme' ); ?>"
+			>
+				<span data-feedback-submit-label><?php esc_html_e( 'Lähetä palaute', 'rytkoset-theme' ); ?></span>
 				<?php echo rytkoset_theme_inline_icon( 'arrow-right', 'ui' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Sanitoitu SVG teeman omasta ikonikansiosta. ?>
 			</button>
+			<span class="screen-reader-text" data-feedback-submit-status aria-live="polite"></span>
 			<p class="event-feedback-actions__note"><?php esc_html_e( 'Emme kysy nimeäsi emmekä yhteystietojasi.', 'rytkoset-theme' ); ?></p>
 		</div>
 	</form>
@@ -1254,6 +1348,20 @@ function rytkoset_theme_handle_event_feedback_submission( $event_id ) {
 		exit;
 	}
 
+	$submission_token = isset( $_POST['rytkoset_event_feedback_submission_token'] )
+		? sanitize_text_field( wp_unslash( $_POST['rytkoset_event_feedback_submission_token'] ) )
+		: '';
+
+	if ( 1 !== preg_match( '/^[A-Za-z0-9]{32}$/', $submission_token ) ) {
+		wp_safe_redirect( add_query_arg( array( 'palaute_virhe' => 'istunto' ), rytkoset_theme_get_event_feedback_public_url( $event_id ) ) );
+		exit;
+	}
+
+	if ( ! rytkoset_theme_claim_event_feedback_submission( $event_id, $submission_token ) ) {
+		wp_safe_redirect( add_query_arg( array( 'palaute' => 'kiitos' ), rytkoset_theme_get_event_feedback_public_url( $event_id ) ) );
+		exit;
+	}
+
 	$meta_keys = rytkoset_theme_get_event_feedback_response_meta_keys();
 	$well      = isset( $_POST['feedback_well'] ) ? rytkoset_theme_sanitize_event_feedback_text( wp_unslash( $_POST['feedback_well'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in rytkoset_theme_sanitize_event_feedback_text().
 	$improve   = isset( $_POST['feedback_improve'] ) ? rytkoset_theme_sanitize_event_feedback_text( wp_unslash( $_POST['feedback_improve'] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Sanitized in rytkoset_theme_sanitize_event_feedback_text().
@@ -1391,6 +1499,7 @@ function rytkoset_theme_render_event_feedback_hero( $event_id, $show_meta = true
 function rytkoset_theme_get_event_feedback_error_message( $error_code ) {
 	$messages = array(
 		'nonce'     => __( 'Lomakkeen istunto on vanhentunut. Yritä uudelleen.', 'rytkoset-theme' ),
+		'istunto'   => __( 'Lomakkeen istunto on vanhentunut. Lataa sivu uudelleen ja yritä uudelleen.', 'rytkoset-theme' ),
 		'suljettu'  => __( 'Palautekysely ei ole avoinna.', 'rytkoset-theme' ),
 		'raja'      => __( 'Liian monta lähetystä lyhyessä ajassa. Yritä hetken kuluttua uudelleen.', 'rytkoset-theme' ),
 		'arvio'     => __( 'Valitse kokonaisarvio 1–5.', 'rytkoset-theme' ),
@@ -1597,7 +1706,7 @@ function rytkoset_theme_render_event_feedback_queue_section( $event_id ) {
 					count( $recipients )
 				);
 			?>
-			<button type="submit" class="button button-primary" <?php disabled( empty( $recipients ) ); ?>>
+			<button type="submit" class="button button-primary rytkoset-feedback-queue-button" <?php disabled( empty( $recipients ) ); ?>>
 				<?php echo esc_html( $button_label ); ?>
 			</button>
 		</form>
@@ -1985,60 +2094,75 @@ function rytkoset_theme_render_event_feedback_admin_page() {
 			</div>
 		<?php endif; ?>
 
-		<form method="get">
-			<input type="hidden" name="post_type" value="rytkoset_event" />
-			<input type="hidden" name="page" value="rytkoset-event-feedback" />
-			<label for="rytkoset-event-feedback-event"><?php esc_html_e( 'Tapahtuma:', 'rytkoset-theme' ); ?></label>
-			<select name="event_id" id="rytkoset-event-feedback-event">
-				<option value="0"><?php esc_html_e( 'Valitse tapahtuma', 'rytkoset-theme' ); ?></option>
-				<?php foreach ( $events as $event ) : ?>
-					<option value="<?php echo esc_attr( (string) $event->ID ); ?>" <?php selected( $selected_event, $event->ID ); ?>>
-						<?php echo esc_html( get_the_title( $event ) ); ?>
-					</option>
-				<?php endforeach; ?>
-			</select>
-			<?php submit_button( __( 'Näytä', 'rytkoset-theme' ), 'secondary', '', false ); ?>
-		</form>
+		<div class="tablenav top">
+			<div class="alignleft ra-toolbar">
+				<form method="get" class="ra-actions">
+					<input type="hidden" name="post_type" value="rytkoset_event" />
+					<input type="hidden" name="page" value="rytkoset-event-feedback" />
+					<label for="rytkoset-event-feedback-event"><?php esc_html_e( 'Tapahtuma:', 'rytkoset-theme' ); ?></label>
+					<select name="event_id" id="rytkoset-event-feedback-event">
+						<option value="0"><?php esc_html_e( 'Valitse tapahtuma', 'rytkoset-theme' ); ?></option>
+						<?php foreach ( $events as $event ) : ?>
+							<option value="<?php echo esc_attr( (string) $event->ID ); ?>" <?php selected( $selected_event, $event->ID ); ?>>
+								<?php echo esc_html( get_the_title( $event ) ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+					<?php submit_button( __( 'Näytä', 'rytkoset-theme' ), 'secondary', '', false ); ?>
+				</form>
+			</div>
+			<br class="clear" />
+		</div>
 
 		<?php if ( $selected_event > 0 ) : ?>
-			<p>
-				<?php
-				echo esc_html(
-					sprintf(
-						/* translators: %d: response count. */
-						_n( 'Vastauksia %d', 'Vastauksia %d', count( $responses ), 'rytkoset-theme' ),
-						count( $responses )
-					)
-				);
-				?>
-				&mdash;
-				<?php
-				echo esc_html(
-					null === $average_rating
-						? __( 'Keskiarvo: –', 'rytkoset-theme' )
-						: sprintf(
-							/* translators: %s: average rating with one decimal. */
-							__( 'Keskiarvo: %s / 5', 'rytkoset-theme' ),
-							number_format_i18n( $average_rating, 1 )
-						)
-				);
-				?>
-			</p>
+			<div class="postbox" id="rytkoset-event-feedback-summary">
+				<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'Yhteenveto', 'rytkoset-theme' ); ?></h2></div>
+				<div class="inside">
+					<ul class="ra-summary">
+						<li class="ra-summary__item">
+							<span class="ra-summary__value"><?php echo esc_html( number_format_i18n( count( $responses ) ) ); ?></span>
+							<span class="ra-summary__label"><?php echo esc_html( _n( 'vastaus', 'vastausta', count( $responses ), 'rytkoset-theme' ) ); ?></span>
+						</li>
+						<li class="ra-summary__item">
+							<span class="ra-summary__value">
+								<?php
+								echo esc_html(
+									null === $average_rating
+										? '–'
+										/* translators: %s: average rating with one decimal. */
+										: sprintf( __( '%s / 5', 'rytkoset-theme' ), number_format_i18n( $average_rating, 1 ) )
+								);
+								?>
+							</span>
+							<span class="ra-summary__label"><?php esc_html_e( 'arvosanojen keskiarvo', 'rytkoset-theme' ); ?></span>
+						</li>
+					</ul>
+					<?php if ( ! empty( $responses ) ) : ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="ra-actions ra-actions--spaced">
+							<input type="hidden" name="action" value="rytkoset_export_event_feedback_csv" />
+							<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $selected_event ); ?>" />
+							<?php wp_nonce_field( 'rytkoset_export_event_feedback_csv', 'rytkoset_event_feedback_csv_nonce' ); ?>
+							<?php submit_button( __( 'Vie CSV', 'rytkoset-theme' ), 'secondary', '', false ); ?>
+						</form>
+					<?php endif; ?>
+				</div>
+			</div>
 
 			<?php if ( empty( $responses ) ) : ?>
 				<p><?php esc_html_e( 'Ei vastauksia vielä.', 'rytkoset-theme' ); ?></p>
 			<?php else : ?>
-				<table class="widefat striped">
-					<thead>
-						<tr>
-							<th scope="col"><?php esc_html_e( 'Arvio', 'rytkoset-theme' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Mikä onnistui hyvin?', 'rytkoset-theme' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Mitä voisimme parantaa?', 'rytkoset-theme' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Toiveita tuleviin tapahtumiin', 'rytkoset-theme' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Toiminnot', 'rytkoset-theme' ); ?></th>
+				<?php // Explicit roles keep table semantics when the cells are restyled as cards on narrow screens. ?>
+				<table class="widefat striped ra-responsive-table rytkoset-feedback-table" role="table">
+					<thead role="rowgroup">
+						<tr role="row">
+							<th role="columnheader" scope="col" class="rytkoset-feedback-table__rating"><?php esc_html_e( 'Arvio', 'rytkoset-theme' ); ?></th>
+							<th role="columnheader" scope="col"><?php esc_html_e( 'Mikä onnistui hyvin?', 'rytkoset-theme' ); ?></th>
+							<th role="columnheader" scope="col"><?php esc_html_e( 'Mitä voisimme parantaa?', 'rytkoset-theme' ); ?></th>
+							<th role="columnheader" scope="col"><?php esc_html_e( 'Toiveita tuleviin tapahtumiin', 'rytkoset-theme' ); ?></th>
+							<th role="columnheader" scope="col" class="rytkoset-feedback-table__actions"><?php esc_html_e( 'Toiminnot', 'rytkoset-theme' ); ?></th>
 						</tr>
 					</thead>
-					<tbody>
+					<tbody role="rowgroup">
 						<?php foreach ( $responses as $response ) : ?>
 							<?php
 							$rating  = absint( get_post_meta( $response->ID, $meta_keys['rating'], true ) );
@@ -2047,8 +2171,8 @@ function rytkoset_theme_render_event_feedback_admin_page() {
 							$wishes  = (string) get_post_meta( $response->ID, $meta_keys['wishes'], true );
 							?>
 							<?php if ( $edit_id === $response->ID ) : ?>
-								<tr>
-									<td colspan="5">
+								<tr role="row">
+									<td role="cell" colspan="5">
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 											<input type="hidden" name="action" value="rytkoset_edit_event_feedback_response" />
 											<input type="hidden" name="response_id" value="<?php echo esc_attr( (string) $response->ID ); ?>" />
@@ -2077,12 +2201,17 @@ function rytkoset_theme_render_event_feedback_admin_page() {
 									</td>
 								</tr>
 							<?php else : ?>
-								<tr>
-									<td><?php echo esc_html( $rating > 0 ? (string) $rating : '–' ); ?></td>
-									<td style="white-space:pre-wrap;"><?php echo esc_html( $well ); ?></td>
-									<td style="white-space:pre-wrap;"><?php echo esc_html( $improve ); ?></td>
-									<td style="white-space:pre-wrap;"><?php echo esc_html( $wishes ); ?></td>
-									<td>
+								<tr role="row">
+									<td role="cell" data-colname="<?php esc_attr_e( 'Arvio', 'rytkoset-theme' ); ?>">
+										<?php if ( $rating > 0 ) : ?>
+											<?php // One element, so "/ 5" stays with the score in the mobile card grid. ?>
+											<span><span class="rytkoset-feedback-table__score"><?php echo esc_html( (string) $rating ); ?></span> / 5</span>
+										<?php endif; ?>
+									</td>
+									<td role="cell" class="rytkoset-feedback-table__text" data-colname="<?php esc_attr_e( 'Mikä onnistui hyvin?', 'rytkoset-theme' ); ?>"><?php echo esc_html( $well ); ?></td>
+									<td role="cell" class="rytkoset-feedback-table__text" data-colname="<?php esc_attr_e( 'Mitä voisimme parantaa?', 'rytkoset-theme' ); ?>"><?php echo esc_html( $improve ); ?></td>
+									<td role="cell" class="rytkoset-feedback-table__text" data-colname="<?php esc_attr_e( 'Toiveita tuleviin tapahtumiin', 'rytkoset-theme' ); ?>"><?php echo esc_html( $wishes ); ?></td>
+									<td role="cell" data-colname="<?php esc_attr_e( 'Toiminnot', 'rytkoset-theme' ); ?>">
 										<a href="<?php echo esc_url( add_query_arg( array( 'rytkoset_edit_feedback' => $response->ID ), $page_base_url ) ); ?>">
 											<?php esc_html_e( 'Muokkaa', 'rytkoset-theme' ); ?>
 										</a>
@@ -2170,3 +2299,81 @@ function rytkoset_theme_handle_event_feedback_response_edit() {
 	exit;
 }
 add_action( 'admin_post_rytkoset_edit_event_feedback_response', 'rytkoset_theme_handle_event_feedback_response_edit' );
+
+/**
+ * Builds the anonymous feedback CSV lines for one event (#696).
+ *
+ * Only the rating and the three free-text answers; no dates or identifiers,
+ * so the export stays as anonymous as the stored responses.
+ *
+ * @param WP_Post[] $responses Feedback response posts.
+ * @return array<int, array<int, string>>
+ */
+function rytkoset_theme_get_event_feedback_csv_rows( $responses ) {
+	$meta_keys = rytkoset_theme_get_event_feedback_response_meta_keys();
+	$lines     = array(
+		array(
+			__( 'Arvio', 'rytkoset-theme' ),
+			__( 'Mikä onnistui hyvin?', 'rytkoset-theme' ),
+			__( 'Mitä voisimme parantaa?', 'rytkoset-theme' ),
+			__( 'Toiveita tuleviin tapahtumiin', 'rytkoset-theme' ),
+		),
+	);
+
+	foreach ( $responses as $response ) {
+		$rating  = absint( get_post_meta( $response->ID, $meta_keys['rating'], true ) );
+		$lines[] = array_map(
+			'rytkoset_theme_csv_neutralize_formula',
+			array(
+				$rating > 0 ? (string) $rating : '',
+				(string) get_post_meta( $response->ID, $meta_keys['well'], true ),
+				(string) get_post_meta( $response->ID, $meta_keys['improve'], true ),
+				(string) get_post_meta( $response->ID, $meta_keys['wishes'], true ),
+			)
+		);
+	}
+
+	return $lines;
+}
+
+/**
+ * Streams one event's feedback as CSV (#696).
+ *
+ * @return void
+ */
+function rytkoset_theme_export_event_feedback_csv() {
+	if ( ! current_user_can( 'edit_others_event_registrations' ) ) {
+		wp_die( esc_html__( 'Sinulla ei ole oikeutta viedä palautetta.', 'rytkoset-theme' ) );
+	}
+
+	check_admin_referer( 'rytkoset_export_event_feedback_csv', 'rytkoset_event_feedback_csv_nonce' );
+
+	$event_id = isset( $_POST['event_id'] ) ? absint( wp_unslash( $_POST['event_id'] ) ) : 0;
+
+	if ( $event_id <= 0 || 'rytkoset_event' !== get_post_type( $event_id ) ) {
+		wp_die( esc_html__( 'Valitse tapahtuma.', 'rytkoset-theme' ) );
+	}
+
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="palaute-' . $event_id . '-' . gmdate( 'Y-m-d' ) . '.csv"' );
+	header( 'X-Content-Type-Options: nosniff' );
+
+	$output = fopen( 'php://output', 'w' );
+
+	if ( false === $output ) {
+		wp_die( esc_html__( 'CSV-viennin alustaminen epäonnistui.', 'rytkoset-theme' ) );
+	}
+
+	// UTF-8 BOM so that Excel detects the encoding.
+	echo "\xEF\xBB\xBF";
+
+	foreach ( rytkoset_theme_get_event_feedback_csv_rows( rytkoset_theme_get_event_feedback_responses( $event_id ) ) as $line ) {
+		// Empty escape keeps RFC 4180 quoting so a crafted answer cannot split into extra cells.
+		fputcsv( $output, $line, ';', '"', '' );
+	}
+
+	fclose( $output );
+	exit;
+}
+add_action( 'admin_post_rytkoset_export_event_feedback_csv', 'rytkoset_theme_export_event_feedback_csv' );

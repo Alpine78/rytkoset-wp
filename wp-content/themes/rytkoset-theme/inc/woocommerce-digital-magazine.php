@@ -683,7 +683,7 @@ function rytkoset_theme_order_has_digital_magazine_product( $order ) {
  * WooCommerce Blocks stores an unchecked hidden checkbox as `false` on every order regardless of
  * whether the field actually applied, which otherwise renders a misleading "…: Ei" line about
  * digital magazines on unrelated orders (e.g. a Tampere 2026 registration) — the same mechanism
- * already guarded for the Tampere 2026 participant fields in inc/woocommerce-tampere-2026.php.
+ * already guarded for the Tampere 2026 participant fields in inc/woocommerce-event-registration.php.
  *
  * @param bool                 $show    Whether WooCommerce would show the field.
  * @param array<string, mixed> $field   Field data.
@@ -863,28 +863,6 @@ function rytkoset_theme_get_digital_magazine_product_options() {
 }
 
 /**
- * Registers the product link metabox for top-level magazines.
- *
- * @param WP_Post $post Post object.
- * @return void
- */
-function rytkoset_theme_register_digital_magazine_product_metabox( $post ) {
-	if ( $post instanceof WP_Post && 0 < (int) $post->post_parent ) {
-		return;
-	}
-
-	add_meta_box(
-		'rytkoset-digital-magazine-products',
-		__( 'Maksutuotteet', 'rytkoset-theme' ),
-		'rytkoset_theme_render_digital_magazine_product_metabox',
-		'digital_magazine',
-		'side',
-		'default'
-	);
-}
-add_action( 'add_meta_boxes_digital_magazine', 'rytkoset_theme_register_digital_magazine_product_metabox' );
-
-/**
  * Renders a single magazine product selector.
  *
  * @param string       $field_name  Input name.
@@ -911,13 +889,17 @@ function rytkoset_theme_render_digital_magazine_product_select( $field_name, $se
 }
 
 /**
- * Renders the magazine product link metabox.
+ * Renders the magazine product fields inside the "Myynti ja käyttöoikeus" box
+ * (#698), below the access mode select. The fields keep their own nonce and
+ * save handler, so this module stays the only WooCommerce-aware part.
  *
  * @param WP_Post $post Post object.
  * @return void
  */
 function rytkoset_theme_render_digital_magazine_product_metabox( $post ) {
 	wp_nonce_field( 'rytkoset_save_digital_magazine_products', 'rytkoset_digital_magazine_products_nonce' );
+
+	echo '<h4 class="rytkoset-magazine-products__heading">' . esc_html__( 'Maksutuotteet', 'rytkoset-theme' ) . '</h4>';
 
 	if ( ! function_exists( 'wc_get_products' ) ) {
 		echo '<p>' . esc_html__( 'WooCommerce ei ole käytössä, joten maksutuotetta ei voi valita.', 'rytkoset-theme' ) . '</p>';
@@ -930,6 +912,11 @@ function rytkoset_theme_render_digital_magazine_product_metabox( $post ) {
 	$regular_id  = absint( get_post_meta( $post->ID, $regular_key, true ) );
 	$member_id   = absint( get_post_meta( $post->ID, $member_key, true ) );
 	?>
+	<?php // data-access-modes lists the access modes that use the field (#698); assets/js/digital-magazine-admin.js hides the rest. ?>
+	<p class="description rytkoset-magazine-products__none" data-access-modes="free members_only" hidden>
+		<?php esc_html_e( 'Valittu käyttöoikeusmalli ei käytä maksutuotteita.', 'rytkoset-theme' ); ?>
+	</p>
+	<div class="rytkoset-magazine-products__field" data-access-modes="paid member_and_regular">
 	<p>
 		<label for="<?php echo esc_attr( $regular_key ); ?>">
 			<strong><?php esc_html_e( 'Normaalihintatuote', 'rytkoset-theme' ); ?></strong>
@@ -939,7 +926,9 @@ function rytkoset_theme_render_digital_magazine_product_metabox( $post ) {
 	<p class="description">
 		<?php esc_html_e( 'Ei-jäsenten ja kaikille maksullisen lehden hinta. Käytössä malleissa “Kaikille maksullinen” ja “Jäsenhinta + normaalihinta”.', 'rytkoset-theme' ); ?>
 	</p>
+	</div>
 
+	<div class="rytkoset-magazine-products__field" data-access-modes="member_and_regular">
 	<p style="margin-top:1em;">
 		<label for="<?php echo esc_attr( $member_key ); ?>">
 			<strong><?php esc_html_e( 'Jäsenhintatuote', 'rytkoset-theme' ); ?></strong>
@@ -949,8 +938,11 @@ function rytkoset_theme_render_digital_magazine_product_metabox( $post ) {
 	<p class="description">
 		<?php esc_html_e( 'Aktiivisen jäsenen hinta. Käytössä vain mallissa “Jäsenhinta + normaalihinta”. Vain jäsen voi ostaa tämän tuotteen.', 'rytkoset-theme' ); ?>
 	</p>
+	</div>
 	<?php
 }
+
+add_action( 'rytkoset_theme_digital_magazine_access_metabox_after', 'rytkoset_theme_render_digital_magazine_product_metabox' );
 
 /**
  * Validates and saves a single magazine product link.

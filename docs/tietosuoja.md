@@ -123,6 +123,8 @@ Turnstilen pre-clearance on pois käytöstä, joten palvelun valinnaista `cf_cle
 
 ### Tapahtumailmoittautumiset
 
+<!-- #676: vahvista lisäosallistujien osoitteiden käsittelyperuste ja informointiteksti tietosuojasta vastaavan kanssa ennen keruun käyttöönottoa. -->
+
 Kun ilmoittaudut tapahtumaan, tallennamme:
 
 - nimesi
@@ -130,6 +132,8 @@ Kun ilmoittaudut tapahtumaan, tallennamme:
 - ruokarajoitteet (jos annat)
 - vapaamuotoiset lisätiedot (jos annat)
 - ilmoittautumisajan ja antamasi tietosuojasuostumuksen aikaleiman
+
+Maksuttomassa tapahtumassa ilmoittaja voi tapahtumakohtaisen valinnan ollessa käytössä antaa vapaaehtoisesti myös muiden osallistujien sähköpostiosoitteet, yksi osoite per rivi ja vain henkilön luvalla. Näitä osoitteita käytetään vain kyseisen tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin. Jos saamme osoitteesi toiselta ilmoittautujalta, kerromme lähteen ja käyttötarkoituksen sinulle lähetettävässä tapahtumaviestissä ja ohjaamme tähän selosteeseen. Voit pyytää oman osoitteesi poistamista ilman muiden osallistujien tietojen poistamista. Lisäosoitteisiin sovelletaan samaa jäljempänä kuvattua säilytysaikaa.
 
 Nimi ja sähköpostiosoite ovat pakollisia tapahtumailmoittautumisen käsittelyä varten. Ilman niitä ilmoittautumista ei voida vastaanottaa. Ruokarajoitteet ja lisätiedot ovat vapaaehtoisia.
 
@@ -192,6 +196,8 @@ Verkkokaupassa (esimerkiksi toimintakauden jäsenmaksu, ainaisjäsenmaksu, Tampe
 - jäsenyyteen liittyvät tiedot
 
 Tilauksen käsittelyyn tarvittavat yhteys- ja maksutiedot ovat pakollisia, jotta tilaus voidaan vastaanottaa, maksaa ja kirjata. Maksunkäsittelyn suorittaa Paytrail Oyj. Emme tallenna maksukortin tai pankkitilin tietoja omiin järjestelmiimme. Tilaustiedot säilytetään kirjanpitolain edellyttämän ajan (tositteet vähintään kuusi vuotta sen vuoden lopusta, jonka aikana tilikausi on päättynyt).
+
+Maksullisen tapahtuman kassalla ostaja voi antaa osallistujan oman sähköpostiosoitteen vapaaehtoisesti. Osoitetta käytetään kyseisen tapahtuman käytännön viestintään ja mahdolliseen palautepyyntöön, ei uutiskirjeeseen. Osallistujalle ei lähetetä WooCommercen tilausvahvistusta tämän osoitteen perusteella, mutta ostajan tilausvahvistuksessa voivat näkyä kassalla annetut osallistujatiedot. Ilman osoitetta käytetään ostajan yhteystietoja. Ostajaa pyydetään hankkimaan osallistujan lupa ja kertomaan tietosuojaselosteesta. Toisen henkilön osoitteen käsittelyperuste ja informointiteksti vahvistetaan tietosuojasta vastaavan kanssa ennen tuotantokäyttöä. Osallistuja voi pyytää omalla osoitteellaan vain oman osallistujarivinsä tietojen viennin tai anonymisoinnin; tilauksen laskutus- ja kirjanpitotiedot säilyvät niitä koskevan velvoitteen ajan.
 
 Jäsenmaksun yhteydessä kassalla pyydetään jäsenen nimi ja sähköpostiosoite. Perhejäsenmaksulla voi ilmoittaa useamman perheenjäsenen nimen ja sähköpostiosoitteen; lisärivien sähköpostit ovat vapaaehtoisia (esimerkiksi lapsille niitä ei tarvita). Perhejäsenen tiedot saadaan jäsenmaksun maksajalta, eivät välttämättä perhejäseneltä itseltään. Tietoja käytetään jäsenmaksun kohdistamiseen oikeille henkilöille ja jäsenrekisterin ylläpitoon. Tiedot tallennetaan tilauksen tietoihin ja säilytetään edellä kuvatun tilaustietojen säilytysajan mukaisesti.
 

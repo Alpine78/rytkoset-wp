@@ -329,6 +329,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		// 3 free rows + 5 paid rows fetched, active filter keeps 2 free + 2 paid = 4.
 		$this->assertSame( 4, $result['participant_row_count'] );
 		$this->assertSame( 0, $result['no_address_count'] );
+		$this->assertSame( 'Vahvistettu', $result['recipients']['vahvistettu@example.test']['name'] );
 	}
 
 	public function test_recipients_dedupe_by_email(): void {
@@ -359,6 +360,39 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 1, $result['no_address_count'] );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_tampere_messages_and_feedback_use_buyer_name_for_shared_billing_email(): void {
+		$this->event( 72, '2020-01-01' );
+		update_post_meta( 72, '_rytkoset_event_product_id', 900 );
+		$product = new WC_Product( array( '_rytkoset_registration_mode' => 'tampere_2026' ), 900 );
+		$GLOBALS['rytkoset_test_products'][900] = $product;
+
+		// The later purchase for another person is encountered before the buyer's own purchase.
+		foreach ( array( 802 => 'Toinen Osallistuja', 801 => 'Maija Ostaja' ) as $id => $name ) {
+			$order = new WC_Order();
+			$order->id = $id;
+			$order->status = 'completed';
+			$order->billing_first_name = 'Maija';
+			$order->billing_last_name = 'Ostaja';
+			$order->billing_email = 802 === $id ? 'MAIJA@example.test' : 'maija@example.test';
+			$order->items[] = new Rytkoset_Test_Order_Item( $product );
+			$order->meta['_wc_other/rytkoset/participant_1_name'] = $name;
+			$GLOBALS['rytkoset_test_orders'][ $id ] = $order;
+		}
+
+		$rows = rytkoset_theme_get_event_paid_participants( 72 );
+		$this->assertCount( 2, $rows );
+		$this->assertSame( 'Toinen Osallistuja', $rows[0]['name'] );
+
+		foreach ( array( rytkoset_theme_get_event_messaging_recipients( 72 ), rytkoset_theme_get_event_feedback_recipients( 72 ) ) as $result ) {
+			$this->assertCount( 1, $result['recipients'] );
+			$recipient = $result['recipients']['maija@example.test'];
+			$this->assertSame( 'Maija Ostaja', $recipient['name'] );
+			$this->assertSame( 'Hei Maija Ostaja!', rytkoset_theme_personalize_event_message( 'Hei {nimi}!', $recipient['name'], 'Sukujuhla' ) );
+		}
+	}
+
 	// --- {palautelinkki} placeholder --------------------------------------
 
 	public function test_feedback_link_resolves_for_single_event(): void {
@@ -381,11 +415,13 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 
 	private function submit_feedback( int $event_id, array $overrides = array() ): void {
 		$_SERVER['REMOTE_ADDR'] = '203.0.113.20';
+		$submission_token       = str_pad( (string) $GLOBALS['rytkoset_test_next_post_id'], 32, '0', STR_PAD_LEFT );
 		$_POST                  = array_merge(
 			array(
 				'rytkoset_event_feedback_submit'        => '1',
 				'feedback_website'                       => '',
 				'rytkoset_event_feedback_submit_nonce'  => rytkoset_theme_get_event_feedback_submit_nonce_action(),
+				'rytkoset_event_feedback_submission_token' => $submission_token,
 				'feedback_rating'                        => '4',
 				'feedback_well'                           => 'Kaikki sujui hyvin.',
 				'feedback_improve'                         => '',
@@ -530,6 +566,53 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
 			$this->assertStringContainsString( 'palaute_virhe=raja', $redirect->location );
 		}
+	}
+
+	public function test_same_submission_token_stores_and_notifies_only_once(): void {
+		$this->open_event( 97 );
+		update_post_meta( 97, $this->feedback_meta()['notify_organizers'], 'yes' );
+		update_post_meta( 97, '_rytkoset_event_organizer_notification_recipients', 'jarjestaja@example.test' );
+		$token = 'SameFormSubmissionToken123456789';
+
+		for ( $attempt = 0; $attempt < 2; $attempt++ ) {
+			try {
+				$this->submit_feedback( 97, array( 'rytkoset_event_feedback_submission_token' => $token ) );
+				$this->fail( 'Expected a redirect after submission.' );
+			} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+				$this->assertStringContainsString( 'palaute=kiitos', $redirect->location );
+			}
+		}
+
+		$this->assertSame( 1001, $GLOBALS['rytkoset_test_next_post_id'] );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+	}
+
+	public function test_submission_rejects_missing_one_time_token(): void {
+		$this->open_event( 98 );
+
+		try {
+			$this->submit_feedback( 98, array( 'rytkoset_event_feedback_submission_token' => '' ) );
+			$this->fail( 'Expected a redirect for a missing submission token.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertStringContainsString( 'palaute_virhe=istunto', $redirect->location );
+		}
+
+		$this->assertArrayNotHasKey( 1000, $GLOBALS['rytkoset_test_posts'] );
+	}
+
+	public function test_form_renders_one_time_token_and_accessible_submission_state(): void {
+		$GLOBALS['rytkoset_test_privacy_url'] = '';
+		ob_start();
+		rytkoset_theme_render_event_feedback_form( 99 );
+		$html = (string) ob_get_clean();
+
+		$this->assertMatchesRegularExpression(
+			'/name="rytkoset_event_feedback_submission_token" value="[A-Za-z0-9]{32}"/',
+			$html
+		);
+		$this->assertStringContainsString( 'data-submitting-label="Lähetetään…"', $html );
+		$this->assertStringContainsString( 'data-submitting-status="Palautetta lähetetään."', $html );
+		$this->assertStringContainsString( 'data-feedback-submit-status aria-live="polite"', $html );
 	}
 
 	// --- manual redaction ---------------------------------------------------
@@ -732,7 +815,7 @@ final class EventFeedbackTest extends Rytkoset_Theme_Test_Case {
 	}
 
 	public function test_error_message_maps_every_known_code(): void {
-		$codes = array( 'nonce', 'suljettu', 'raja', 'arvio', 'tallennus' );
+		$codes = array( 'nonce', 'istunto', 'suljettu', 'raja', 'arvio', 'tallennus' );
 		$seen  = array();
 
 		foreach ( $codes as $code ) {

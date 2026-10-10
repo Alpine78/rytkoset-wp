@@ -551,14 +551,22 @@ Tämä toteutus ei kata:
 
 Näkymä ei ole virallinen tai täydellinen jäsenrekisteri. Henkilö ei näy siinä, jos hänellä ei ole käyttäjätiliä, odottavaa verkkojäsenyyttä eikä perhejäsenriviä. Koontia voivat käyttää vain ylläpitäjät, joilla on `edit_users`-oikeus.
 
-Koontia voi hakea nimellä tai sähköpostilla sekä suodattaa tilan ja jäsenyyden tyypin mukaan. Tila tarkoittaa:
+Koontia voi hakea nimellä tai sähköpostilla ja suodattaa jäsenyyden tyypin mukaan. Tilat näkyvät listan yläpuolella siruina määrineen (Kaikki, Aktiivinen, Vanhentunut, Puutteellinen, Odottaa käyttäjätiliä); sirun määrä noudattaa haku- ja tyyppirajausta. Tila näkyy rivillä tilamerkkinä, jonka väri ja muoto tukevat tekstiä. Tila tarkoittaa:
 
 - **Aktiivinen:** oma jäsenyys tai päätilin perhejäsenyyden jakamisoikeus on voimassa.
 - **Vanhentunut:** määräaikaisen jäsenyyden voimassaolopäivä on mennyt.
 - **Puutteellinen:** määräaikaiselta jäsenyydeltä puuttuu kelvollinen voimassaolopäivä tai perhelinkin päätilillä ei ole kelvollista perhejäsenyyden jakamisoikeutta.
 - **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin luonnin jälkeen.
 
-Nimi- ja päätililinkit avaavat käyttäjäprofiilin. Jäsenten aktivointi -lähdelinkki avaa aktivointityökalun, jossa odottavaa jäsenyyttä voi käsitellä.
+Taulukossa on viisi saraketta (#697):
+
+- **Jäsen:** nimi linkkinä profiiliin ja sen alla sähköposti. Ilman käyttäjätiliä pääriviksi nousee sähköposti (sillä tili myöhemmin tunnistetaan) ja alle tulee nimi sekä "Ei vielä käyttäjätiliä". Rivitoiminto on **Avaa profiili**, puutteellisella omalla jäsenyydellä **Korjaa profiilissa**, puutteellisella perityllä perhejäsenyydellä **Korjaa päätilin profiilissa** (perhejäsenyyden voimassaolo tallennetaan päätilille), aktivointia odottavalla **Avaa jäsenten aktivointi** ja tiliä odottavalla perheenjäsenellä **Avaa päätilin profiili**.
+- **Tila:** tilamerkki. Puutteellisen alla näkyy syy ("Voimassaolopäivä puuttuu" tai "Jäsenyyden tyyppi puuttuu"), joka korjataan käyttäjäprofiilissa.
+- **Jäsenyys:** tyyppi. Perheenjäsenellä alla on päätili linkkinä, ja päätilin omalla rivillä perheenjäsenten määrä.
+- **Voimassa:** voimassaolopäivä, ainaisjäsenellä "Toistaiseksi", ja sen alla kausi kaikilla riveillä, joilla kausi on tallennettu.
+- **Lähde:** Oma jäsenyys, Peritty perhejäsenyys, Jäsenten aktivointi tai Perhejäsenrivi.
+
+**Vie CSV** lataa rajatut rivit puolipisteellä erotettuna (nimi, sähköposti, tila, tyyppi, kausi, voimassa asti, lähde, päätili). Tiedosto sisältää henkilötietoja, joten käsittele ja hävitä se tietosuojaohjeen mukaisesti. Alle 782 px:n näytöllä rivit näkyvät kortteina.
 
 ## Jäsenviestinnän AcyMailing-lista
 

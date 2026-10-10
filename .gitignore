@@ -46,6 +46,9 @@ wp-config.php
 # Playwright CLI local snapshots/logs
 .playwright-cli/
 
+# Newsletter import packages are generated locally from versioned sources.
+/newsletters/*.zip
+
 # htaccess
 /.htaccess
 

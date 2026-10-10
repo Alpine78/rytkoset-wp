@@ -84,6 +84,18 @@ Debug-lokia ei pidetä päällä normaalikäytössä: lisäosan loki tallentaisi
 
 > Turnstile ei korvaa palvelintason kirjautumisrajoitusta. Jos hyökkäys siirtyy kirjautumiseen, salasanan palautukseen, WooCommerceen tai bbPressiin, suojaus arvioidaan kyseiselle lomakkeelle erikseen eikä integraatioita kytketä päälle varmuuden vuoksi.
 
+### Henkilötunnuksen muotoiset käyttäjätunnukset (#726)
+
+Käyttäjätunnus näkyy sivuston ylläpidossa ja voi päätyä kirjoittajan osoitteeseen, joten uusi tunnus ei saa olla henkilötunnuksen muotoinen (esim. `ppkkvv-nnnX`). Tunnistus vaatii kelvollisen päivän ja kuukauden, välimerkin (`-`, `+`, `A`–`F`, `U`–`Y`), kolme numeroa ja tarkistemerkin, isoista ja pienistä kirjaimista riippumatta ja myös osana pidempää tunnusta, vaikka tunnuksen ympärillä olisi kirjaimia tai numeroita. Tarkistemerkin oikeellisuutta ei vaadita, koska väärin kirjoitettukin henkilötunnus on henkilötieto.
+
+- **WordPressin rekisteröityminen** (`registration_errors`) ja **WooCommercen tilin luonti, kun tunnus kirjoitetaan itse** (`woocommerce_registration_errors`): rekisteröityminen hylätään selkeällä suomenkielisellä ilmoituksella.
+- **WooCommercen automaattisesti muodostama tunnus** (nimestä tai sähköpostin alkuosasta, `woocommerce_new_customer_username`): korvataan neutraalilla tunnuksella `asiakas-nnnnnn`, koska asiakas ei itse valinnut sitä eikä virheilmoitus auttaisi. Myös lähtötiedot (sähköpostin alkuosa, etu- ja sukunimi) tarkistetaan, koska WooCommerce poistaa tunnuksesta `+`-merkin ennen tarkistusta.
+- **REST-rajapinta** (`POST /wp/v2/users`): selkeä virhe tilakoodilla 400 (`rest_request_before_callbacks`).
+- **Muu suora käyttäjän luonti** (esim. WP-CLI tai toinen lisäosa, joka kutsuu `wp_insert_user()`-funktiota): viimeinen varmistus `wp_pre_insert_user_data`-suotimessa pysäyttää uuden käyttäjän WordPressin omaan yleiseen virheeseen. Olemassa olevien käyttäjien päivityksiin se ei koske.
+- **Ylläpidon Lisää käyttäjä** (`user_profile_update_errors` uudelle käyttäjälle): sama ilmoitus.
+
+Olemassa oleviin tunnuksiin ei kosketa: käyttäjät ovat valinneet ne itse, eikä WordPress salli tunnuksen vaihtoa hallinnan kautta. Havaittua tunnusta ei tallenneta eikä lokiteta. Esto on henkilötietojen suojaa eikä roskapostisuojaa, joten se ei riipu yleisestä `rytkoset_theme_enable_security_hardening`-kytkimestä; sen voi kytkeä pois omalla suotimellaan `rytkoset_theme_block_personal_id_usernames`. Toteutus: `inc/security.php`; testit `tests/SecurityHardeningTest.php`.
+
 ### CSV-kaavainjektion esto (osallistujavienti)
 
 Osallistujalistan CSV-vienti (`Events > Participants`, `inc/event-participants-admin.php`) sisältää osallistujien itse syöttämiä kenttiä (nimi, sähköposti, puhelin, ruokavalio/huomiot, yhteyshenkilö). Taulukkolaskenta (Excel, LibreOffice, Google Sheets) tulkitsee `=`, `+`, `-`, `@` tai sarkain-/rivinvaihtomerkillä alkavan solun **kaavaksi**, joten haitallinen ilmoittautuja voisi piilottaa CSV:hen ajettavan kaavan (CSV-injektio, CWE-1236).

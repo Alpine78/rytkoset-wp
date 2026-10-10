@@ -24,8 +24,8 @@ function rytkoset_theme_product_is_withdrawal_exempt_event( $product, $order ) {
 
 	if ( $product instanceof WC_Product ) {
 		$is_event = (
-			function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' )
-			&& rytkoset_theme_is_tampere_2026_registration_product( $product )
+			function_exists( 'rytkoset_theme_is_paid_event_registration_product' )
+			&& rytkoset_theme_is_paid_event_registration_product( $product )
 		) || (
 			function_exists( 'rytkoset_theme_is_bus_transport_product' )
 			&& rytkoset_theme_is_bus_transport_product( $product )

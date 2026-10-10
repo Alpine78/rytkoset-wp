@@ -1063,6 +1063,16 @@ function rytkoset_theme_event_collects_quantity( $event_id ) {
 }
 
 /**
+ * Checks whether an event collects optional participant email addresses.
+ *
+ * @param int $event_id Event ID.
+ * @return bool
+ */
+function rytkoset_theme_event_collects_participant_emails( $event_id ) {
+	return 'yes' === get_post_meta( absint( $event_id ), '_rytkoset_event_collect_participant_emails', true );
+}
+
+/**
  * Returns the meta key for the quantity-field label.
  *
  * @return string
@@ -1211,6 +1221,14 @@ function rytkoset_theme_render_event_choice_field_metabox( $post ) {
 	<p class="description">
 		<?php esc_html_e( 'Lisää lomakkeelle numerokentän (esim. matkustajien tai henkilöiden määrä).', 'rytkoset-theme' ); ?>
 	</p>
+	<hr />
+	<p>
+		<label for="rytkoset_event_collect_participant_emails">
+			<input type="checkbox" id="rytkoset_event_collect_participant_emails" name="rytkoset_event_collect_participant_emails" value="yes" <?php checked( rytkoset_theme_event_collects_participant_emails( $post->ID ) ); ?> />
+			<?php esc_html_e( 'Kysy osallistujien sähköpostiosoitteet (vapaaehtoinen)', 'rytkoset-theme' ); ?>
+		</label>
+	</p>
+	<p class="description"><?php esc_html_e( 'Maksuttomassa lomakkeessa voi antaa muiden osallistujien osoitteet, linkitetyn maksutuotteen kassalla jokaisen osallistujan oman osoitteen. Osoitteita käytetään tapahtumaviestintään ja palautepyyntöön. Vahvista tietosuojateksti ja käsittelyperuste ennen käyttöönottoa.', 'rytkoset-theme' ); ?></p>
 	<?php
 }
 
@@ -1279,7 +1297,8 @@ function rytkoset_theme_save_event_choice_field( $post_id ) {
 	}
 
 	$toggle_meta = array(
-		'rytkoset_event_collect_quantity' => rytkoset_theme_get_event_collect_quantity_meta_key(),
+		'rytkoset_event_collect_participant_emails' => '_rytkoset_event_collect_participant_emails',
+		'rytkoset_event_collect_quantity'           => rytkoset_theme_get_event_collect_quantity_meta_key(),
 	);
 
 	foreach ( $toggle_meta as $field => $meta_key ) {
@@ -1756,14 +1775,14 @@ function rytkoset_theme_get_event_product_registration_deadline( $product ) {
 	if (
 		! class_exists( 'WC_Product' )
 		|| ! $product instanceof WC_Product
-		|| ! function_exists( 'rytkoset_theme_get_tampere_2026_registration_deadline' )
-		|| ! function_exists( 'rytkoset_theme_is_tampere_2026_registration_product' )
-		|| ! rytkoset_theme_is_tampere_2026_registration_product( $product )
+		|| ! function_exists( 'rytkoset_theme_get_paid_event_registration_deadline' )
+		|| ! function_exists( 'rytkoset_theme_is_paid_event_registration_product' )
+		|| ! rytkoset_theme_is_paid_event_registration_product( $product )
 	) {
 		return '';
 	}
 
-	return rytkoset_theme_get_tampere_2026_registration_deadline( $product );
+	return rytkoset_theme_get_paid_event_registration_deadline( $product );
 }
 
 /**
@@ -1860,8 +1879,8 @@ function rytkoset_theme_get_event_product_unavailability_message( $event_id ) {
 		return '';
 	}
 
-	if ( function_exists( 'rytkoset_theme_get_tampere_2026_registration_unavailability_message' ) ) {
-		$message = rytkoset_theme_get_tampere_2026_registration_unavailability_message( $product );
+	if ( function_exists( 'rytkoset_theme_get_paid_event_registration_unavailability_message' ) ) {
+		$message = rytkoset_theme_get_paid_event_registration_unavailability_message( $product );
 
 		if ( '' !== $message ) {
 			return $message;

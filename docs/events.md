@@ -287,7 +287,7 @@ jolloin myös tapahtumakohtaiset lisävalinta- ja määräkentät näkyvät heti
 
 ### Järjestäjäilmoitus maksuttomasta ilmoittautumisesta (#638)
 
-Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmoitus, jos tapahtuman `Järjestäjäilmoitukset`-laatikkoon on asetettu vastaanottajia. Käytössä on täsmälleen sama vastaanottajakenttä kuin maksullisten tapahtumien tilausilmoituksissa (`docs/woocommerce-tampere-2026-notifications.md`), joten järjestäjät hallitaan yhdestä paikasta tapahtuman muokkausnäkymässä.
+Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmoitus, jos tapahtuman `Järjestäjäilmoitukset`-laatikkoon on asetettu vastaanottajia. Käytössä on täsmälleen sama vastaanottajakenttä kuin maksullisten tapahtumien tilausilmoituksissa (`docs/woocommerce-event-registration.md`), joten järjestäjät hallitaan yhdestä paikasta tapahtuman muokkausnäkymässä.
 
 - **Tyhjä kenttä tarkoittaa, ettei ilmoitusta lähetetä.** Varaosoitetta ei ole tarkoituksella, jotta osallistujan henkilötiedot eivät koskaan päädy osoitteeseen, jota kukaan ei ole valinnut tähän käyttöön. Sama sääntö on voimassa maksullisella polulla.
 - Viesti sisältää tapahtuman perustiedot sekä ilmoittautujan nimen ja sähköpostiosoitteen. **Ruokarajoitteet, lisätieto ja lisävalinta jätetään tarkoituksella pois** — ne katsotaan ylläpidosta, jotta sähköpostilla liikkuu mahdollisimman vähän henkilötietoa.
@@ -421,7 +421,7 @@ Antaminen:
 2. Etsi osio **Tapahtumien järjestäjä** ja rastita **Tapahtumien järjestäjä (Event Organizer)**.
 3. Tallenna käyttäjä.
 
-Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus muokata käyttäjiä (`edit_users`). Rastin poisto poistaa vain Event Organizer -lisäroolin; käyttäjän muut roolit säilyvät.
+Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus vaihtaa käyttäjien rooleja (`promote_users`, käytännössä ylläpitäjä). Pelkkä käyttäjien muokkausoikeus (`edit_users`) ei riitä, koska WooCommerce antaa sen kauppapäällikölle asiakkaiden muokkaamista varten (#699). Rastin poisto poistaa vain Event Organizer -lisäroolin; käyttäjän muut roolit säilyvät.
 
 **Milloin mitäkin roolia käytetään:**
 
@@ -431,16 +431,9 @@ Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus muokata k
 
 Päätoimittaja-roolille **ei** anneta tapahtumaoikeuksia suoraan, koska kaikki päätoimittajat eivät järjestä tapahtumia. Rajattu lisärooli on ylläpidettävämpi.
 
-### Tampere 2026
+### Maksullisen tapahtuman osallistujat
 
-Tampere 2026 -tapahtuman ilmoittautuminen on toteutettu WooCommercen päälle erillisinä MVP-osina:
-
-- osallistumismaksutuote: `docs/woocommerce-tampere-2026-product.md`
-- checkoutin osallistujakentät: `docs/woocommerce-tampere-2026-checkout-fields.md`
-- määräpäivä ja kapasiteetti: `docs/woocommerce-tampere-2026-management.md`
-- maksullisten tapahtumien järjestäjäilmoitukset: `docs/woocommerce-tampere-2026-notifications.md`
-
-Tampere 2026 -osallistujat näkyvät yhteisessä osallistujalistassa (katso alla). Vanha `WooCommerce > Tampere 2026 osallistujat` -pikalinkkisivu poistettiin tiketissä `#194`, kun sama tieto on saatavilla rajatuilla oikeuksilla yhteisestä näkymästä.
+Tuotteen osallistujakentät, vapaaehtoinen kyllä/ei-valinta, määräpäivä, kapasiteetti ja järjestäjäilmoitukset: [maksullisen tapahtuman yleisohje](woocommerce-event-registration.md). Myös vanhat Tampere 2026 -tilaukset näkyvät yhteisessä **Tapahtumat → Osallistujat** -näkymässä. Vanha tapahtumakohtainen pikalinkkisivu poistettiin #194:ssa.
 
 ### Yleinen osallistujanäkymä
 
@@ -545,3 +538,17 @@ Tapahtumaosio on testattu WCAG 2.1 AA -vaatimuksia vasten tiketissä #75. Seuraa
 - `prefers-reduced-motion` -media query koko teemalle ✓
 
 Lomakkeen palvelinpuolen virheviestit ovat yleisiä ilmoituksia lomakkeen yläpuolella (`role="alert"`). HTML5 native validation hoitaa kenttäkohtaiset virheet ennen lähetystä.
+
+## Osallistujien sähköpostiosoitteet (#676, #685)
+
+Tapahtuman **Ilmoittautumisen lisävalinta** -metaboksin **Kysy osallistujien sähköpostiosoitteet** on oletuksena pois päältä. Maksuttomassa lomakkeessa valinta lisää vapaaehtoisen muiden osallistujien osoitetekstialueen, yksi osoite per rivi. Maksullisessa tapahtumassa se lisää osallistujakohtaiset vapaaehtoiset sähköpostikentät kassalle, kun tapahtumaan on linkitetty osallistujatietoja keräävä WooCommerce-tuote (#685). Sama tuote kannattaa varata yhdelle tapahtumalle; jos tuote on linkitetty useaan tapahtumaan, kaikkien näiden tapahtumien pitää sallia osoitteiden keruu, jotta kentät näkyvät.
+
+Osoitteen saa antaa vain henkilön luvalla. Sitä käytetään vain tapahtumaviestintään ja palautepyyntöön. Määräkentän kanssa raja on henkilömäärä miinus yksi (ilmoittaja lasketaan mukaan); ilman määräkenttää oletusraja on 9, suodatin `rytkoset_theme_event_registration_max_additional_emails`. Syötteen tekninen pituusraja on 10 000 tavua. Virheellinen osoite tai ylitys palauttaa lomakkeelle virheen ennen tallennusta; kentät täytetään uudelleen nykyisen PRG-käytännön mukaisesti. Tyhjä kenttä sallitaan, oma osoite ja kirjainkoosta riippumattomat kaksoiskappaleet poistetaan.
+
+Osoitteet tallennetaan taulukkona metaan `_rytkoset_registration_additional_emails`. Ne näkyvät ilmoittautumisen ylläpitonäkymässä lukutietona ja osallistujien CSV-viennissä. Ne eivät luo osallistujarivejä, muuta henkilömäärää tai ilmoittautumisen duplikaattitarkistusta, eivätkä saa ilmoittautumiskuittia tai uutiskirjetilausta. Keruun poistaminen käytöstä piilottaa kentän uusilta ilmoittautumisilta; jo kerätyt osoitteet säilyvät viestinnässä ilmoittautumisen tilan mukaisesti.
+
+Ennen tuotantokäyttöä vahvista käsittelyperuste ja informointiteksti tietosuojasta vastaavan kanssa ja päivitä julkinen tietosuojaseloste. Lisäosoitteen poisto onnistuu WordPressin henkilötietojen poistotyökalulla.
+
+### #676:n paikallinen varmennus (19.9.2026)
+
+WordPress / PHP 8.3.31: lomakkeen virheellinen syöte, onnistunut tallennus ja tyhjä vapaaehtoinen kenttä tarkistettu selaimella. Mobiili 390 px, vaalea ja tumma teema, näkyvä fokus ja virhekentän `aria-invalid` ilman vaakavieritystä. Ylläpidon lisäosoitetieto ja CSV:n monirivinen osoitesarake tarkistettu. Tapahtumaviesti ja palautepyyntö käsiteltiin lähetysjonon kautta ulkoinen sähköpostilähetys estettynä. Oikealla tietokannalla tarkistettu vastaanottajien deduplikointi, lisäosallistujan rajattu vienti/poisto, peruminen ja anonymisointi. Testiaineisto poistettu. `dev.rytkoset.net`-varmennus ja oikea sähköpostitoimitus jäävät julkaisuun liittyvään testiin.

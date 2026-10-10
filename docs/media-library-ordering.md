@@ -41,6 +41,28 @@ Käytännössä tämä toimii oikein, kun kuvat on nimetty nollatäytetyillä ju
 
 Jos yksittäinen albumi tarvitsee tiedostonimistä poikkeavan tarinallisen järjestyksen, sille kannattaa tehdä erillinen jatkotiketti. Nykyinen MVP pitää albumien järjestyksen toistettavana ilman maksullisia lisäosia.
 
+## Kuvan käyttöpaikat ja poistoesto (#702)
+
+Albumin kuvat valitaan Galleria-lohkoon mediakirjastosta, joten WordPress näyttää ne mediakirjastossa tilassa **(Ei liitetty)**. Se ei tarkoita, että kuva olisi käyttämätön.
+
+- Mediakirjaston listanäkymässä on sarake **Käytössä**. Siinä näkyy enintään kolme sisältöä, joissa kuvaa käytetään (esim. "Albumi: Sukujuhla 2023"), ja loput lukumääränä. Linkki avaa sisällön muokkausnäkymän, jos sinulla on siihen oikeus. Sisältöjä, joita et voi lukea (esim. toisen käyttäjän yksityinen sisältö), ei nimetä, vaan ne näkyvät vain lukumääränä.
+- Ruudukkonäkymän ja mediaikkunan kuvatiedoissa on sama **Käytössä**-tieto.
+- Käytössä olevalta kuvalta puuttuu **Poista pysyvästi** -toiminto (ja **Roskakoriin**, jos mediakirjaston roskakori on käytössä). Listanäkymässä sen tilalla lukee "Käytössä, ei poistettavissa".
+- Jos käytössä olevaa kuvaa yritetään silti poistaa (esim. listanäkymän joukkotoiminnolla tai WP-CLI:llä), WordPress kieltäytyy. Joukkopoisto pysähtyy ensimmäiseen käytössä olevaan kuvaan WordPressin omaan yleiseen virheilmoitukseen liitteen poistamisen epäonnistumisesta; sitä ennen valitut käyttämättömät kuvat on jo poistettu. Poista siis käytössä olevat kuvat valinnasta ennen joukkopoistoa.
+- Sama esto koskee roskakoriin siirtoa, jos mediakirjaston roskakori on otettu käyttöön (`MEDIA_TRASH`).
+- Kuvan voi poistaa, kun se on ensin poistettu kaikista sisällöistä, joissa se on käytössä.
+
+Käyttöpaikaksi lasketaan julkaistut, ajastetut, luonnos-, odottavat ja yksityiset sisällöt (ei roskakoria) näissä sisältötyypeissä: albumit, tapahtumat, tuotteet ja niiden variaatiot, blogikirjoitukset, sivut, digilehdet ja synkronoidut lohkomallit. Tunnistetaan:
+
+- kuva-, galleria-, kansikuva-, media ja teksti-, tiedosto-, video- ja äänilohkot sekä minkä tahansa lohkon (esim. Ryhmä) mediakirjastosta valittu taustakuva
+- klassisen editorin kuvat (`<img class="wp-image-N">`) ja `[gallery ids="…"]` tai `[gallery include="…"]` (pilkuilla tai välilyönneillä eroteltuna). Pelkkä tekstinä kirjoitettu luokan nimi, HTML-kommentin sisältö tai kaksoishakasilla kirjoitettu esimerkki `[[gallery …]]` ei ole käyttöä.
+- artikkelikuva, WooCommercen tuotegalleria, albumin vanha ACF-galleria ja albumivideoiden pikkukuvat
+- sivuston logo ja kuvake
+
+Ei tunnisteta: kuvia, joihin viitataan pelkällä osoitteella (URL), keskustelupalstan viestejä eikä lisäosien omia asetuksia. Tällaisen kuvan poistaminen on edelleen mahdollista, joten ole tarkkana kuvissa, joiden Käytössä-sarake on tyhjä.
+
+Tekniikka: `inc/media-usage.php`. Näkymät käyttävät 12 tunnin välimuistia, joka tyhjennetään aina, kun seurattu sisältö tai sen kuvakenttä muuttuu. Poistoesto tarkistaa käytön aina suoraan tietokannasta. Eston voi kytkeä pois suotimella `rytkoset_theme_block_in_use_attachment_delete` ja tarkistettavia sisältötyyppejä muuttaa suotimella `rytkoset_theme_media_usage_post_types`.
+
 ## Albumin osiot ja suodatus (#677)
 
 Kun albumissa on useampi erillinen tilaisuus (esim. perjantain buffet-illallinen

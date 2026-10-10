@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LUONNOS – uutiskirjepilotti #660</title>
+  <style>
+    /* Essential layout and colors are inline; these rules enhance supported clients. */
+    table { border-collapse: collapse; }
+    a:focus { outline: 3px solid #0f4c81; outline-offset: 3px; }
+    /* A combined selector preserves canvas colors through AcyMailing's body rule cleanup. */
+    @media screen {
+      body, html { margin: 0 !important; padding: 0 !important; background-color: #f5f5f5 !important; }
+    }
+    @media screen and (max-width: 600px) {
+      .email-padding { padding-left: 20px !important; padding-right: 20px !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body, html { background-color: #0d1117 !important; }
+      .email-bg { background-color: #0d1117 !important; }
+      .email-surface { background-color: #111827 !important; color: #e8edf4 !important; }
+      .email-text { color: #e8edf4 !important; }
+      .email-muted { color: #a7b0bf !important; }
+      .email-link { color: #93c5fd !important; }
+      a:focus { outline-color: #fbbf24; }
+    }
+  </style>
+</head>
+<body class="email-bg" style="margin: 0; padding: 0; background-color: #f5f5f5;">
+  <!-- Keep language and Outlook markup inside body: import discards html/body attributes. -->
+  <table lang="fi" dir="ltr" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-bg" bgcolor="#f5f5f5" style="width: 100%; background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 24px 0;">
+        <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="email-surface" bgcolor="#ffffff" style="width: 100%; max-width: 600px; background-color: #ffffff; color: #1f2933; font-family: Arial, Helvetica, sans-serif;">
+          <tr>
+            <td class="email-padding" bgcolor="#0f4c81" style="padding: 24px 32px; background-color: #0f4c81; color: #ffffff;">
+              <p style="margin: 0; color: #ffffff; font-size: 20px; line-height: 28px; font-weight: bold;">Rytkösten sukuseura ry</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-padding email-surface" style="padding: 32px;">
+              <!-- Remove this notice only after the content has been approved. -->
+              <p class="email-muted" style="margin: 0 0 24px; color: #5b6577; font-size: 14px; line-height: 22px;">LUONNOS #660 – sisältö odottaa hyväksyntää. Ei lähetettäväksi.</p>
+              <h1 class="email-text" style="margin: 0 0 20px; color: #1f2933; font-size: 28px; line-height: 36px;">[TÄYDENNÄ: kirjeen otsikko]</h1>
+              <p class="email-text" style="margin: 0 0 16px; color: #1f2933; font-size: 16px; line-height: 26px;">Hei!</p>
+              <p class="email-text" style="margin: 0 0 24px; color: #1f2933; font-size: 16px; line-height: 26px;">[TÄYDENNÄ: hyväksytty johdanto ja kirjeen tärkein asia.]</p>
+              <h2 class="email-text" style="margin: 0 0 16px; color: #1f2933; font-size: 22px; line-height: 30px;">[TÄYDENNÄ: sisältöosion otsikko]</h2>
+              <p class="email-text" style="margin: 0 0 24px; color: #1f2933; font-size: 16px; line-height: 26px;">[TÄYDENNÄ: hyväksytty teksti. Lisää vain vahvistetut tiedot ja tarvittaessa hyväksytty kuva.]</p>
+              <!-- Replace both the label and the destination with the approved primary link. -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td bgcolor="#fbbf24" style="background-color: #fbbf24;">
+                    <a href="https://rytkoset.net/" style="display: inline-block; border: 12px solid #fbbf24; background-color: #fbbf24; color: #08254a; font-size: 16px; line-height: 24px; font-weight: bold; text-decoration: underline;">[TÄYDENNÄ: päälinkki]</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-padding email-surface" style="padding: 24px 32px; border-top: 1px solid #5b6577;">
+              <p class="email-muted" style="margin: 0 0 16px; color: #5b6577; font-size: 14px; line-height: 22px;">Saat tämän viestin, koska olet tilannut Rytkösten sukuseuran uutiskirjeen.</p>
+              <p style="margin: 0 0 16px; font-size: 14px; line-height: 24px;"><a class="email-link" href="https://rytkoset.net/" style="color: #0f4c81; text-decoration: underline;">Rytkoset.net</a></p>
+              <!-- Empty paired tags become URLs, preserving the surrounding styled anchor. -->
+              <p style="margin: 0 0 16px; font-size: 14px; line-height: 24px;"><a class="email-link" href="{readonline}{/readonline}" style="color: #0f4c81; text-decoration: underline;">Lue selaimessa</a></p>
+              <p style="margin: 0; font-size: 14px; line-height: 24px;"><a class="email-link" href="{unsubscribe}{/unsubscribe}" style="color: #0f4c81; text-decoration: underline;">Peruuta uutiskirjeen tilaus</a></p>
+            </td>
+          </tr>
+        </table>
+        <!--[if mso]></td></tr></table><![endif]-->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

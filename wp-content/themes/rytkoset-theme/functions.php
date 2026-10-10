@@ -28,6 +28,7 @@ require_once get_template_directory() . '/inc/share.php';
 require_once get_template_directory() . '/inc/gallery-albums.php';
 require_once get_template_directory() . '/inc/youtube-privacy.php';
 require_once get_template_directory() . '/inc/media-library.php';
+require_once get_template_directory() . '/inc/media-usage.php';
 require_once get_template_directory() . '/inc/event-roles.php';
 require_once get_template_directory() . '/inc/events.php';
 require_once get_template_directory() . '/inc/home-highlight.php';
@@ -40,10 +41,14 @@ require_once get_template_directory() . '/inc/event-participants-messaging.php';
 require_once get_template_directory() . '/inc/event-feedback.php';
 require_once get_template_directory() . '/inc/digital-magazines.php';
 require_once get_template_directory() . '/inc/digital-magazine-access.php';
+require_once get_template_directory() . '/inc/digital-magazines-admin.php';
 require_once get_template_directory() . '/inc/attachment-iptc.php';
 require_once get_template_directory() . '/inc/seo-meta.php';
 require_once get_template_directory() . '/inc/structured-data.php';
 require_once get_template_directory() . '/inc/login.php';
+require_once get_template_directory() . '/inc/admin-appearance.php';
+require_once get_template_directory() . '/inc/admin-dashboard.php';
+require_once get_template_directory() . '/inc/admin-menu.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/user-membership.php';
 require_once get_template_directory() . '/inc/member-newsletter.php';
@@ -55,11 +60,13 @@ require_once get_template_directory() . '/inc/woocommerce-mollie.php';
 require_once get_template_directory() . '/inc/woocommerce-membership.php';
 require_once get_template_directory() . '/inc/woocommerce-member-coupon.php';
 require_once get_template_directory() . '/inc/woocommerce-digital-magazine.php';
-require_once get_template_directory() . '/inc/woocommerce-tampere-2026.php';
+require_once get_template_directory() . '/inc/woocommerce-event-registration.php';
+require_once get_template_directory() . '/inc/woocommerce-event-privacy.php';
 require_once get_template_directory() . '/inc/woocommerce-bus-transport.php';
 require_once get_template_directory() . '/inc/woocommerce-product-sync.php';
 require_once get_template_directory() . '/inc/woocommerce-shop-categories.php';
 require_once get_template_directory() . '/inc/woocommerce-empty-cart.php';
+require_once get_template_directory() . '/inc/woocommerce-checkout-session.php';
 require_once get_template_directory() . '/inc/woocommerce-structured-data.php';
 require_once get_template_directory() . '/inc/woocommerce-payment-retry.php';
 require_once get_template_directory() . '/inc/woocommerce-cancellation.php';
@@ -617,7 +624,8 @@ function rytkoset_theme_scripts() {
 	}
 
 	// Tapahtumapalautteen julkinen sivu (/palaute/{event_id}/): oma hero +
-	// kortti -asettelu ja merkkilaskuri. Ladataan vain tällä reitillä.
+	// kortti -asettelu, merkkilaskuri ja lähetyspainikkeen lukitus.
+	// Ladataan vain tällä reitillä.
 	if ( function_exists( 'rytkoset_theme_is_event_feedback_request' ) && rytkoset_theme_is_event_feedback_request() ) {
 		wp_enqueue_style(
 			'rytkoset-theme-event-feedback',
@@ -685,8 +693,8 @@ function rytkoset_theme_scripts() {
 					'checkoutNotes' => array_values(
 						array_filter(
 							array(
-								function_exists( 'rytkoset_theme_cart_has_tampere_2026_registration' ) && rytkoset_theme_cart_has_tampere_2026_registration()
-										? rytkoset_theme_get_tampere_2026_checkout_notice_markup()
+								function_exists( 'rytkoset_theme_cart_has_paid_event_registration' ) && rytkoset_theme_cart_has_paid_event_registration()
+										? rytkoset_theme_get_paid_event_checkout_notice_markup()
 										: '',
 							)
 						)

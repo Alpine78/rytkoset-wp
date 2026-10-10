@@ -3,7 +3,7 @@
  * Ilmoittautumisyhteenveto järjestäjäilmoituksiin.
  *
  * Shared by the free registration notification (inc/event-registrations.php) and
- * the paid order notification (inc/woocommerce-tampere-2026.php). Both emails are
+ * the paid order notification (inc/woocommerce-event-registration.php). Both emails are
  * sent from latency-sensitive paths (a public form POST and a WooCommerce order
  * status transition), so the counting here deliberately avoids
  * `rytkoset_theme_get_event_participants()`, which hydrates every supported-status

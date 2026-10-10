@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $GLOBALS['rytkoset_test_user_meta']    = array(); // [user_id][key] => value
 $GLOBALS['rytkoset_test_users']        = array(); // [user_id] => WP_User
 $GLOBALS['rytkoset_test_posts']        = array(); // [post_id] => WP_Post
+$GLOBALS['rytkoset_test_get_posts_calls'] = 0;
 $GLOBALS['rytkoset_test_permalink_failures'] = array(); // [post_id] => true
 $GLOBALS['rytkoset_test_parent_map']   = array(); // [child_id] => parent_id (magazine articles)
 $GLOBALS['rytkoset_test_mails']        = array(); // recorded wp_mail() calls
@@ -70,9 +71,11 @@ $GLOBALS['rytkoset_test_hooks'] = array(); // [tag] => array of array{0:int prio
  */
 function rytkoset_test_reset(): void {
 	$_POST = array();
+	$GLOBALS['rytkoset_test_enqueued_styles'] = array();
 	$GLOBALS['rytkoset_test_user_meta']     = array();
 	$GLOBALS['rytkoset_test_users']         = array();
 	$GLOBALS['rytkoset_test_posts']         = array();
+	$GLOBALS['rytkoset_test_get_posts_calls'] = 0;
 	$GLOBALS['rytkoset_test_permalink_failures'] = array();
 	$GLOBALS['rytkoset_test_parent_map']    = array();
 	$GLOBALS['rytkoset_test_mails']         = array();
@@ -103,6 +106,8 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_flush_rewrite_rules_count'] = 0;
 	$GLOBALS['rytkoset_test_cron_events']   = array();
 	$GLOBALS['rytkoset_test_dashboard_widgets'] = array();
+	$GLOBALS['rytkoset_test_removed_meta_boxes'] = array();
+	$GLOBALS['rytkoset_test_post_type_create_caps'] = array();
 	$GLOBALS['rytkoset_test_http_responses'] = array();
 	$GLOBALS['rytkoset_test_http_requests']  = array();
 
@@ -178,6 +183,19 @@ class WP_User {
 
 	public function exists(): bool {
 		return $this->ID > 0;
+	}
+
+	/** @var string[] Roles, for tests that add or remove a secondary role. */
+	public array $roles = array();
+
+	public function add_role( $role ): void {
+		if ( ! in_array( $role, $this->roles, true ) ) {
+			$this->roles[] = (string) $role;
+		}
+	}
+
+	public function remove_role( $role ): void {
+		$this->roles = array_values( array_diff( $this->roles, array( (string) $role ) ) );
 	}
 }
 
@@ -357,6 +375,7 @@ class Rytkoset_Test_Cart {
 
 class Rytkoset_Test_WC {
 	public ?Rytkoset_Test_Cart $cart = null;
+	public ?object $session = null;
 }
 
 class WC_Admin_Meta_Boxes {
@@ -377,11 +396,28 @@ class Rytkoset_Test_Order_Item {
 	private WC_Product $product;
 	private string $name;
 	private int $quantity;
+	private array $meta = array();
 
 	public function __construct( WC_Product $product, string $name = 'Jäsenmaksu', int $quantity = 1 ) {
 		$this->product  = $product;
 		$this->name     = $name;
 		$this->quantity = $quantity;
+	}
+
+	public function get_meta( string $key, bool $single = true ) {
+		return $this->meta[ $key ] ?? '';
+	}
+
+	public function update_meta_data( string $key, $value ): void {
+		$this->meta[ $key ] = $value;
+	}
+
+	public function save(): int {
+		return 1;
+	}
+
+	public function get_product_id(): int {
+		return $this->product->get_parent_id() ?: $this->product->get_id();
 	}
 
 	public function get_product(): WC_Product {
@@ -535,6 +571,14 @@ class WC_Order {
 		$this->notes[] = $note;
 	}
 
+	public function meta_exists( string $key ): bool {
+		return array_key_exists( $key, $this->meta );
+	}
+
+	public function delete_meta_data( string $key ): void {
+		unset( $this->meta[ $key ] );
+	}
+
 	public function save(): void {
 		++$this->save_count;
 	}
@@ -621,6 +665,16 @@ class WP_Error {
 
 /** Minimal REST request stand-in for chat handler integration tests. */
 class WP_REST_Request {
+	public function __construct( private string $method = 'GET', private string $route = '' ) {}
+
+	public function get_method(): string {
+		return $this->method;
+	}
+
+	public function get_route(): string {
+		return $this->route;
+	}
+
 	/** @var array<string,mixed> */
 	private array $params = array();
 	/** @var array<string,string> */
@@ -797,6 +851,10 @@ if ( ! defined( 'DAY_IN_SECONDS' ) ) {
 	define( 'DAY_IN_SECONDS', 86400 );
 }
 
+function _n( $single, $plural, $number, $domain = 'default' ) {
+	return 1 === (int) $number ? $single : $plural;
+}
+
 function __( $text, $domain = 'default' ) {
 	return $text;
 }
@@ -889,6 +947,11 @@ function esc_attr( $text ) {
 
 function esc_url( $url ) {
 	return (string) $url;
+}
+
+// Rendering-only stand-in; this is not a sanitizer security test.
+function wp_kses( $data, $allowed_html, $allowed_protocols = array() ) {
+	return strip_tags( (string) $data, array_keys( $allowed_html ) );
 }
 
 function wp_kses_post( $data ) {
@@ -1122,6 +1185,10 @@ function get_the_title( $post = 0 ) {
 		: '';
 }
 
+function get_the_time( $format = '', $post = null ) {
+	return wp_date( '' === $format ? get_option( 'time_format' ) : $format, current_datetime()->getTimestamp() );
+}
+
 function get_the_date( $format = '', $post = null ) {
 	$format = '' === $format ? get_option( 'date_format' ) : $format;
 
@@ -1211,6 +1278,32 @@ function update_meta_cache( $meta_type, $object_ids ) {
 
 function wp_add_dashboard_widget( $widget_id, $widget_name, $callback, $control_callback = null, $callback_args = null, $context = 'normal', $priority = 'core' ): void {
 	$GLOBALS['rytkoset_test_dashboard_widgets'][ (string) $widget_id ] = $callback;
+}
+
+function untrailingslashit( $value ) {
+	return rtrim( (string) $value, '/\\' );
+}
+
+function username_exists( $username ) {
+	foreach ( $GLOBALS['rytkoset_test_users'] as $user ) {
+		if ( $user->user_login === (string) $username ) {
+			return $user->ID;
+		}
+	}
+
+	return false;
+}
+
+function wp_rand( $min = 0, $max = 0 ) {
+	return null !== ( $GLOBALS['rytkoset_test_wp_rand'] ?? null ) ? (int) array_shift( $GLOBALS['rytkoset_test_wp_rand'] ) : random_int( (int) $min, (int) $max );
+}
+
+function wp_print_inline_script_tag( $data, $attributes = array() ): void {
+	echo '<script>' . $data . '</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Test bootstrap.
+}
+
+function remove_meta_box( $id, $screen, $context ): void {
+	$GLOBALS['rytkoset_test_removed_meta_boxes'][] = (string) $screen . ':' . (string) $context . ':' . (string) $id;
 }
 
 function number_format_i18n( $number, $decimals = 0 ): string {
@@ -1400,6 +1493,37 @@ function wp_get_post_parent_id( $post = 0 ) {
 /**
  * Capability check controlled by $GLOBALS['rytkoset_test_caps'] (defaults to denied).
  */
+// Form attribute helpers with WordPress's own string comparison semantics.
+function selected( $selected, $current = true, $display = true ) {
+	$result = (string) $selected === (string) $current ? " selected='selected'" : '';
+	if ( $display ) {
+		echo $result; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed literal.
+	}
+	return $result;
+}
+
+function checked( $checked, $current = true, $display = true ) {
+	$result = (string) $checked === (string) $current ? " checked='checked'" : '';
+	if ( $display ) {
+		echo $result; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed literal.
+	}
+	return $result;
+}
+
+// Post type object with the capabilities the theme checks; every type maps to core's post caps.
+function get_post_type_object( $post_type ) {
+	// Tests may give a post type its own create capability; default edit_posts.
+	$create = $GLOBALS['rytkoset_test_post_type_create_caps'][ (string) $post_type ] ?? 'edit_posts';
+
+	return (object) array(
+		'name' => (string) $post_type,
+		'cap'  => (object) array(
+			'create_posts' => $create,
+			'edit_posts'   => 'edit_posts',
+		),
+	);
+}
+
 function current_user_can( $capability, ...$args ) {
 	return ! empty( $GLOBALS['rytkoset_test_caps'][ $capability ] );
 }
@@ -1554,6 +1678,7 @@ function wpautop( $text ) {
 // ---------------------------------------------------------------------------
 
 function get_posts( $args = array() ) {
+	++$GLOBALS['rytkoset_test_get_posts_calls'];
 	$types  = (array) ( $args['post_type'] ?? 'post' );
 	$fields = $args['fields'] ?? '';
 	$parent = array_key_exists( 'post_parent', $args ) ? (int) $args['post_parent'] : null;
@@ -1687,6 +1812,12 @@ function rytkoset_test_match_meta_query( int $post_id, array $meta_query ): bool
 			continue;
 		}
 
+		if ( 'LIKE' === $compare ) {
+			$value = get_post_meta( $post_id, $clause['key'], true );
+			$results[] = str_contains( is_array( $value ) ? serialize( $value ) : (string) $value, (string) $clause['value'] );
+			continue;
+		}
+
 		$results[] = (string) get_post_meta( $post_id, $clause['key'], true ) === (string) ( $clause['value'] ?? '' );
 	}
 
@@ -1725,10 +1856,24 @@ function update_option( $option, $value, $autoload = null ): bool {
 	return true;
 }
 
+function add_option( $option, $value = '', $deprecated = '', $autoload = 'yes' ): bool {
+	if ( array_key_exists( $option, $GLOBALS['rytkoset_test_options'] ) ) {
+		return false;
+	}
+
+	$GLOBALS['rytkoset_test_options'][ $option ] = $value;
+
+	return true;
+}
+
 function delete_option( $option ): bool {
 	unset( $GLOBALS['rytkoset_test_options'][ $option ] );
 
 	return true;
+}
+
+function wp_generate_password( $length = 12, $special_chars = true, $extra_special_chars = false ): string {
+	return substr( str_repeat( 'Ab12Cd34Ef56Gh78', (int) ceil( $length / 16 ) ), 0, $length );
 }
 
 function flush_rewrite_rules( $hard = true ): void {
@@ -1853,6 +1998,15 @@ function get_template_directory_uri() {
 	return 'https://rytkoset.test/wp-content/themes/rytkoset-theme';
 }
 
+// Records enqueued styles by handle so tests can assert what an enqueue callback loaded.
+function wp_enqueue_style( $handle, $src = '', $deps = array(), $ver = false, $media = 'all' ) {
+	$GLOBALS['rytkoset_test_enqueued_styles'][ $handle ] = array(
+		'src'  => $src,
+		'deps' => $deps,
+		'ver'  => $ver,
+	);
+}
+
 function get_theme_mod( $name, $default_value = false ) {
 	if ( 'rytkoset_theme_contact_email' === $name ) {
 		return (string) $GLOBALS['rytkoset_test_contact_email'];
@@ -1974,6 +2128,7 @@ require_once $rytkoset_theme_inc . '/woocommerce-membership.php';
 require_once $rytkoset_theme_inc . '/woocommerce-member-coupon.php';
 require_once $rytkoset_theme_inc . '/digital-magazines.php';
 require_once $rytkoset_theme_inc . '/digital-magazine-access.php';
+require_once $rytkoset_theme_inc . '/digital-magazines-admin.php';
 require_once $rytkoset_theme_inc . '/woocommerce-digital-magazine.php';
 require_once $rytkoset_theme_inc . '/members-only-pages.php';
 require_once $rytkoset_theme_inc . '/events.php';
@@ -1984,7 +2139,9 @@ require_once $rytkoset_theme_inc . '/security.php';
 require_once $rytkoset_theme_inc . '/seo-meta.php';
 require_once $rytkoset_theme_inc . '/media-library.php';
 require_once $rytkoset_theme_inc . '/event-roles.php';
-require_once $rytkoset_theme_inc . '/woocommerce-tampere-2026.php';
+require_once $rytkoset_theme_inc . '/woocommerce-event-registration.php';
+require_once $rytkoset_theme_inc . '/woocommerce-event-privacy.php';
+require_once $rytkoset_theme_inc . '/woocommerce-checkout-session.php';
 require_once $rytkoset_theme_inc . '/newsletter.php';
 require_once $rytkoset_theme_inc . '/member-newsletter.php';
 require_once $rytkoset_theme_inc . '/event-registration-privacy.php';
@@ -1995,6 +2152,7 @@ require_once $rytkoset_theme_inc . '/event-registration-summary.php';
 require_once $rytkoset_theme_inc . '/event-feedback.php';
 require_once $rytkoset_theme_inc . '/email.php';
 require_once $rytkoset_theme_inc . '/gallery-albums.php';
+require_once $rytkoset_theme_inc . '/media-usage.php';
 
 // functions.php pulls in the remaining inc modules (icons, share, customizer-contact, …) and
 // defines the shared theme helpers (asset version, gallery alt fallback, order-status mapping,

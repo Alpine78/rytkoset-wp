@@ -206,6 +206,7 @@ Tärkeät polut:
 - `wp-content/mu-plugins/automation-by-klik.php` - Klikin hallinnoiman ylläpidon
   MU-pluginin repoitu kopio; ei automaattisesti deployattava teematiedosto
 - `docs/` - ominaisuus- ja ylläpitodokumentaatio
+- `newsletters/660-pilot/` - paikallinen uutiskirjeen HTML-luonnos ja pilotin havaintoloki (#660)
 - `.github/workflows/` - CI- ja deploy-workflowt
 - `CHANGELOG.md` - manuaalinen muutoshistoria
 - `AGENTS.md` - repo-ohjeet AI-avusteiseen kehitykseen
@@ -220,7 +221,9 @@ SEO-metatiedot, some-linkit ja Customizer-asetukset.
 Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 
 - `docs/hallituksen-paatettavat-asiat.md` - hallituksen päätettävät verkkosivustoasiat ja päätösrungot
+- `docs/hallitussivu.md` - hallitussivun sisältö ja siirto deviin sekä tuotantoon
 - `docs/design-system.md` - design-tokenit ja frontend-käytännöt
+- `docs/admin-ulkoasu.md` - hallintapaneelin ulkoasu, hätäkatkaisin ja päivitysten jälkeinen tarkistuslista
 - `docs/menu-structure.md` - päävalikon tavoiterakenne
 - `docs/comments.md` - blogin ja albumien kommentointi
 - `docs/events.md` - tapahtuma-CPT ja ilmoittautumisvirta
@@ -232,7 +235,7 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/digital-magazines.md` - digilehtien sisältö-, käyttöoikeus- ja hinnoittelumalli
 - `docs/jasenyys.md` - käyttäjän jäsenyystilan asettaminen
 - `docs/jasenille-rajatut-sivut.md` - vain jäsenille näkyvät sisältösivut
-- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio
+- `docs/newsletter.md` - AcyMailing-uutiskirjeintegraatio ja paikallisen HTML-tuontipilotin työnkulku
 - `docs/chat.md` - AI-tukichatin backend-proxy, widget ja ylläpito
 - `docs/woocommerce-setup.md` - WooCommercen perusasetukset
 - `docs/woocommerce-membership-products.md` - jäsenmaksutuotteet
@@ -241,12 +244,8 @@ Lue aiheeseen liittyvä dokumentti ennen ominaisuuden muuttamista:
 - `docs/woocommerce-digital-products.md` - digitaalisten tuotteiden MVP-malli
 - `docs/woocommerce-rytkosten-sukulainen-product.md` - painetun jäsenlehden tuotemalli
 - `docs/woocommerce-product-sync.md` - tuotteiden synkronointi ympäristöjen välillä
+- `docs/woocommerce-event-registration.md` - maksullisen tapahtuman tuoteasetukset, osallistujat, lisävalinta, järjestäjäilmoitukset ja kuljetuksen maksu jälkikäteen
 - `docs/woocommerce-event-product-link.md` - tapahtuman linkitys maksutuotteeseen
-- `docs/woocommerce-tampere-2026-product.md` - Tampere 2026 -osallistumismaksutuote
-- `docs/woocommerce-tampere-2026-checkout-fields.md` - Tampere 2026 checkout-kentät
-- `docs/woocommerce-tampere-2026-management.md` - Tampere 2026 -hallinta
-- `docs/woocommerce-tampere-2026-notifications.md` - maksullisten tapahtumien järjestäjäilmoitukset
-- `docs/woocommerce-tampere-2026-bussikyyti.md` - bussikyydin ilmoittautuminen ja maksu jälkikäteen
 - `docs/woocommerce-mollie-payments.md` - lepäävä Mollie-maksujen palautusohje
 - `docs/woocommerce-mollie-go-live.md` - lepäävä Mollie dev→live -palautusohje
 - `docs/woocommerce-mollie-mobilepay.md` - lepäävä Mollie MobilePay -palautusohje

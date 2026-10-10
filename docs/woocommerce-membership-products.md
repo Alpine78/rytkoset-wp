@@ -72,7 +72,7 @@ Maksetun tilauksen käsittely käyttää samoja sääntöjä. Puutteellisesta tu
 
 ### Rakenteiset jäsenkentät kassalla
 
-Toteutus seuraa Tampere 2026 -kenttien mallia (`inc/woocommerce-tampere-2026.php`, `docs/woocommerce-tampere-2026-checkout-fields.md`):
+Toteutus seuraa tapahtuman osallistujakenttien mallia (`inc/woocommerce-event-registration.php`, `docs/woocommerce-event-registration.md`):
 
 - Kentät rekisteröidään WooCommerce Blocks -kassan lisäkenttärajapinnalla (`woocommerce_register_additional_checkout_field`, `location = order`): `rytkoset/member_X_name` ja `rytkoset/member_X_email` (X = 1–6).
 - Teema julkaisee Checkout Blockille näytettävien rivien määrän Store API:n `cart.extensions.rytkoset_membership.member_row_count` -kentässä: 1 yksityis-/ainaisjäsenmaksulle, käyttäjän lisäämä määrä 1–6 perhejäsenmaksulle ja 0, kun korissa ei ole nimet vaativaa jäsenmaksua.
