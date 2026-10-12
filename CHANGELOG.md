@@ -6,6 +6,9 @@ Kaikki merkittävät muutokset tähän projektiin kirjataan tähän tiedostoon.
 
 ## [Unreleased]
 
+### Added
+- #730: tukichatin 502-virheen vianhakuohje (`docs/chat.md`) ja REST-regressiot (`tests/ChatRequestHandlerTest.php`) erottavat chatin oman kävijärajan (429) Mistralin käyttörajasta (`http_429`, selaimelle geneerinen 502). Testit varmistavat, ettei palveluntarjoajan virhettä yritetä uudelleen tai sen sisältöä paljasteta; tuotannon häiriön syyn vahvistaminen ja palveluntarjoajan asetusten tarkistus ovat vielä kesken.
+
 ## [1.5.0] - 2026-10-10
 
 ### Added

@@ -314,6 +314,34 @@ Ennen tätä kokonaisuutta kulusuojien osumat eivät näkyneet ylläpitäjälle 
 
 **Puhtaat apufunktiot** (testattu `tests/ChatUsageStatsTest.php`:ssä): `rytkoset_theme_chat_bump_stat()` / `..._bump_error_stat()` (laskurin kasvatus, ei kosketa `wp_options`-tauluun), `rytkoset_theme_chat_get_usage_stats()` (yhteenveto widgetiä varten) ja `rytkoset_theme_chat_get_error_type_label()`. Itse Dashboard-widgetin rekisteröinti ja renderöinti ovat ohutta admin-liimakoodia, joka on tarkoituksella jätetty yksikkötestien ulkopuolelle (ks. `CLAUDE.md`:n testausohje render-raskaille admin-näkymille). Widgetin aiemmat rivit todennettiin #472:ssa manuaalisesti wp-adminissa; uuden prompt-välimuistirivin dev-todennus kuuluu yllä kuvattuun #567-kokeeseen.
 
+### 502-virheen vianhaku (#730)
+
+Chatin JSON-virhe `rytkoset_chat_upstream_error` / HTTP 502 on yhteinen vastaus usealle virhepolulle. Se ei yksin kerro, onko syy Mistralin HTTP-virhe, verkkoyhteys vai mallivastauksen hylkäys. Web-palvelimen HTML-muotoinen 403/502 on eri havainto, eikä sitä pidä tulkita chatin sisäiseksi virheeksi.
+
+1. Avaa **Ohjausnäkymä → Tukichatti → Tekniset tiedot**. Kirjaa virheiden määrä sekä viimeisimmän virheen tyyppi ja ajankohta.
+2. Lähetä tuoreessa selainistunnossa yksi epäonnistuva kysymys ja tarkista tiedot uudelleen. Varmista, että virhelaskuri kasvoi; tilasto on yhteinen kaikille kävijöille, joten vanha tyyppi ei riitä diagnoosiksi. Älä lähetä pitkää sarjaa testikysymyksiä.
+3. Vertaa tarvittaessa tavallista tervehdystä (`Hei`) sekä mallin ohittavaa kysymystä (`Mikä on sukuseuran tilikausi?`). Tilikausivastaus edellyttää julkaistun Säännöt-sivun kohdan 10 varmentamista. Jos tämä vastaus toimii mutta tervehdys epäonnistuu, vika rajautuu mallikutsun polkuun; vertailu ei vielä yksilöi syytä.
+4. Valitse jatkotoimi tuoreen virhetyypin perusteella. Widget näyttää tyypin ihmisluettavana tekstinä: esimerkiksi ”Mistral vastasi HTTP-virheellä 429” vastaa tallennettua tyyppiä `http_429`. Taulukko käyttää tallennettuja tunnisteita:
+
+| Tallennettu virhetyyppi | Tarkistus |
+| --- | --- |
+| `http_401` / `http_403` | API-avaimen voimassaolo ja käyttöoikeudet palveluntarjoajalla. |
+| `http_404` | Endpoint ja konfiguroitu mallinimi. |
+| `http_400` / `http_422` | Mallin ja pyyntöparametrien yhteensopivuus. |
+| `http_429` | Palveluntarjoajan käyttörajat; ks. seuraava kohta. |
+| `http_500`–`http_599` | Palveluntarjoajan häiriö ja sen tilanne; tallennettu tyyppi sisältää tarkan numeron, esim. `http_503`. |
+| Muu `http_<koodi>` | Tarkka HTTP-status ja palveluntarjoajan dokumentoima merkitys. |
+| `network` | Palvelimen DNS/TLS/yhteys ja mahdollinen 20 sekunnin aikakatkaisu. |
+| `invalid_finish_reason` / `empty_reply` / `invalid_reply` | Vastauksen valmistuminen, muoto tai sisällön validointi. Älä poista validointia virheen peittämiseksi. |
+| `direct_source_missing` | Säännöt-sivun julkisuus, polku ja kohdan 10 sisältö. |
+| `forced_tool_missing` | Pakotettu sivunluku ei palauttanut kelvollista työkalukutsua. Handler voi toipua tästä yhdellä tavallisella jatkokutsulla, joten tämä tyyppi ei yksin osoita epäonnistunutta REST-vastausta. |
+
+**Kaksi eri käyttörajaa:** chatin oma IP-kohtainen kulusuoja palauttaa selaimelle HTTP 429:n (`rytkoset_chat_rate_limited`) ja kasvattaa **Rate limit -osumia yhteensä:** -laskuria ennen API-kutsua. Mistralin palauttama HTTP 429 kirjautuu sen sijaan Mistral-/yhteysvirheeksi (`http_429`) ja näkyy selaimelle nykyisenä geneerisenä 502-virheenä. Chat-handler ei yritä ei-2xx-vastausta automaattisesti uudelleen. Pakotetun työkalukutsun korvausyritys koskee onnistunutta HTTP-vastausta, josta kelvollinen työkalukutsu puuttuu. Erottelu, turvallinen virheviesti ja laskurit on katettu `tests/ChatRequestHandlerTest.php`:ssä.
+
+**Kun virhe on `http_429`:** tarkista Mistralin **Admin Panel → API → Limits** ja **API → Usage** sekä organisaation/työtilan kulurajat. Mistralin ohjeen mukaan 429 voi johtua pyyntö-, token/minuutti- tai token/kuukausirajasta; pelkkä status ei osoita, mikä raja ylittyi. API-käyttörajat koskevat organisaatiota, joten samassa Mistral-organisaatiossa eri ympäristöjen erilliset API-avaimet eivät itsessään erota API-käyttörajoja. Älä nosta chatin omaa `RYTKOSET_CHAT_RATE_LIMIT`-rajaa tai HTTP-timeoutia tämän virheen korjaamiseksi. Maksullisen käytön käyttöönotto tai budjettirajan nosto on erillinen kustannuspäätös. Lähteet: [Mistralin käyttörajat](https://docs.mistral.ai/admin/billing-usage/usage-limits) ja [429-virheen vianhaku](https://help.mistral.ai/en/articles/698531-why-am-i-hitting-api-rate-limits-and-how-do-i-increase-them), tarkistettu 11.10.2026.
+
+Jos sisäinen virhetyyppi ei riitä, tee yksi rajattu palvelinpuolen koe. Älä tulosta tai tallenna API-avainta, Authorization-otsaketta, keskustelua tai raakaa palveluntarjoajan virherunkoa. Paikallisen kokeen tulos ei varmista tuotannon syytä, vaikka selaimen virhe näyttää samalta. Korjauksen jälkeen varmista devissä sekä tavallinen chat-vastaus että aiemmin epäonnistunut kysymys; tuotanto tarkistetaan manuaalisen deployn tai asetusten korjauksen jälkeen.
+
 ## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
 
 Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature, frequency_penalty}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Mistral-kohtainen `prompt_cache_key` lisätään vain, kun endpointin isäntä on täsmälleen `api.mistral.ai`; se jää automaattisesti pois muiden tarjoajien payloadista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:

@@ -1,6 +1,6 @@
 <?php
 /**
- * REST handler regressions for malformed Mistral responses (#604).
+ * REST handler regressions for malformed responses and provider failures.
  *
  * @package Rytkoset\Tests
  */
@@ -652,6 +652,84 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'invalid_finish_reason', rytkoset_theme_chat_get_usage_stats()['last_error']['last_type'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_provider_rate_limit_returns_safe_502_without_retry_or_visitor_limit_hit(): void {
+		$this->configure_chat_backend();
+		$provider_message = 'Rate limit exceeded: private-provider-detail';
+		$this->queue_mistral_response(
+			array(
+				'object'  => 'error',
+				'message' => $provider_message,
+				'type'    => 'rate_limited',
+				'code'    => '1300',
+			),
+			429
+		);
+
+		$started_at = time();
+		$result     = rytkoset_theme_chat_handle_request( $this->request( 'Hei' ) );
+
+		$this->assert_safe_upstream_error( $result, $provider_message );
+		$public_error = wp_json_encode(
+			array(
+				'code'    => $result->get_error_code(),
+				'message' => $result->get_error_message(),
+				'data'    => $result->get_error_data(),
+			)
+		);
+		foreach ( array( 'private-provider-detail', 'rate_limited', '1300', RYTKOSET_CHAT_API_KEY ) as $private_value ) {
+			$this->assertStringNotContainsString( $private_value, $public_error );
+		}
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$stats = rytkoset_theme_chat_get_usage_stats();
+		$this->assertSame( 'http_429', $stats['last_error']['last_type'] );
+		$this->assertSame( 1, $stats['last_error']['count'] );
+		$this->assertSame( 0, $stats['rate_limit_hits']['count'] );
+		$this->assertSame( 0, $stats['messages_sent']['count'] );
+
+		$stored_error = get_option( rytkoset_theme_chat_get_stat_option_names()['error'] );
+		$this->assertIsInt( $stored_error['last_at'] );
+		$this->assertGreaterThanOrEqual( $started_at, $stored_error['last_at'] );
+		$this->assertLessThanOrEqual( time(), $stored_error['last_at'] );
+		$this->assertSame(
+			array(
+				'count'     => 1,
+				'last_at'   => $stored_error['last_at'],
+				'last_type' => 'http_429',
+			),
+			$stored_error
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_visitor_rate_limit_returns_429_without_calling_provider(): void {
+		$this->configure_chat_backend();
+		$ip = rytkoset_theme_chat_get_client_ip();
+		set_transient(
+			'rytkoset_chat_rl_' . md5( $ip ),
+			array(
+				'count' => rytkoset_theme_chat_get_rate_limit(),
+				'start' => time(),
+			),
+			HOUR_IN_SECONDS
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Hei' ) );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rytkoset_chat_rate_limited', $result->get_error_code() );
+		$this->assertSame( 429, $result->get_error_data()['status'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$stats = rytkoset_theme_chat_get_usage_stats();
+		$this->assertSame( 1, $stats['rate_limit_hits']['count'] );
+		$this->assertSame( 0, $stats['last_error']['count'] );
+		$this->assertSame( 0, $stats['messages_sent']['count'] );
+	}
+
 	private function configure_chat_backend(): void {
 		if ( ! defined( 'RYTKOSET_CHAT_API_KEY' ) ) {
 			define( 'RYTKOSET_CHAT_API_KEY', 'test-key' );
@@ -715,10 +793,13 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 		$page->post_content = $content;
 	}
 
-	/** @param array<string,mixed> $body Decoded Mistral response body. */
-	private function queue_mistral_response( array $body ): void {
+	/**
+	 * @param array<string,mixed> $body         Decoded Mistral response body.
+	 * @param int                 $status_code Provider HTTP status.
+	 */
+	private function queue_mistral_response( array $body, int $status_code = 200 ): void {
 		$GLOBALS['rytkoset_test_http_responses'][] = array(
-			'response' => array( 'code' => 200 ),
+			'response' => array( 'code' => $status_code ),
 			'body'     => wp_json_encode( $body ),
 		);
 	}
