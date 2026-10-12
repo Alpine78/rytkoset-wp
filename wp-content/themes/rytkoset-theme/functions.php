@@ -664,12 +664,13 @@ function rytkoset_theme_scripts() {
 			'rytkoset-theme-chat',
 			'window.rytkosetChatConfig = ' . wp_json_encode(
 				array(
-					'restUrl'        => rest_url( 'rytkoset/v1/chat' ),
-					'nonce'          => wp_create_nonce( 'wp_rest' ),
-					'maxInputLength' => rytkoset_theme_chat_get_max_input_length(),
-					'typingText'     => __( 'Kirjoittaa…', 'rytkoset-theme' ),
-					'errorText'      => __( 'Vastauksen haku ei juuri nyt onnistunut. Yritä hetken kuluttua uudelleen tai ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
-					'sendingLabel'   => __( 'Lähetetään…', 'rytkoset-theme' ),
+					'restUrl'          => rest_url( 'rytkoset/v1/chat' ),
+					'nonce'            => wp_create_nonce( 'wp_rest' ),
+					'maxInputLength'   => rytkoset_theme_chat_get_max_input_length(),
+					'typingText'       => __( 'Kirjoittaa…', 'rytkoset-theme' ),
+					'errorText'        => __( 'Vastauksen haku ei juuri nyt onnistunut. Yritä hetken kuluttua uudelleen tai ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
+					'sessionErrorText' => __( 'Istunnon tarkistus epäonnistui. Päivitä sivu ja yritä uudelleen.', 'rytkoset-theme' ),
+					'sendingLabel'     => __( 'Lähetetään…', 'rytkoset-theme' ),
 				)
 			) . ';',
 			'before'
