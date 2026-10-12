@@ -14,6 +14,67 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_past_event_followup_is_answered_without_mistral(): void {
+		$this->configure_chat_backend();
+		$GLOBALS['rytkoset_test_now'] = '2026-10-12 12:00:00';
+		rytkoset_test_register_post( 41, 'rytkoset_event', 'Tampereen sukujuhla' );
+		update_post_meta( 41, rytkoset_theme_get_event_date_meta_key(), '2026-08-29' );
+		$result = rytkoset_theme_chat_handle_request(
+			$this->request_with_messages(
+				array(
+					array( 'role' => 'user', 'content' => 'Milloin Tampereen sukujuhlat pidetään?' ),
+					array( 'role' => 'assistant', 'content' => '29.8.2026.' ),
+					array( 'role' => 'user', 'content' => 'Vieläkö kerkeää osallistua sukujuhliin?' ),
+				)
+			)
+		);
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'ei voi enää osallistua', $result->get_data()['reply'] );
+		$this->assertStringContainsString( get_permalink( 41 ), $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertSame( 1, rytkoset_theme_chat_get_usage_stats()['messages_sent']['count'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_generic_attendance_question_requests_a_subject_without_a_useless_search(): void {
+		$this->configure_chat_backend();
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Vieläkö kerkeää osallistua sukujuhliin?' ) );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertStringContainsString( 'Mitä tapahtumaa tarkoitat?', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( '?s=', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_missing_lowercase_meeting_source_uses_place_terms_in_search(): void {
+		$this->configure_chat_backend();
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'voinko osallistua helsingin sukujuhliin?' ) );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertStringContainsString( '?s=helsingin', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( 'osallistua', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_event_direct_answer_obeys_the_page_tool_kill_switch(): void {
+		$this->configure_chat_backend();
+		$GLOBALS['rytkoset_test_now'] = '2026-10-12 12:00:00';
+		rytkoset_test_register_post( 41, 'rytkoset_event', 'Tampereen sukujuhla' );
+		update_post_meta( 41, rytkoset_theme_get_event_date_meta_key(), '2026-08-29' );
+		add_filter( 'rytkoset_theme_chat_page_tool_enabled', static fn() => false );
+		$this->queue_mistral_response( array( 'choices' => array( array( 'finish_reason' => 'stop', 'message' => array( 'content' => 'Varmennettua tapahtumatietoa ei ole käytettävissä.' ) ) ) ) );
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Voinko osallistua Tampereen sukujuhliin?' ) );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertStringNotContainsString( 'ei voi enää osallistua', $result->get_data()['reply'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_fiscal_year_source_reply_bypasses_mistral(): void {
 		$this->configure_chat_backend();
 		$this->register_rules_page(

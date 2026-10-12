@@ -128,6 +128,21 @@ Kaikki oletukset ovat suodatettavia:
 
 Kytke tuotannon chatti Customizerista pois päältä ja pidä se pois, kunnes #604:n dev- ja tuotantosavutestit ovat valmiit. Malli, 20 sekunnin timeout, `frequency_penalty: 0.3` ja REST-vastauksen rakenne säilyvät tässä korjauksessa ennallaan.
 
+### Menneet tapahtumat ja keskustelun jatkokysymykset (#731)
+
+Osallistumis- ja sukukokouksen ajankohtakysymyksissä backend tarkistaa ennen Mistralia, löytyykö **yksi julkaistu, salasanaton tapahtuma**. `rytkoset_theme_chat_resolve_referenced_event()` vertaa kysymyksen nimeä tai paikkaa tapahtuman otsikkoon. Ilman uutta nimeä jatkokysymys voi käyttää historian tarkkaa, uudelleen varmennettua tapahtumapermalinkkiä tai aiempaa nimettyä käyttäjäkysymystä. Asiakkaan lähettämä historia ei toimi päivämäärän lähteenä: tiedot luetaan aina nykyisestä julkaistusta tapahtumasta.
+
+- `rytkoset_theme_chat_get_event_time_sensitive_reply()` vastaa menneeseen tapahtumaan liittyvään kysymykseen päivämäärällä ja lähdelinkillä; osallistumiskysymys kertoo lisäksi, ettei tapahtumaan enää voi osallistua.
+- Päivän päättyminen ja ilmoittautumisen takaraja ratkaistaan samoilla WordPressin aikavyöhykettä käyttävillä helpereillä kuin tapahtumasivulla. Tulevan tapahtuman päättynyt ilmoittautuminen erotetaan menneestä tapahtumasta. Avoimesta ilmoittautumisesta ei päätellä vapaita paikkoja tai osallistumiskelpoisuutta.
+- Eri paikan/vuoden kysymys ei peri aiempaa tapahtumaa. Useampi osuma jää ratkaisematta. Kuljetusotsikko ei vastaa sukujuhlaan, ellei kysymys nimenomaan käsittele kuljetusta. ”Seuraavat”, ”tulevat” tai ”ensi” -kysymys ei käytä tätä menneen tapahtuman vastauspolkua; esihaku jättää päivämäärältään menneet tapahtumat pois tällaisesta tapahtumahausta.
+- Yleinen ”Vieläkö kerkeää osallistua sukujuhliin?” ilman yksiselitteistä viitettä saa tarkennuksen: ”Mitä tapahtumaa tarkoitat? Kerro tapahtuman nimi tai paikkakunta.” Osallistuminen muuhun aiheeseen, esimerkiksi sukututkimukseen, säilyttää tavallisen vastauspolun.
+- Tapahtuman hakutermeistä poistetaan kysymyssanat, osallistumis-/ilmoittautumisverbit ja yleiset juhlasanat. Hakulinkin termi on löydetty nimi tai paikka; `Vieläkö` ja `osallistua` eivät yksin muodosta tapahtuman hakua.
+- System-prompt sisältää sivuston nykyisen päivämäärän. Tapahtuman lähdeotteessa on lisäksi metatiedon päivämäärä ja tieto siitä, onko päivä jo mennyt. Lisätieto vähennetään nykyisestä otebudjetista.
+
+Nonce-, kytkin-, syöte- ja kävijärajan tarkistukset tehdään myös suoralle päivämäärävastaukselle. Sivunlukutyökalun katkaisin `rytkoset_theme_chat_page_tool_enabled` ohittaa tämänkin lähdepolun. Onnistunut suora vastaus kasvattaa viestilaskuria ja säilyttää REST-vastauksen `ai_generated: true` -sopimuksen; se ei tee Mistral-kutsua.
+
+Regressiot: `tests/ChatEventTimingTest.php` (21 testiä) ja neljä uutta REST-testiä `tests/ChatRequestHandlerTest.php`:ssä. Ne kattavat muun muassa historiallisen viitteen, eri paikan/vuoden, kuljetuksen, moniselitteisyyden, luonnoksen/salasanan/puuttuvan päivämäärän, päivän vaihtumisen, päättyneen ilmoittautumisen, merkityksellisen hakutermin sekä työkalukatkaisimen.
+
 ### Dev-ympäristön löysemmät rajat
 
 Pitkää testisessiota varten rate limitin ja keskustelumuistin voi ylikirjoittaa ympäristökohtaisesti `wp-config.php`-vakioilla (sama tiedosto, jossa chat-vakiot jo ovat — ei repossa, joten ei voi vuotaa tuotantoon):
@@ -388,6 +403,38 @@ Selosteteksti on sivun sisältöä (ei koodia), joten alla oleva on **ehdotus yl
 > Älä kirjoita chattiin henkilötietoja tai arkaluonteisia tietoja (esimerkiksi henkilötunnusta, salasanoja tai maksukortin tietoja). Henkilökohtaisissa asioissa ota yhteyttä sähköpostitse: **[yhteysosoite]**.
 >
 > Lisätietoa Mistral AI:n tietosuojakäytännöistä: https://mistral.ai/privacy-policy
+
+## Vastauslaadun tarkistus 12.10.2026 (#731)
+
+Seuraavat kysymykset koottiin tuotannon julkaistuista julkisista sivuista. Tuotannon 13 oikeaa selain-/REST-pyyntöä saivat HTTP 200:n, mutta jatkokysymys nro 3 jäi lähteettömään vastaukseen ja ehdotti hakusanaksi `Vieläkö`. HTTP 200 ei siis yksin ole laatutestin hyväksyntä. Kysymykset 1–4 lähetetään samassa keskustelussa; muut aloitetaan erikseen.
+
+| Kysymys | Tarkistettava tieto ja tuotannon julkinen lähde |
+|---|---|
+| Kuka on Riitta Taipale? | Hallituksen jäsen; sivulla mainitaan Heinola. Paikkakuntaa ei saa päätellä syntymä-/kotipaikaksi. [Hallitus](https://rytkoset.net/sukuseura/sukuseuran-hallitus/) |
+| Milloin Tampereen sukujuhlat pidetään? | Ajankohta oli 29.8.2026; 12.10.2026 se on jo mennyt. [Tapahtuma](https://rytkoset.net/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/) |
+| Vieläkö kerkeää osallistua sukujuhliin? | Viite edellisen vuoron Tampereen tapahtumaan: ei enää voi osallistua, sama lähde. |
+| Voinko osallistua Tampereen sukujuhliin? | Sama vastaus myös ilman historian apua. |
+| Milloin sukuseura perustettiin ja missä? | Valmistelu keväällä 1963 Hotelli Koljonvirrassa; varsinainen perustava kokous 18.8.1963 Runnin Terveyskylpylällä. Näitä ei yhdistetä samaksi kokoukseksi. [Sukuseura](https://rytkoset.net/sukuseura/) |
+| Voinko ostaa kirjan Rytkösiä sukupolvesta toiseen? | Vuoden 2006 kirja on loppuunmyyty; uusia tietoja on täydennyslehtisissä. [Sukututkimus](https://rytkoset.net/sukuseura/sukututkimus/) |
+| Paljonko perhejäsenyys maksaa ja kauanko se on voimassa? | 35 € / toimintakausi 2026–2029; tarkka päättymispäivä verrataan kyseisen ympäristön jäsenyystuotteen metatietoon. [Jäsenyys](https://rytkoset.net/sukuseura/jasenyys/) |
+| Miten Anne Kauppala liittyy sukuseuraan? | Tampereen esitys Aino Acktén kansainvälisestä urasta ja kulttuuriperinnöstä; Acktén Rytkösten sukujuuret äidin suvun kautta. [Tapahtuma](https://rytkoset.net/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/) |
+| Miten Maarit Tastula liittyy sukuseuraan? | Tampereen puheenvuoro suomalaisten siirtolaisuudesta Amerikkaan ja menneiden sukupolvien vaiheista/valinnoista; pelkkä osallistumismaininta on puutteellinen. Sama tapahtumasivu. |
+| Kuinka kauan postitettavan tuotteen toimitus kestää? | Käsittely 1–3 arkipäivää ja Postin arvio lähettämisestä 2–5 arkipäivää erikseen. [Maksu- ja toimitusehdot](https://rytkoset.net/kauppa/maksu-ja-toimitusehdot/) |
+| Olen 12-vuotias. Voinko tilata uutiskirjeen itse? | Sivuston suostumusohje: huoltaja tekee tai hyväksyy tilauksen. [Tietosuoja](https://rytkoset.net/tietosuoja/) |
+| Voinko lukea digilehtiä ilman jäsenyyttä? | Vastaus perustuu julkaistujen lehtien määrään ja kunkin käyttöoikeuteen. Tuotannon julkinen digilehti-REST palautti tarkistuksessa tyhjän listan (yhteensä 0). [Digilehdet](https://rytkoset.net/digilehdet/) |
+| Onko Iisalmen vuoden 2023 sukujuhlista kuvia? | Julkaistun Iisalmen 60-vuotisjuhlan albumin oma permalinkki; tapahtuman mainitseva tavallinen sivu ei todista kuvien olemassaoloa. [Albumi](https://rytkoset.net/albumit/rytkosten-sukuseuran-60-vuotissukujuhla-seka-sukukokous-iisalmen-kulttuurikeskuksella-19-8-2023/) |
+
+**Mallin ja sisällön erot:** localhostilta puuttui `RYTKOSET_CHAT_API_MODEL`, joten se käytti koodin `mistral-small-latest`-oletusta. Smallin vastauksissa perustamisen valmistelu ja perustava kokous sekoittuivat, ja kirjan loppuunmyyty-tieto jäi käyttämättä. Kolmen oikean kysymyksen Medium-vertailussa perustaminen, kirjan saatavuus ja Anne Kauppalan yhteys vastattiin oikein. Ylläpitäjä vahvisti tuotannon asetukseksi `mistral-medium-latest`; sama vakio lisättiin localhostin `wp-config.php`:hen. Tämä on paikallinen ympäristöasetus, ei versionhallinnan muutos. Koodin oletusmallia ei muutettu.
+
+Localhostin jäsenyyskontekstissa tarkistettu päättymispäivä on 30.8.2029, tuotannon chat vastasi 31.8.2029. Tuotannon tarkkaa metatietoa ei tarkistettu tässä työssä; julkinen jäsenyyssivu vahvisti hinnan ja kauden. Localhostissa on lisäksi julkaistu kaikille ilmainen testidigilehti, joten sen myönteinen vastaus ja tuotannon tyhjän arkiston vastaus ovat eri sisältötilanteita.
+
+**Korjauksen varmennus:** paikallisen Medium-mallin koko 13 kysymyksen sarja palautti HTTP 200:n. Tapahtumakysymykset 2–4 vastasivat menneeseen päivään ja osallistumisen päättymiseen. Maarit Tastulan vastaus jäi ensin pelkäksi osallistumismaininnaksi, vaikka ote sisälsi aiheen; lähdeohjetta tarkennettiin ja yksi uusi oikea kutsu kertoi sekä roolin että puheenvuoron aiheen. Henkilön paikkakuntaa koskeva promptiohje estää muuttamasta hallitussivun paikkariviä väitteeksi henkilön alkuperästä.
+
+Oikean paikallisen widgetin kolme tapahtumavuoroa läpäisivät lähdelinkin, fokuksen, virheettömän renderöinnin ja historian tarkistukset (390 × 844, tumma teema; päivityksen jälkeen 6 historiaviestiä; 1280 × 900 vaalea teema). Testisarja täytti paikallisen tuntirajan, joten vain viimeistä kolmen viestin koetta varten lisättiin hetkeksi `RYTKOSET_CHAT_RATE_LIMIT = 40`; vakio poistettiin heti ja alkuperäinen oletus 20 varmennettiin. Tuotannon rajoja ei muutettu.
+
+PHP 8.3:n teemasyntaksi, koko PHPCS ja PHPUnit läpäisivät: 1204 testiä, 3205 assertiota; yksi ennestään tunnettu PHPUnitin metatietodeprecation. Uutta korjausta ei ole julkaistu deviin tai tuotantoon. Toista siellä vähintään vuorot 2–4, lähteetön tarkennus, seuraavan tapahtuman kysymys sekä jäsenyys-/digilehtitiedot kyseisen ympäristön sisällöllä normaalin julkaisun jälkeen.
+
+Tämän jatkotyön suunnitelma- ja koodikatselmointipyynnöt Claudelle estyivät istuntokiintiöön. Ylläpitäjä päätti ohittaa Clauden tässä korjauksessa (#731), joten Claude-katselmointi ei jää odottavaksi vaiheeksi. Varsinaista Claude-palautetta tähän korjaukseen ei saatu; paikallinen varmennus on kirjattu yllä.
 
 ## Testaus
 
