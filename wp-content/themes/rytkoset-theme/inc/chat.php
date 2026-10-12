@@ -864,6 +864,14 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		$latest_user_message = rytkoset_theme_chat_get_latest_user_message( $messages );
 		$concept_matched     = '' !== rytkoset_theme_chat_get_concept_source_path( $latest_user_message );
 		$tool_enabled        = rytkoset_theme_chat_page_tool_is_enabled();
+		$event_time_reply    = $tool_enabled ? rytkoset_theme_chat_get_event_time_sensitive_reply( $messages ) : '';
+
+		if ( '' !== $event_time_reply ) {
+			rytkoset_theme_chat_record_message_sent_stat();
+
+			return new WP_REST_Response( rytkoset_theme_chat_build_response_body( $event_time_reply ), 200 );
+		}
+
 		$prefetched_source   = $tool_enabled ? rytkoset_theme_chat_get_prefetched_public_source( $messages ) : '';
 		$tool_rounds_enabled = $tool_enabled && '' === $prefetched_source;
 		$system_prompt       = rytkoset_theme_chat_get_system_prompt();
@@ -888,10 +896,11 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 			// The visitor gets the site's own search for the name terms we could
 			// not verify, so a dead end still has one concrete next step.
-			$search_phrase  = implode(
-				' ',
-				rytkoset_theme_chat_get_named_search_terms( rytkoset_theme_chat_get_latest_user_message( $messages ) )
-			);
+			$search_terms = rytkoset_theme_chat_get_named_search_terms( $latest_user_message );
+			if ( empty( $search_terms ) && rytkoset_theme_chat_is_meeting_query( $latest_user_message ) ) {
+				$search_terms = rytkoset_theme_chat_get_lowercase_meeting_place_terms( $latest_user_message );
+			}
+			$search_phrase  = implode( ' ', $search_terms );
 			$fallback_reply = rytkoset_theme_chat_is_photo_query( $latest_user_message )
 				? rytkoset_theme_chat_get_photo_source_fallback_reply( $search_phrase )
 				: rytkoset_theme_chat_get_named_source_fallback_reply( $search_phrase );
@@ -2414,12 +2423,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_term_ignore_list' ) ) {
 			'albumia',
 			'albumissa',
 			'entä',
+			'enää',
+			'ehdinkö',
+			'ehtiikö',
 			'kenen',
 			'kerro',
 			'ketä',
 			'keitä',
 			'keistä',
 			'ketkä',
+			'kerkeääkö',
 			'kuka',
 			'kuva',
 			'kuvat',
@@ -2447,6 +2460,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_named_term_ignore_list' ) ) {
 			'sukuseuran',
 			'voiko',
 			'voinko',
+			'vuoden',
+			'vuonna',
+			'vielä',
+			'vieläkö',
 			'valokuva',
 			'valokuvia',
 		);
@@ -2532,7 +2549,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_lowercase_meeting_place_terms' 
 		$terms   = array();
 
 		foreach ( $matches[0] as $term ) {
-			if ( in_array( $term, $ignored, true ) ) {
+			if (
+				in_array( $term, $ignored, true )
+				|| preg_match( '/^(?:sukujuhl|sukukokou|osallist|ilmoittaut|ilmoittaud|kerke|ehti|ehdi)[\p{L}]*$/u', $term )
+			) {
 				continue;
 			}
 
@@ -2673,6 +2693,152 @@ if ( ! function_exists( 'rytkoset_theme_chat_line_is_founding_meeting' ) ) {
 if ( ! function_exists( 'rytkoset_theme_chat_is_meeting_history_query' ) ) {
 	function rytkoset_theme_chat_is_meeting_history_query( $message ) {
 		return (bool) preg_match( '/\b(?:ollut|pidettiin|pidetty)\b/ui', (string) $message );
+	}
+}
+
+/**
+ * Resolves one published event from an explicit subject or a recent reference.
+ *
+ * A new named subject never inherits an older event. Elliptical follow-ups
+ * may use an exact verified permalink or a named user question, but ambiguous
+ * matches and conflicting years fail closed. Transport titles do not answer
+ * family-party questions unless transport was explicitly requested.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return WP_Post|null Verified event, or null.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_resolve_referenced_event' ) ) {
+	function rytkoset_theme_chat_resolve_referenced_event( $messages ) {
+		$query         = rytkoset_theme_chat_get_latest_user_message( $messages );
+		$meeting_query = rytkoset_theme_chat_is_meeting_query( $query );
+		$max_events    = min( 100, max( 1, (int) apply_filters( 'rytkoset_theme_chat_prefetch_max_pages', 60 ) ) );
+		$events        = array();
+
+		foreach ( rytkoset_theme_chat_get_prefetch_candidate_ids( 'rytkoset_event', array(), $max_events ) as $event_id ) {
+			$event = rytkoset_theme_chat_get_public_source_post( $event_id, array( 'rytkoset_event' ) );
+			if ( ! $event instanceof WP_Post ) {
+				continue;
+			}
+			if (
+				$meeting_query && ! preg_match( '/\b(?:kuljet|yhteiskuljet|bussi|kyyti)[\p{L}]*\b/ui', $query )
+				&& preg_match( '/\b(?:kuljet|yhteiskuljet|bussi|kyyti)[\p{L}]*\b/ui', get_the_title( $event->ID ) )
+			) {
+				continue;
+			}
+			$events[] = $event;
+		}
+
+		$find_named = static function ( $content ) use ( $events ) {
+			$terms = rytkoset_theme_chat_get_named_search_terms( $content );
+			if ( empty( $terms ) && rytkoset_theme_chat_is_meeting_query( $content ) ) {
+				$terms = rytkoset_theme_chat_get_lowercase_meeting_place_terms( $content );
+			}
+			if ( empty( $terms ) ) {
+				return null;
+			}
+			preg_match_all( '/\b(?:19|20)\d{2}\b/u', $content, $years );
+			$matches = array();
+			foreach ( $events as $event ) {
+				$title = (string) get_the_title( $event->ID );
+				foreach ( $terms as $term ) {
+					if ( ! rytkoset_theme_chat_text_contains_term_stem( $title, $term ) ) {
+						continue 2;
+					}
+				}
+				if ( ! empty( $years[0] ) && array( substr( rytkoset_theme_get_event_date_raw( $event->ID ), 0, 4 ) ) !== array_values( array_unique( $years[0] ) ) ) {
+					continue;
+				}
+				$matches[] = $event;
+			}
+			return 1 === count( $matches ) ? $matches[0] : null;
+		};
+
+		$terms = rytkoset_theme_chat_get_named_search_terms( $query );
+		if ( empty( $terms ) && $meeting_query ) {
+			$terms = rytkoset_theme_chat_get_lowercase_meeting_place_terms( $query );
+		}
+		if ( ! empty( $terms ) || preg_match( '/\b(?:19|20)\d{2}\b/u', $query ) ) {
+			return $find_named( $query );
+		}
+
+		$history = array_reverse( array_slice( (array) $messages, 0, -1 ) );
+		foreach ( $history as $message ) {
+			$content = (string) ( $message['content'] ?? '' );
+			$matches = array();
+			foreach ( $events as $event ) {
+				$url = get_permalink( $event->ID );
+				if ( is_string( $url ) && rytkoset_theme_chat_text_contains_exact_url( $content, $url ) ) {
+					$matches[] = $event;
+				}
+			}
+			if ( ! empty( $matches ) ) {
+				return 1 === count( $matches ) ? $matches[0] : null;
+			}
+			if ( 'user' === ( $message['role'] ?? '' ) && rytkoset_theme_chat_is_meeting_query( $content ) ) {
+				return $find_named( $content );
+			}
+		}
+		return null;
+	}
+}
+
+/**
+ * Answers past-event timing and closed registration from canonical dates.
+ *
+ * Upcoming availability and future-event plans are not inferred. The event
+ * access gate and the site's timezone-aware end-of-day cutoffs are reused.
+ *
+ * @param array<int,array{role:string,content:string}> $messages Prepared history.
+ * @return string Verified reply, or an empty string for normal source handling.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_event_time_sensitive_reply' ) ) {
+	function rytkoset_theme_chat_get_event_time_sensitive_reply( $messages ) {
+		$query      = rytkoset_theme_chat_get_latest_user_message( $messages );
+		$attendance = (bool) preg_match( '/\b(?:osallistua|osallistumaan|ilmoittautua|ilmoittautumaan|ilmoittaudun|mukaan)\b/ui', $query );
+		if ( $attendance && ! rytkoset_theme_chat_is_meeting_query( $query ) && ! preg_match( '/\b(?:tapahtum[\p{L}]*|tilaisuu[\p{L}]*|siihen|sinne|tuohon)\b/ui', $query ) ) {
+			return '';
+		}
+		$timing = rytkoset_theme_chat_is_meeting_query( $query )
+			&& preg_match( '/\b(?:milloin|koska)\b/ui', $query )
+			&& preg_match( '/\b(?:pidetään|pidettiin|järjestetään|järjestettiin|ovat)\b/ui', $query );
+		if ( ( ! $attendance && ! $timing ) || preg_match( '/\b(?:seuraav[\p{L}]*|tulev[\p{L}]*|ensi)\b/ui', $query ) ) {
+			return '';
+		}
+		$event = rytkoset_theme_chat_resolve_referenced_event( $messages );
+		if ( ! $event instanceof WP_Post ) {
+			$terms = rytkoset_theme_chat_get_named_search_terms( $query );
+			if ( empty( $terms ) && rytkoset_theme_chat_is_meeting_query( $query ) ) {
+				$terms = rytkoset_theme_chat_get_lowercase_meeting_place_terms( $query );
+				if ( empty( $terms ) ) {
+					return __( 'Mitä tapahtumaa tarkoitat? Kerro tapahtuman nimi tai paikkakunta.', 'rytkoset-theme' );
+				}
+			}
+			return '';
+		}
+		$date = rytkoset_theme_chat_format_iso_date( rytkoset_theme_get_event_date_raw( $event->ID ) );
+		$url  = get_permalink( $event->ID );
+		if ( '' === $date || ! is_string( $url ) || '' === trim( $url ) ) {
+			return '';
+		}
+		$title = wp_strip_all_tags( (string) get_the_title( $event->ID ) );
+		if ( rytkoset_theme_is_event_date_passed( $event->ID ) ) {
+			/* translators: 1: Event title, 2: Event date. */
+			$reply = sprintf( __( '%1$s: tapahtuman ajankohta oli %2$s. Tapahtuma on jo mennyt.', 'rytkoset-theme' ), $title, $date );
+			if ( $attendance ) {
+				$reply .= ' ' . __( 'Siihen ei voi enää osallistua.', 'rytkoset-theme' );
+			}
+		} elseif ( $attendance && rytkoset_theme_is_event_registration_deadline_passed( $event->ID ) ) {
+			$deadline = rytkoset_theme_chat_format_iso_date( rytkoset_theme_get_event_registration_deadline_raw( $event->ID ) );
+			if ( '' === $deadline ) {
+				return '';
+			}
+			/* translators: 1: Event title, 2: Registration deadline, 3: Event date. */
+			$reply = sprintf( __( '%1$s: ilmoittautuminen päättyi %2$s. Tapahtuman ajankohta on %3$s.', 'rytkoset-theme' ), $title, $deadline, $date );
+		} else {
+			return '';
+		}
+		$reply .= "\n\n" . __( 'Lähde:', 'rytkoset-theme' ) . ' ' . $url;
+		return rytkoset_theme_chat_reply_is_valid( $reply ) ? $reply : '';
 	}
 }
 
@@ -3106,7 +3272,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_build_prefetched_source_context' ) 
 			return '';
 		}
 
-		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Kysymys \"Kuka on Nimi?\" ei vaadi täydellistä elämäkertaa: lähteessä mainittu ammatti, rooli, puhe, esitelmä, esiintyminen tai muu teko on riittävä vastaus. Kysymys \"Miten Nimi liittyy sukuseuraan?\" tai \"Mikä on Nimen yhteys sukuseuraan?\" kysyy lähteessä näkyvää yhteyttä eikä välttämättä jäsenyyttä tai virallista tehtävää. Kerro lähteessä mainittu puhe, esitelmä, esiintyminen, kirjallinen työ, muu osallistuminen tai teko henkilön yhteytenä sukuseuraan. Älä päättele jäsenyyttä tai virallista asemaa ilman lähteen tietoa, mutta älä kiellä henkilön yhteyttä sukuseuraan, jos ote osoittaa tällaisen yhteyden. Aiempi vastaus tai kieltäytyminen ei saa ohittaa uusimman lähdeotteen tietoa. Kerro kysytystä henkilöstä tai asiasta kaikki otteessa annetut tiedot suoraan. Jos kysytty nimi esiintyy otteessa, vastaus \"en löytänyt tietoa\" on väärä ja kielletty. Vain jos otteet eivät sisällä kysytystä henkilöstä tai asiasta mitään vastaavaa tietoa, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
+		return "Palvelin on lukenut ja varmistanut seuraavat julkiset lähteet. Vastaa vain uusimpaan käyttäjäkysymykseen näiden lähdeotteiden perusteella. Älä vastaa samalla aiempiin vastaamatta jääneisiin kysymyksiin. Kysymys \"Kuka on Nimi?\" ei vaadi täydellistä elämäkertaa: lähteessä mainittu ammatti, rooli, puhe, esitelmä, esiintyminen tai muu teko on riittävä vastaus. Kysymys \"Miten Nimi liittyy sukuseuraan?\" tai \"Mikä on Nimen yhteys sukuseuraan?\" kysyy lähteessä näkyvää yhteyttä eikä välttämättä jäsenyyttä tai virallista tehtävää. Kerro lähteessä mainittu puhe, esitelmä, esiintyminen, kirjallinen työ, muu osallistuminen tai teko henkilön yhteytenä sukuseuraan. Jos lähde nimeää puheen tai esitelmän aiheen, kerro myös aihe äläkä korvaa sitä pelkällä osallistumismaininnalla. Älä päättele jäsenyyttä tai virallista asemaa ilman lähteen tietoa, mutta älä kiellä henkilön yhteyttä sukuseuraan, jos ote osoittaa tällaisen yhteyden. Aiempi vastaus tai kieltäytyminen ei saa ohittaa uusimman lähdeotteen tietoa. Kerro kysytystä henkilöstä tai asiasta kaikki otteessa annetut tiedot suoraan. Jos kysytty nimi esiintyy otteessa, vastaus \"en löytänyt tietoa\" on väärä ja kielletty. Vain jos otteet eivät sisällä kysytystä henkilöstä tai asiasta mitään vastaavaa tietoa, kerro ettet löytänyt vastausta. Lisää vastaukseen käyttämäsi lähteen osoite täsmälleen tässä annetussa muodossa — älä käytä sivustokartan tai muun lähteen osoitetta, vaikka aihe vaikuttaisi liittyvän toiseen sivuun. Toista otteen päivämäärät, vuosiluvut, paikat ja muut täsmälliset tiedot sellaisenaan äläkä korvaa niitä yleistyksellä kuten \"muun muassa\".\n\n"
 			. implode( "\n\n---\n\n", $source_blocks );
 	}
 }
@@ -3653,6 +3819,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		$photo_query           = rytkoset_theme_chat_is_photo_query( $message );
 		$meeting_query         = ! $photo_query && rytkoset_theme_chat_is_meeting_query( $message );
 		$meeting_history_query = $meeting_query && rytkoset_theme_chat_is_meeting_history_query( $message );
+		$next_meeting_query    = $meeting_query && preg_match( '/\b(?:seuraav[\p{L}]*|tulev[\p{L}]*|ensi)\b/ui', $message );
+		preg_match_all( '/\b(?:19|20)\d{2}\b/u', $message, $meeting_years );
 		$person_relation_query = ! $photo_query && ! $meeting_query && rytkoset_theme_chat_is_person_relation_query( $message );
 		$person_terms          = rytkoset_theme_chat_get_person_search_terms( $message );
 		$search_terms          = ! empty( $person_terms ) ? $person_terms : rytkoset_theme_chat_get_named_search_terms( $message );
@@ -3748,6 +3916,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 					if ( ! $page instanceof WP_Post ) {
 						continue;
 					}
+					if ( $meeting_query && 'rytkoset_event' === $page->post_type ) {
+						$event_date = rytkoset_theme_get_event_date_raw( $page->ID );
+						if ( $next_meeting_query && rytkoset_theme_is_event_date_passed( $page->ID ) ) {
+							continue;
+						}
+						if ( ! empty( $meeting_years[0] ) && array( substr( $event_date, 0, 4 ) ) !== array_values( array_unique( $meeting_years[0] ) ) ) {
+							continue;
+						}
+					}
 
 					$text        = trim( (string) get_the_title( $page->ID ) . "\n" . rytkoset_theme_chat_extract_page_text( (string) $page->post_content ) );
 					$score       = 0;
@@ -3817,12 +3994,22 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 		$source_blocks = array();
 
 		foreach ( $candidates as $candidate ) {
-			$page    = $candidate['post'];
-			$text    = $candidate['text'];
-			$url     = get_permalink( $page->ID );
-			$excerpt = ! empty( $candidate['whole'] )
-				? rytkoset_theme_chat_truncate( $text, $excerpt_max )
-				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_max, $meeting_query || $photo_query || $person_relation_query );
+			$page = $candidate['post'];
+			$text = $candidate['text'];
+			$url  = get_permalink( $page->ID );
+
+			$event_context = '';
+			if ( 'rytkoset_event' === $page->post_type ) {
+				$event_date = rytkoset_theme_chat_format_iso_date( rytkoset_theme_get_event_date_raw( $page->ID ) );
+				if ( '' !== $event_date ) {
+					$event_context = 'Tapahtumatiedon päivämäärä: ' . $event_date . "\n"
+						. ( rytkoset_theme_is_event_date_passed( $page->ID ) ? 'Ajankohta on jo mennyt.' : 'Ajankohta ei ole vielä mennyt.' ) . "\n\n";
+				}
+			}
+			$excerpt_budget = max( 1, $excerpt_max - mb_strlen( $event_context ) );
+			$excerpt        = ! empty( $candidate['whole'] )
+				? rytkoset_theme_chat_truncate( $text, $excerpt_budget )
+				: rytkoset_theme_chat_get_matching_page_excerpt( $text, $source_terms, $excerpt_budget, $meeting_query || $photo_query || $person_relation_query );
 
 			if ( ! is_string( $url ) || '' === trim( $url ) || '' === $excerpt ) {
 				return '';
@@ -3831,7 +4018,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_prefetched_public_source' ) ) {
 			$source_label    = 'gallery_album' === $page->post_type ? 'Albumi: ' : 'Sivu: ';
 			$source_blocks[] = $source_label . trim( (string) get_the_title( $page->ID ) ) . "\n"
 				. 'Lähde: ' . trim( $url ) . "\n\n"
-				. $excerpt;
+				. $event_context . $excerpt;
 		}
 
 		return rytkoset_theme_chat_build_prefetched_source_context( $source_blocks );
@@ -4882,6 +5069,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt  = "Olet Rytkösten sukuseura ry:n verkkosivujen suomenkielinen tukiassistentti.\n\n";
 		$prompt .= "Ohjeet:\n";
 		$prompt .= "- Vastaa aina ja vain suomeksi, ystävällisesti ja tiiviisti.\n";
+		$prompt .= '- Sivuston tämänhetkinen päivämäärä on ' . current_datetime()->format( 'j.n.Y' ) . ". Vertaa tapahtuman ajankohtaa tähän päivään. Menneen tapahtuman ajankohta ei ole tuleva osallistumismahdollisuus: kerro tapahtumasta menneessä aikamuodossa. Älä käytä menneen tapahtuman päivämäärää seuraavan tapahtuman ajankohtana.\n";
 		$prompt .= "- Vastaa pelkkänä tekstinä ilman muotoilumerkintöjä: ei Markdownia, ei tähtiä lihavointiin, ei [teksti](osoite)-linkkejä eikä otsikkomerkkejä. Luettelot saa tehdä viivalla alkavina riveinä.\n";
 		$prompt .= "- Sivuston osoite on {$home_url}. Kun viittaat sivuston sivuun, kirjoita koko osoite paljaana tekstinä (esim. {$home_url}/kauppa/) — chatti muuttaa sen automaattisesti linkiksi.\n";
 		$prompt .= "- Jätä URL-osoitteen jälkeen aina välilyönti tai rivinvaihto ennen seuraavaa sanaa.\n";
@@ -4899,6 +5087,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_system_prompt' ) ) {
 		$prompt .= "- Tulkitse seurantakysymyksen pronomini tai muu viittaus (esimerkiksi hän tai hänen) viimeisimmän yksiselitteisen keskustelukontekstin perusteella. Jos viittaus on epäselvä, pyydä täsmennys äläkä arvaa.\n";
 		$prompt .= "- Älä korvaa käyttäjän kysymää käsitettä samankaltaisella käsitteellä. Hallituskausi, toimintakausi ja tilikausi ovat eri asioita. Jos kysytyn käsitteen täsmällinen tieto ei ole jo lähteissä, lue sopiva sivu työkalulla.\n";
 		$prompt .= "- Kun käyttäjä kysyy henkilön ammattia, tehtävää tai roolia, käytä lähteessä henkilölle nimenomaisesti annettua nimikettä äläkä yleistä tai päättele sitä.\n";
+		$prompt .= "- Henkilön nimen yhteydessä mainittu paikkakunta ei yksin kerro hänen syntymäpaikkaansa tai sitä, mistä hän on kotoisin. Kerro tarvittaessa, että henkilön yhteydessä mainitaan kyseinen paikkakunta; älä päättele siitä elämäkertatietoja.\n";
 		$prompt .= "- Kun et löydä kysytystä henkilöstä tietoa, käytä nimeä vastauksessa perusmuodossa äläkä taivuta sitä, jottei nimi vääristy. Jos annetussa lähteessä on lähes sama nimi kuin kysytty, mainitse lähteen nimi ja kysy, tarkoittiko käyttäjä häntä — älä pelkästään ohjaa lähdesivulle.\n";
 		$prompt .= "- Suomessa henkilö nimetään usein myös järjestyksessä \"Sukunimen genetiivi + etunimi\": esimerkiksi \"Virtasen Matti\" tarkoittaa samaa henkilöä kuin \"Matti Virtanen\". Tunnista tällainen kysymys samaksi henkilöksi ja vastaa lähteen perusteella normaalisti. Sukunimen taivutettu muoto voi poiketa kirjoitusasultaan perusmuodosta (Virtanen -> Virtasen), ja myös lähteessä nimi voi esiintyä taivutettuna, joten vertaa nimen vartaloa äläkä vaadi täsmälleen samaa kirjoitusasua.\n";
 		$prompt .= "- Ohjaa epävarmoissa tai henkilökohtaisissa asioissa ottamaan yhteyttä sähköpostitse osoitteeseen {$contact_email}.\n";

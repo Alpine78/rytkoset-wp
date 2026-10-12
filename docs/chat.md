@@ -73,6 +73,8 @@ define( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY', 'rytkoset-chat-dev-v1' );       // Val
 
 Jos `RYTKOSET_CHAT_API_KEY` tai `RYTKOSET_CHAT_API_ENDPOINT` puuttuu, reitti palauttaa **hallitun virheen** (HTTP 503) — ei PHP-fatalia. Avain luetaan vain palvelimella eikä sitä koskaan tulosteta vasteeseen tai lokiin.
 
+**Mallinimen ylläpito:** `mistral-small-latest` on jo teeman oletus. `latest` seuraa malliperheen uusinta versiota ja vähentää mallinimen manuaalisia päivityksiä, mutta ei takaa avaimen käyttöoikeutta tai kiintiötä. Alias voi myös vaihtaa mallin käyttäytymistä ja hinnoittelua ilman sivuston omaa asetuspäivitystä. Tuotannon version voi vaihtoehtoisesti kiinnittää tarjoajan varmentamaan versiotunnisteeseen ja vaihtaa sen hallitusti dev-testauksen jälkeen; kiinnitetynkin version poistumista pitää seurata. Käytössä olevan mallin tieto tarkistetaan API:n `model`-kentästä tai konsolin mallivalinnasta, ei avustajan omasta tekstivastauksesta. Lähde: [Mistralin mallien elinkaari ja aliakset](https://docs.mistral.ai/inference/model-lifecycle), tarkistettu 12.10.2026.
+
 `RYTKOSET_CHAT_PROMPT_CACHE_KEY` on oletuksena pois käytöstä. Kun vakio sisältää arvon ja endpointin isäntä on täsmälleen `api.mistral.ai`, backend lisää Mistralin payloadiin `prompt_cache_key`-kentän. Kenttää ei lähetetä Azurelle tai muille palveluntarjoajille. Käytä ympäristöä ja kokeiluversiota kuvaavaa vakaata arvoa, kuten `rytkoset-chat-dev-v1` — älä johda avainta käyttäjästä, IP-osoitteesta, viestistä tai muusta henkilötiedosta. Avaimen arvoa ei tallenneta käyttötilastoihin eikä näytetä Dashboard-widgetissä.
 
 ## Kulusuojat
@@ -125,6 +127,21 @@ Kaikki oletukset ovat suodatettavia:
 - Virhetilastoon tallennetaan vain staattinen henkilötiedoton tyyppi: `direct_source_missing`, `forced_tool_missing`, `invalid_finish_reason` tai `invalid_reply`. Viestisisältöä tai `finish_reason`-arvoa ei kirjata.
 
 Kytke tuotannon chatti Customizerista pois päältä ja pidä se pois, kunnes #604:n dev- ja tuotantosavutestit ovat valmiit. Malli, 20 sekunnin timeout, `frequency_penalty: 0.3` ja REST-vastauksen rakenne säilyvät tässä korjauksessa ennallaan.
+
+### Menneet tapahtumat ja keskustelun jatkokysymykset (#731)
+
+Osallistumis- ja sukukokouksen ajankohtakysymyksissä backend tarkistaa ennen Mistralia, löytyykö **yksi julkaistu, salasanaton tapahtuma**. `rytkoset_theme_chat_resolve_referenced_event()` vertaa kysymyksen nimeä tai paikkaa tapahtuman otsikkoon. Ilman uutta nimeä jatkokysymys voi käyttää historian tarkkaa, uudelleen varmennettua tapahtumapermalinkkiä tai aiempaa nimettyä käyttäjäkysymystä. Asiakkaan lähettämä historia ei toimi päivämäärän lähteenä: tiedot luetaan aina nykyisestä julkaistusta tapahtumasta.
+
+- `rytkoset_theme_chat_get_event_time_sensitive_reply()` vastaa menneeseen tapahtumaan liittyvään kysymykseen päivämäärällä ja lähdelinkillä; osallistumiskysymys kertoo lisäksi, ettei tapahtumaan enää voi osallistua.
+- Päivän päättyminen ja ilmoittautumisen takaraja ratkaistaan samoilla WordPressin aikavyöhykettä käyttävillä helpereillä kuin tapahtumasivulla. Tulevan tapahtuman päättynyt ilmoittautuminen erotetaan menneestä tapahtumasta. Avoimesta ilmoittautumisesta ei päätellä vapaita paikkoja tai osallistumiskelpoisuutta.
+- Eri paikan/vuoden kysymys ei peri aiempaa tapahtumaa. Useampi osuma jää ratkaisematta. Kuljetusotsikko ei vastaa sukujuhlaan, ellei kysymys nimenomaan käsittele kuljetusta. ”Seuraavat”, ”tulevat” tai ”ensi” -kysymys ei käytä tätä menneen tapahtuman vastauspolkua; esihaku jättää päivämäärältään menneet tapahtumat pois tällaisesta tapahtumahausta.
+- Yleinen ”Vieläkö kerkeää osallistua sukujuhliin?” ilman yksiselitteistä viitettä saa tarkennuksen: ”Mitä tapahtumaa tarkoitat? Kerro tapahtuman nimi tai paikkakunta.” Osallistuminen muuhun aiheeseen, esimerkiksi sukututkimukseen, säilyttää tavallisen vastauspolun.
+- Tapahtuman hakutermeistä poistetaan kysymyssanat, osallistumis-/ilmoittautumisverbit ja yleiset juhlasanat. Hakulinkin termi on löydetty nimi tai paikka; `Vieläkö` ja `osallistua` eivät yksin muodosta tapahtuman hakua.
+- System-prompt sisältää sivuston nykyisen päivämäärän. Tapahtuman lähdeotteessa on lisäksi metatiedon päivämäärä ja tieto siitä, onko päivä jo mennyt. Lisätieto vähennetään nykyisestä otebudjetista.
+
+Nonce-, kytkin-, syöte- ja kävijärajan tarkistukset tehdään myös suoralle päivämäärävastaukselle. Sivunlukutyökalun katkaisin `rytkoset_theme_chat_page_tool_enabled` ohittaa tämänkin lähdepolun. Onnistunut suora vastaus kasvattaa viestilaskuria ja säilyttää REST-vastauksen `ai_generated: true` -sopimuksen; se ei tee Mistral-kutsua.
+
+Regressiot: `tests/ChatEventTimingTest.php` (21 testiä) ja neljä uutta REST-testiä `tests/ChatRequestHandlerTest.php`:ssä. Ne kattavat muun muassa historiallisen viitteen, eri paikan/vuoden, kuljetuksen, moniselitteisyyden, luonnoksen/salasanan/puuttuvan päivämäärän, päivän vaihtumisen, päättyneen ilmoittautumisen, merkityksellisen hakutermin sekä työkalukatkaisimen.
 
 ### Dev-ympäristön löysemmät rajat
 
@@ -314,6 +331,46 @@ Ennen tätä kokonaisuutta kulusuojien osumat eivät näkyneet ylläpitäjälle 
 
 **Puhtaat apufunktiot** (testattu `tests/ChatUsageStatsTest.php`:ssä): `rytkoset_theme_chat_bump_stat()` / `..._bump_error_stat()` (laskurin kasvatus, ei kosketa `wp_options`-tauluun), `rytkoset_theme_chat_get_usage_stats()` (yhteenveto widgetiä varten) ja `rytkoset_theme_chat_get_error_type_label()`. Itse Dashboard-widgetin rekisteröinti ja renderöinti ovat ohutta admin-liimakoodia, joka on tarkoituksella jätetty yksikkötestien ulkopuolelle (ks. `CLAUDE.md`:n testausohje render-raskaille admin-näkymille). Widgetin aiemmat rivit todennettiin #472:ssa manuaalisesti wp-adminissa; uuden prompt-välimuistirivin dev-todennus kuuluu yllä kuvattuun #567-kokeeseen.
 
+### 502-virheen vianhaku (#730)
+
+Chatin JSON-virhe `rytkoset_chat_upstream_error` / HTTP 502 on yhteinen vastaus usealle virhepolulle. Se ei yksin kerro, onko syy Mistralin HTTP-virhe, verkkoyhteys vai mallivastauksen hylkäys. Web-palvelimen HTML-muotoinen 403/502 on eri havainto, eikä sitä pidä tulkita chatin sisäiseksi virheeksi.
+
+**#730:n tuotantohavainto (vahvistettu 12.10.2026):** ylläpitäjän toimittamassa tilastossa Mistral-/yhteysvirheitä oli 13, viimeisin 11.10.2026 klo 22.37: ”Mistral vastasi HTTP-virheellä 429”. Chatin oman kävijärajan viimeisin osuma oli 22.7.2026, joten lokakuun 502:n taustalla oli palveluntarjoajan 429. Paikallinen API ilmoitti efektiiviseksi pyyntörajaksi nollan. Palvelu palautui alla kuvatuissa saldolatauksen jälkeisissä kokeissa. **Lähetettyjä viestejä yhteensä** -laskuri sisältää myös mallin ohittavat lähdevastaukset; sen viimeisin ajankohta ei yksin osoita onnistunutta Mistral-kutsua.
+
+**#730:n tilivertailu (12.10.2026):** ylläpitäjä ilmoitti API:n olevan Free-tilassa. Usage-jaksolla 1.–12.10. näkyi 0 pyyntöä ja 0,00 €; Limits-näkymässä `mistral-small-2603`- ja `mistral-medium-latest`-mallien rajat olivat 20 000 tokenia/minuutti ja 1 pyyntö/sekunti. Paikallisen WordPress-avaimen mallilistaus palautti HTTP 200:n ja vahvisti `mistral-small-latest`-aliaksen viittaavan `mistral-small-2603`:een. Molemmilla nimillä sekä `mistral-medium-latest`-mallilla tehty minimaalinen chat-kutsu palautti kuitenkin 429:n ja otsakkeet `x-ratelimit-limit-req-minute: 0` sekä `x-ratelimit-remaining-req-minute: 0`. Erikseen tallennettu vertailuavain palautti saman 429:n ja nollarajat yhdellä `Hei` / 10 tokenin `mistral-small-latest`-kutsulla. Avainten ero varmistettiin tulostamatta kumpaakaan; WordPressin konfiguraatiota ei muutettu.
+
+Avainten ja aiemman Limits-näkymän organisaation/työtilan vastaavuutta ei erikseen vahvistettu. Nollakulutuksesta ei päätellä kuukausikiintiön loppumista, eikä Free-tila yksin yksilöi eston syytä. Ylläpitäjä sai aiemmin selaimessa vastauksen ja ilmoitti Medium 2608:n näkyvän mallilistassa, mutta kokeen sivun osoite ja täsmällinen mallivalinta jäivät varmistamatta; vastauksen oma ”Mistral Medium” -teksti ei varmista mallia. Mallialias, malliperheen vaihtaminen ja eri avaimella tehty koe eivät ratkaisseet paikallista estoa ennen saldolatausta. Jos nollaraja toistuu, varmista avainten organisaatio/työtila ja API-avaintyyppi sekä laskutuksen tila. Pyydä tarvittaessa Mistralin tukea selvittämään nollarajan syy. Toimita organisaatiotunniste, malli, kokeen ajankohta, HTTP 429 / `rate_limited` / `1300` sekä rajaotsakkeet; älä toimita API-avainta. [Mistralin ohje](https://help.mistral.ai/en/articles/698531-why-am-i-hitting-api-rate-limits-and-how-do-i-increase-them), tarkistettu 12.10.2026.
+
+**#730:n palautus (12.10.2026):** ylläpitäjä osti 10 € ennakkokrediittejä PAYG-käyttöön ja toimitti Billing-tiedot: saldo 10 €, osto Active ja lasku Paid. Heti latauksen jälkeen testiavain sai vielä 429:n. Seuraavissa rajatuissa kokeissa sekä WordPressin nykyinen avain että erillinen testiavain saivat HTTP 200:n; pyyntöraja oli 100/minuutti, ja testiavaimen vastaus ilmoitti myös 100 000 tokenin minuuttirajan. Mistralin ohje mainitsee laskutuksen aktivoinnille 2–3 minuutin viiveen; viivettä ei todeta aiemman eston ainoaksi syyksi. [Aktivointiohje](https://docs.mistral.ai/getting-started/quickstarts/admin/create-organization), tarkistettu 12.10.2026.
+
+Oikean widgetin kuusi selainkoetta läpäisivät ilman mock-vastauksia tai assettien korvausta: localhostissa `Hei` ja `Kuka on Riitta Taipale?`, devissä ja tuotannossa `Hei` ja `Kuka on Antti Rytkönen?` palauttivat kaikki HTTP 200:n. Henkilövastausten hallitussivulinkit toimivat; devin ja tuotannon Antti-vastaus vastasi julkaistun nykyhallituksen puheenjohtaja/Tampere-tietoja. Mobiilikoossa 390 × 844 ja tummassa teemassa paneeli mahtui, fokus palautui syötteeseen ja onnistunut vuoro säilyi historiassa. API-avain, mallinimi, backend-koodi ja dev-/tuotantoteema säilyivät kokeessa ennallaan. Istuntovirheen UI-parannus on erillinen teemamuutos, jonka julkaisu on vielä tekemättä.
+
+**Tuotantokäyttö:** suosittelemme PAYG-käyttöä hyväksytyllä kuukausittaisella kulurajalla. PAYG aktivoidaan **Admin Panel → Subscription** -näkymässä; organisaation **Monthly spending limit** asetetaan **Subscriptions → Billing** -näkymässä ja työtilan oma raja sen asetuksissa. Ennakkosaldo ja kuukausittainen kuluraja ovat eri asetuksia. Automaattinen saldon lataus oli ylläpitäjän toimittamissa tiedoissa pois päältä; kuukausikattoa ei vielä varmennettu. [Tiliasetukset](https://docs.mistral.ai/admin/billing-usage/subscriptions), [kulurajat](https://docs.mistral.ai/admin/billing-usage/usage-limits), tarkistettu 12.10.2026.
+
+1. Avaa **Ohjausnäkymä → Tukichatti → Tekniset tiedot**. Kirjaa virheiden määrä sekä viimeisimmän virheen tyyppi ja ajankohta.
+2. Lähetä tuoreessa selainistunnossa yksi epäonnistuva kysymys ja tarkista tiedot uudelleen. Varmista, että virhelaskuri kasvoi; tilasto on yhteinen kaikille kävijöille, joten vanha tyyppi ei riitä diagnoosiksi. Älä lähetä pitkää sarjaa testikysymyksiä.
+3. Vertaa tarvittaessa tavallista tervehdystä (`Hei`) sekä mallin ohittavaa kysymystä (`Mikä on sukuseuran tilikausi?`). Tilikausivastaus edellyttää julkaistun Säännöt-sivun kohdan 10 varmentamista. Jos tämä vastaus toimii mutta tervehdys epäonnistuu, vika rajautuu mallikutsun polkuun; vertailu ei vielä yksilöi syytä.
+4. Valitse jatkotoimi tuoreen virhetyypin perusteella. Widget näyttää tyypin ihmisluettavana tekstinä: esimerkiksi ”Mistral vastasi HTTP-virheellä 429” vastaa tallennettua tyyppiä `http_429`. Taulukko käyttää tallennettuja tunnisteita:
+
+| Tallennettu virhetyyppi | Tarkistus |
+| --- | --- |
+| `http_401` / `http_403` | API-avaimen voimassaolo ja käyttöoikeudet palveluntarjoajalla. |
+| `http_404` | Endpoint ja konfiguroitu mallinimi. |
+| `http_400` / `http_422` | Mallin ja pyyntöparametrien yhteensopivuus. |
+| `http_429` | Palveluntarjoajan käyttörajat; ks. seuraava kohta. |
+| `http_500`–`http_599` | Palveluntarjoajan häiriö ja sen tilanne; tallennettu tyyppi sisältää tarkan numeron, esim. `http_503`. |
+| Muu `http_<koodi>` | Tarkka HTTP-status ja palveluntarjoajan dokumentoima merkitys. |
+| `network` | Palvelimen DNS/TLS/yhteys ja mahdollinen 20 sekunnin aikakatkaisu. |
+| `invalid_finish_reason` / `empty_reply` / `invalid_reply` | Vastauksen valmistuminen, muoto tai sisällön validointi. Älä poista validointia virheen peittämiseksi. |
+| `direct_source_missing` | Säännöt-sivun julkisuus, polku ja kohdan 10 sisältö. |
+| `forced_tool_missing` | Pakotettu sivunluku ei palauttanut kelvollista työkalukutsua. Handler voi toipua tästä yhdellä tavallisella jatkokutsulla, joten tämä tyyppi ei yksin osoita epäonnistunutta REST-vastausta. |
+
+**Kaksi eri käyttörajaa:** chatin oma IP-kohtainen kulusuoja palauttaa selaimelle HTTP 429:n (`rytkoset_chat_rate_limited`) ja kasvattaa **Rate limit -osumia yhteensä:** -laskuria ennen API-kutsua. Mistralin palauttama HTTP 429 kirjautuu sen sijaan Mistral-/yhteysvirheeksi (`http_429`) ja näkyy selaimelle nykyisenä geneerisenä 502-virheenä. Chat-handler ei yritä ei-2xx-vastausta automaattisesti uudelleen. Pakotetun työkalukutsun korvausyritys koskee onnistunutta HTTP-vastausta, josta kelvollinen työkalukutsu puuttuu. Erottelu, turvallinen virheviesti ja laskurit on katettu `tests/ChatRequestHandlerTest.php`:ssä.
+
+**Kun virhe on `http_429`:** tarkista Mistralin **Admin Panel → API → Limits** ja **API → Usage** sekä organisaation/työtilan kulurajat. Mistralin ohjeen mukaan 429 voi johtua pyyntö-, token/minuutti- tai token/kuukausirajasta; pelkkä status ei osoita, mikä raja ylittyi. API-käyttörajat koskevat organisaatiota, joten samassa Mistral-organisaatiossa eri ympäristöjen erilliset API-avaimet eivät itsessään erota API-käyttörajoja. Älä nosta chatin omaa `RYTKOSET_CHAT_RATE_LIMIT`-rajaa tai HTTP-timeoutia tämän virheen korjaamiseksi. Tuotannossa tarkista lisäksi PAYG-käytön tila, ennakkosaldo, maksujen tila sekä organisaation ja työtilan kuukausikatot. Maksullisen käytön käyttöönotto tai budjettirajan nosto on erillinen kustannuspäätös. Lähteet: [Mistralin käyttörajat](https://docs.mistral.ai/admin/billing-usage/usage-limits) ja [429-virheen vianhaku](https://help.mistral.ai/en/articles/698531-why-am-i-hitting-api-rate-limits-and-how-do-i-increase-them), tarkistettu 11.10.2026.
+
+Jos sisäinen virhetyyppi ei riitä, tee yksi rajattu palvelinpuolen koe. Älä tulosta tai tallenna API-avainta, Authorization-otsaketta, keskustelua tai raakaa palveluntarjoajan virherunkoa. Paikallisen kokeen tulos ei varmista tuotannon syytä, vaikka selaimen virhe näyttää samalta. Korjauksen jälkeen varmista devissä sekä tavallinen chat-vastaus että aiemmin epäonnistunut kysymys; tuotanto tarkistetaan manuaalisen deployn tai asetusten korjauksen jälkeen.
+
 ## Palveluntarjoajan vaihto (Mistral ↔ Azure Sweden Central)
 
 Integraatio on tarkoituksella tehty vaihdettavaksi: chatti kutsuu geneeristä **chat-completions-rajapintaa** (`POST {endpoint}` + `Authorization: Bearer {key}` + `{model, messages, max_tokens, temperature, frequency_penalty}` → `choices[0].message.content`), ja kaikki kolme parametria luetaan `wp-config.php`-vakioista. Mistral-kohtainen `prompt_cache_key` lisätään vain, kun endpointin isäntä on täsmälleen `api.mistral.ai`; se jää automaattisesti pois muiden tarjoajien payloadista. Palveluntarjoajan vaihto on siis konfiguraatiomuutos, **ei koodimuutos**, kunhan uusi tarjoaja toteuttaa saman rajapintamuodon:
@@ -346,6 +403,38 @@ Selosteteksti on sivun sisältöä (ei koodia), joten alla oleva on **ehdotus yl
 > Älä kirjoita chattiin henkilötietoja tai arkaluonteisia tietoja (esimerkiksi henkilötunnusta, salasanoja tai maksukortin tietoja). Henkilökohtaisissa asioissa ota yhteyttä sähköpostitse: **[yhteysosoite]**.
 >
 > Lisätietoa Mistral AI:n tietosuojakäytännöistä: https://mistral.ai/privacy-policy
+
+## Vastauslaadun tarkistus 12.10.2026 (#731)
+
+Seuraavat kysymykset koottiin tuotannon julkaistuista julkisista sivuista. Tuotannon 13 oikeaa selain-/REST-pyyntöä saivat HTTP 200:n, mutta jatkokysymys nro 3 jäi lähteettömään vastaukseen ja ehdotti hakusanaksi `Vieläkö`. HTTP 200 ei siis yksin ole laatutestin hyväksyntä. Kysymykset 1–4 lähetetään samassa keskustelussa; muut aloitetaan erikseen.
+
+| Kysymys | Tarkistettava tieto ja tuotannon julkinen lähde |
+|---|---|
+| Kuka on Riitta Taipale? | Hallituksen jäsen; sivulla mainitaan Heinola. Paikkakuntaa ei saa päätellä syntymä-/kotipaikaksi. [Hallitus](https://rytkoset.net/sukuseura/sukuseuran-hallitus/) |
+| Milloin Tampereen sukujuhlat pidetään? | Ajankohta oli 29.8.2026; 12.10.2026 se on jo mennyt. [Tapahtuma](https://rytkoset.net/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/) |
+| Vieläkö kerkeää osallistua sukujuhliin? | Viite edellisen vuoron Tampereen tapahtumaan: ei enää voi osallistua, sama lähde. |
+| Voinko osallistua Tampereen sukujuhliin? | Sama vastaus myös ilman historian apua. |
+| Milloin sukuseura perustettiin ja missä? | Valmistelu keväällä 1963 Hotelli Koljonvirrassa; varsinainen perustava kokous 18.8.1963 Runnin Terveyskylpylällä. Näitä ei yhdistetä samaksi kokoukseksi. [Sukuseura](https://rytkoset.net/sukuseura/) |
+| Voinko ostaa kirjan Rytkösiä sukupolvesta toiseen? | Vuoden 2006 kirja on loppuunmyyty; uusia tietoja on täydennyslehtisissä. [Sukututkimus](https://rytkoset.net/sukuseura/sukututkimus/) |
+| Paljonko perhejäsenyys maksaa ja kauanko se on voimassa? | 35 € / toimintakausi 2026–2029; tarkka päättymispäivä verrataan kyseisen ympäristön jäsenyystuotteen metatietoon. [Jäsenyys](https://rytkoset.net/sukuseura/jasenyys/) |
+| Miten Anne Kauppala liittyy sukuseuraan? | Tampereen esitys Aino Acktén kansainvälisestä urasta ja kulttuuriperinnöstä; Acktén Rytkösten sukujuuret äidin suvun kautta. [Tapahtuma](https://rytkoset.net/tapahtumat/rytkosten-sukukokous-tampereella-29-8-2026/) |
+| Miten Maarit Tastula liittyy sukuseuraan? | Tampereen puheenvuoro suomalaisten siirtolaisuudesta Amerikkaan ja menneiden sukupolvien vaiheista/valinnoista; pelkkä osallistumismaininta on puutteellinen. Sama tapahtumasivu. |
+| Kuinka kauan postitettavan tuotteen toimitus kestää? | Käsittely 1–3 arkipäivää ja Postin arvio lähettämisestä 2–5 arkipäivää erikseen. [Maksu- ja toimitusehdot](https://rytkoset.net/kauppa/maksu-ja-toimitusehdot/) |
+| Olen 12-vuotias. Voinko tilata uutiskirjeen itse? | Sivuston suostumusohje: huoltaja tekee tai hyväksyy tilauksen. [Tietosuoja](https://rytkoset.net/tietosuoja/) |
+| Voinko lukea digilehtiä ilman jäsenyyttä? | Vastaus perustuu julkaistujen lehtien määrään ja kunkin käyttöoikeuteen. Tuotannon julkinen digilehti-REST palautti tarkistuksessa tyhjän listan (yhteensä 0). [Digilehdet](https://rytkoset.net/digilehdet/) |
+| Onko Iisalmen vuoden 2023 sukujuhlista kuvia? | Julkaistun Iisalmen 60-vuotisjuhlan albumin oma permalinkki; tapahtuman mainitseva tavallinen sivu ei todista kuvien olemassaoloa. [Albumi](https://rytkoset.net/albumit/rytkosten-sukuseuran-60-vuotissukujuhla-seka-sukukokous-iisalmen-kulttuurikeskuksella-19-8-2023/) |
+
+**Mallin ja sisällön erot:** localhostilta puuttui `RYTKOSET_CHAT_API_MODEL`, joten se käytti koodin `mistral-small-latest`-oletusta. Smallin vastauksissa perustamisen valmistelu ja perustava kokous sekoittuivat, ja kirjan loppuunmyyty-tieto jäi käyttämättä. Kolmen oikean kysymyksen Medium-vertailussa perustaminen, kirjan saatavuus ja Anne Kauppalan yhteys vastattiin oikein. Ylläpitäjä vahvisti tuotannon asetukseksi `mistral-medium-latest`; sama vakio lisättiin localhostin `wp-config.php`:hen. Tämä on paikallinen ympäristöasetus, ei versionhallinnan muutos. Koodin oletusmallia ei muutettu.
+
+Localhostin jäsenyyskontekstissa tarkistettu päättymispäivä on 30.8.2029, tuotannon chat vastasi 31.8.2029. Tuotannon tarkkaa metatietoa ei tarkistettu tässä työssä; julkinen jäsenyyssivu vahvisti hinnan ja kauden. Localhostissa on lisäksi julkaistu kaikille ilmainen testidigilehti, joten sen myönteinen vastaus ja tuotannon tyhjän arkiston vastaus ovat eri sisältötilanteita.
+
+**Korjauksen varmennus:** paikallisen Medium-mallin koko 13 kysymyksen sarja palautti HTTP 200:n. Tapahtumakysymykset 2–4 vastasivat menneeseen päivään ja osallistumisen päättymiseen. Maarit Tastulan vastaus jäi ensin pelkäksi osallistumismaininnaksi, vaikka ote sisälsi aiheen; lähdeohjetta tarkennettiin ja yksi uusi oikea kutsu kertoi sekä roolin että puheenvuoron aiheen. Henkilön paikkakuntaa koskeva promptiohje estää muuttamasta hallitussivun paikkariviä väitteeksi henkilön alkuperästä.
+
+Oikean paikallisen widgetin kolme tapahtumavuoroa läpäisivät lähdelinkin, fokuksen, virheettömän renderöinnin ja historian tarkistukset (390 × 844, tumma teema; päivityksen jälkeen 6 historiaviestiä; 1280 × 900 vaalea teema). Testisarja täytti paikallisen tuntirajan, joten vain viimeistä kolmen viestin koetta varten lisättiin hetkeksi `RYTKOSET_CHAT_RATE_LIMIT = 40`; vakio poistettiin heti ja alkuperäinen oletus 20 varmennettiin. Tuotannon rajoja ei muutettu.
+
+PHP 8.3:n teemasyntaksi, koko PHPCS ja PHPUnit läpäisivät: 1204 testiä, 3205 assertiota; yksi ennestään tunnettu PHPUnitin metatietodeprecation. Uutta korjausta ei ole julkaistu deviin tai tuotantoon. Toista siellä vähintään vuorot 2–4, lähteetön tarkennus, seuraavan tapahtuman kysymys sekä jäsenyys-/digilehtitiedot kyseisen ympäristön sisällöllä normaalin julkaisun jälkeen.
+
+Tämän jatkotyön suunnitelma- ja koodikatselmointipyynnöt Claudelle estyivät istuntokiintiöön. Ylläpitäjä päätti ohittaa Clauden tässä korjauksessa (#731), joten Claude-katselmointi ei jää odottavaksi vaiheeksi. Varsinaista Claude-palautetta tähän korjaukseen ei saatu; paikallinen varmennus on kirjattu yllä.
 
 ## Testaus
 
@@ -395,9 +484,13 @@ Kelluva chat-painike + paneeli (`inc/chat.php` renderöi kuoren `wp_footer`-kouk
 - **Disclaimer** näkyy paneelin yläosassa: "Tekoälyavustaja. Älä syötä arkaluonteisia tietoja; varmista tärkeät asiat sähköpostitse."
 - **Syöteraja** (`maxlength`) jaetaan backendin kanssa: `rytkoset_theme_chat_get_max_input_length()`.
 
-### Sivuvälimuisti-caveat
+### Istuntotunniste ja sivuvälimuisti (#730)
 
-Widgetin nonce (`wp_create_nonce('wp_rest')`) upotetaan sivun HTML:ään `wp_add_inline_script`illä. Jos sivustolla on **täyssivuvälimuisti**, kirjautumattoman kävijän nonce vanhenee ~12–24 h kuluttua ja REST-kutsu palauttaa "Istunto on vanhentunut" (HTTP 403). Tällöin ohita chat-sivujen välimuisti tai pidä TTL noncen elinikää lyhyempänä.
+Widgetin nonce (`wp_create_nonce('wp_rest')`) upotetaan sivun HTML:ään `wp_add_inline_script`illä. Tunniste on sidottu käyttäjään ja istuntoon ja vanhenee oletuksena noin 12–24 tunnissa. Pitkään auki ollut sivu, kirjautumisen muutos tai vanha välimuisti-HTML voivat siksi lähettää hylättävän tunnisteen. WordPress voi palauttaa `rest_cookie_invalid_nonce` / HTTP 403:n jo ennen teeman omaa käsittelijää; ytimen viesti on ”Evästeen tarkistus epäonnistui”. Lähteet: [WordPressin REST-autentikointi](https://developer.wordpress.org/rest-api/using-the-rest-api/authentication/) ja [nonce-tunnisteet](https://developer.wordpress.org/apis/security/nonces/), tarkistettu 12.10.2026.
+
+Widget näyttää sekä tämän että teeman oman `rytkoset_chat_invalid_nonce` / 403 -virheen yhteydessä **”Istunnon tarkistus epäonnistui. Päivitä sivu ja yritä uudelleen.”** `functions.php` välittää käännettävän tekstin `sessionErrorText`-kentässä. Muiden 403-virheiden ja Mistral-/yhteysvirheiden viestejä ei korvata tällä ohjeella. Jos vanhasta HTML-konfiguraatiosta puuttuu uusi tekstikenttä, alkuperäinen virheviesti säilyy. Tarkistukset, kulusuojat ja epäonnistuneen vuoron poistuminen historiasta pysyvät käytössä; viestiä ei lähetetä automaattisesti uudelleen.
+
+Päivitä sivu (tarvittaessa Ctrl+F5) ja kokeile kerran uudelleen. Paikallisessa anonyymissä kontrollikokeessa tuoreen sivun tunnisteella tilikausikysymys palautti 200:n; virheellisellä tunnisteella sama reitti palautti kuvakaappauksen 403:n. Ylläpitäjä vahvisti 12.10.2026, että localhostin virhe vaihtuu tai poistuu Ctrl+F5-päivityksellä; oman selainistunnon hylkäyksen tarkka syy on silti vahvistamatta. Ennen saldolatausta tuoreella tunnisteella toistettu `Kuka on Riitta Taipale?` palautti paikallisesti REST 502:n ja sisäisen `http_429`-tyypin; palautuksen jälkeen sama kysymys onnistui 200:lla. Jos virhe vaihtuu 502:ksi, tunnistetarkistus on läpäisty ja API-virhe selvitetään edellä kuvatulla tavalla. Jos sama 403 jatkuu tuoreella sivulla, tarkista kirjautumistila sekä sivun ja REST-reitin osoitteet. **Täyssivuvälimuistissa** ohita chat-sivujen välimuisti tai pidä TTL noncen elinikää lyhyempänä; välimuistista toistuvasti saatu vanha tunniste ei korjaannu pelkällä päivitysohjeella.
 
 ### Manuaalinen selaintestaus
 

@@ -387,7 +387,7 @@
               return {};
             })
             .then(function (data) {
-              return { ok: response.ok, data: data };
+              return { ok: response.ok, status: response.status, data: data };
             });
         })
         .then(function (result) {
@@ -398,6 +398,12 @@
             appendMessage('assistant', result.data.reply, 'start');
           } else {
             var message = (result.data && result.data.message) || config.errorText;
+            if (
+              result.status === 403 && result.data && config.sessionErrorText &&
+              (result.data.code === 'rest_cookie_invalid_nonce' || result.data.code === 'rytkoset_chat_invalid_nonce')
+            ) {
+              message = config.sessionErrorText;
+            }
             rollbackFailedUserTurn(text);
             appendMessage('error', message, 'start');
           }
