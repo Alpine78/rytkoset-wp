@@ -1,6 +1,6 @@
 <?php
 /**
- * REST handler regressions for malformed Mistral responses (#604).
+ * REST handler regressions for malformed responses and provider failures.
  *
  * @package Rytkoset\Tests
  */
@@ -11,6 +11,67 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 
 final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_past_event_followup_is_answered_without_mistral(): void {
+		$this->configure_chat_backend();
+		$GLOBALS['rytkoset_test_now'] = '2026-10-12 12:00:00';
+		rytkoset_test_register_post( 41, 'rytkoset_event', 'Tampereen sukujuhla' );
+		update_post_meta( 41, rytkoset_theme_get_event_date_meta_key(), '2026-08-29' );
+		$result = rytkoset_theme_chat_handle_request(
+			$this->request_with_messages(
+				array(
+					array( 'role' => 'user', 'content' => 'Milloin Tampereen sukujuhlat pidetään?' ),
+					array( 'role' => 'assistant', 'content' => '29.8.2026.' ),
+					array( 'role' => 'user', 'content' => 'Vieläkö kerkeää osallistua sukujuhliin?' ),
+				)
+			)
+		);
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertSame( 200, $result->get_status() );
+		$this->assertStringContainsString( 'ei voi enää osallistua', $result->get_data()['reply'] );
+		$this->assertStringContainsString( get_permalink( 41 ), $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertSame( 1, rytkoset_theme_chat_get_usage_stats()['messages_sent']['count'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_generic_attendance_question_requests_a_subject_without_a_useless_search(): void {
+		$this->configure_chat_backend();
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Vieläkö kerkeää osallistua sukujuhliin?' ) );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertStringContainsString( 'Mitä tapahtumaa tarkoitat?', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( '?s=', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_missing_lowercase_meeting_source_uses_place_terms_in_search(): void {
+		$this->configure_chat_backend();
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'voinko osallistua helsingin sukujuhliin?' ) );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertStringContainsString( '?s=helsingin', $result->get_data()['reply'] );
+		$this->assertStringNotContainsString( 'osallistua', $result->get_data()['reply'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_event_direct_answer_obeys_the_page_tool_kill_switch(): void {
+		$this->configure_chat_backend();
+		$GLOBALS['rytkoset_test_now'] = '2026-10-12 12:00:00';
+		rytkoset_test_register_post( 41, 'rytkoset_event', 'Tampereen sukujuhla' );
+		update_post_meta( 41, rytkoset_theme_get_event_date_meta_key(), '2026-08-29' );
+		add_filter( 'rytkoset_theme_chat_page_tool_enabled', static fn() => false );
+		$this->queue_mistral_response( array( 'choices' => array( array( 'finish_reason' => 'stop', 'message' => array( 'content' => 'Varmennettua tapahtumatietoa ei ole käytettävissä.' ) ) ) ) );
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Voinko osallistua Tampereen sukujuhliin?' ) );
+		$this->assertInstanceOf( WP_REST_Response::class, $result );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+		$this->assertStringNotContainsString( 'ei voi enää osallistua', $result->get_data()['reply'] );
+	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
@@ -652,6 +713,84 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'invalid_finish_reason', rytkoset_theme_chat_get_usage_stats()['last_error']['last_type'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_provider_rate_limit_returns_safe_502_without_retry_or_visitor_limit_hit(): void {
+		$this->configure_chat_backend();
+		$provider_message = 'Rate limit exceeded: private-provider-detail';
+		$this->queue_mistral_response(
+			array(
+				'object'  => 'error',
+				'message' => $provider_message,
+				'type'    => 'rate_limited',
+				'code'    => '1300',
+			),
+			429
+		);
+
+		$started_at = time();
+		$result     = rytkoset_theme_chat_handle_request( $this->request( 'Hei' ) );
+
+		$this->assert_safe_upstream_error( $result, $provider_message );
+		$public_error = wp_json_encode(
+			array(
+				'code'    => $result->get_error_code(),
+				'message' => $result->get_error_message(),
+				'data'    => $result->get_error_data(),
+			)
+		);
+		foreach ( array( 'private-provider-detail', 'rate_limited', '1300', RYTKOSET_CHAT_API_KEY ) as $private_value ) {
+			$this->assertStringNotContainsString( $private_value, $public_error );
+		}
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$stats = rytkoset_theme_chat_get_usage_stats();
+		$this->assertSame( 'http_429', $stats['last_error']['last_type'] );
+		$this->assertSame( 1, $stats['last_error']['count'] );
+		$this->assertSame( 0, $stats['rate_limit_hits']['count'] );
+		$this->assertSame( 0, $stats['messages_sent']['count'] );
+
+		$stored_error = get_option( rytkoset_theme_chat_get_stat_option_names()['error'] );
+		$this->assertIsInt( $stored_error['last_at'] );
+		$this->assertGreaterThanOrEqual( $started_at, $stored_error['last_at'] );
+		$this->assertLessThanOrEqual( time(), $stored_error['last_at'] );
+		$this->assertSame(
+			array(
+				'count'     => 1,
+				'last_at'   => $stored_error['last_at'],
+				'last_type' => 'http_429',
+			),
+			$stored_error
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_visitor_rate_limit_returns_429_without_calling_provider(): void {
+		$this->configure_chat_backend();
+		$ip = rytkoset_theme_chat_get_client_ip();
+		set_transient(
+			'rytkoset_chat_rl_' . md5( $ip ),
+			array(
+				'count' => rytkoset_theme_chat_get_rate_limit(),
+				'start' => time(),
+			),
+			HOUR_IN_SECONDS
+		);
+
+		$result = rytkoset_theme_chat_handle_request( $this->request( 'Hei' ) );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rytkoset_chat_rate_limited', $result->get_error_code() );
+		$this->assertSame( 429, $result->get_error_data()['status'] );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_http_requests'] );
+
+		$stats = rytkoset_theme_chat_get_usage_stats();
+		$this->assertSame( 1, $stats['rate_limit_hits']['count'] );
+		$this->assertSame( 0, $stats['last_error']['count'] );
+		$this->assertSame( 0, $stats['messages_sent']['count'] );
+	}
+
 	private function configure_chat_backend(): void {
 		if ( ! defined( 'RYTKOSET_CHAT_API_KEY' ) ) {
 			define( 'RYTKOSET_CHAT_API_KEY', 'test-key' );
@@ -715,10 +854,13 @@ final class ChatRequestHandlerTest extends Rytkoset_Theme_Test_Case {
 		$page->post_content = $content;
 	}
 
-	/** @param array<string,mixed> $body Decoded Mistral response body. */
-	private function queue_mistral_response( array $body ): void {
+	/**
+	 * @param array<string,mixed> $body         Decoded Mistral response body.
+	 * @param int                 $status_code Provider HTTP status.
+	 */
+	private function queue_mistral_response( array $body, int $status_code = 200 ): void {
 		$GLOBALS['rytkoset_test_http_responses'][] = array(
-			'response' => array( 'code' => 200 ),
+			'response' => array( 'code' => $status_code ),
 			'body'     => wp_json_encode( $body ),
 		);
 	}
