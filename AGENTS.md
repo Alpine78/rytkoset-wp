@@ -79,6 +79,7 @@ Use conventional commits:
 - Do not create commits automatically when a task appears complete
 - Suggest a conventional commit message at useful review points, including mid-ticket if a coherent partial change is ready to review
 - When the ticket requirements are implemented, report that clearly and suggest the final commit message so the user can review changes in the editor before committing
+- At the same review-ready point, automatically include a PR title and copyable Markdown description following the Pull Request Description Workflow below; this also applies to documentation-only changes without a ticket.
 
 ### Tool approval discipline
 - Minimize permission prompts.
@@ -312,9 +313,11 @@ When creating GitHub issues for this repository:
 
 ### Pull Request Description Workflow
 
-When a ticket is ready:
+When a ticket or any other change is ready for review (including documentation-only work):
 
 - Always provide a PR title and PR description without waiting for a separate request
+- Read `.github/pull_request_template.md` and use its current headings and structure.
+- Put the complete PR description in a fenced `md` code block in the final response so the user can copy it directly; provide the title separately. A file link or an offer to write the description later is not a substitute.
 - Include a concise summary, key implementation details, and validation performed
 - Mention any validation that could not be run and why
 - Keep the PR description reviewable and tied to the ticket scope

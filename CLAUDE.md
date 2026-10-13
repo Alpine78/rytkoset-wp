@@ -98,6 +98,8 @@ refactor: split functions.php into inc/ modules
 
 Do not create commits automatically â€” report the implementation first, suggest a commit message, and let the user review the diff before committing.
 
+At every review-ready completion, automatically provide the suggested commit message, a PR title and a complete copyable PR description, including for documentation-only work without a ticket. Read `.github/pull_request_template.md` and follow its current structure. Put the description in a fenced `md` code block in the final response and the title separately; do not wait for another request or substitute a file link. See `AGENTS.md`.
+
 ## Theme architecture
 
 Event email privacy (#643): WooCommerce admin order emails hide both the Tampere 2026 diet fields and the free-text customer note on event orders. The note getter is filtered only between `woocommerce_email_before_order_table` and `woocommerce_email_after_order_table`; saved notes, customer emails and non-event order notes remain available.
