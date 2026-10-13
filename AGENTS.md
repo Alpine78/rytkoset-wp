@@ -60,6 +60,10 @@ Avoid:
 ### Branching
 - `dev` = deploys automatically to dev when theme files change
 - `main` = primary integration branch; no automatic dev deploy
+- Create task branches without inheriting the base branch's upstream: `git switch --no-track -c <new-branch> origin/dev` (or the requested base).
+- Immediately publish each new task branch with `git push --set-upstream origin <new-branch>`. The user has authorized this branch setup; do not create commits automatically.
+- Verify that the upstream is `origin/<new-branch>` before handing the branch to the user. VS Code Source Control Sync must target that same-name remote branch, never `origin/dev` or `origin/main` for a task branch. If publication fails, leave the branch untracked and report the failure.
+- Repository-local defaults: `branch.autoSetupMerge = simple`, `push.default = simple`, `push.autoSetupRemote = true`. These are safeguards; still publish and verify new branches explicitly.
 - Use:
   - `feature/...`
   - `fix/...`
@@ -75,6 +79,7 @@ Use conventional commits:
 - Do not create commits automatically when a task appears complete
 - Suggest a conventional commit message at useful review points, including mid-ticket if a coherent partial change is ready to review
 - When the ticket requirements are implemented, report that clearly and suggest the final commit message so the user can review changes in the editor before committing
+- At the same review-ready point, automatically include a PR title and copyable Markdown description following the Pull Request Description Workflow below; this also applies to documentation-only changes without a ticket.
 
 ### Tool approval discipline
 - Minimize permission prompts.
@@ -308,9 +313,11 @@ When creating GitHub issues for this repository:
 
 ### Pull Request Description Workflow
 
-When a ticket is ready:
+When a ticket or any other change is ready for review (including documentation-only work):
 
 - Always provide a PR title and PR description without waiting for a separate request
+- Read `.github/pull_request_template.md` and use its current headings and structure.
+- Put the complete PR description in a fenced `md` code block in the final response so the user can copy it directly; provide the title separately. A file link or an offer to write the description later is not a substitute.
 - Include a concise summary, key implementation details, and validation performed
 - Mention any validation that could not be run and why
 - Keep the PR description reviewable and tied to the ticket scope

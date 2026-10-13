@@ -85,6 +85,8 @@ The theme has **no WordPress test install**. These are lightweight unit tests: `
 
 ## Commit messages
 
+Task branch setup: create from the requested base without inherited tracking (`git switch --no-track -c <new-branch> origin/dev`), then immediately publish with `git push --set-upstream origin <new-branch>` and verify upstream is `origin/<new-branch>`. The owner authorizes this setup so VS Code Source Control Sync targets the task branch. Never leave a task branch tracking `origin/dev` or `origin/main`; failed publication must leave it untracked and be reported. Repository-local safeguards are `branch.autoSetupMerge = simple`, `push.default = simple`, `push.autoSetupRemote = true`. This does not authorize automatic commits or integration-branch pushes. See `AGENTS.md`.
+
 Conventional Commits (see `CONTRIBUTING.md`):
 
 ```
@@ -95,6 +97,8 @@ refactor: split functions.php into inc/ modules
 ```
 
 Do not create commits automatically â€” report the implementation first, suggest a commit message, and let the user review the diff before committing.
+
+At every review-ready completion, automatically provide the suggested commit message, a PR title and a complete copyable PR description, including for documentation-only work without a ticket. Read `.github/pull_request_template.md` and follow its current structure. Put the description in a fenced `md` code block in the final response and the title separately; do not wait for another request or substitute a file link. See `AGENTS.md`.
 
 ## Theme architecture
 
