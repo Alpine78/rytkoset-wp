@@ -60,6 +60,10 @@ Avoid:
 ### Branching
 - `dev` = deploys automatically to dev when theme files change
 - `main` = primary integration branch; no automatic dev deploy
+- Create task branches without inheriting the base branch's upstream: `git switch --no-track -c <new-branch> origin/dev` (or the requested base).
+- Immediately publish each new task branch with `git push --set-upstream origin <new-branch>`. The user has authorized this branch setup; do not create commits automatically.
+- Verify that the upstream is `origin/<new-branch>` before handing the branch to the user. VS Code Source Control Sync must target that same-name remote branch, never `origin/dev` or `origin/main` for a task branch. If publication fails, leave the branch untracked and report the failure.
+- Repository-local defaults: `branch.autoSetupMerge = simple`, `push.default = simple`, `push.autoSetupRemote = true`. These are safeguards; still publish and verify new branches explicitly.
 - Use:
   - `feature/...`
   - `fix/...`

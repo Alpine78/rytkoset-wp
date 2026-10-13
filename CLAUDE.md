@@ -85,6 +85,8 @@ The theme has **no WordPress test install**. These are lightweight unit tests: `
 
 ## Commit messages
 
+Task branch setup: create from the requested base without inherited tracking (`git switch --no-track -c <new-branch> origin/dev`), then immediately publish with `git push --set-upstream origin <new-branch>` and verify upstream is `origin/<new-branch>`. The owner authorizes this setup so VS Code Source Control Sync targets the task branch. Never leave a task branch tracking `origin/dev` or `origin/main`; failed publication must leave it untracked and be reported. Repository-local safeguards are `branch.autoSetupMerge = simple`, `push.default = simple`, `push.autoSetupRemote = true`. This does not authorize automatic commits or integration-branch pushes. See `AGENTS.md`.
+
 Conventional Commits (see `CONTRIBUTING.md`):
 
 ```

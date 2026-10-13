@@ -173,6 +173,7 @@ Branch-malli:
 
 - `dev` deployaa automaattisesti `dev.rytkoset.net`-ympäristöön, kun teematiedostot muuttuvat.
 - `main` on pääasiallinen integraatiobranch, eikä se deployaa automaattisesti deviin.
+- Työhaara julkaistaan heti samalla nimellä `origin`-remoteen ja asetetaan seuraamaan sitä, jotta Source Controlin Sync kohdistuu työhaaraan. Haaran perustaminen ja seurannan tarkistus: [AGENTS.md](AGENTS.md).
 
 Dev-deploy:
 
