@@ -1,7 +1,7 @@
 # Hallituksen päätettävät verkkosivustoasiat
 
 > Valmisteltu 24.7.2026 avoimista GitHub-tiketeistä ja projektin
-> tietosuojadokumentaatiosta.
+> tietosuojadokumentaatiosta. Maksunvälittäjä-kohta päivitetty 31.10.2026.
 
 Tämä asiakirja kokoaa asiat, joissa Rytkösten sukuseura ry:n hallituksen pitää
 valita toimintaperiaate, hyväksyä kustannus tai nimetä vastuuhenkilö. Hallituksen
@@ -22,7 +22,7 @@ palveluntarjoaja-, kirjanpito- tai asiantuntijatiedot on tarkistettu.
 | Seuraava soveltuva kokous | Jäseneksi hyväksyminen ja jäsenen eroaminen | Miten verkkopalvelun käytäntö sovitetaan yhdistyksen rekisteröityihin sääntöihin | [#562](https://github.com/Alpine78/rytkoset-wp/issues/562) |
 | Ennen jäsenmaksujen muuttamista | Jäsenmaksun porrastus | Porrastetaanko maksu kesken jäsenkauden ja sallivatko säännöt sen | [#394](https://github.com/Alpine78/rytkoset-wp/issues/394) |
 | Ennen jäsenjulkaisun aloittamista | Jäsenedut ja jäsensisältö | Jäsenyyden lupaus, tarjottavat edut, julkaisurytmi, vastuut ja resurssit | [#597](https://github.com/Alpine78/rytkoset-wp/issues/597) |
-| Kokeilukuukauden jälkeen | Maksunvälittäjä | Jatketaanko Paytrail-kokeilua pysyvästi (n. 220 €/v lisäkustannus) vai palataanko Mollieen | [#396](https://github.com/Alpine78/rytkoset-wp/issues/396), [#530](https://github.com/Alpine78/rytkoset-wp/issues/530) |
+| Kokeilukuukauden jälkeen | Maksunvälittäjä | Jatketaanko Paytrail-kokeilua pysyvästi, vaihdetaanko halvempaan kotimaiseen palveluun (esim. Visma Pay) vai palataanko Mollieen | [#396](https://github.com/Alpine78/rytkoset-wp/issues/396), [#530](https://github.com/Alpine78/rytkoset-wp/issues/530) |
 | Ennen aineiston vastaanoton avaamista | Sukututkimusaineisto | Otetaanko aineistoa vastaan, mitä otetaan vastaan, kuka käsittelee ja kuinka kauan aineisto säilytetään | [#26](https://github.com/Alpine78/rytkoset-wp/issues/26) |
 | Seuraava soveltuva kokous | Sivuston jatkuvuus ja tietoturva | Varmuuskopioinnin, valvonnan ja tietoturvan vastuuhenkilöt, palvelut ja kuluraja | [#421](https://github.com/Alpine78/rytkoset-wp/issues/421), [#514](https://github.com/Alpine78/rytkoset-wp/issues/514), [#336](https://github.com/Alpine78/rytkoset-wp/issues/336) |
 
@@ -224,24 +224,86 @@ Mollien pois käytöstä toistaiseksi ilman koodin poistoa
 ([#530](https://github.com/Alpine78/rytkoset-wp/issues/530), tuotantoon vienti
 todennettu 15.7.2026 mennessä). Päätettävä asia ei siis ole enää "kokeillaanko
 kotimaista", vaan jatketaanko sitä pysyvästi kustannuksesta huolimatta.
-Paytrailin kevyin paketti maksaa n. 14,90 €/kk + alv sekä 0,50 € + 3,25 % per
-tapahtuma; Mollie oli transaktiopohjainen ilman kuukausimaksua. Sukuseuran
-volyymillä ero on karkeasti 220 €/vuosi.
+Paytrailin kevyin paketti maksaa 14,90 €/kk + alv sekä 0,50 € + 3,25 % per
+tapahtuma. Arvonlisäveron (25,5 %) kanssa kuukausimaksu on n. 18,70 €/kk eli
+n. 224 €/vuosi. Mollie oli transaktiopohjainen ilman kuukausimaksua.
+
+Aiemmassa versiossa ero Mollieen arvioitiin sukuseuran volyymillä karkeasti
+220 €/vuodeksi, mutta laskentaperustetta ei kirjattu. Koska pelkkä
+kuukausimaksu on arvonlisäverollisena jo tätä suurempi ja Paytrailin
+tapahtumamaksukin on Mollien korttimaksua kalliimpi, todellinen ero on
+todennäköisesti suurempi, jos yhdistys ei voi vähentää arvonlisäveroa. Ero
+lasketaan uudelleen ennen päätöstä.
+
+### Hintavertailu: Visma Pay
+
+Visma Payn [hinnaston](https://www.vismapay.fi/hinnasto) mukaan (tarkistettu
+31.10.2026) kevyin Express-paketti maksaa 9,90 €/kk + alv, eli arvonlisäveron
+kanssa n. 149 €/vuosi, eikä aloitusmaksua ole. Visma Pay suosittelee
+Expressiä kauppiaille, joiden myyntivolyymi on alle 2 000 €/kk. Tapahtumamaksu on 0,49 € +
+2,99 % kaikilla maksutavoilla (verkkopankki, kortit, mobiilimaksut, Klarna ja
+OP Lasku). Yritys- ja prepaid-korteista sekä ETA-alueen ulkopuolisista
+korteista peritään lisäksi 1 %. Hyvitykset ovat maksuttomia. Päivittäiset
+tilitykset eivät sisälly Express-pakettiin, joten rahat tilitetään
+yhdistyksen tilille harvemmin.
+
+Express on siis Paytrailin kevyintä pakettia halvempi sekä kuukausimaksultaan
+(n. 75 €/vuosi arvonlisäveron kanssa) että tapahtumamaksultaan. Hinnasto
+merkitsee "+ alv" kuukausimaksuun ja lisäpalveluihin, mutta ei
+tapahtumamaksuihin. Visma Pay on suomalainen
+maksunvälittäjä, joka tarjoaa suomalaiset verkkopankkimaksut, joten se
+ratkaisisi pankkimaksujen ongelmat samalla tavalla kuin Paytrail. Poistuuko
+myös korttimaksun ulkomaisuus, varmistetaan ennen sopimusta. Vaihto vaatii
+uuden sopimuksen sekä WooCommerce-maksulisäosan käyttöönoton ja testauksen.
+
+### Mollien hinnanmuutokset 1.12.2026
+
+Mollie ilmoitti syksyllä 2026 sähköpostilla muutoksista, jotka koskevat
+yhdistystä vain, jos Mollieen palataan:
+
+- **Pay by Bank** halpenee: 0,45 % + 0,25 € per tapahtuma (aiemmin 0,90 % +
+  0,25 €). Mollien uusi Pay by Bank -järjestelmä ei ole vielä käytössä
+  Suomessa, joten maksun rajat ylittävä luonne (ongelma 1) säilyy.
+- **Tilisiirto** maksaa 0,35 € per tapahtuma. Samalla Mollie lupaa
+  virtuaalisen IBANin yhdistyksen nimissä ja sen, ettei väärällä viitteellä tai
+  summalla maksettua tilisiirtoa enää palauteta automaattisesti. Mollien
+  [dokumentaation](https://docs.mollie.com/docs/flexible-bank-transfer-reconciliation)
+  mukaan ominaisuus on kuitenkin beta-vaiheessa ja vain osan kauppiaista
+  saatavilla Alankomaissa, Belgiassa, Ranskassa ja Saksassa. Dokumentaatio ei
+  kerro, minkä maan IBAN virtuaalinen IBAN on.
+- Kohdistamaton tilisiirto on ratkaistava 2 pankkipäivän kuluessa Mollien
+  hallintapaneelissa tai rajapinnan kautta, muuten raha palautuu maksajalle.
+  Tämä lieventää väliviivallisen RF-viitteen ongelmaa (ongelma 2) mutta ei
+  poista sitä, ja se tuo vapaaehtoiselle uuden, säännöllisesti seurattavan
+  tehtävän.
+- Korttimaksuihin ja korttimaksun ulkomaisuuteen (ongelma 3) muutokset eivät
+  vaikuta.
+
+Mollien muutokset eivät siis poista mitään kolmesta juurisyystä. Kustannusero
+kotimaisiin palveluihin syntyy pääosin näiden kuukausimaksusta, joten Mollien
+halpeneminen muuttaa vertailua vain vähän.
 
 ### Ennen päätöstä selvitettävä
 
 - Onko kokeilukuukauden aikana havaittu vähemmän keskeytyneitä maksuja tai
   maksutukipyyntöjä kuin Mollien aikana.
-- Paytrailin ja muiden kotimaisten vaihtoehtojen (esim. Visma Pay, Checkout
-  Finland) ajantasaiset hinnat ja sopimusehdot pienelle yhdistykselle, jos
-  Paytrailista halutaan vielä vertailla.
+- Voiko yhdistys vähentää arvonlisäveron. Jos ei, kuukausimaksut vertaillaan
+  arvonlisäverollisina.
+- Jos Paytrailin sijaan harkitaan Visma Payta: sopimusehdot pienelle
+  yhdistykselle, veloitetaanko kortit kotimaisesti, kuinka usein
+  Express-paketissa tilitetään ja tuleeko tapahtumamaksujen päälle
+  arvonlisävero.
 - Rinnakkaismalli (kortit Molliessa, verkkopankki kotimaisessa) ei poista
   korttien rajat ylittävää luonnetta — kannattaako sitä silti harkita.
+- Jos Mollieen palataan: onko virtuaalinen IBAN ja joustava kohdistus
+  saatavilla suomalaiselle kauppiaalle, minkä maan IBAN se on ja kuka
+  kohdistaa kohdistamattomat tilisiirrot 2 pankkipäivän kuluessa.
 
 ### Päätettävä
 
-- Jatketaanko Paytraililla pysyvästi ja hyväksytäänkö sen n. 220 €/v
-  lisäkustannus, vai palataanko Mollieen?
+- Jatketaanko Paytraililla pysyvästi, vaihdetaanko halvempaan kotimaiseen
+  palveluun (esim. Visma Pay Express) vai palataanko Mollieen? Kotimaisen
+  palvelun kuukausimaksu on arvonlisäverollisena n. 149–224 €/vuosi.
 - Kuka saa tehdä lopullisen sopimuksen Paytrailin tai muun kotimaisen palvelun
   kanssa?
 - Jos Mollieen ei enää palata: puretaanko sen kiertotiekoodi
