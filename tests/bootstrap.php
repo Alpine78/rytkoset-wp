@@ -41,6 +41,7 @@ $GLOBALS['rytkoset_test_products']     = array(); // [product_id] => WC_Product
 $GLOBALS['rytkoset_test_orders']       = array(); // [order_id] => WC_Order (wc_get_order)
 $GLOBALS['rytkoset_test_bought']       = array(); // ["user_id:product_id"] => true (wc_customer_bought_product)
 $GLOBALS['rytkoset_test_caps']         = array(); // [capability] => bool for the current user
+$GLOBALS['rytkoset_test_object_caps']  = array(); // ["capability:object_id"] => bool, overrides the map above
 $GLOBALS['rytkoset_test_current_post'] = 0;       // get_post() with no argument
 $GLOBALS['rytkoset_test_options']      = array(); // [option] => value (get_option/update_option)
 $GLOBALS['rytkoset_test_roles']        = array(); // [role slug] => WP_Role (get_role)
@@ -88,6 +89,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_orders']        = array();
 	$GLOBALS['rytkoset_test_bought']        = array();
 	$GLOBALS['rytkoset_test_caps']          = array();
+	$GLOBALS['rytkoset_test_object_caps']   = array();
 	$GLOBALS['rytkoset_test_current_post']  = 0;
 	$GLOBALS['rytkoset_test_options']       = array();
 	$GLOBALS['rytkoset_test_roles']         = array();
@@ -1525,6 +1527,15 @@ function get_post_type_object( $post_type ) {
 }
 
 function current_user_can( $capability, ...$args ) {
+	// Optional per-object answer, e.g. "edit_post:123", for object-level checks.
+	if ( isset( $args[0] ) && is_scalar( $args[0] ) ) {
+		$object_key = $capability . ':' . $args[0];
+
+		if ( isset( $GLOBALS['rytkoset_test_object_caps'][ $object_key ] ) ) {
+			return (bool) $GLOBALS['rytkoset_test_object_caps'][ $object_key ];
+		}
+	}
+
 	return ! empty( $GLOBALS['rytkoset_test_caps'][ $capability ] );
 }
 

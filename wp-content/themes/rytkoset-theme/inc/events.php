@@ -1382,7 +1382,61 @@ function rytkoset_theme_get_event_linked_product( $event_id ) {
 }
 
 /**
- * Returns published WooCommerce products for the event product selector.
+ * Returns whether the current user may link a product to an event (#745).
+ *
+ * Linking a product exposes its buyers through the participant list, the CSV
+ * export, organizer notifications and the messaging tool. A user may therefore
+ * link only a product that collects event participants, or a product the user
+ * is allowed to edit. Event organizers hold no product capabilities, so they
+ * can attach a registration product but never an unrelated shop product.
+ *
+ * @param WC_Product|null $product WooCommerce product object.
+ * @return bool
+ */
+function rytkoset_theme_user_can_link_event_product( $product ) {
+	if ( ! class_exists( 'WC_Product' ) || ! $product instanceof WC_Product ) {
+		return false;
+	}
+
+	if (
+		function_exists( 'rytkoset_theme_is_paid_event_registration_product' )
+		&& rytkoset_theme_is_paid_event_registration_product( $product )
+	) {
+		return true;
+	}
+
+	return current_user_can( 'edit_post', $product->get_id() );
+}
+
+/**
+ * Returns whether the stored product link is locked for the current user (#745).
+ *
+ * A link to a product the user could not have linked is read-only: the user can
+ * neither replace nor remove it. This keeps a link set by a shop administrator
+ * intact when someone without product capabilities saves the event. A stored ID
+ * that no longer resolves to a product is not locked, because it exposes nothing.
+ *
+ * @param int $event_id Event post ID.
+ * @return bool
+ */
+function rytkoset_theme_event_product_link_is_locked( $event_id ) {
+	$product_id = absint( get_post_meta( absint( $event_id ), rytkoset_theme_get_event_product_meta_key(), true ) );
+
+	if ( $product_id <= 0 || ! function_exists( 'wc_get_product' ) ) {
+		return false;
+	}
+
+	$product = wc_get_product( $product_id );
+
+	if ( ! class_exists( 'WC_Product' ) || ! $product instanceof WC_Product ) {
+		return false;
+	}
+
+	return ! rytkoset_theme_user_can_link_event_product( $product );
+}
+
+/**
+ * Returns the published WooCommerce products the current user may link to an event.
  *
  * @return WC_Product[]
  */
@@ -1391,7 +1445,7 @@ function rytkoset_theme_get_event_product_options() {
 		return array();
 	}
 
-	return wc_get_products(
+	$products = wc_get_products(
 		array(
 			'status'  => 'publish',
 			'limit'   => -1,
@@ -1399,6 +1453,12 @@ function rytkoset_theme_get_event_product_options() {
 			'order'   => 'ASC',
 		)
 	);
+
+	if ( ! is_array( $products ) ) {
+		return array();
+	}
+
+	return array_values( array_filter( $products, 'rytkoset_theme_user_can_link_event_product' ) );
 }
 
 /**
@@ -1581,6 +1641,22 @@ function rytkoset_theme_render_event_product_metabox( $post ) {
 		echo '<p>' . esc_html__( 'WooCommerce ei ole käytössä, joten maksutuotetta ei voi valita.', 'rytkoset-theme' ) . '</p>';
 		return;
 	}
+
+	if ( rytkoset_theme_event_product_link_is_locked( $post->ID ) ) {
+		// No form control is rendered: the save handler ignores the field for this user.
+		$locked_product = wc_get_product( $selected_product_id );
+		$locked_name    = class_exists( 'WC_Product' ) && $locked_product instanceof WC_Product ? $locked_product->get_name() : '';
+		?>
+		<p>
+			<strong><?php esc_html_e( 'WooCommerce-tuote', 'rytkoset-theme' ); ?>:</strong>
+			<?php echo esc_html( $locked_name ); ?>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'Tämä tuote ei ole tapahtuman ilmoittautumistuote, joten linkityksen voi vaihtaa tai poistaa vain kaupan tuotteita hallitseva ylläpitäjä.', 'rytkoset-theme' ); ?>
+		</p>
+		<?php
+		return;
+	}
 	?>
 	<p>
 		<label for="rytkoset_event_product_id">
@@ -1623,6 +1699,11 @@ function rytkoset_theme_render_event_product_metabox( $post ) {
 	<p class="description">
 		<?php esc_html_e( 'Valitse tapahtumaan liittyvä WooCommerce-tuote. Tapahtumasivulle lisätään painike tuotteen sivulle.', 'rytkoset-theme' ); ?>
 	</p>
+	<?php if ( ! current_user_can( 'edit_products' ) ) : ?>
+		<p class="description">
+			<?php esc_html_e( 'Valittavissa ovat vain tapahtumailmoittautumiseen merkityt tuotteet. Muun tuotteen linkittää kaupan ylläpitäjä.', 'rytkoset-theme' ); ?>
+		</p>
+	<?php endif; ?>
 	<?php
 }
 
@@ -1683,11 +1764,21 @@ function rytkoset_theme_save_event_product_link( $post_id ) {
 		return;
 	}
 
+	// Without WooCommerce the product cannot be validated, so the link is left as it is.
+	if ( ! function_exists( 'wc_get_product' ) ) {
+		return;
+	}
+
+	// A link the user could not have set is read-only for that user (#745).
+	if ( rytkoset_theme_event_product_link_is_locked( $post_id ) ) {
+		return;
+	}
+
 	$product_id = isset( $_POST['rytkoset_event_product_id'] )
 		? absint( wp_unslash( $_POST['rytkoset_event_product_id'] ) )
 		: 0;
 
-	if ( $product_id <= 0 || ! function_exists( 'wc_get_product' ) ) {
+	if ( $product_id <= 0 ) {
 		delete_post_meta( $post_id, rytkoset_theme_get_event_product_meta_key() );
 		return;
 	}
@@ -1696,6 +1787,11 @@ function rytkoset_theme_save_event_product_link( $post_id ) {
 
 	if ( ! class_exists( 'WC_Product' ) || ! $product instanceof WC_Product || 'publish' !== $product->get_status() ) {
 		delete_post_meta( $post_id, rytkoset_theme_get_event_product_meta_key() );
+		return;
+	}
+
+	// Refuse a product that would widen the user's access; the stored link stays (#745).
+	if ( ! rytkoset_theme_user_can_link_event_product( $product ) ) {
 		return;
 	}
 
