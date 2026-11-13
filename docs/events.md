@@ -83,7 +83,7 @@ Tapahtuman lisätiedot tallennetaan WordPressin post metaan:
 | Kysy määrä | `_rytkoset_event_collect_quantity` | `yes` tai puuttuva | Näyttää maksuttomalla lomakkeella määräkentän |
 | Määräkentän otsikko | `_rytkoset_event_quantity_field_label` | vapaa teksti | Määräkentän otsikko, oletus `Matkustajien määrä` |
 
-Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon.
+Tallennuksessa tarkistetaan nonce, käyttäjän `edit_post`-oikeus ja kenttäkohtaiset muodot. Tyhjä kenttä poistaa vastaavan metatiedon. Maksutuotteen linkityksellä on lisäksi oma oikeusrajansa (#745): tuotteen on oltava tapahtuman ilmoittautumistuote tai käyttäjällä on oltava oikeus muokata tuotetta. Katso `docs/woocommerce-event-product-link.md`.
 
 ### Ilmoittautumisten metakentät
 
@@ -398,7 +398,7 @@ Rooli saa:
 - hallita kaikkia ilmaisten tapahtumien ilmoittautumisia kohdassa `Tapahtumat > Ilmoittautumiset`
 - muuttaa ilmoittautumisen tilaa, esimerkiksi `pending`, `confirmed` tai `cancelled`
 - lisätä tapahtuman artikkelikuvan mediakirjastosta
-- linkittää tapahtumaan olemassa olevan WooCommerce-maksutuotteen
+- linkittää tapahtumaan olemassa olevan ilmoittautumistuotteen eli tuotteen, jonka ylläpitäjä on merkinnyt tapahtumailmoittautumiseen (#745)
 - määrittää tapahtumakohtaiset järjestäjäilmoitusten vastaanottajat
 - tarkastella ja viedä osallistujia CSV-tiedostoon
 - lisätä osallistujaviestit rajattuun lähetysjonoon
@@ -407,6 +407,7 @@ Rooli ei saa:
 
 - hallita WooCommerce-tuotteita, tilauksia, maksutapoja tai asetuksia
 - avata WooCommerce-hallintanäkymiä
+- linkittää tapahtumaan muuta kaupan tuotetta (esimerkiksi jäsenmaksua) eikä vaihtaa tai poistaa ylläpitäjän asettamaa linkkiä tällaiseen tuotteeseen (#745)
 - muuttaa sivuston yleisiä asetuksia, teeman asetuksia tai käyttäjärooleja
 
 Tämä rooli on tarkoitettu tapahtumien järjestäjille, joille ei haluta antaa täysiä ylläpitäjän oikeuksia. Maksutuotteet luo ja ylläpitää edelleen varsinainen ylläpitäjä.

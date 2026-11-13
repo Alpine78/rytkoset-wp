@@ -21,6 +21,31 @@ Tämä pitää tapahtuman sisällön ja WooCommerce-tuotteen erillään:
 
 Jos tapahtumalle ei valita tuotetta, tapahtumasivulle ei tule maksupainiketta.
 
+## Kuka saa linkittää minkä tuotteen (#745)
+
+Linkitetyn tuotteen ostajat näkyvät tapahtuman osallistujalistassa, CSV-viennissä, järjestäjäilmoituksissa ja viestintätyökalussa. Siksi linkitys on rajattu:
+
+- **Ilmoittautumistuotteen** saa linkittää jokainen, joka saa muokata tapahtumaa, myös Event Organizer. Ilmoittautumistuote on tuote, jonka varastoasetuksissa on tapahtumailmoittautuminen käytössä (`_rytkoset_registration_mode`), sekä vanha Tampere 2026 -tuote (vanha tila tai SKU). Katso [maksullisen tapahtuman yleisohje](woocommerce-event-registration.md).
+- **Muun tuotteen** saa linkittää vain käyttäjä, jolla on oikeus muokata kyseistä tuotetta (ylläpitäjä tai kauppapäällikkö). Tällaisen tuotteen osallistujarivit muodostetaan tilauksen laskutustiedoista.
+- Event Organizerin tuotevalikossa näkyvät vain ilmoittautumistuotteet. Jos tapahtumaan on jo linkitetty muu tuote, hän näkee tuotteen nimen ilman valikkoa, eikä tapahtuman tallennus muuta tai poista linkkiä.
+- Jos WooCommerce ei ole käytössä, tapahtuman tallennus jättää linkin ennalleen.
+
+Rajaus koskee linkin asettamista. Se ei muuta jo tallennettuja linkityksiä, eikä se seuraa tuotteen myöhempiä muutoksia: jos ilmoittautumistuotteelta poistetaan ilmoittautumistila tai tuote otetaan muuhun käyttöön, poista linkki tapahtumasta samalla.
+
+### Kertatarkistus käyttöönoton yhteydessä
+
+Koska vanhoja linkityksiä ei muuteta, tarkista dev- ja tuotantoympäristössä kerran, ettei mihinkään tapahtumaan ole linkitetty tuotetta, joka ei kuulu sille:
+
+```bash
+wp post list --post_type=rytkoset_event --post_status=any \
+  --meta_key=_rytkoset_event_product_id --fields=ID,post_title,post_status,post_author
+wp post list --post_type=rytkoset_event --post_status=trash \
+  --meta_key=_rytkoset_event_product_id --fields=ID,post_title,post_status,post_author
+wp post meta get <tapahtuman ID> _rytkoset_event_product_id
+```
+
+Tila `any` ei sisällä roskakoria, joten roskakorissa olevat tapahtumat listataan erikseen: myös niiden linkitys on voimassa. Käy lista läpi ja varmista jokaisen tuotteen kohdalla, että se on kyseisen tapahtuman maksutuote. Jos löytyy asiaton linkitys, poista se ylläpitäjänä ja tarkista lisäksi **Tapahtumat > Viestintä** -näkymän lähetysjono: jonoon jo lisätty viesti säilyttää vastaanottajansa, vaikka linkki poistetaan.
+
 ## Julkinen näkymä
 
 Kun tapahtumalle on valittu maksutuote, tapahtumasivulla näkyy painike:
