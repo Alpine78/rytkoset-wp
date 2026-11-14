@@ -7,7 +7,7 @@ Reference for the visual language of `rytkoset-theme`. Read this before writing 
 - Mobile-first, WCAG 2.1 AA, semantic HTML — no Bootstrap or other CSS frameworks
 - Always use CSS variables for color, radius, shadow, and transition values — never hardcode
 - The theme supports a light (default) and a dark theme via `:root[data-theme="dark"]`. Any new color must be defined for both themes
-- No build step: `style.css` imports every module file directly
+- No build step: `style.css` contains the theme header; `functions.php` enqueues the CSS modules in dependency order
 
 ## Color tokens
 
@@ -84,6 +84,44 @@ Dark theme overrides all of the above in the `:root[data-theme="dark"]` block �
 - Use BEM-style class names: `block__element--modifier`
 - Reference existing tokens; if a genuinely new token is needed, define it in `base.css` for both light and dark themes
 - Test both themes and mobile width before considering the change done
+
+## Asset loading and public templates
+
+`rytkoset_theme_scripts()` in `functions.php` chains the core styles in this
+order: `base`, `layout`, `hero`, `home`, `404`, `components`, `nav.base`,
+`nav.desktop`, `nav.account`, `nav.mobile`, `footer`, `responsive`.
+Page-specific shop, forum, digital-magazine and gallery styles depend on the
+last core module. `account.css` follows `shop.css` on account pages; login,
+chat and feedback assets have their own loading conditions. All local CSS/JS,
+including vendored PhotoSwipe, use `rytkoset_theme_get_asset_version()`:
+`filemtime()` when present, theme version as the missing-file fallback.
+
+`front-page.php` combines a split hero, the **Ajankohtaista** highlight and
+alternating album, membership, shop and genealogy bands. `inc/home-highlight.php`
+prefers the soonest published, passwordless future event with Event schema
+enabled. Otherwise it chooses the latest published, passwordless album or blog
+post by publication date. Past/undated events and transport services are not
+fallback candidates. A usable permalink is required; a missing featured image
+uses the existing type-aware home illustration. Images live in `assets/images/home/`.
+
+`page.php` serves static pages; `page-blogi.php` lists published blog posts,
+`category.php` uses the main category query and `single.php` renders a post.
+Event and album single/archive templates follow their CPT names.
+`header.php` and `footer.php` share navigation helpers; newsletter pre-footer
+partials are described in [newsletter.md](newsletter.md).
+
+`inc/icons.php` provides `rytkoset_theme_inline_icon()` from
+`assets/icons/{social,ui}/` using `currentColor`. `inc/share.php` uses it for
+Facebook, X and WhatsApp sharing; `inc/social-links.php` for header/footer links.
+`functions.php` also owns the bbPress avatar, color, icon and author-name
+presentation helpers.
+
+`inc/login.php` and `assets/css/login.css` provide the split login layout,
+per-view copy, Finnish translations and theme-aware dark mode. The password
+reset view keeps an empty masked password field, removes the generated
+plaintext password/Generate control via JS and preserves password-manager
+recognition and the reveal button. Registration protection is described in
+[tietoturva.md](tietoturva.md).
 
 ## Do not
 

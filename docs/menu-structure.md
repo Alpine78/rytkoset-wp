@@ -66,3 +66,34 @@ Pikalinkki ei korvaa `Kauppa`-alasivun `Ostoskori`-linkkiä, vaan varmistaa, ett
 - Mobiilissa sama valikkorakenne näkyy `Valikko`-paneelissa.
 - `Ostoskori`-pikalinkki näkyy mobiiliheaderissa ja vie `/ostoskori/`-sivulle.
 - `Albumit`, `Tapahtumat`, `Kauppa`, `Ostoskori`, `Kassa`, `Oma tili` ja `Oma tili -> Tilaukset` (`/oma-tili/tilaukset/`) avautuvat ilman 404-virheitä.
+
+## Valikkopaikat ja vanhojen osoitteiden ohjaukset
+
+Teeman rekisteröidyt valikkopaikat ovat `primary`, `footer` ja `account`.
+
+`inc/legacy-redirects.php` käsittelee vain 404-pyyntöjä `template_redirect`-
+koukussa. `rytkoset_theme_normalize_legacy_redirect_path()` purkaa
+prosenttikoodauksen ja normalisoi kauttaviivat; kyselymerkkijono ei ratkaise
+kohdetta. `rytkoset_theme_resolve_legacy_redirect_target()` tarkistaa ensin
+`rytkoset_theme_get_legacy_redirect_exact_map()`-taulukon, sitten
+`rytkoset_theme_get_legacy_redirect_prefix_rules()`-säännöt. Ohjaus tehdään
+`wp_safe_redirect()`-kutsulla, HTTP 301; toimivaa nykyistä sivua ei ohjata.
+
+Tarkka kartta kattaa vanhat kirjautumis-, rekisteröinti-, salasananpalautus-,
+tilinhallinta-, haku-, sukuseura- ja edelleen käytössä olevat tuotepolut.
+Kirjautumisosoitteet ja kaupan tilisivut muodostetaan WordPressin ja
+WooCommercen URL-apufunktioilla, ei olettamalla julkisia loppuliitteitä.
+Keskeiset etuliite- ja aliasrajaukset:
+
+- vanhat foorumipolut → foorumin etusivu; tunnistamaton `kauppa/`-polku → kauppa
+- vanhat hallituksen jäsensivut → hallitussivu
+- `valokuvat`, `Sukujuhlat2006`, `Sukujuhlat_2009` ja `kuvat` → `/albumit/`
+- `sukuseura/perhetietolomake` → `/sukuseura/sukututkimus/`
+- `my-account` ja `oma-tili/lost-password` → ympäristön omat tilin loppuliitteet
+- tarkat etusivualiakset `fi`, `etusivu`, `index.html` → `/`
+
+Kyse on rajatusta kartasta, ei automaattisesta URL-arvauksesta. Skanneripolut,
+`/null`-jäänteet ja vanhat kuvatiedostot saavat jäädä 404-vastauksiksi.
+Uuden säännön yhteydessä
+varmista 301:n `Location`, kohteen toimivuus ja tuntemattoman polun säilyminen
+404:nä. Puhdas normalisointi ja täsmäys on katettu `tests/LegacyRedirectsTest.php`:ssä.

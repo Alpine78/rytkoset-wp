@@ -193,3 +193,34 @@ eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519_personal
 ssh -T git@github-personal   # vahvistus: "Hi <tili>! You've successfully authenticated"
 ```
+
+## Versionoidut operointitiedostot ja julkaisu
+
+Nykyiset FTPS-workflowt julkaisevat vain teeman. `dev` julkaisee teemamuutokset
+osoitteeseen `dev.rytkoset.net`; `main` ei julkaise automaattisesti. Tuotannon
+manuaalinen `.github/workflows/deploy-production.yml` käyttää oletuksena
+`main`-haaraa ja ympäristön `PROD_FTP_HOST`, `PROD_FTP_USERNAME`,
+`PROD_FTP_PASSWORD`, `PROD_FTP_PORT` -salaisuuksia. Alla olevat erilliset
+`wp-content`-tiedostot kuuluvat lint-tarkistukseen, mutta ne toimitetaan
+palvelimelle erikseen.
+
+- `wp-content/mu-plugins/automation-by-klik.php` on Klikin operointilisäosan
+  versiokopio. Se estää WordPressin automaattipäivitykset ja niitä koskevan
+  Site Health -testin, koska Klik hoitaa päivitykset ja varmuuskopiot ulkoisesti.
+- `wp-content/maintenance.php` korvaa WordPressin `.maintenance`-huoltosivun.
+  Se lähettää itse HTTP 503-, `Retry-After`- ja välimuistinesto-otsakkeet
+  (`status_header`/`nocache_headers` tai raaka `header()`-varatoteutus).
+  CSS on inline; Manrope/Newsreader-fontit tulevat teeman omista
+  `assets/fonts/`-tiedostoista `WP_CONTENT_URL`:n kautta.
+
+Huoltosivu ajetaan ennen options-, formatting- ja teema-API:en latautumista.
+Älä oleta `get_option()`, `get_theme_mod()` tai `esc_*()`-funktioiden olevan
+käytettävissä äläkä lataa niiden riippuvuusketjua osittaisen bootstrapin aikana.
+Tiedosto tarjoaa kevyet escaping-varatoteutukset ja avaa tietokantayhteyden
+`require_wp_db()`-kutsulla. Se lukee `$wpdb`:llä suoraan `blogname`, `home`,
+`siteurl` ja `theme_mods_<stylesheet>` -arvot sekä rakentaa logon osoitteen
+`_wp_attached_file`-metasta ja uploads-perusosoitteesta.
+
+`inc/customizer-contact.php` hallitsee yhteystietoja ja **Huoltotila**-asetuksia:
+`rytkoset_theme_maintenance_concept`, `rytkoset_theme_maintenance_return_text`,
+`rytkoset_theme_contact_email` ja `custom_logo` vaikuttavat huoltosivuun.

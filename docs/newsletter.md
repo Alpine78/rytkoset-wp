@@ -57,7 +57,9 @@ Ajotila näkyy `wp-admin → Hallintapaneeli → Jäsenviestinnän synkronointi`
 - käsiteltyjen, lisättyjen, poistettujen, ennallaan pysyneiden, suojattujen ja virheellisten tietueiden määrät
 - viimeisin lyhyt virhekoodi ja aika
 
-Koosteeseen ei tallenneta nimiä, sähköpostiosoitteita tai viestisisältöjä.
+Kooste tallennetaan ei-autoloadattavaan
+`rytkoset_member_newsletter_reconciliation`-optioon. Siihen ei tallenneta
+nimiä, sähköpostiosoitteita tai viestisisältöjä.
 Virheellinen tietue ei keskeytä muuta erää; seuraava päiväajo aloittaa uuden
 täsmäytyksen ja yrittää tilanteen uudelleen. Tietokantahaun tai asetusten
 laajuinen virhe päättää nykyisen ajon virhetilaan, jotta ylläpito näkee sen.
@@ -511,3 +513,10 @@ Tämä MVP ei sisällä:
 - yleistä uutiskirjepohjajärjestelmää, automaattista HTML-tuontia tai SMTP-asetuksia; #660 lisää yhden paikallisen pilottiluonnoksen
 
 Paikallisessa plugin-koodissa ei ole mukana erillistä AcyMailing WooCommerce -integraatiolisäosaa. Checkout-opt-in toteutetaan siksi teeman kevyellä WooCommerce Blocks -hookilla.
+
+## Teeman sähköpostien lähettäjä
+
+`inc/email.php` korvaa vain WordPressin oletuslähettäjän
+`wp_mail_from`/`wp_mail_from_name`-suotimilla. Nimi on **Rytkösten sukuseura ry**
+ja osoite tulee `rytkoset_theme_get_contact_email()`-funktiosta; erikseen
+asetettua lähettäjää ei korvata.

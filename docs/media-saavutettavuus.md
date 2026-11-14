@@ -119,3 +119,13 @@ jakolinkki, johdannon yksittäinen kuva ja vanha ACF-kuvaruudukko,
 vanha yhden gallerian albumi, 390 px leveys, tumma teema sekä
 kaiken sisällön näkyminen ilman JavaScriptiä. Dev-palvelimen tarkistus odottaa
 julkaisua.
+
+## Metatietojen ja upotusten käsittely
+
+`inc/attachment-iptc.php` synkronoi kuvaliitteen IPTC-otsikon ja kuvauksen.
+`inc/youtube-privacy.php`:n `rytkoset_theme_rewrite_youtube_embed_to_nocookie()`
+vaihtaa `embed_oembed_html`-suotimella YouTuben upotusisännäksi
+`www.youtube-nocookie.com`, myös sisältöeditorin oEmbed-upotuksissa.
+Vaihto säilyttää iframen `title`-attribuutin ja parametrit; jo nocookie-muotoiset
+ja muiden palveluiden upotukset jätetään ennalleen. Albumien Videot-osio
+rakentaa saman nocookie-osoitteen itse.
