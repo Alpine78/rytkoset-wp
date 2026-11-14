@@ -342,3 +342,26 @@ Toista **aktiivisella jäsenellä** (tai ylläpitäjänä): lukunäkymä, REST-s
 syötteet palauttavat sisällön normaalisti. Varmista lisäksi, että **kaikille
 ilmainen** lehti palauttaa sisältönsä kaikissa reiteissä kuten ennen ja että
 lohkoeditori avaa rajatun lehden sisällön muokattavaksi adminissa.
+
+## Kehittäjän laajennuspisteet
+
+- Käyttöoikeusmallin meta on `_rytkoset_magazine_access_mode`.
+  `rytkoset_theme_user_has_purchased_digital_magazine`-suodatin yhdistää
+  manuaaliset myönnöt ja WooCommerce-ostot OR-logiikalla. Yhteinen ilmoitusfunktio on
+  `rytkoset_theme_send_digital_magazine_access_email()`; tilauskohtainen
+  deduplikointimeta on `_rytkoset_magazine_access_email_sent`.
+- Lehden tuotelinkkien avaimet ovat `_rytkoset_magazine_regular_product_id` ja
+  `_rytkoset_magazine_member_product_id`. Tuotevalinnat tulostetaan yhteiseen
+  laatikkoon `rytkoset_theme_digital_magazine_access_metabox_after`-actionilla;
+  kumpikin moduuli säilyttää oman noncensa ja tallennuskäsittelijänsä.
+- Jutun lisäyslinkin `rytkoset_parent` asetetaan vanhemmaksi vain uuden
+  `auto-draft`-tietueen luonnissa (`wp_insert_post_data`). Kohteen on oltava
+  muokattava ylätason lehti ja käyttäjällä oltava luontioikeus.
+  Adminin `rytkoset_theme_get_digital_magazine_admin_articles()` saa palauttaa
+  muokattavia julkaisemattomia juttuja; julkinen
+  `rytkoset_theme_get_digital_magazine_articles()` pysyy publish-rajattuna.
+- Rank Math tallentaa sarakenäkyvyyden käyttäjälle etukäteen, joten
+  `default_hidden_columns` ei riitä kertapiilotukseen.
+  `rytkoset_theme_hide_digital_magazine_seo_column_once()` päivittää
+  `manageedit-digital_magazinecolumnshidden`-asetuksen ja merkitsee käsittelyn
+  käyttäjämetaan `rytkoset_magazine_seo_column_hidden`.

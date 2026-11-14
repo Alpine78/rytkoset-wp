@@ -161,3 +161,35 @@ tilasiirtymien ja tuotannon asetusten hyväksymistestaus tehdään
 Mollien kolme käyttöönotto-ohjetta ovat lepääviä palautusohjeita. Mollie-koodia
 ei poisteta, eikä lisäosaa deaktivoida ennen kuin avoimet Mollie-maksut ja
 niiden webhook-päivitysten tarve on tarkistettu.
+
+## Oma tili -näkymän tekninen rakenne
+
+`inc/woocommerce-my-account.php` ja `woocommerce/myaccount/navigation.php` /
+`dashboard.php` muodostavat tilikortin, ikonivalikon ja tilausyhteenvedon.
+Overridejen WooCommerce-koukut säilytetään. `assets/css/account.css` vaihtaa
+sivupalkin valintariviksi enintään 768 px:n leveydessä; WooCommercen
+clearfix-pseudoelementit on poistettava grid-säiliöistä.
+
+- Avatar suosii Gravataria ja käyttää muuten nimikirjaimia; `show_avatars`
+  huomioidaan. `rytkoset_theme_get_account_avatar_image_url()` tarkistaa
+  kuvan `d=404` + `wp_remote_head` -pyynnöllä ja välimuistittaa tuloksen
+  päiväksi `rytkoset_gravatar_<md5(email)>`-transienttiin. Sama kuva/alkukirjain
+  on headerin tilivalikon fallbackissa. Gravatarin tietosuojakäsittely on
+  kuvattu [tietosuoja.md](tietosuoja.md):ssä.
+- Tilauskoosteet jättävät `checkout-draft`-tilaukset pois. Tilamerkit ryhmitellään
+  `completed` → valmis, `processing`/`pending`/`on-hold` → odottava,
+  `cancelled`/`failed` → peruttu; muut saavat neutraalin esityksen.
+- Tilitietolomakkeen alussa näytetään vain luettava `user_login`, koska
+  vanhan foorumitilin käyttäjätunnus voi poiketa näyttönimestä.
+- Kirjautumaton ohjataan `wp-login.php`:hen alkuperäinen syvälinkki
+  `redirect_to`-parametrina. `lost-password` ja `customer-logout` jätetään
+  ohjauksen ulkopuolelle, jotta WooCommercen oma sähköpostilinkkipolku toimii.
+  Poikkeuslista: `rytkoset_theme_account_login_redirect_excluded_endpoints`.
+
+Jäsentietojen toimintalogiikka on [jasenyys.md](jasenyys.md):ssä ja Uutiskirje-
+välilehti [newsletter.md](newsletter.md):ssä.
+
+## Tulossa pian -sivupohja
+
+`inc/coming-soon.php` valitsee `coming-soon_template`-suotimella teeman oman
+`coming-soon.php`:n WooCommercen rekisteröimän lohkotemplaatin sijaan.

@@ -129,3 +129,24 @@ kuulu kuvien suurennusnäkymään.
 - Suodatin ei vielä osaa liittää yksittäistä videota tiettyyn tilaisuuteen —
   ACF:n Videot-kentän videot muodostavat yhden yhteisen "Videot"-valinnan.
   Editorin H2-osion sisään lisätty upotus kuuluu kyseiseen osioon.
+
+## Kehittäjän huomiot
+
+`inc/gallery-albums.php`:n `rytkoset_theme_sort_gallery_block_by_filename()`
+välimuistittaa jokaisen gallerian järjestyksen albumin sisällä erikseen.
+`rytkoset_theme_get_gallery_image_set_hash()` erottaa kuvajoukot: pelkkä
+albumin ID avaimena käyttäisi ensimmäisen lohkon järjestystä myös seuraaviin.
+`album-filter.js` ladataan ennen `photoswipe-init.js`:ää, jotta osiosuodatus
+ja `#kuva=`-linkin näkyvyys ratkaistaan ennen lightboxin avausta. Kun suodatin
+on näkyvissä, PhotoSwipe käyttää albumin runkoa galleriansa juurena ja kokoaa
+kuvalistan näkyvistä linkeistä DOM-järjestyksessä; ilman suodatinta vanhat
+galleriajuuret säilyvät. WooCommercen PhotoSwipe 4 poistetaan latausjonosta,
+jotta se ei törmää teeman mukana toimitettuun PhotoSwipe 5:een.
+
+Käyttöpaikkakartan invalidointi (`rytkoset_theme_reset_media_usage_map()`)
+kattaa seurattujen sisältöjen tallennuksen, poiston, roskakoriin siirron ja
+palautuksen, kuvametat (myös `gallery_videos*`), sivukuvakkeen muutoksen ja
+`customize_save_after`-koukun. Logo/kuvake merkitään karttaan post ID:llä 0.
+Poiston ja roskakorin palvelinpuolen estot käyttävät tuoretta pyyntökohtaista
+karttaa; mediaikkunan poistotoiminto estetään myös `nonces.delete = false`
+-arvolla `wp_prepare_attachment_for_js`-suotimessa.
