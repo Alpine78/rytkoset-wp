@@ -143,6 +143,10 @@ Yhteenvetokortissa näytetään täytetyt perustiedot:
 
 Jos linkitetyn WooCommerce-tuotteen ilmoittautuminen on päättynyt tai tuote ei muuten ole ostettavissa, tapahtumasivu näyttää tilaviestinä syyn eikä tarjoa aktiivista maksupainiketta.
 
+Myös tapahtuma-arkiston **Ilmoittautuminen avoinna** -merkki seuraa linkitetyn
+tuotteen saatavuutta: merkki näytetään vain, kun tuotteella ei ole
+ilmoittautumisen estävää syytä. Määräpäivää ei kovakoodata sivupohjaan.
+
 ### Google-tapahtumahaku ja rakennedata
 
 Julkaistu tapahtuma tuottaa oletuksena schema.org/Event-rakennedatan Googlea ja muita hakukoneita varten. Ylläpidon `Tapahtuman tiedot` -laatikon valinta **Näytä tapahtuma Googlen tapahtumahaussa** kannattaa pitää päällä vain itsenäisillä tapahtumilla. Poista valinta esimerkiksi kuljetuspalvelulta, joka liittyy toiseen tapahtumaan mutta ei ole itse erillinen yleisötapahtuma.
@@ -152,6 +156,14 @@ Valinnan poistaminen jättää tapahtumasivun, arkiston, ilmoittautumisen ja tav
 **Mistä Google saa tapahtuman hinnan:** maksullisen tapahtuman rakennedatan hinta luetaan **linkitetystä WooCommerce-tuotteesta**, ei tapahtuman `Hintateksti`-kentästä. Jos tuote on variaatiotuote (esimerkiksi aikuinen ja lapsi), rakennedataan menee alin variaatiohinta — Google määrittelee kentän nimenomaan lipun alimmaksi hinnaksi. Väärä hinta hakutuloksessa korjataan siis tuotteen hinnasta, ei tapahtuman hintatekstistä. `Hintateksti` on ensisijaisesti tapahtumasivulla näkyvää esittelytekstiä, ja sitä käytetään rakennedatassa vain silloin, kun maksulliseen tapahtumaan ei ole linkitetty tuotetta **ja** teksti on pelkkä luku (esimerkiksi `20` tai `20,50`). Vapaamuotoista tekstiä kuten `Aikuiset 20 €, lapset 10 €` ei tulkita, vaan hinta jätetään tällöin pois — hintaa ei arvata.
 
 Tapahtumien ISO-aikaleimat käyttävät WordPressin kaupunkipohjaista aikavyöhykettä. Tuotannossa asetuksen tulee olla `Europe/Helsinki`, jotta kesäajan tapahtumat saavat offsetin `+03:00`. Aikavyöhykkeen tai rakennedatan muuttamisen jälkeen tyhjennä LiteSpeedin sivuvälimuisti ennen Rich Results Testiä ja Search Consolen validointia; muuten julkinen osoite voi tarjota hetken vanhaa JSON-LD:tä.
+
+`inc/structured-data.php` pitää Organization-solmun tunnisteena
+`home_url('/#organization')`. Tapahtumasivulla teema tulostaa sen aina;
+muualla vain ilman Rank Mathia, jotta samalle `@id`:lle ei synny kahta solmua.
+Eventin `organizer` viittaa tähän tunnisteeseen; `endDate` lisätään vain
+loppuajan ollessa asetettu. JSON-LD koodataan `wp_json_encode()`-funktiolla
+Unicode säilyttäen ja kauttaviivat escapettaen (`</script>` ei saa purkaa
+skriptielementtiä). Tulostuksen suodin on `rytkoset_theme_output_structured_data`.
 
 **Roskapostisuoja (maksuton lomake):** lomakkeessa on piilotettu honeypot-kenttä ja kevyt IP-kohtainen lähetysrajoitus (oletus 5 lähetystä / 10 min samasta IP-osoitteesta). Rajan ylittävä lähetys hylätään ennen tallennusta ja kuittisähköpostia, jottei lomakkeen toistolla voi synnyttää rajatonta määrää kuittiviestejä tai ilmoittautumistietueita. Tavallinen yksittäinen ilmoittautuminen ei osu rajaan. Rajan ja aikaikkunan voi säätää suodattimilla `rytkoset_theme_event_registration_rate_limit` ja `rytkoset_theme_event_registration_rate_limit_window`. Jos järjestäjä testaa lomaketta toistuvasti samasta verkosta ja saa viestin "Liian monta ilmoittautumisyritystä", kyse on tästä rajasta — odota aikaikkunan verran. (Käänteisen proxyn takana raja kohdistuu proxyn IP:hen; ks. `docs/tietoturva.md`.)
 
@@ -297,6 +309,11 @@ Samalla lähetyksellä tapahtuman järjestäjille menee oma tekstimuotoinen ilmo
 - Maksuttomalla polulla ei ole WooCommerce-tilauksen order note -lokia, joten onnistuneesta tai epäonnistuneesta lähetyksestä ei jää audit trailia. Jos ilmoituksia ei tule, tarkista ensin vastaanottajakenttä ja sen jälkeen palvelimen sähköpostinvälitys.
 - Ilmoitus lähetetään yhtenä `wp_mail()`-kutsuna riippumatta vastaanottajien määrästä. Kuittisähköposti ja järjestäjäilmoitus ovat toisistaan riippumattomia: kumpikaan ei estä toista.
 
+Muokkauslinkin osoite rakennetaan suoraan `post.php`-reitistä. Älä vaihda sitä
+`get_edit_post_link()`-kutsuksi: anonyymin `admin_post_nopriv`-lähetyksen aikana
+sen `edit_post`-tarkistus estää linkin saamisen. Kohdesivu tarkistaa oikeudet
+normaalisti, kun järjestäjä avaa linkin.
+
 ### Ilmoittautumisyhteenveto järjestäjäilmoituksissa (#643)
 
 Sekä maksuttoman lomakkeen että maksullisen tilauksen järjestäjäilmoitus sisältää
@@ -367,6 +384,11 @@ osallistujilta. Kokonaisuus on kuvattu tarkemmin tiedostossa
 
 Tietosuojaseloste lupaa, että tapahtumailmoittautumisten tiedot poistetaan tai anonymisoidaan viimeistään 12 kuukauden kuluttua tapahtumasta. Lupaus toteutetaan automaattisesti ilman ylläpitäjän muistinvaraista rutiinia päivittäisellä WP-Cron-ajolla (`inc/event-registration-anonymization.php`).
 
+`rytkoset_theme_event_registration_anonymization`-ajo ajastetaan `init`-
+koukussa ja poistetaan `switch_theme`-koukussa. Kelvoton vertailuaika tai
+päivämäärä ei oikeuta anonymisointiin; jo käsitellyt rivit rajataan pois
+`_rytkoset_registration_anonymized_at NOT EXISTS` -metaehdolla.
+
 - Ajo käy läpi maksuttomat `event_registration`-tietueet, joita ei ole vielä anonymisoitu, ja anonymisoi ne samalla #250:n polulla (`rytkoset_theme_anonymize_event_registration()`), kun tapahtumapäivästä on kulunut yli 12 kuukautta. Kynnys lasketaan tapahtumapäivän lopusta, ja se on säädettävissä suodattimella `rytkoset_theme_event_registration_anonymization_months` (oletus 12).
 - Ajo on **idempotentti**: jo anonymisoidut rivit ohitetaan (niillä on `_rytkoset_registration_anonymized_at`), joten uudelleenajo ei kosketa niitä eikä riko tai toista rekisteröidyn pyynnöstä tehtyä anonymisointia. Manuaalinen työkalu ja Privacy Tools -polut toimivat ennallaan.
 - Ajon tulos kirjataan kevyesti optioon `rytkoset_event_registration_anonymization` (aikaleima, viimeisimmän ajon määrä, kumulatiivinen määrä ja päivämäärää vailla olevien tapahtumien ID:t) — **ei koskaan henkilötietoja**.
@@ -423,6 +445,11 @@ Antaminen:
 3. Tallenna käyttäjä.
 
 Valinnan näkee ja sitä voi muuttaa vain käyttäjä, jolla on oikeus vaihtaa käyttäjien rooleja (`promote_users`, käytännössä ylläpitäjä). Pelkkä käyttäjien muokkausoikeus (`edit_users`) ei riitä, koska WooCommerce antaa sen kauppapäällikölle asiakkaiden muokkaamista varten (#699). Rastin poisto poistaa vain Event Organizer -lisäroolin; käyttäjän muut roolit säilyvät.
+
+Lisärooli tallennetaan `profile_update`-koukussa `WP_User::add_role()` /
+`remove_role()` -metodeilla. Älä siirrä tallennusta
+`edit_user_profile_update`-koukkuun: coren myöhempi roolipudotusvalikon
+`set_role()` korvaisi juuri lisätyn roolin.
 
 **Milloin mitäkin roolia käytetään:**
 
@@ -547,6 +574,11 @@ Tapahtuman **Ilmoittautumisen lisävalinta** -metaboksin **Kysy osallistujien s�
 Osoitteen saa antaa vain henkilön luvalla. Sitä käytetään vain tapahtumaviestintään ja palautepyyntöön. Määräkentän kanssa raja on henkilömäärä miinus yksi (ilmoittaja lasketaan mukaan); ilman määräkenttää oletusraja on 9, suodatin `rytkoset_theme_event_registration_max_additional_emails`. Syötteen tekninen pituusraja on 10 000 tavua. Virheellinen osoite tai ylitys palauttaa lomakkeelle virheen ennen tallennusta; kentät täytetään uudelleen nykyisen PRG-käytännön mukaisesti. Tyhjä kenttä sallitaan, oma osoite ja kirjainkoosta riippumattomat kaksoiskappaleet poistetaan.
 
 Osoitteet tallennetaan taulukkona metaan `_rytkoset_registration_additional_emails`. Ne näkyvät ilmoittautumisen ylläpitonäkymässä lukutietona ja osallistujien CSV-viennissä. Ne eivät luo osallistujarivejä, muuta henkilömäärää tai ilmoittautumisen duplikaattitarkistusta, eivätkä saa ilmoittautumiskuittia tai uutiskirjetilausta. Keruun poistaminen käytöstä piilottaa kentän uusilta ilmoittautumisilta; jo kerätyt osoitteet säilyvät viestinnässä ilmoittautumisen tilan mukaisesti.
+
+Kehittäjälle: yhteisen keruuvalinnan meta on
+`_rytkoset_event_collect_participant_emails`. Lue maksuttoman ilmoittautumisen
+lisäosoitteet `rytkoset_theme_get_event_registration_additional_emails()`-
+apufunktiolla, älä skalaarisella metakenttien lukijalla.
 
 Ennen tuotantokäyttöä vahvista käsittelyperuste ja informointiteksti tietosuojasta vastaavan kanssa ja päivitä julkinen tietosuojaseloste. Lisäosoitteen poisto onnistuu WordPressin henkilötietojen poistotyökalulla.
 

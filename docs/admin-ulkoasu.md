@@ -64,3 +64,28 @@ Vakio ohittaa myös suotimen. Koodista tyylin saa pois suotimella `rytkoset_them
 - WooCommercen tilausten hakupainike ei käytä compact-luokkaa, joten se on 40 px ja hakukenttä 32 px. Se on WooCommercen oma merkintä, eikä sitä tasata.
 - Tummaa tilaa ei ole, koska pluginit kovakoodaavat vaaleat taustat.
 - Profiilissa, osallistujalistassa, tilauksissa (783 px) ja AcyMailingissa (390 px) on sivun vaakavieritystä myös ilman tätä tyyliä. Ne korjataan omissa tiketeissään.
+
+## Kehittäjän laajennus- ja järjestysrajat
+
+`rytkoset_theme_admin_appearance_should_load()` ratkaisee tyylin käytön:
+hätäkatkaisin ohittaa suotimen. CSS:n `--ra-*`-muuttujat asetetaan sekä juureen
+että `body.wp-admin`-elementtiin, jotta coren käyttäjäkohtainen väriasetelma
+ei ohita niitä. Lohkoeditorin inline-brändimuuttujien ohitus kattaa myös
+`--wpds-color-*-brand-*`-muuttujat. Vain tummat palkit tarvitsevat oman
+amber-fokusrenkaan; muualla säilytetään coren renkaat.
+
+Kojelaudan pikatoimintoja voi rajata suotimella
+`rytkoset_theme_dashboard_quick_actions`. `inc/admin-dashboard.php` poistaa
+tekniset widgetit `wp_dashboard_setup`-prioriteetissa 999 kaikista konteksteista;
+Paytrailin erikseen tunnistetut ilmoitukset poistetaan `admin_notices`-
+prioriteetissa 0. Muiden lisäosien ilmoituksia ei poisteta yleissäännöllä.
+
+`inc/admin-menu.php` lisää ryhmäerottimet `admin_menu`-prioriteetissa 999 ja
+järjestää kohteet `menu_order`-prioriteetissa 999 WooCommercen jälkeen.
+Alkuperäiset slug-tunnisteet ratkaistaan `$_wp_real_parent_file`-kartasta;
+tunnetun tunnisteen ryhmä säilyy myös coren yhteensopivuusaliaksissa.
+Tuntemattomat lisäosat kuuluvat Ylläpitoon. Tyhjien ryhmien erottimet sijoitetaan
+vierekkäin, jotta coren erottimien siivous poistaa ne; teeman viimeinen erotin
+siivotaan erikseen `add_menu_classes`-suotimella. Otsikot lisätään
+`in_admin_header`-koukussa vain, kun hallintatyyli on käytössä. Väriasetelma
+lukitaan `modern`-avaimeen tallennettua käyttäjävalintaa hävittämättä.

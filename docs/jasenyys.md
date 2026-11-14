@@ -292,6 +292,13 @@ Huomioita:
   sähköpostia myös perhejäsenmaksun jäsenriveiltä ja linkittää odottavan
   perherivin päätiliin.
 
+Historiallisen vierastilauksen odotusmerkki on
+`_rytkoset_membership_awaiting_account` ja kertaluonteisen tiliohjeen merkki
+`_rytkoset_membership_account_notice_sent`. Puuttuva tai virheellinen
+laskutussähköposti tuottaa vain ylläpidon tilausmerkinnän. Odottavan tilauksen
+`_rytkoset_membership_order_processed` jätetään tyhjäksi, jotta sama
+jäsenyyden soveltamispolku voidaan ajaa sähköpostin vahvistuksen jälkeen.
+
 ## Perhejäsenmaksun jäsenrivien automaattinen käsittely (#519)
 
 Kun `annual_family`-jäsenmaksutilaus saavuttaa tilan `processing` tai
@@ -556,7 +563,7 @@ Koontia voi hakea nimellä tai sähköpostilla ja suodattaa jäsenyyden tyypin m
 - **Aktiivinen:** oma jäsenyys tai päätilin perhejäsenyyden jakamisoikeus on voimassa.
 - **Vanhentunut:** määräaikaisen jäsenyyden voimassaolopäivä on mennyt.
 - **Puutteellinen:** määräaikaiselta jäsenyydeltä puuttuu kelvollinen voimassaolopäivä tai perhelinkin päätilillä ei ole kelvollista perhejäsenyyden jakamisoikeutta.
-- **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin luonnin jälkeen.
+- **Odottaa käyttäjätiliä:** manuaalinen jäsenyys tai perhejäsenrivi voidaan kytkeä vasta tilin sähköpostiosoitteen vahvistuksen jälkeen.
 
 Taulukossa on viisi saraketta (#697):
 

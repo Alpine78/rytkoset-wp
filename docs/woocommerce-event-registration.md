@@ -124,6 +124,13 @@ Yhteenveto lasketaan moduulissa `inc/event-registration-summary.php`. Maksulline
 
 Laskennan voi ohittaa suodattimella `rytkoset_theme_pre_event_paid_registration_count` (ei-null paluuarvo ohittaa kyselyn kokonaan).
 
+`rytkoset_theme_count_event_paid_registrations()` palauttaa tuntemattomalle
+määrälle `null`, ei nollaa. HPOS:n `wc_orders`- ja vanhan `posts`-tallennuksen
+SQL-tilat ovat molemmat `wc-`-alkuisia. Yhteinen
+`rytkoset_theme_get_event_registration_summary()` ja
+`rytkoset_theme_format_event_registration_summary_lines()` säilyttävät saman
+puuttuvien arvojen käsittelyn molemmissa järjestäjäilmoituksissa.
+
 ### Audit trail
 
 - Onnistuneesta lähetyksestä lisätään private order note.
@@ -251,3 +258,16 @@ Dev-hyväksyntä on vielä tekemättä. Paikalliset tilaukset ovat nollahintaisi
 3. Tarkista tilausvahvistus, asiakkaan ja ylläpidon sähköpostit, tilauksen osallistujalaatikko, tapahtuman osallistujalista ja CSV. Järjestäjäviesti ei sisällä ruokarajoitteita eikä vapaata tilauslisätietoa.
 4. Poista lisävalinta käytöstä ja muuta kysymystä. Uusi kassa seuraa asetusta, vanha tilaus säilyttää alkuperäisen vastauksen. Tarkista vanhan tuotteen buffet-historia.
 5. Tarkista tilausraja, täysi varasto ja umpeutunut määräpäivä sekä mobiili, tumma teema ja näkyvä näppäimistöfokus.
+
+## Myöhäisen kassapyynnön istuntosuoja
+
+`inc/woocommerce-checkout-session.php` estää ennen korin tyhjennystä alkaneen
+Store API:n checkout PUT/PATCH -taustapyynnön palauttamasta vanhaa ostoskoria.
+`woocommerce_cart_emptied` poistaa `store_api_customer_note`-arvon ja kirjoittaa
+shutdown-prioriteetissa 21, WooCommercen istuntotallennuksen (20) jälkeen,
+tunnin transienttimerkin (istunnon tiiviste + tyhjennysaika). Taustapyyntö
+lukee merkin prioriteetissa 19 ja poistaa vain oman istuntonsa `save_data`-
+callbackin, jos pyyntö alkoi ennen tyhjennystä. Merkki on istunnon ulkopuolella,
+jotta vanha tilannekuva ei voi poistaa sitä. Tilaus-POSTit, ostoskorin muokkaus
+ja uudet pyynnöt säilyvät ennallaan; suoja ei tyhjennä uutta ostoskoria.
+Regressiot: `tests/CheckoutSessionTest.php`.

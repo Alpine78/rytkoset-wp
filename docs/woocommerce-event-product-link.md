@@ -32,6 +32,16 @@ Linkitetyn tuotteen ostajat näkyvät tapahtuman osallistujalistassa, CSV-vienni
 
 Rajaus koskee linkin asettamista. Se ei muuta jo tallennettuja linkityksiä, eikä se seuraa tuotteen myöhempiä muutoksia: jos ilmoittautumistuotteelta poistetaan ilmoittautumistila tai tuote otetaan muuhun käyttöön, poista linkki tapahtumasta samalla.
 
+Kehittäjälle: `rytkoset_theme_save_event_product_link()` on suojatun,
+rekisteröimättömän `_rytkoset_event_product_id`-metan kirjoittaja.
+`rytkoset_theme_user_can_link_event_product()` tarkistaa ilmoittautumistuotteen
+tunnistuksen tai kyseisen tuote-ID:n `edit_post`-oikeuden. Ilmoittautumistuotteen
+tunnistus periytyy variaatiolle emolta.
+Lukittu linkki ohitetaan tallennuksessa ennen kentän lukemista; puuttuvaan
+tuotteeseen osoittavaa ID:tä ei lukita. Lukuun ei lisätä nykyiseen käyttäjään
+sidottua rajausta: ylläpitäjän tavallinen tuotelinkki on tuettu, ja esimerkiksi
+järjestäjäilmoitus voi lähteä ilman kirjautunutta käyttäjää.
+
 ### Kertatarkistus käyttöönoton yhteydessä
 
 Koska vanhoja linkityksiä ei muuteta, tarkista dev- ja tuotantoympäristössä kerran, ettei mihinkään tapahtumaan ole linkitetty tuotetta, joka ei kuulu sille:
