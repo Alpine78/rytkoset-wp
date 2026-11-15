@@ -115,9 +115,12 @@ Maksuttoman tapahtuman julkinen ilmoittautumislomake (`inc/event-registrations.p
 
 `rytkoset/v1/chat` ([`inc/chat.php`](../wp-content/themes/rytkoset-theme/inc/chat.php)) on teeman ensimmäinen julkinen REST-reitti, joka kutsuu maksullista kolmannen osapuolen tekoälyrajapintaa (Mistral). Ilman rajoituksia botti tai skripti voisi ajaa rajattomasti API-kuluja tai käyttää reittiä väärin.
 
-- **Nonce:** pyyntö vaatii voimassa olevan `wp_rest`-noncen (`X-WP-Nonce`-otsake), joten kutsun on tultava sivustolta.
-- **Per-IP rate limit:** kiinteä ikkuna transientilla, oletus 20 viestiä / IP / tunti (`REMOTE_ADDR` vain — välityspalvelinotsakkeisiin ei luoteta). Ylitys → HTTP 429. Säädettävissä suodattimilla `rytkoset_theme_chat_rate_limit` / `rytkoset_theme_chat_rate_window`.
-- **Syöte- ja vastausrajat:** viestin merkkiraja (1000), historian pituus (8 viestiä) ja vastauksen `max_tokens` (800) rajaavat yhden kutsun kulua.
+- **Nonce:** pyyntö vaatii voimassa olevan `wp_rest`-noncen (`X-WP-Nonce`-otsake). Nonce ei yksin todista, että kutsu tulee sivustolta: kirjautumattoman kävijän nonce on sama kaikille anonyymeille ja näkyy sivun lähdekoodissa (#749).
+- **Origin-tarkistus (#749):** WordPressin REST heijastaa minkä tahansa `Origin`-otsakkeen CORS-vastaukseen, joten käsittelijä hylkää itse pyynnön, jonka `Origin` ei ole oma sivusto (HTTP 403). Estää vieraan sivun ajamasta chattia kävijöidensä selaimista; ei pysäytä skriptiä, joka väärentää tai jättää otsakkeen pois.
+- **Yleinen API-kutsukatto (#749):** koko sivuston yhteinen katto Mistralille lähteville kutsuyrityksille (oletus 120 / tunti ja 500 / vuorokausi), koska IP-kohtaisen rajan voi kiertää osoitteita vaihtamalla. Ylitys → HTTP 503. Laskuri ei ole atominen (paras yritys, #737), joten kova kuukausikatto asetetaan lisäksi palveluntarjoajan hallintapaneelissa.
+- **Pyynnön aikabudjetti (#749):** yhden pyynnön kaikki API-kutsut jakavat 40 sekunnin määräajan, jottei yksi pyyntö varaa PHP-työntekijää minuutiksi tai pidempään.
+- **Per-IP rate limit:** kiinteä ikkuna transientilla, oletus 20 viestiä / IP / tunti (`REMOTE_ADDR` vain — välityspalvelinotsakkeisiin ei luoteta; IPv6-osoitteet niputetaan /64-etuliitteeseen, #749). Ylitys → HTTP 429. Säädettävissä suodattimilla `rytkoset_theme_chat_rate_limit` / `rytkoset_theme_chat_rate_window`.
+- **Syöte- ja vastausrajat:** viestin merkkiraja (1000), historian pituus (8 viestiä), pyynnön viestilistan enimmäispituus (100, #749) ja vastauksen `max_tokens` (800) rajaavat yhden kutsun kulua.
 - **Ylläpitäjän kytkin:** chatti voidaan sulkea kokonaan Customizerista (*Ulkoasu → Mukauta → Tukichatti*), jolloin sekä widget että REST-reitti poistuvat käytöstä.
 - **Avain ei vuoda:** API-avain luetaan vain palvelimella `wp-config.php`-vakiosta eikä koskaan päädy vasteeseen tai lokiin (paitsi tekninen virheviesti `WP_DEBUG`-tilassa, ei koskaan itse avainta).
 

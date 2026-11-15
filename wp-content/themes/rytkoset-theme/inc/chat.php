@@ -146,6 +146,114 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_max_history' ) ) {
 }
 
 /**
+ * Returns the site-wide cap on attempted upstream calls per hour (#749).
+ *
+ * The per-IP limit cannot stop address rotation, so this cap bounds the total
+ * spend regardless of who is asking. The default (120) can be overridden per
+ * environment with the `RYTKOSET_CHAT_GLOBAL_HOURLY_LIMIT` wp-config constant;
+ * the `rytkoset_theme_chat_global_hourly_limit` filter runs on top of it.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_global_hourly_limit' ) ) {
+	function rytkoset_theme_chat_get_global_hourly_limit() {
+		$limit = defined( 'RYTKOSET_CHAT_GLOBAL_HOURLY_LIMIT' ) ? (int) constant( 'RYTKOSET_CHAT_GLOBAL_HOURLY_LIMIT' ) : 120;
+		$limit = (int) apply_filters( 'rytkoset_theme_chat_global_hourly_limit', $limit );
+
+		return max( 1, $limit );
+	}
+}
+
+/**
+ * Returns the site-wide cap on attempted upstream calls per day (#749).
+ *
+ * Default 500; constant `RYTKOSET_CHAT_GLOBAL_DAILY_LIMIT`, then filter
+ * `rytkoset_theme_chat_global_daily_limit`.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_global_daily_limit' ) ) {
+	function rytkoset_theme_chat_get_global_daily_limit() {
+		$limit = defined( 'RYTKOSET_CHAT_GLOBAL_DAILY_LIMIT' ) ? (int) constant( 'RYTKOSET_CHAT_GLOBAL_DAILY_LIMIT' ) : 500;
+		$limit = (int) apply_filters( 'rytkoset_theme_chat_global_daily_limit', $limit );
+
+		return max( 1, $limit );
+	}
+}
+
+/**
+ * Returns the wall-clock budget in seconds for one chat request (#749).
+ *
+ * Shared by every upstream call of the request: the forced-tool retry and the
+ * page-tool rounds all draw from the same deadline. Clamped to 10–120 s.
+ *
+ * @return float
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_request_time_budget' ) ) {
+	function rytkoset_theme_chat_get_request_time_budget() {
+		$budget = (float) apply_filters( 'rytkoset_theme_chat_request_time_budget', 40 );
+
+		return min( 120.0, max( 10.0, $budget ) );
+	}
+}
+
+/**
+ * Returns the current time as a float Unix timestamp.
+ *
+ * The filter exists so the request deadline can be exercised in tests without
+ * real waiting.
+ *
+ * @return float
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_current_time' ) ) {
+	function rytkoset_theme_chat_get_current_time() {
+		return (float) apply_filters( 'rytkoset_theme_chat_current_time', microtime( true ) );
+	}
+}
+
+/**
+ * Returns the timeout for the next upstream call, or 0 when the request's
+ * time budget is spent.
+ *
+ * Pure decision: the call may use what is left of the budget, never more than
+ * the per-call ceiling, and is not started at all when too little remains for
+ * a realistic answer.
+ *
+ * @param float $deadline    Request deadline (Unix timestamp).
+ * @param float $now         Current time (Unix timestamp).
+ * @param float $max_timeout Per-call timeout ceiling in seconds.
+ * @param float $min_timeout Smallest remaining time worth a call.
+ * @return float Timeout in seconds, or 0.0 when no further call is allowed.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_upstream_timeout' ) ) {
+	function rytkoset_theme_chat_get_upstream_timeout( $deadline, $now, $max_timeout = 20.0, $min_timeout = 3.0 ) {
+		$remaining = (float) $deadline - (float) $now;
+
+		if ( $remaining < (float) $min_timeout ) {
+			return 0.0;
+		}
+
+		return min( (float) $max_timeout, $remaining );
+	}
+}
+
+/**
+ * Returns the largest client message list the route accepts (#749).
+ *
+ * The widget sends at most its 40 stored messages, so a longer list is not
+ * ordinary use. Never lower than the history length itself.
+ *
+ * @return int
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_max_request_messages' ) ) {
+	function rytkoset_theme_chat_get_max_request_messages() {
+		$max = (int) apply_filters( 'rytkoset_theme_chat_max_request_messages', 100 );
+
+		return max( rytkoset_theme_chat_get_max_history(), $max );
+	}
+}
+
+/**
  * Palauttaa vastauksen token-rajan (`max_tokens`) API-kutsulle.
  *
  * Oletus 800: 512 katkaisi monikohtaiset vastaukset (esim. jäsenyystyypit +
@@ -787,6 +895,22 @@ add_action( 'rest_api_init', 'rytkoset_theme_chat_register_routes' );
  */
 if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 	function rytkoset_theme_chat_handle_request( $request ) {
+		// One wall-clock deadline for the whole request (#749): every upstream
+		// call, including the retry and the tool rounds, draws from it.
+		$deadline = rytkoset_theme_chat_get_current_time() + rytkoset_theme_chat_get_request_time_budget();
+
+		// 0. Origin (#749). Core REST reflects any Origin into its CORS headers
+		// and logged-out visitors share one nonce, so a foreign page could
+		// otherwise run the chat from its visitors' browsers. Rejected before
+		// any stored state is touched, so a flood stays cheap.
+		if ( ! rytkoset_theme_chat_origin_is_allowed( (string) $request->get_header( 'origin' ) ) ) {
+			return new WP_Error(
+				'rytkoset_chat_forbidden_origin',
+				__( 'Pyyntöä ei voitu käsitellä. Päivitä sivu ja yritä uudelleen.', 'rytkoset-theme' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		// 1. Nonce (CSRF-suoja). Julkinen reitti, mutta pyyntö on tultava sivustolta.
 		$nonce = $request->get_header( 'X-WP-Nonce' );
 		if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
@@ -833,6 +957,16 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		$raw_messages = $request->get_param( 'messages' );
 		if ( ! is_array( $raw_messages ) ) {
 			$raw_messages = array();
+		}
+
+		// An oversized list is refused before any per-row work (#749). The
+		// widget never sends more than its 40 stored messages.
+		if ( count( $raw_messages ) > rytkoset_theme_chat_get_max_request_messages() ) {
+			return new WP_Error(
+				'rytkoset_chat_too_many_messages',
+				__( 'Keskustelu on liian pitkä. Päivitä sivu ja aloita uusi keskustelu.', 'rytkoset-theme' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		$messages = rytkoset_theme_chat_prepare_messages( $raw_messages, $max_history, $max_input );
@@ -963,16 +1097,36 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 		$tool_query = rytkoset_theme_chat_get_latest_user_message( $messages );
 
 		while ( true ) {
+			// Time budget (#749): a further call is made only while enough of
+			// the request's deadline remains, and may use no more than that.
+			$timeout = rytkoset_theme_chat_get_upstream_timeout( $deadline, rytkoset_theme_chat_get_current_time() );
+			if ( $timeout <= 0 ) {
+				rytkoset_theme_chat_log_error( 'Request time budget exhausted before the next upstream call.' );
+				rytkoset_theme_chat_record_error_stat( 'time_budget' );
+
+				return rytkoset_theme_chat_upstream_error();
+			}
+
+			// Site-wide cap (#749): every attempted upstream call is reserved
+			// here, so replies answered without the provider never consume it.
+			if ( ! rytkoset_theme_chat_reserve_upstream_call() ) {
+				rytkoset_theme_chat_log_error( 'Site-wide upstream call cap reached.' );
+
+				return rytkoset_theme_chat_busy_error();
+			}
+
 			$response = wp_remote_post(
 				$config['endpoint'],
 				array(
-					'timeout' => 20,
-					'headers' => array(
+					'timeout'     => $timeout,
+					// A redirect would restart the timeout and escape the budget.
+					'redirection' => 0,
+					'headers'     => array(
 						'Authorization' => 'Bearer ' . $config['api_key'],
 						'Content-Type'  => 'application/json',
 						'Accept'        => 'application/json',
 					),
-					'body'    => wp_json_encode( $payload ),
+					'body'        => wp_json_encode( $payload ),
 				)
 			);
 
@@ -1012,6 +1166,13 @@ if ( ! function_exists( 'rytkoset_theme_chat_handle_request' ) ) {
 
 				$force_page_tool = false;
 				unset( $payload['tool_choice'] );
+
+				// The recovery attempt counts as one page-tool round (#749), so
+				// it cannot add an extra upstream call on top of the round cap.
+				$max_rounds = max( 0, $max_rounds - 1 );
+				if ( 0 === $max_rounds ) {
+					$payload['tool_choice'] = 'none';
+				}
 
 				continue;
 			}
@@ -1139,7 +1300,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_log_error' ) ) {
  * IP-osoitetta eikä viestisisältöä, sama periaate kuin rate limit
  * -transientissa (joka tallentaa vain MD5-tiivisteen).
  *
- * @return array{messages:string,rate_limit:string,error:string,tool_calls:string,prompt_cache:string}
+ * @return array{messages:string,rate_limit:string,error:string,tool_calls:string,prompt_cache:string,global_limit:string}
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
 	function rytkoset_theme_chat_get_stat_option_names() {
@@ -1149,6 +1310,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_stat_option_names' ) ) {
 			'error'        => 'rytkoset_chat_stat_error',
 			'tool_calls'   => 'rytkoset_chat_stat_tool_calls',
 			'prompt_cache' => 'rytkoset_chat_stat_prompt_cache',
+			'global_limit' => 'rytkoset_chat_stat_global_limit',
 		);
 	}
 }
@@ -1347,6 +1509,23 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_rate_limit_hit_stat' ) ) {
 }
 
 /**
+ * Records one request refused by the site-wide upstream cap (#749).
+ *
+ * @return void
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_record_global_limit_hit_stat' ) ) {
+	function rytkoset_theme_chat_record_global_limit_hit_stat() {
+		$names = rytkoset_theme_chat_get_stat_option_names();
+
+		update_option(
+			$names['global_limit'],
+			rytkoset_theme_chat_bump_stat( get_option( $names['global_limit'], array() ), time() ),
+			false
+		);
+	}
+}
+
+/**
  * Kirjaa yhden Mistral-/upstream-virheen käyttötilastoon.
  *
  * Kutsutaan samoista kohdista kuin `rytkoset_theme_chat_log_error()`, joka
@@ -1377,7 +1556,9 @@ if ( ! function_exists( 'rytkoset_theme_chat_record_error_stat' ) ) {
  *     rate_limit_hits: array{count:int,last_at:int},
  *     last_error: array{count:int,last_at:int,last_type:string},
  *     tool_calls: array{count:int,last_at:int},
- *     prompt_cache: array{api_calls:int,cache_hit_calls:int,prompt_tokens:int,cached_tokens:int,last_prompt_tokens:int,last_cached_tokens:int,last_at:int}
+ *     prompt_cache: array{api_calls:int,cache_hit_calls:int,prompt_tokens:int,cached_tokens:int,last_prompt_tokens:int,last_cached_tokens:int,last_at:int},
+ *     global_limit_hits: array{count:int,last_at:int},
+ *     upstream_budget: array{hour_count:int,day_count:int}
  * }
  */
 if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
@@ -1389,26 +1570,31 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 		$error        = get_option( $names['error'], array() );
 		$tool_calls   = get_option( $names['tool_calls'], array() );
 		$prompt_cache = get_option( $names['prompt_cache'], array() );
+		$global_limit = get_option( $names['global_limit'], array() );
+		$now          = time();
+		$budget       = get_option( rytkoset_theme_chat_get_upstream_budget_option_name(), array() );
+		$hour_start   = (int) rytkoset_theme_chat_stat_value( $budget, 'hour_start', 0 );
+		$day_start    = (int) rytkoset_theme_chat_stat_value( $budget, 'day_start', 0 );
 
 		return array(
-			'messages_sent'   => array(
+			'messages_sent'     => array(
 				'count'   => (int) rytkoset_theme_chat_stat_value( $messages, 'count', 0 ),
 				'last_at' => (int) rytkoset_theme_chat_stat_value( $messages, 'last_at', 0 ),
 			),
-			'rate_limit_hits' => array(
+			'rate_limit_hits'   => array(
 				'count'   => (int) rytkoset_theme_chat_stat_value( $rate_limit, 'count', 0 ),
 				'last_at' => (int) rytkoset_theme_chat_stat_value( $rate_limit, 'last_at', 0 ),
 			),
-			'last_error'      => array(
+			'last_error'        => array(
 				'count'     => (int) rytkoset_theme_chat_stat_value( $error, 'count', 0 ),
 				'last_at'   => (int) rytkoset_theme_chat_stat_value( $error, 'last_at', 0 ),
 				'last_type' => (string) rytkoset_theme_chat_stat_value( $error, 'last_type', '' ),
 			),
-			'tool_calls'      => array(
+			'tool_calls'        => array(
 				'count'   => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'count', 0 ),
 				'last_at' => (int) rytkoset_theme_chat_stat_value( $tool_calls, 'last_at', 0 ),
 			),
-			'prompt_cache'    => array(
+			'prompt_cache'      => array(
 				'api_calls'          => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'api_calls', 0 ),
 				'cache_hit_calls'    => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'cache_hit_calls', 0 ),
 				'prompt_tokens'      => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'prompt_tokens', 0 ),
@@ -1416,6 +1602,15 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_usage_stats' ) ) {
 				'last_prompt_tokens' => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_prompt_tokens', 0 ),
 				'last_cached_tokens' => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_cached_tokens', 0 ),
 				'last_at'            => (int) rytkoset_theme_chat_stat_value( $prompt_cache, 'last_at', 0 ),
+			),
+			'global_limit_hits' => array(
+				'count'   => (int) rytkoset_theme_chat_stat_value( $global_limit, 'count', 0 ),
+				'last_at' => (int) rytkoset_theme_chat_stat_value( $global_limit, 'last_at', 0 ),
+			),
+			// Current-window usage; an expired window counts as empty.
+			'upstream_budget'   => array(
+				'hour_count' => $hour_start > 0 && $now - $hour_start < HOUR_IN_SECONDS ? (int) rytkoset_theme_chat_stat_value( $budget, 'hour_count', 0 ) : 0,
+				'day_count'  => $day_start > 0 && $now - $day_start < DAY_IN_SECONDS ? (int) rytkoset_theme_chat_stat_value( $budget, 'day_count', 0 ) : 0,
 			),
 		);
 	}
@@ -1453,6 +1648,10 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_error_type_label' ) ) {
 
 		if ( 'invalid_finish_reason' === $type ) {
 			return __( 'Mistralin vastaus jäi kesken', 'rytkoset-theme' );
+		}
+
+		if ( 'time_budget' === $type ) {
+			return __( 'Pyynnön aikabudjetti ylittyi', 'rytkoset-theme' );
 		}
 
 		if ( 'invalid_reply' === $type ) {
@@ -1566,6 +1765,23 @@ if ( ! function_exists( 'rytkoset_theme_chat_render_dashboard_widget' ) ) {
 		}
 		echo '</li>';
 
+		echo '<li>' . esc_html__( 'API-kutsuja nykyisissä jaksoissa:', 'rytkoset-theme' ) . ' <strong>' . esc_html(
+			sprintf(
+				/* translators: 1: calls in the current hour window, 2: hourly cap, 3: calls in the current day window, 4: daily cap. */
+				__( 'tunti %1$s / %2$s, vuorokausi %3$s / %4$s', 'rytkoset-theme' ),
+				number_format_i18n( $stats['upstream_budget']['hour_count'] ),
+				number_format_i18n( rytkoset_theme_chat_get_global_hourly_limit() ),
+				number_format_i18n( $stats['upstream_budget']['day_count'] ),
+				number_format_i18n( rytkoset_theme_chat_get_global_daily_limit() )
+			)
+		) . '</strong></li>';
+
+		echo '<li>' . esc_html__( 'Yleisen käyttökaton osumia yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['global_limit_hits']['count'] ) ) . '</strong>';
+		if ( $stats['global_limit_hits']['last_at'] > 0 ) {
+			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['global_limit_hits']['last_at'] ) );
+		}
+		echo '</li>';
+
 		echo '<li>' . esc_html__( 'Sivunlukuhakuja (lue_sivu-työkalu) yhteensä:', 'rytkoset-theme' ) . ' <strong>' . esc_html( number_format_i18n( $stats['tool_calls']['count'] ) ) . '</strong>';
 		if ( $stats['tool_calls']['last_at'] > 0 ) {
 			echo ' &ndash; ' . esc_html__( 'viimeksi', 'rytkoset-theme' ) . ' ' . esc_html( wp_date( 'j.n.Y H:i', $stats['tool_calls']['last_at'] ) );
@@ -1628,22 +1844,40 @@ if ( ! function_exists( 'rytkoset_theme_chat_prepare_messages' ) ) {
 		$allowed     = array( 'user', 'assistant' );
 		$clean       = array();
 
-		foreach ( $messages as $message ) {
+		if ( ! is_array( $messages ) ) {
+			return $clean;
+		}
+
+		// Walk from the newest row and stop once the history is full, so a long
+		// list is never validated in full (#749). The result equals validating
+		// everything and keeping the last valid rows.
+		foreach ( array_reverse( $messages ) as $message ) {
+			if ( count( $clean ) >= $max_history ) {
+				break;
+			}
+
 			if ( ! is_array( $message ) ) {
 				continue;
 			}
 
-			$role = isset( $message['role'] ) ? (string) $message['role'] : '';
+			if ( ! isset( $message['role'], $message['content'] ) || ! is_string( $message['role'] ) || ! is_string( $message['content'] ) ) {
+				continue;
+			}
+
+			$role = $message['role'];
 			if ( ! in_array( $role, $allowed, true ) ) {
 				continue;
 			}
 
-			$raw_content = isset( $message['content'] ) ? (string) $message['content'] : '';
+			$raw_content = $message['content'];
 			if ( 'assistant' === $role && ! rytkoset_theme_chat_reply_is_valid( $raw_content ) ) {
 				continue;
 			}
 
-			$content = sanitize_textarea_field( $raw_content );
+			// Bound the sanitizer's input: nothing past the limit can survive
+			// anyway, and the margin keeps stripped markup from eating the text.
+			$content = rytkoset_theme_chat_truncate( $raw_content, $max_length * 4 );
+			$content = sanitize_textarea_field( $content );
 			$content = rytkoset_theme_chat_truncate( $content, $max_length );
 
 			if ( '' === $content ) {
@@ -1656,11 +1890,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_prepare_messages' ) ) {
 			);
 		}
 
-		if ( count( $clean ) > $max_history ) {
-			$clean = array_slice( $clean, -$max_history );
-		}
-
-		return $clean;
+		return array_reverse( $clean );
 	}
 }
 
@@ -1714,7 +1944,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_register_rate_limit_hit' ) ) {
 	function rytkoset_theme_chat_register_rate_limit_hit( $ip, $limit ) {
 		$window = (int) apply_filters( 'rytkoset_theme_chat_rate_window', HOUR_IN_SECONDS );
 		$window = max( 60, $window );
-		$key    = 'rytkoset_chat_rl_' . md5( (string) $ip );
+		$key    = 'rytkoset_chat_rl_' . md5( rytkoset_theme_chat_normalize_rate_limit_ip( $ip ) );
 		$now    = time();
 
 		$record = get_transient( $key );
@@ -1746,6 +1976,244 @@ if ( ! function_exists( 'rytkoset_theme_chat_register_rate_limit_hit' ) ) {
 		set_transient( $key, $record, $remaining );
 
 		return false;
+	}
+}
+
+/**
+ * Normalizes a client address into its rate-limit bucket (#749).
+ *
+ * An IPv6 subscriber normally controls a whole /64, so rotating inside it must
+ * not yield a fresh quota: IPv6 addresses collapse to their /64 prefix. IPv4
+ * addresses are returned unchanged (existing buckets stay valid), and an
+ * IPv4-mapped IPv6 address shares the bucket of the IPv4 address it carries.
+ * Anything unparsable lands in one shared "unknown" bucket.
+ *
+ * @param string $ip Client address.
+ * @return string Bucket identifier (never stored unhashed).
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_normalize_rate_limit_ip' ) ) {
+	function rytkoset_theme_chat_normalize_rate_limit_ip( $ip ) {
+		$ip = is_string( $ip ) ? trim( $ip ) : '';
+
+		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return $ip;
+		}
+
+		if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			return 'unknown';
+		}
+
+		$packed = inet_pton( $ip );
+		if ( false === $packed || 16 !== strlen( $packed ) ) {
+			return 'unknown';
+		}
+
+		// ::ffff:a.b.c.d is an IPv4 client seen through a dual-stack socket.
+		if ( 0 === strncmp( $packed, "\0\0\0\0\0\0\0\0\0\0\xff\xff", 12 ) ) {
+			$ipv4 = inet_ntop( substr( $packed, 12 ) );
+
+			return false !== $ipv4 ? $ipv4 : 'unknown';
+		}
+
+		$prefix = inet_ntop( substr( $packed, 0, 8 ) . str_repeat( "\0", 8 ) );
+
+		return false !== $prefix ? $prefix . '/64' : 'unknown';
+	}
+}
+
+/**
+ * Reduces an origin or site URL to a comparable host identifier.
+ *
+ * Lowercases the host, drops a leading "www." and the default ports, and keeps
+ * any other port. The scheme is deliberately ignored so a TLS-terminating
+ * proxy does not make the site's own origin look foreign.
+ *
+ * @param string $url Origin header value, URL or bare host.
+ * @return string Normalized host, or '' when the value is not an http(s) origin.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_normalize_origin_host' ) ) {
+	function rytkoset_theme_chat_normalize_origin_host( $url ) {
+		$url = is_string( $url ) ? trim( $url ) : '';
+
+		if ( '' === $url || 'null' === $url ) {
+			return '';
+		}
+
+		if ( false === strpos( $url, '://' ) ) {
+			$url = 'https://' . $url;
+		}
+
+		$parts = wp_parse_url( $url );
+		if ( ! is_array( $parts ) || empty( $parts['host'] ) || empty( $parts['scheme'] ) ) {
+			return '';
+		}
+
+		if ( ! in_array( strtolower( $parts['scheme'] ), array( 'http', 'https' ), true ) ) {
+			return '';
+		}
+
+		$host = strtolower( $parts['host'] );
+		if ( 0 === strpos( $host, 'www.' ) ) {
+			$host = substr( $host, 4 );
+		}
+
+		$port = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+
+		return in_array( $port, array( 0, 80, 443 ), true ) ? $host : $host . ':' . $port;
+	}
+}
+
+/**
+ * Tells whether a request's Origin header belongs to this site (#749).
+ *
+ * WordPress REST reflects any Origin into its CORS headers and the anonymous
+ * `wp_rest` nonce is shared by all logged-out visitors, so without this check
+ * a third-party page could drive the chat from its own visitors' browsers.
+ * A missing header is allowed: browsers always send Origin on a cross-origin
+ * POST, and a non-browser client could forge the header anyway (the global
+ * cap covers those).
+ *
+ * @param string $origin Raw Origin header value ('' when absent).
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_origin_is_allowed' ) ) {
+	function rytkoset_theme_chat_origin_is_allowed( $origin ) {
+		$origin = is_string( $origin ) ? trim( $origin ) : '';
+
+		if ( '' === $origin ) {
+			return true;
+		}
+
+		$origin_host = rytkoset_theme_chat_normalize_origin_host( $origin );
+		if ( '' === $origin_host ) {
+			return false;
+		}
+
+		$allowed = array( home_url(), site_url() );
+		$allowed = (array) apply_filters( 'rytkoset_theme_chat_allowed_origin_hosts', $allowed );
+
+		foreach ( $allowed as $candidate ) {
+			if ( rytkoset_theme_chat_normalize_origin_host( $candidate ) === $origin_host ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+/**
+ * Advances the site-wide upstream call budget by one attempted call (#749).
+ *
+ * Pure decision: two fixed windows (hour, day) that open at their first call
+ * and reset once their length has passed. The counters grow only when the
+ * call is allowed.
+ *
+ * @param mixed $record     Stored budget record (or missing/invalid).
+ * @param int   $now        Current Unix timestamp.
+ * @param int   $hour_limit Allowed attempts per hour window.
+ * @param int   $day_limit  Allowed attempts per day window.
+ * @return array{allowed:bool,record:array{hour_start:int,hour_count:int,day_start:int,day_count:int}}
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_advance_upstream_budget' ) ) {
+	function rytkoset_theme_chat_advance_upstream_budget( $record, $now, $hour_limit, $day_limit ) {
+		$now    = (int) $now;
+		$record = array(
+			'hour_start' => (int) rytkoset_theme_chat_stat_value( $record, 'hour_start', 0 ),
+			'hour_count' => max( 0, (int) rytkoset_theme_chat_stat_value( $record, 'hour_count', 0 ) ),
+			'day_start'  => (int) rytkoset_theme_chat_stat_value( $record, 'day_start', 0 ),
+			'day_count'  => max( 0, (int) rytkoset_theme_chat_stat_value( $record, 'day_count', 0 ) ),
+		);
+
+		// A start in the future (clock change) is treated as an expired window.
+		if ( $record['hour_start'] <= 0 || $record['hour_start'] > $now || $now - $record['hour_start'] >= HOUR_IN_SECONDS ) {
+			$record['hour_start'] = $now;
+			$record['hour_count'] = 0;
+		}
+
+		if ( $record['day_start'] <= 0 || $record['day_start'] > $now || $now - $record['day_start'] >= DAY_IN_SECONDS ) {
+			$record['day_start'] = $now;
+			$record['day_count'] = 0;
+		}
+
+		$allowed = $record['hour_count'] < (int) $hour_limit && $record['day_count'] < (int) $day_limit;
+
+		if ( $allowed ) {
+			++$record['hour_count'];
+			++$record['day_count'];
+		}
+
+		return array(
+			'allowed' => $allowed,
+			'record'  => $record,
+		);
+	}
+}
+
+/**
+ * Returns the option name of the site-wide upstream call budget.
+ *
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_get_upstream_budget_option_name' ) ) {
+	function rytkoset_theme_chat_get_upstream_budget_option_name() {
+		return 'rytkoset_chat_upstream_budget';
+	}
+}
+
+/**
+ * Reserves one upstream call from the site-wide budget (#749).
+ *
+ * Called immediately before every upstream request, so retries and tool
+ * rounds are counted and replies that never reach the provider are not. The
+ * record holds only counters and window starts. The read-modify-write is not
+ * atomic (see #737), so this is a best-effort cap: concurrent requests can
+ * lose increments. The in-process option cache is dropped first so a request
+ * that waited on the provider does not write back a stale count.
+ *
+ * @return bool True when the call may be made, false when a cap is reached.
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_reserve_upstream_call' ) ) {
+	function rytkoset_theme_chat_reserve_upstream_call() {
+		$option = rytkoset_theme_chat_get_upstream_budget_option_name();
+
+		if ( function_exists( 'wp_cache_delete' ) ) {
+			wp_cache_delete( $option, 'options' );
+		}
+
+		$result = rytkoset_theme_chat_advance_upstream_budget(
+			get_option( $option, array() ),
+			time(),
+			rytkoset_theme_chat_get_global_hourly_limit(),
+			rytkoset_theme_chat_get_global_daily_limit()
+		);
+
+		if ( ! $result['allowed'] ) {
+			rytkoset_theme_chat_record_global_limit_hit_stat();
+
+			return false;
+		}
+
+		update_option( $option, $result['record'], false );
+
+		return true;
+	}
+}
+
+/**
+ * Returns the "chat is busy" error used when the site-wide cap is reached.
+ *
+ * Deliberately says nothing about limits, counters or the provider.
+ *
+ * @return WP_Error
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_busy_error' ) ) {
+	function rytkoset_theme_chat_busy_error() {
+		return new WP_Error(
+			'rytkoset_chat_busy',
+			__( 'Chat on juuri nyt ruuhkautunut. Yritä myöhemmin uudelleen tai ota yhteyttä sähköpostitse.', 'rytkoset-theme' ),
+			array( 'status' => 503 )
+		);
 	}
 }
 

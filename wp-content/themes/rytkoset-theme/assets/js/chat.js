@@ -378,7 +378,8 @@
       fetch(config.restUrl, {
         method: 'POST',
         headers: headers,
-        body: JSON.stringify({ messages: history })
+        // The server only uses the latest turns and refuses an oversized list (#749).
+        body: JSON.stringify({ messages: history.slice(-MAX_STORED_MESSAGES) })
       })
         .then(function (response) {
           return response
