@@ -516,7 +516,7 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_family_submit_handler_links_an_existing_account_by_email(): void {
 		$this->set_up_family_primary( 10 );
-		rytkoset_test_register_user( 20, 'uusi@example.test', 'Uusi Jäsen' );
+		rytkoset_test_register_verified_user( 20, 'uusi@example.test', 'Uusi Jäsen' );
 
 		$_POST = array(
 			'rytkoset_account_family_action' => 'add',

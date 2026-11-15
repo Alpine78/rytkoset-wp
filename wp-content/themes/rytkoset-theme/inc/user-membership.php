@@ -493,6 +493,9 @@ function rytkoset_theme_supersede_removed_family_member_rows( $members ) {
 /**
  * Resolves pending family rows to existing WordPress accounts by email (#542).
  *
+ * Only an account whose holder has proven control of the address is linked
+ * (#744); other rows stay pending until that proof arrives.
+ *
  * This runs only on writes. Reading stored rows must remain side-effect free so a
  * link is never exposed without its matching reverse meta being persisted.
  *
@@ -514,7 +517,7 @@ function rytkoset_theme_resolve_family_member_accounts( $members, $excluded_user
 			continue;
 		}
 
-		$linked_user = get_user_by( 'email', $email );
+		$linked_user = rytkoset_theme_get_verified_user_by_email( $email );
 
 		if ( ! $linked_user instanceof WP_User ) {
 			continue;
@@ -778,6 +781,11 @@ function rytkoset_theme_link_family_member_account_from_primary( $primary_user_i
 	$user            = get_userdata( absint( $user_id ) );
 
 	if ( $primary_user_id <= 0 || ! $user instanceof WP_User || absint( $user->ID ) === $primary_user_id ) {
+		return false;
+	}
+
+	// The row is matched by email alone, so the account must have proven the address (#744).
+	if ( ! rytkoset_theme_user_email_is_verified( $user->ID ) ) {
 		return false;
 	}
 

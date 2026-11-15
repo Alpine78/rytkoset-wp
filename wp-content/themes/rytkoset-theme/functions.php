@@ -50,6 +50,7 @@ require_once get_template_directory() . '/inc/admin-appearance.php';
 require_once get_template_directory() . '/inc/admin-dashboard.php';
 require_once get_template_directory() . '/inc/admin-menu.php';
 require_once get_template_directory() . '/inc/newsletter.php';
+require_once get_template_directory() . '/inc/user-email-verification.php';
 require_once get_template_directory() . '/inc/user-membership.php';
 require_once get_template_directory() . '/inc/member-newsletter.php';
 require_once get_template_directory() . '/inc/user-membership-activation.php';

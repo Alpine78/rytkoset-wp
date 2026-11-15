@@ -9,9 +9,11 @@
  * same rule as the WooCommerce order path in inc/woocommerce-membership.php) and
  * receive the shared #390 confirmation email on a non-active → active
  * transition. Addresses without an account are stored as pending manual
- * memberships in a wp_options map and receive a #518-style "create an account
- * with this same email" invite; a later registration with the same email
- * applies the pending membership automatically via user_register.
+ * memberships in a wp_options map and receive a #518-style invite. The pending
+ * membership is applied only once an account with the same email has proven
+ * control of the address (#744, inc/user-email-verification.php), never merely
+ * because such an account was created. An existing account that has not proven
+ * its address is handled like a missing account.
  *
  * GDPR scope: only the email address and the chosen membership details are
  * processed; the processing log stores the address, the outcome, the acting
@@ -423,15 +425,11 @@ if ( ! function_exists( 'rytkoset_theme_send_membership_activation_invite_email'
 			'',
 			__( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat käyttäjätilin. Jäsenyytesi aktivointi odottaa, että sinulla on tili sivustolla.', 'rytkoset-theme' ),
 			'',
-			sprintf(
-				/* translators: %s: recipient email address. */
-				__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin jäsenyytesi aktivoituu automaattisesti:', 'rytkoset-theme' ),
-				$email
-			),
-			wp_registration_url(),
-			'',
-			__( 'Sähköpostiosoitteesi on peräisin sukuseuran jäsenrekisteristä, ja sitä käytetään vain jäsenyyden hoitamiseen ja jäsenetujen käyttöönottoon. Rekisterinpitäjä on Rytkösten sukuseura ry.', 'rytkoset-theme' ),
 		);
+		$lines = array_merge( $lines, rytkoset_theme_get_email_verification_instruction_lines( $email ) );
+
+		$lines[] = '';
+		$lines[] = __( 'Sähköpostiosoitteesi on peräisin sukuseuran jäsenrekisteristä, ja sitä käytetään vain jäsenyyden hoitamiseen ja jäsenetujen käyttöönottoon. Rekisterinpitäjä on Rytkösten sukuseura ry.', 'rytkoset-theme' );
 
 		$privacy_url = function_exists( 'get_privacy_policy_url' ) ? get_privacy_policy_url() : '';
 
@@ -522,10 +520,10 @@ if ( ! function_exists( 'rytkoset_theme_get_membership_activation_result_label' 
 	function rytkoset_theme_get_membership_activation_result_label( $result ) {
 		$labels = array(
 			'applied'             => __( 'Tili löytyi, jäsenyys päivitetty.', 'rytkoset-theme' ),
-			'applied_on_register' => __( 'Odottava jäsenyys aktivoitu rekisteröitymisen yhteydessä.', 'rytkoset-theme' ),
+			'applied_on_register' => __( 'Odottava jäsenyys aktivoitu, kun tilin sähköpostiosoite vahvistettiin.', 'rytkoset-theme' ),
 			'skipped_covered'     => __( 'Ohitettu: käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys.', 'rytkoset-theme' ),
-			'invited'             => __( 'Tiliä ei löytynyt: jäsenyys odottaa tiliä ja kutsuviesti lähetettiin.', 'rytkoset-theme' ),
-			'pending_updated'     => __( 'Tiliä ei löytynyt: odottavat jäsenyystiedot päivitettiin, kutsua ei lähetetty uudelleen.', 'rytkoset-theme' ),
+			'invited'             => __( 'Vahvistettua tiliä ei löytynyt: jäsenyys odottaa ja kutsuviesti lähetettiin.', 'rytkoset-theme' ),
+			'pending_updated'     => __( 'Vahvistettua tiliä ei löytynyt: odottavat jäsenyystiedot päivitettiin, kutsua ei lähetetty uudelleen.', 'rytkoset-theme' ),
 			'invite_failed'       => __( 'Kutsuviestin lähetys epäonnistui: jäsenyys jää odottamaan, yritä lähetystä uudelleen.', 'rytkoset-theme' ),
 			'pending_removed'     => __( 'Odottava jäsenyys poistettu.', 'rytkoset-theme' ),
 		);
@@ -545,7 +543,8 @@ if ( ! function_exists( 'rytkoset_theme_membership_activation_process_email' ) )
 	 * @return string Result code.
 	 */
 	function rytkoset_theme_membership_activation_process_email( $email, $membership, $resend, $admin_id ) {
-		$user = get_user_by( 'email', $email );
+		// An account that has not proven the address is handled like a missing account (#744).
+		$user = rytkoset_theme_get_verified_user_by_email( $email );
 
 		if ( $user instanceof WP_User && $user->ID > 0 ) {
 			$result = rytkoset_theme_apply_manual_membership( (int) $user->ID, $membership );
@@ -631,21 +630,22 @@ if ( ! function_exists( 'rytkoset_theme_membership_activation_process_submission
 	}
 }
 
-if ( ! function_exists( 'rytkoset_theme_apply_pending_manual_membership_on_user_register' ) ) {
+if ( ! function_exists( 'rytkoset_theme_apply_pending_manual_membership_for_verified_user' ) ) {
 	/**
-	 * Applies a pending manual membership when an account is registered with the same email.
+	 * Applies a pending manual membership to an account that has proven the same email (#744).
 	 *
-	 * WordPress registration verifies control of the email address via the
-	 * password set link, so the membership cannot be claimed by the wrong
-	 * person, same trust model as the #518 order path.
+	 * Runs on `rytkoset_theme_user_email_verified`, never on account creation:
+	 * WooCommerce creates accounts for any address without verification, so the
+	 * membership could otherwise be claimed with someone else's address. Same
+	 * trust model as the #518 order path.
 	 *
-	 * @param int $user_id Newly registered user ID.
+	 * @param int $user_id User ID whose email was verified.
 	 * @return void
 	 */
-	function rytkoset_theme_apply_pending_manual_membership_on_user_register( $user_id ) {
+	function rytkoset_theme_apply_pending_manual_membership_for_verified_user( $user_id ) {
 		$user = get_userdata( (int) $user_id );
 
-		if ( ! $user instanceof WP_User ) {
+		if ( ! $user instanceof WP_User || ! rytkoset_theme_user_email_is_verified( $user->ID ) ) {
 			return;
 		}
 
@@ -672,7 +672,7 @@ if ( ! function_exists( 'rytkoset_theme_apply_pending_manual_membership_on_user_
 			0
 		);
 	}
-	add_action( 'user_register', 'rytkoset_theme_apply_pending_manual_membership_on_user_register' );
+	add_action( 'rytkoset_theme_user_email_verified', 'rytkoset_theme_apply_pending_manual_membership_for_verified_user' );
 }
 
 // ---------------------------------------------------------------------------
@@ -828,7 +828,7 @@ if ( ! function_exists( 'rytkoset_theme_render_membership_activation_admin_page'
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Jäsenten aktivointi', 'rytkoset-theme' ); ?></h1>
 			<p>
-				<?php esc_html_e( 'Syötä olemassa olevien jäsenten sähköpostiosoitteita jäsenrekisterin perusteella. Jos osoitteella on käyttäjätili, jäsenyys päivitetään heti ja jäsen saa vahvistusviestin. Jos tiliä ei ole, osoitteelle lähetetään kutsu luoda tili samalla sähköpostilla, ja jäsenyys aktivoituu automaattisesti rekisteröitymisen yhteydessä.', 'rytkoset-theme' ); ?>
+				<?php esc_html_e( 'Syötä olemassa olevien jäsenten sähköpostiosoitteita jäsenrekisterin perusteella. Jos osoitteella on käyttäjätili, jonka sähköpostiosoite on vahvistettu, jäsenyys päivitetään heti ja jäsen saa vahvistusviestin. Muussa tapauksessa osoitteelle lähetetään kutsu, ja jäsenyys aktivoituu automaattisesti, kun samalla sähköpostilla olevan tilin haltija on asettanut salasanan sähköpostiin lähetetyn linkin kautta. Pelkkä tilin luominen ei riitä, koska esimerkiksi kassalla tilin voi luoda toisen osoitteella.', 'rytkoset-theme' ); ?>
 			</p>
 			<p class="description">
 				<?php esc_html_e( 'Työkalu on tarkoitettu vain jäsenyyden hoitamiseen ja jäsenetujen käyttöönottoon. Se ei tilaa uutiskirjettä eikä lisää osoitteita muuhun viestintään. Olemassa olevaa pidempää tai ainaisjäsenyyttä ei koskaan heikennetä.', 'rytkoset-theme' ); ?>
@@ -948,7 +948,7 @@ if ( ! function_exists( 'rytkoset_theme_render_membership_activation_admin_page'
 					</tbody>
 				</table>
 				<p class="description">
-					<?php esc_html_e( 'Poisto lopettaa odottavan jäsenyyden: rekisteröityminen samalla sähköpostilla ei enää aktivoi jäsenyyttä automaattisesti.', 'rytkoset-theme' ); ?>
+					<?php esc_html_e( 'Poisto lopettaa odottavan jäsenyyden: sähköpostiosoitteen vahvistaminen ei enää aktivoi jäsenyyttä automaattisesti.', 'rytkoset-theme' ); ?>
 				</p>
 			<?php endif; ?>
 

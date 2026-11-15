@@ -333,7 +333,7 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_process_submission_handles_mixed_existing_and_unknown(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
-		rytkoset_test_register_user( 5, 'matti@example.com', 'Matti' );
+		rytkoset_test_register_verified_user( 5, 'matti@example.com', 'Matti' );
 		$this->activation_product();
 
 		$response = rytkoset_theme_membership_activation_process_submission(
@@ -370,7 +370,7 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 	public function test_process_email_for_existing_user_clears_stale_pending_entry(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
 		rytkoset_theme_membership_activation_process_email( 'matti@example.com', $this->details(), false, 3 );
-		rytkoset_test_register_user( 5, 'matti@example.com' );
+		rytkoset_test_register_verified_user( 5, 'matti@example.com' );
 		$GLOBALS['rytkoset_test_mails'] = array();
 
 		$result = rytkoset_theme_membership_activation_process_email( 'matti@example.com', $this->details(), false, 3 );
@@ -383,13 +383,21 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 	// Registration linking
 	// -----------------------------------------------------------------
 
-	public function test_pending_membership_applies_on_user_register(): void {
+	public function test_pending_membership_applies_once_email_is_verified(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
 		rytkoset_theme_membership_activation_process_email( 'uusi@example.com', $this->details(), false, 3 );
 		$GLOBALS['rytkoset_test_mails'] = array();
 
-		rytkoset_test_register_user( 9, 'Uusi@Example.com', 'Uusi Jäsen' );
-		rytkoset_theme_apply_pending_manual_membership_on_user_register( 9 );
+		// Account creation alone (e.g. at checkout with someone else's address) applies nothing (#744).
+		$user = rytkoset_test_register_user( 9, 'Uusi@Example.com', 'Uusi Jäsen' );
+		do_action( 'user_register', 9, array() );
+		rytkoset_theme_apply_pending_manual_membership_for_verified_user( 9 );
+
+		$this->assertSame( '', get_user_meta( 9, 'rytkoset_membership_type', true ) );
+		$this->assertArrayHasKey( 'uusi@example.com', rytkoset_theme_get_pending_manual_memberships() );
+		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
 
 		$this->assertSame( 'annual', get_user_meta( 9, 'rytkoset_membership_type', true ) );
 		$this->assertSame( '2029-12-31', get_user_meta( 9, 'rytkoset_membership_expires', true ) );
@@ -403,10 +411,50 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 0, $log[0]['admin_id'] );
 	}
 
+	public function test_existing_unverified_account_is_handled_like_a_missing_account(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
+
+		// The account was created (e.g. at checkout) before the administrator ran the tool.
+		$user = rytkoset_test_register_user( 9, 'uusi@example.com', 'Uusi Jäsen' );
+
+		$result = rytkoset_theme_membership_activation_process_email( 'uusi@example.com', $this->details(), false, 3 );
+
+		$this->assertSame( 'invited', $result );
+		$this->assertSame( '', get_user_meta( 9, 'rytkoset_membership_type', true ) );
+		$this->assertArrayHasKey( 'uusi@example.com', rytkoset_theme_get_pending_manual_memberships() );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'] );
+		$this->assertStringContainsString( 'action=lostpassword', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+		$this->assertStringContainsString( 'action=register', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
+
+		$this->assertSame( 'annual', get_user_meta( 9, 'rytkoset_membership_type', true ) );
+		$this->assertSame( array(), rytkoset_theme_get_pending_manual_memberships() );
+	}
+
+	public function test_email_change_to_pending_address_applies_nothing(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10 12:00:00';
+		rytkoset_theme_membership_activation_process_email( 'uhri@example.com', $this->details(), false, 3 );
+
+		// A verified account switches its address to one with a pending membership on the
+		// account details form, which sends no confirmation.
+		$user             = rytkoset_test_register_verified_user( 9, 'oma@example.com' );
+		$user->user_email = 'uhri@example.com';
+
+		$this->assertFalse( rytkoset_theme_user_email_is_verified( 9 ) );
+
+		rytkoset_theme_apply_pending_manual_membership_for_verified_user( 9 );
+		$result = rytkoset_theme_membership_activation_process_email( 'uhri@example.com', $this->details(), false, 3 );
+
+		$this->assertSame( 'pending_updated', $result );
+		$this->assertSame( '', get_user_meta( 9, 'rytkoset_membership_type', true ) );
+		$this->assertArrayHasKey( 'uhri@example.com', rytkoset_theme_get_pending_manual_memberships() );
+	}
+
 	public function test_user_register_without_pending_entry_is_a_noop(): void {
 		rytkoset_test_register_user( 9, 'uusi@example.com' );
 
-		rytkoset_theme_apply_pending_manual_membership_on_user_register( 9 );
+		rytkoset_theme_apply_pending_manual_membership_for_verified_user( 9 );
 
 		$this->assertSame( '', get_user_meta( 9, 'rytkoset_membership_type', true ) );
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
@@ -418,10 +466,10 @@ final class MembershipActivationTest extends Rytkoset_Theme_Test_Case {
 		rytkoset_theme_membership_activation_process_email( 'uusi@example.com', $this->details(), false, 3 );
 		$GLOBALS['rytkoset_test_mails'] = array();
 
-		rytkoset_test_register_user( 9, 'uusi@example.com' );
+		$user = rytkoset_test_register_user( 9, 'uusi@example.com' );
 		update_user_meta( 9, 'rytkoset_membership_type', 'lifetime' );
 
-		rytkoset_theme_apply_pending_manual_membership_on_user_register( 9 );
+		do_action( 'after_password_reset', $user, 'new-password' );
 
 		$this->assertSame( 'lifetime', get_user_meta( 9, 'rytkoset_membership_type', true ) );
 		$this->assertSame( array(), rytkoset_theme_get_pending_manual_memberships() );

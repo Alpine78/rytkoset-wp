@@ -48,6 +48,12 @@ abstract class Rytkoset_Theme_Test_Case extends TestCase {
 		$order->user_id       = $user_id;
 		$order->billing_email = $billing_email;
 
+		// An order built for a user models a purchase made while logged in, which the
+		// checkout stamps with the buyer (#744).
+		if ( $user_id > 0 ) {
+			$order->update_meta_data( '_rytkoset_membership_buyer_user_id', $user_id );
+		}
+
 		foreach ( $products as $product ) {
 			$order->items[] = new Rytkoset_Test_Order_Item( $product );
 		}
