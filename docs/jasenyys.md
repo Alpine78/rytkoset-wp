@@ -268,16 +268,100 @@ tarkistaa sähköpostin edelleen manipuloidun Store API -pyynnön varalta.
 
 Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
 
-## Vanhojen vierastilausten kytkentä tilin luonnissa (#518, rajattu #661)
+## Sähköpostiosoitteen hallinnan todentaminen (#744)
+
+Odottava jäsenyys, vanhan vierastilauksen jäsenyys ja perherivin linkitys
+kohdistetaan käyttäjätiliin pelkän sähköpostiosoitteen perusteella. Siksi ne
+annetaan vain tilille, jonka haltija on todistanut hallitsevansa osoitetta.
+Pelkkä tilin luominen ei ole todiste: WooCommercen kassa (Block ja klassinen),
+Oman tilin rekisteröintilomake ja tilausvahvistussivun tilinluonti luovat tilin
+mille tahansa osoitteelle ja kirjaavat kävijän heti sisään, ja Oman tilin
+tietolomake vaihtaa tilin sähköpostin ilman vahvistusviestiä.
+
+Toteutus on `inc/user-email-verification.php`:ssä:
+
+- Todiste tallennetaan käyttäjämetaan `rytkoset_verified_email` vahvistettuna
+  osoitteena (pienin kirjaimin). Tili on vahvistettu vain, kun arvo vastaa tilin
+  nykyistä sähköpostia, joten osoitteen vaihto mitätöi todisteen itsestään.
+  Profiilin tallennus (`profile_update`) lisäksi poistaa vanhentuneen todisteen,
+  joten paluu aiempaan osoitteeseen vaatii uuden vahvistuksen ja ajaa odottavien
+  etujen kytkennän uudelleen.
+- Todisteen kirjaa vain tapahtuma, joka vaatii tilin nykyiseen osoitteeseen
+  lähetetyn linkin: salasanan asettaminen tai vaihto sähköpostilinkin kautta
+  (`after_password_reset`: WordPressin ja WooCommercen linkit, myös
+  `wp-login.php`-rekisteröinnin salasanan asetuslinkki) sekä WooCommercen oma
+  sähköpostin vahvistuslinkki (`woocommerce_customer_email_verified`).
+  Salasanan vaihto Oman tilin lomakkeella ei ole todiste. WordPress mitätöi
+  aiemmin lähetetyn linkin, kun tilin sähköposti tai salasana vaihtuu.
+- **Ylläpitäjän vahvistus:** WooCommerce laukaisee saman
+  `woocommerce_customer_email_verified`-tapahtuman myös, kun kaupan ylläpitäjä
+  (`manage_woocommerce`) rastittaa käyttäjän profiilissa WooCommercen
+  sähköpostin vahvistusvalinnan. Tämä hyväksytään tietoisesti todisteeksi:
+  rooli on jo luotettu ja voi asettaa jäsenyyden käsin. Rasti on samalla
+  ylläpidon keino vahvistaa vanhan tilin osoite, kun henkilöllisyys on
+  varmistettu muuta kautta. Rastin poistaminen ei peru teeman tallentamaa
+  todistetta eikä jo kytkettyjä etuja.
+- Kun tili muuttuu vahvistetuksi, `rytkoset_theme_user_email_verified` ajaa
+  odottavien etujen kytkennän: odottava manuaalinen jäsenyys, tiliä odottavat
+  vierastilaukset ja `pending_account`-perherivit.
+- Sähköpostiin perustuvat tilihaut (`rytkoset_theme_get_verified_user_by_email()`)
+  ohittavat vahvistamattoman tilin: se käsitellään kuten puuttuva tili, ja etu
+  jää odottamaan.
+
+Rajaukset ja ylläpidon huomiot:
+
+- Kirjautuneena tehty jäsenmaksuosto kuuluu aina ostajan tilille (#661), eikä
+  se vaadi vahvistusta. Kassa leimaa jäsenmaksutilaukseen kirjautuneen ostajan
+  (`_rytkoset_membership_buyer_user_id`). Pelkkä tilaukseen liitetty käyttäjä ei
+  riitä, koska WooCommercen tilausvahvistussivun tilinluonti liittää
+  vierastilauksen jälkikäteen luotuun tiliin. Ilman leimaa liitetty käyttäjä
+  kelpaa vain, jos hän on todistanut hallitsevansa tilauksen
+  laskutussähköpostia tai jos tili oli olemassa jo ennen tilauksen luontia
+  (ennen leimaa tehdyt kirjautuneet ostot). Muuten tilaus jää odottamaan.
+  Leimaton tilaus, jonka liitetty käyttäjä ei kelpaa, kytketään kuitenkin
+  tilille, joka on todistanut hallitsevansa tilauksen laskutussähköpostia, jotta
+  vahvistamaton liitetty tili ei voi estää osoitteen oikeaa haltijaa.
+- Ylläpitäjän profiilissa käsin asettama jäsenyys ja käsin tehty perhelinkitys
+  toimivat kuten ennen. Jo linkitetty perherivi säilyy myös perhejäsenmaksun
+  uusinnassa, vaikka linkitetyn tilin osoitetta ei olisi vahvistettu; todiste
+  vaaditaan vain uudelta linkitykseltä.
+- **Ennen #744:ää luoduilla tileillä ei ole todistetta.** Niiden nykyiset
+  jäsenyydet ja perhelinkit säilyvät, mutta uusi sähköpostiin perustuva kytkentä
+  (aktivointityökalu, perherivin lisäys, vanha vierastilaus) jää odottamaan,
+  kunnes tilin haltija asettaa salasanan sähköpostilinkin kautta
+  (**Unohtuiko salasana?**) tai käyttää WooCommercen vahvistuslinkkiä, tai
+  kunnes ylläpitäjä vahvistaa osoitteen profiilissa. Viestit
+  ohjaavat tähän, ja **Oma tili > Jäsentiedot** näyttää saman ohjeen
+  vahvistamattomalle tilille, jolla ei ole voimassa olevaa jäsenyyttä. Ohje
+  näkyy riippumatta siitä, odottaako osoitteella etua, joten se ei paljasta
+  toisen henkilön jäsenyyttä.
+- Kiireellisessä tapauksessa ylläpitäjä voi asettaa jäsenyyden tai perhelinkin
+  käsin käyttäjän profiilissa tai vahvistaa osoitteen WooCommercen
+  profiilivalinnalla.
+- Ennen korjausta kassalla luotu tili on voinut saada odottavan edun toisen
+  osoitteella. Korjaus ei peru jo annettuja etuja; ne on tarkistettava käsin
+  (aktivointilokin "rekisteröitymisen yhteydessä" -merkinnät ja tilausten
+  automaattiset linkitysmuistiinpanot).
+
+Rajaus: tämä sähköpostivahvistus koskee jäsenetuja ja perhelinkitystä.
+Digilehtien `inc/woocommerce-digital-magazine.php`-moduulin
+`wc_customer_bought_product()`-haku tunnistaa edelleen vierastilauksia tilin
+sähköpostilla; sitä ei muuteta tässä jäsenyyden vahvistuspolussa.
+
+## Vanhojen vierastilausten kytkentä tiliin (#518, rajattu #661, #744)
 
 Uusia jäsenmaksuostoja ei voi tehdä vieraana. Ennen #661:tä syntyneitä
-vierastilauksia varten `user_register`-yhteensopivuuspolku säilyy: kun uusi
-käyttäjätili luodaan, teema etsii käyttäjän
+vierastilauksia varten yhteensopivuuspolku säilyy: kun tilin sähköpostiosoite
+on vahvistettu (ks. edellä), teema etsii käyttäjän
 sähköpostilla maksetut (`processing`/`completed`) jäsenmaksutilaukset, jotka
 odottavat tilikytkentää, ja ajaa niille saman jäsenyyden sovelluslogiikan kuin
-tilaussiirtymissä. Käytännössä: vierasostaja, joka sai "luo tili" -viestin ja
-rekisteröityy samalla sähköpostiosoitteella, saa jäsenyyden automaattisesti —
-vahvistusviesti (`#390`) lähtee ja tilaukseen kirjataan muistiinpano.
+tilaussiirtymissä. Käytännössä: vierasostaja, joka sai ohjeviestin, luo tilin
+samalla sähköpostiosoitteella ja asettaa salasanan sähköpostilinkin kautta, saa
+jäsenyyden automaattisesti: vahvistusviesti (`#390`) lähtee ja tilaukseen
+kirjataan muistiinpano. Vierastilaus, joka liitetään jälkikäteen luotuun tiliin
+(esimerkiksi tilausvahvistussivun tilinluonnilla), sovelletaan vasta, kun tilin
+haltija on todistanut hallitsevansa nimenomaan tilauksen laskutussähköpostia.
+Toisen osoitteen vahvistaminen ei riitä.
 
 Huomioita:
 
@@ -285,10 +369,10 @@ Huomioita:
   asetettu, `processed`-meta tyhjä). Jo sovellettuja tai ennen tätä ominaisuutta
   käsiteltyjä tilauksia ei käsitellä uudelleen.
 - "Jäsenyyttä ei koskaan lyhennetä" -sääntö pätee myös tätä kautta.
-- Turvallisuus: WordPressin rekisteröinti varmistaa sähköpostiosoitteen
-  hallinnan salasanan asetuslinkillä, joten jäsenyys ei päädy väärälle
-  henkilölle, vaikka joku rekisteröisi tilin toisen sähköpostilla.
-- Ostajan/laskutussähköpostin lisäksi `#519`-polku etsii uuden käyttäjän
+- Turvallisuus: jäsenyys kytketään vasta, kun tilin haltija on asettanut
+  salasanan osoitteeseen lähetetyn linkin kautta (#744). Toisen sähköpostilla
+  luotu tili ei saa jäsenyyttä, koska linkki menee osoitteen oikealle haltijalle.
+- Ostajan/laskutussähköpostin lisäksi `#519`-polku etsii vahvistetun käyttäjän
   sähköpostia myös perhejäsenmaksun jäsenriveiltä ja linkittää odottavan
   perherivin päätiliin.
 
@@ -312,14 +396,16 @@ Ennen tallennusta sähköpostit normalisoidaan pieniksi kirjaimiksi ja
 deduplikoidaan. Ostajan laskutus-/tilisähköpostia vastaava jäsenrivi ohitetaan,
 jotta päätiliä ei linkitetä itseensä. Muut rivit käsitellään näin:
 
-- **Sähköpostilla on käyttäjätili:** rivi tallennetaan tilaan `active`, käyttäjä
+- **Sähköpostilla on vahvistettu käyttäjätili (#744):** rivi tallennetaan tilaan `active`, käyttäjä
   asetetaan `linked_user_id`-arvoksi ja reverse meta päivitetään #524:n
   `rytkoset_theme_update_family_members()`-helperillä.
-- **Sähköpostilla ei ole käyttäjätiliä:** rivi tallennetaan tilaan
-  `pending_account`. Osoitteeseen lähetetään kerran tilausta kohti viesti, joka
-  kertoo osoitteen tulleen perhejäsenmaksun yhteydessä ja ohjaa luomaan tilin
-  samalla osoitteella. Viesti ei paljasta ostajan henkilöllisyyttä tai muita
-  tilaustietoja.
+- **Sähköpostilla ei ole käyttäjätiliä tai tilin osoitetta ei ole
+  vahvistettu:** rivi tallennetaan tilaan `pending_account`. Osoitteeseen
+  lähetetään kerran tilausta kohti viesti, joka kertoo osoitteen tulleen
+  perhejäsenmaksun yhteydessä ja ohjaa luomaan tilin samalla osoitteella tai
+  vahvistamaan olemassa olevan tilin osoitteen salasanan vaihtolinkillä. Viesti
+  ei paljasta ostajan henkilöllisyyttä, muita tilaustietoja eikä sitä, onko
+  osoitteella jo tili.
 - **Sähköpostia ei ole:** nimi tallennetaan jäsenrekisteritiedoksi ilman
   käyttäjälinkkiä ja sähköpostiviestiä.
 
@@ -330,15 +416,16 @@ Näin `processing` → `completed` -siirtymä ei lisää rivejä tai lähetä vi
 uudelleen. Jokaisella tallennetulla rivillä on lisäksi `source_order_id`, joka
 kertoo viimeisimmän lähdetilauksen.
 
-Kun `pending_account`-rivillä oleva henkilö luo käyttäjätilin, `user_register`
+Kun `pending_account`-rivillä olevan henkilön tilin sähköpostiosoite on
+vahvistettu (#744), `rytkoset_theme_user_email_verified`-käsittelijä
 hakee saman normalisoidun sähköpostin ensin suoraan päätilien
 `rytkoset_family_members`-metasta. Meta-haku rajaa kandidaatit ja tallennetut
 rivit tarkistetaan vielä täsmällisesti ennen linkitystä. Kassalta syntyneiden
 rivien vanha tilauspolku säilyy varmistuksena, mutta sen `wc_get_orders()`-haku
 rajataan jo käsiteltyihin perhetilauksiin
-(`_rytkoset_family_members_processed`), joten rekisteröityminen ei lataa koko
-maksettujen tilausten historiaa. Rivi muutetaan `active`-tilaan ja linkitetään
-käyttäjään. Jäsenetu johdetaan päätilin erillisestä aktiivisesta
+(`_rytkoset_family_members_processed`), joten kytkentä ei lataa koko
+maksettujen tilausten historiaa. Vain `pending_account`-rivi muutetaan
+`active`-tilaan ja linkitetään käyttäjään; `removed`-riviä ei palauteta. Jäsenetu johdetaan päätilin erillisestä aktiivisesta
 perhejäsenyyden jakamisoikeudesta; perheenjäsenen omaa
 `rytkoset_membership_*`-metaa ei muuteta. Jos käyttäjällä on oma voimassa oleva
 tai ainaisjäsenyys, effective membership valitsee oman jäsenyyden.
@@ -414,21 +501,23 @@ työkalu ei muodosta sähköpostiosoitteista yhtä perhettä.
 
 Käsittely osoitetta kohti:
 
-- **Käyttäjätili löytyy:** jäsenyys päivitetään valituilla tiedoilla samalla
+- **Vahvistettu käyttäjätili löytyy (#744):** jäsenyys päivitetään valituilla tiedoilla samalla
   "ei koskaan lyhennetä" -säännöllä kuin tilauspolussa (`#302`): ainaisjäsenyyttä
   tai pidempään voimassa olevaa aktiivista jäsenyyttä ei korvata lyhyemmällä.
   Ei-aktiivinen → aktiivinen -siirtymästä lähtee `#390`-vahvistusviesti.
-- **Käyttäjätiliä ei löydy:** jäsenyystiedot tallennetaan odottavaksi
+- **Vahvistettua käyttäjätiliä ei löydy** (tiliä ei ole tai sen osoitetta ei
+  ole vahvistettu): jäsenyystiedot tallennetaan odottavaksi
   jäsenyydeksi (`rytkoset_pending_manual_memberships`-optio, avaimena
   normalisoitu sähköposti) ja osoitteeseen lähetetään `#518`-mallinen
-  kutsuviesti: luo tili samalla sähköpostiosoitteella, niin jäsenyys aktivoituu
+  kutsuviesti: luo tili samalla sähköpostiosoitteella tai vahvista olemassa
+  olevan tilin osoite salasanan vaihtolinkillä, niin jäsenyys aktivoituu
   automaattisesti. Viesti kertoo, että osoite on peräisin sukuseuran
   jäsenrekisteristä, kuka on rekisterinpitäjä ja mistä tietosuojaseloste löytyy
   (WordPressin tietosuojasivu, jos asetettu).
-- **Rekisteröityminen:** `user_register`-hookissa odottava jäsenyys sovelletaan
-  uudelle tilille samalla apply-polulla (ei koskaan lyhennetä,
-  vahvistusviesti), ja odottava merkintä poistetaan. WordPressin rekisteröinti
-  varmistaa sähköpostin hallinnan salasanan asetuslinkillä.
+- **Osoitteen vahvistus (#744):** odottava jäsenyys sovelletaan tilille samalla
+  apply-polulla (ei koskaan lyhennetä, vahvistusviesti) vasta, kun tilin
+  haltija on asettanut salasanan sähköpostilinkin kautta, ja odottava merkintä
+  poistetaan. Pelkkä tilin luominen, esimerkiksi kassalla, ei sovella sitä.
 
 Uudelleenlähetyksen esto: jo kutsutun osoitteen uusi käsittely päivittää
 odottavat jäsenyystiedot mutta **ei** lähetä kutsua uudelleen, ellei
@@ -442,7 +531,7 @@ Sivu näyttää myös:
 
 - **Tiliä odottavat jäsenyydet** -taulukon (osoite, jäsenyys, kutsun
   lähetysaika, lisääjä) ja rivikohtaisen **Poista**-toiminnon, joka lopettaa
-  odottavan jäsenyyden (rekisteröityminen ei enää aktivoi sitä). Poistoa
+  odottavan jäsenyyden (osoitteen vahvistus ei enää aktivoi sitä). Poistoa
   käytetään myös, jos rekisteröity pyytää tietojensa poistoa.
 - **Viimeisimmät käsittelyt** -lokin (aika, osoite, tulos, käsittelijä;
   optio `rytkoset_membership_activation_log`, uusin ensin, enintään 200
@@ -499,8 +588,9 @@ Toteutus (`inc/woocommerce-my-account.php`):
   tallenna virheellistä arvoa tyhjänä.
   Puhdas lomaketoiminto rakentaa rivin aluksi ilman käyttäjä-ID:tä. Yhteinen
   tallennushelperi linkittää sen kuitenkin heti, jos samalla normalisoidulla
-  sähköpostilla on jo käyttäjätili; muuten rivi jää `pending_account`-tilaan ja
-  linkittyy automaattisesti, kun tili myöhemmin rekisteröidään.
+  sähköpostilla on jo vahvistettu käyttäjätili (#744); muuten rivi jää
+  `pending_account`-tilaan ja linkittyy automaattisesti, kun tilin
+  sähköpostiosoite on vahvistettu.
 - **Enimmäismäärä:** perheenjäseniä voi lisätä itsepalveluna enintään
   `rytkoset_theme_get_account_family_member_max_rows()`-verran (oletus 5).
   Tämä on sama raja kuin kassan perhejäsenmaksun rivimäärä
@@ -521,8 +611,8 @@ Toteutus (`inc/woocommerce-my-account.php`):
   vaihtuu tai poistetaan, vanha `linked_user_id` nollataan ja rivi siirtyy
   `pending_account`-tilaan; sama tallennus siivoaa vanhan käyttäjän reverse-metan,
   joten vanha peritty jäsenetu päättyy välittömästi. Sama tallennus linkittää
-  uuden osoitteen tiliin heti, jos tili on olemassa; muuten rivi jää odottamaan
-  myöhempää rekisteröitymistä.
+  uuden osoitteen tiliin heti, jos vahvistettu tili on olemassa; muuten rivi jää
+  odottamaan osoitteen vahvistusta.
 - **Poista** (roskakoriikoni): asettaa rivin tilaksi `removed` (pehmeä poisto,
   ei rivin täydellistä poistoa — sama malli kuin ylläpitäjän profiililomake).
   Jos rivi oli linkitetty ja aktiivinen, `rytkoset_theme_update_family_members()`

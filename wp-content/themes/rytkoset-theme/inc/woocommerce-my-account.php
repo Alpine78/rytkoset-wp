@@ -816,6 +816,22 @@ if ( ! function_exists( 'rytkoset_theme_handle_account_membership_family_submit'
 }
 add_action( 'template_redirect', 'rytkoset_theme_handle_account_membership_family_submit' );
 
+if ( ! function_exists( 'rytkoset_theme_account_should_show_email_verification_hint' ) ) {
+	/**
+	 * Returns true when the membership page should explain email verification (#744).
+	 *
+	 * @param int $user_id User ID.
+	 * @return bool
+	 */
+	function rytkoset_theme_account_should_show_email_verification_hint( $user_id ) {
+		$user_id = absint( $user_id );
+
+		return $user_id > 0
+			&& ! rytkoset_theme_user_email_is_verified( $user_id )
+			&& ! rytkoset_theme_user_is_active_member( $user_id );
+	}
+}
+
 if ( ! function_exists( 'rytkoset_theme_render_account_membership_endpoint' ) ) {
 	/**
 	 * Renders the My Account membership view, with self-service family member management for the
@@ -832,6 +848,20 @@ if ( ! function_exists( 'rytkoset_theme_render_account_membership_endpoint' ) ) 
 		if ( ! $user instanceof WP_User || ! $user->exists() ) {
 			wc_print_notice( __( 'Kirjaudu sisään nähdäksesi jäsenyytesi.', 'rytkoset-theme' ), 'error' );
 			return;
+		}
+
+		// Shown to every account without proven email control and without an active
+		// membership, whether or not anything is waiting, so it never reveals that a
+		// benefit exists for the address (#744).
+		if ( rytkoset_theme_account_should_show_email_verification_hint( $user->ID ) ) {
+			wc_print_notice(
+				sprintf(
+					/* translators: %s: lost password URL. */
+					__( 'Jos jäsenyytesi tai perhejäsenyytesi ei näy tässä, vahvista sähköpostiosoitteesi: <a href="%s">tilaa salasanan vaihtolinkki</a> ja aseta salasana sähköpostiisi saapuvan linkin kautta. Sähköpostiosoitteeseen kytketyt jäsenedut tulevat käyttöön vasta vahvistuksen jälkeen.', 'rytkoset-theme' ),
+					esc_url( wp_lostpassword_url() )
+				),
+				'notice'
+			);
 		}
 
 		$data                = rytkoset_theme_get_account_membership_view_data( $user->ID );
@@ -1005,7 +1035,7 @@ if ( ! function_exists( 'rytkoset_theme_render_account_membership_endpoint' ) ) 
 						<?php wp_nonce_field( rytkoset_theme_get_account_family_member_nonce_action( 'add' ) ); ?>
 						<input type="hidden" name="rytkoset_account_family_action" value="add" />
 						<h4 class="rytkoset-family-add__title"><?php esc_html_e( 'Lisää perheenjäsen', 'rytkoset-theme' ); ?></h4>
-						<p class="rytkoset-family-add__hint"><?php esc_html_e( 'Sähköposti on valinnainen — käyttäjätili linkittyy automaattisesti samalla sähköpostiosoitteella.', 'rytkoset-theme' ); ?></p>
+						<p class="rytkoset-family-add__hint"><?php esc_html_e( 'Sähköposti on valinnainen. Käyttäjätili linkittyy automaattisesti samalla sähköpostiosoitteella, kun tilin haltija on vahvistanut osoitteen asettamalla salasanan sähköpostilinkin kautta.', 'rytkoset-theme' ); ?></p>
 						<p class="form-row">
 							<label for="rytkoset_family_member_name_new"><?php esc_html_e( 'Nimi', 'rytkoset-theme' ); ?></label>
 							<input type="text" class="input-text" id="rytkoset_family_member_name_new" name="rytkoset_family_member_name" required />
