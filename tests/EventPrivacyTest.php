@@ -30,6 +30,31 @@ final class EventPrivacyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( '', rytkoset_theme_format_event_registration_consent_timestamp( 'eilen' ) );
 	}
 
+	public function test_anonymize_removes_the_name_from_the_slug(): void {
+		rytkoset_test_register_post( 10, 'rytkoset_event', 'Sukujuhla' );
+		rytkoset_test_register_post( 121, 'event_registration', 'Maija Meikäläinen - Sukujuhla' );
+		get_post( 121 )->post_name = 'maija-meikalainen-sukujuhla';
+
+		$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+		update_post_meta( 121, $meta_keys['event_id'], 10 );
+		update_post_meta( 121, $meta_keys['name'], 'Maija Meikäläinen' );
+		update_post_meta( 121, '_wp_old_slug', 'maija-meikalainen-sukujuhla' );
+		update_post_meta( 121, '_wp_desired_post_slug', 'maija-meikalainen-sukujuhla' );
+
+		$this->assertTrue( rytkoset_theme_anonymize_event_registration( 121 ) );
+
+		$post = get_post( 121 );
+		$this->assertSame( 'ilmoittautuminen-121', $post->post_name );
+		$this->assertSame( 'Anonymisoitu osallistuja - Sukujuhla', $post->post_title );
+		$this->assertSame( '', get_post_meta( 121, '_wp_old_slug', true ) );
+		$this->assertSame( '', get_post_meta( 121, '_wp_desired_post_slug', true ) );
+
+		// An already anonymized row with a name-derived slug is repaired on a re-run.
+		$post->post_name = 'maija-meikalainen-sukujuhla';
+		$this->assertTrue( rytkoset_theme_anonymize_event_registration( 121 ) );
+		$this->assertSame( 'ilmoittautuminen-121', $post->post_name );
+	}
+
 	public function test_anonymize_clears_personal_data_source_but_keeps_coded_metadata(): void {
 		rytkoset_test_register_post( 10, 'rytkoset_event', 'Sukujuhla' );
 		rytkoset_test_register_post( 120, 'event_registration', 'Maija Meikäläinen - Sukujuhla' );

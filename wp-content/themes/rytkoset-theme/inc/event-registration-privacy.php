@@ -120,15 +120,9 @@ function rytkoset_theme_anonymize_event_registration( $registration_id ) {
 	$event_id        = absint( rytkoset_theme_get_event_registration_meta( $registration_id, 'event_id' ) );
 	$anonymized_name = rytkoset_theme_get_anonymized_event_registration_name();
 	$title           = rytkoset_theme_build_event_registration_title( $anonymized_name, $event_id );
-	$updated         = wp_update_post(
-		array(
-			'ID'         => $registration_id,
-			'post_title' => $title,
-		),
-		true
-	);
 
-	if ( is_wp_error( $updated ) ) {
+	// Also replaces a name-derived slug, which would otherwise survive the erasure (#748).
+	if ( ! rytkoset_theme_sync_event_registration_title( $registration_id, $title ) ) {
 		return false;
 	}
 
