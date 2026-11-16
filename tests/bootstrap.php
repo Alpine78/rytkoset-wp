@@ -40,6 +40,7 @@ $GLOBALS['rytkoset_test_object_terms'] = array(); // [post_id][taxonomy] => term
 $GLOBALS['rytkoset_test_products']     = array(); // [product_id] => WC_Product
 $GLOBALS['rytkoset_test_orders']       = array(); // [order_id] => WC_Order (wc_get_order)
 $GLOBALS['rytkoset_test_bought']       = array(); // ["user_id:product_id"] => true (wc_customer_bought_product)
+$GLOBALS['rytkoset_test_bought_by_email'] = array(); // ["email:product_id"] => true (billing email match)
 $GLOBALS['rytkoset_test_caps']         = array(); // [capability] => bool for the current user
 $GLOBALS['rytkoset_test_object_caps']  = array(); // ["capability:object_id"] => bool, overrides the map above
 $GLOBALS['rytkoset_test_current_post'] = 0;       // get_post() with no argument
@@ -88,6 +89,7 @@ function rytkoset_test_reset(): void {
 	$GLOBALS['rytkoset_test_products']      = array();
 	$GLOBALS['rytkoset_test_orders']        = array();
 	$GLOBALS['rytkoset_test_bought']        = array();
+	$GLOBALS['rytkoset_test_bought_by_email'] = array();
 	$GLOBALS['rytkoset_test_caps']          = array();
 	$GLOBALS['rytkoset_test_object_caps']   = array();
 	$GLOBALS['rytkoset_test_current_post']  = 0;
@@ -1778,7 +1780,13 @@ function wc_get_orders( $args = array() ) {
 }
 
 function wc_customer_bought_product( $email, $user_id, $product_id ): bool {
-	return ! empty( $GLOBALS['rytkoset_test_bought'][ (int) $user_id . ':' . (int) $product_id ] );
+	if ( ! empty( $GLOBALS['rytkoset_test_bought'][ (int) $user_id . ':' . (int) $product_id ] ) ) {
+		return true;
+	}
+
+	// Mirrors WooCommerce: a non-empty email also matches orders by billing email.
+	return '' !== (string) $email
+		&& ! empty( $GLOBALS['rytkoset_test_bought_by_email'][ strtolower( (string) $email ) . ':' . (int) $product_id ] );
 }
 
 function wpautop( $text ) {

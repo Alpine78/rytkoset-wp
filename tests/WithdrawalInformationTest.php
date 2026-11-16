@@ -101,6 +101,33 @@ final class WithdrawalInformationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_order_has_withdrawal_right_products( $order ) );
 	}
 
+	public function test_unpublished_magazine_with_consent_keeps_withdrawal_information(): void {
+		rytkoset_test_register_post( 20, 'digital_magazine', 'Sukuviesti' )->post_status = 'future';
+		update_post_meta( 20, rytkoset_theme_get_digital_magazine_regular_product_meta_key(), 13 );
+
+		$product  = new WC_Product( array( '_virtual' => 'yes' ), 13, 'publish', 'Digilehti' );
+		$order    = $this->order_with_products( $product );
+		$meta_key = '_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id();
+
+		$order->meta[ $meta_key ] = '1';
+
+		// Reading access starts only at publication, so the withdrawal right is not lost yet (#750).
+		$this->assertTrue( rytkoset_theme_order_has_withdrawal_right_products( $order ) );
+	}
+
+	public function test_published_magazine_variation_with_consent_does_not_receive_withdrawal_information(): void {
+		rytkoset_test_register_post( 20, 'digital_magazine', 'Sukuviesti' );
+		update_post_meta( 20, rytkoset_theme_get_digital_magazine_regular_product_meta_key(), 13 );
+
+		$variation = new WC_Product( array( '_virtual' => 'yes', '_parent_id' => 13 ), 131, 'publish', 'Digilehti – PDF' );
+		$order     = $this->order_with_products( $variation );
+		$meta_key  = '_wc_other/' . rytkoset_theme_get_digital_magazine_consent_field_id();
+
+		$order->meta[ $meta_key ] = '1';
+
+		$this->assertFalse( rytkoset_theme_order_has_withdrawal_right_products( $order ) );
+	}
+
 	public function test_html_customer_order_confirmation_contains_instruction_and_form(): void {
 		$order = $this->order_with_products(
 			new WC_Product( array( '_virtual' => 'no' ), 10, 'publish', 'Painettu sukulehti' )

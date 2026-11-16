@@ -173,12 +173,83 @@ function rytkoset_theme_get_digital_magazine_purchase_cta( $magazine_id, $user_i
 }
 
 /**
+ * Returns the magazine post statuses a reverse product lookup considers (#750).
+ *
+ * Purchase guards (member price, required account, cancellation consent) must also
+ * cover a product whose magazine is still a draft or scheduled: the product can be
+ * on sale before the magazine is published, and access is granted on publication.
+ *
+ * @param bool $include_unpublished True to include every status except trash.
+ * @return string[]
+ */
+function rytkoset_theme_get_magazine_lookup_statuses( $include_unpublished ) {
+	return $include_unpublished ? array( 'publish', 'future', 'draft', 'pending', 'private' ) : array( 'publish' );
+}
+
+/**
+ * Returns the product IDs a cart or order product may be linked to a magazine by (#750).
+ *
+ * A variation carries its own ID, while the magazine stores the parent product ID,
+ * so both are checked.
+ *
+ * @param WC_Product|mixed $product Product object.
+ * @return int[]
+ */
+function rytkoset_theme_get_magazine_lookup_product_ids( $product ) {
+	if ( ! $product instanceof WC_Product ) {
+		return array();
+	}
+
+	return array_values( array_unique( array_filter( array( absint( $product->get_id() ), absint( $product->get_parent_id() ) ) ) ) );
+}
+
+/**
+ * Returns the magazine linked to a cart or order product, by its own or its parent ID (#750).
+ *
+ * @param WC_Product|mixed $product             Product object.
+ * @param bool             $include_unpublished Optional. Also match unpublished magazines. Default
+ *                                              true, for purchase guards. Pass false where the
+ *                                              magazine must already be readable, e.g. when
+ *                                              deciding whether delivery has begun.
+ * @return int Magazine ID, or 0.
+ */
+function rytkoset_theme_get_magazine_id_for_purchase_product( $product, $include_unpublished = true ) {
+	foreach ( rytkoset_theme_get_magazine_lookup_product_ids( $product ) as $product_id ) {
+		$magazine_id = rytkoset_theme_get_magazine_id_by_product( $product_id, $include_unpublished );
+
+		if ( $magazine_id > 0 ) {
+			return $magazine_id;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Returns true when a cart product is a member-price product of any magazine, including unpublished ones (#750).
+ *
+ * @param WC_Product|mixed $product Product object.
+ * @return bool
+ */
+function rytkoset_theme_purchase_product_is_magazine_member_product( $product ) {
+	foreach ( rytkoset_theme_get_magazine_lookup_product_ids( $product ) as $product_id ) {
+		if ( rytkoset_theme_product_is_magazine_member_product( $product_id, true ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Returns the magazine ID linked to a product through either product meta, or 0.
  *
- * @param int $product_id Product ID.
+ * @param int  $product_id          Product ID.
+ * @param bool $include_unpublished Optional. Also match draft, scheduled, pending and private
+ *                                  magazines (#750). Default false: published only.
  * @return int
  */
-function rytkoset_theme_get_magazine_id_by_product( $product_id ) {
+function rytkoset_theme_get_magazine_id_by_product( $product_id, $include_unpublished = false ) {
 	$product_id = absint( $product_id );
 
 	if ( $product_id <= 0 ) {
@@ -188,7 +259,7 @@ function rytkoset_theme_get_magazine_id_by_product( $product_id ) {
 	$ids = get_posts(
 		array(
 			'post_type'      => 'digital_magazine',
-			'post_status'    => 'publish',
+			'post_status'    => rytkoset_theme_get_magazine_lookup_statuses( $include_unpublished ),
 			'posts_per_page' => 1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
@@ -213,10 +284,11 @@ function rytkoset_theme_get_magazine_id_by_product( $product_id ) {
 /**
  * Returns true when a product is used as a member-price product for any magazine.
  *
- * @param int $product_id Product ID.
+ * @param int  $product_id          Product ID.
+ * @param bool $include_unpublished Optional. Also match unpublished magazines (#750). Default false.
  * @return bool
  */
-function rytkoset_theme_product_is_magazine_member_product( $product_id ) {
+function rytkoset_theme_product_is_magazine_member_product( $product_id, $include_unpublished = false ) {
 	$product_id = absint( $product_id );
 
 	if ( $product_id <= 0 ) {
@@ -226,7 +298,7 @@ function rytkoset_theme_product_is_magazine_member_product( $product_id ) {
 	$ids = get_posts(
 		array(
 			'post_type'      => 'digital_magazine',
-			'post_status'    => 'publish',
+			'post_status'    => rytkoset_theme_get_magazine_lookup_statuses( $include_unpublished ),
 			'posts_per_page' => 1,
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
@@ -257,12 +329,20 @@ function rytkoset_theme_filter_purchased_digital_magazine( $has_access, $magazin
 
 	$user = get_userdata( (int) $user_id );
 
-	if ( ! $user instanceof WP_User || ! is_email( $user->user_email ) ) {
+	if ( ! $user instanceof WP_User ) {
 		return $has_access;
 	}
 
+	// wc_customer_bought_product() matches the customer ID OR the billing email. The email
+	// match grants access to orders placed by someone else, so it is only used once the
+	// account has proven control of its address (#750, same rule as #744). Orders linked to
+	// the account by customer ID always count.
+	$email = function_exists( 'rytkoset_theme_user_email_is_verified' ) && rytkoset_theme_user_email_is_verified( (int) $user_id ) && is_email( $user->user_email )
+		? (string) $user->user_email
+		: '';
+
 	foreach ( rytkoset_theme_get_digital_magazine_product_ids( $magazine_id ) as $product_id ) {
-		if ( wc_customer_bought_product( $user->user_email, (int) $user_id, $product_id ) ) {
+		if ( wc_customer_bought_product( $email, (int) $user_id, $product_id ) ) {
 			return true;
 		}
 	}
@@ -283,12 +363,26 @@ function rytkoset_theme_get_digital_magazine_member_product_block_message() {
 /**
  * Blocks adding a member-price magazine product to the cart without an active membership.
  *
- * @param bool $passed     Whether add to cart should proceed.
- * @param int  $product_id Product ID.
+ * Unpublished magazines count too, and a variation is checked by both its own and its
+ * parent product ID (#750).
+ *
+ * @param bool $passed       Whether add to cart should proceed.
+ * @param int  $product_id   Product ID.
+ * @param int  $quantity     Quantity.
+ * @param int  $variation_id Variation ID, or 0.
  * @return bool
  */
-function rytkoset_theme_validate_digital_magazine_member_add_to_cart( $passed, $product_id ) {
-	if ( ! rytkoset_theme_product_is_magazine_member_product( $product_id ) ) {
+function rytkoset_theme_validate_digital_magazine_member_add_to_cart( $passed, $product_id, $quantity = 1, $variation_id = 0 ) {
+	$is_member_product = false;
+
+	foreach ( array_filter( array( absint( $product_id ), absint( $variation_id ) ) ) as $candidate_id ) {
+		if ( rytkoset_theme_product_is_magazine_member_product( $candidate_id, true ) ) {
+			$is_member_product = true;
+			break;
+		}
+	}
+
+	if ( ! $is_member_product ) {
 		return $passed;
 	}
 
@@ -304,7 +398,7 @@ function rytkoset_theme_validate_digital_magazine_member_add_to_cart( $passed, $
 
 	return false;
 }
-add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_digital_magazine_member_add_to_cart', 10, 2 );
+add_filter( 'woocommerce_add_to_cart_validation', 'rytkoset_theme_validate_digital_magazine_member_add_to_cart', 10, 4 );
 
 /**
  * Validates member-price magazine products already present in cart or checkout.
@@ -323,7 +417,7 @@ function rytkoset_theme_validate_digital_magazine_member_cart_items() {
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 
-		if ( ! $product instanceof WC_Product || ! rytkoset_theme_product_is_magazine_member_product( $product->get_id() ) ) {
+		if ( ! rytkoset_theme_purchase_product_is_magazine_member_product( $product ) ) {
 			continue;
 		}
 
@@ -374,7 +468,7 @@ function rytkoset_theme_cart_has_digital_magazine_product() {
 	foreach ( WC()->cart->get_cart() as $cart_item ) {
 		$product = isset( $cart_item['data'] ) ? $cart_item['data'] : null;
 
-		if ( $product instanceof WC_Product && rytkoset_theme_get_magazine_id_by_product( $product->get_id() ) > 0 ) {
+		if ( rytkoset_theme_get_magazine_id_for_purchase_product( $product ) > 0 ) {
 			return true;
 		}
 	}
@@ -668,7 +762,7 @@ function rytkoset_theme_order_has_digital_magazine_product( $order ) {
 	foreach ( $order->get_items() as $item ) {
 		$product = is_object( $item ) && method_exists( $item, 'get_product' ) ? $item->get_product() : null;
 
-		if ( $product instanceof WC_Product && rytkoset_theme_get_magazine_id_by_product( $product->get_id() ) > 0 ) {
+		if ( rytkoset_theme_get_magazine_id_for_purchase_product( $product ) > 0 ) {
 			return true;
 		}
 	}

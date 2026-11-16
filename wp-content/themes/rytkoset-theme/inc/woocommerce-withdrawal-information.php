@@ -63,8 +63,10 @@ function rytkoset_theme_product_has_withdrawal_right( $product, $order ) {
 
 	if (
 		$has_right
-		&& function_exists( 'rytkoset_theme_get_magazine_id_by_product' )
-		&& rytkoset_theme_get_magazine_id_by_product( $product->get_id() ) > 0
+		&& function_exists( 'rytkoset_theme_get_magazine_id_for_purchase_product' )
+		// Only a published magazine can be read, so consent loses the withdrawal right only
+		// then; an unpublished magazine keeps the instructions until delivery begins (#750).
+		&& rytkoset_theme_get_magazine_id_for_purchase_product( $product, false ) > 0
 		&& function_exists( 'rytkoset_theme_order_has_digital_magazine_cancellation_consent' )
 		&& rytkoset_theme_order_has_digital_magazine_cancellation_consent( $order )
 	) {
