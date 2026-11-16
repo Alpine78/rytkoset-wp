@@ -391,6 +391,18 @@ final class OrderCancellationTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Avaa tilaus: https://rytkoset.test/wp-admin/post.php?post=123&action=edit', $mail['message'] );
 	}
 
+	public function test_admin_email_reminds_about_membership_only_for_membership_orders(): void {
+		$order = $this->make_order( 'processing', 1_700_000_000 );
+
+		rytkoset_theme_send_order_cancellation_admin_email( $order, 1_782_413_200 );
+		$this->assertStringNotContainsString( 'jäsenmaksun', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+
+		$order->items[] = new Rytkoset_Test_Order_Item( $this->membership_product( 'annual_individual', '2029-12-31', '2026-2029' ), 'Vuosijäsenmaksu' );
+
+		rytkoset_theme_send_order_cancellation_admin_email( $order, 1_782_413_200 );
+		$this->assertStringContainsString( 'Tilaus sisältää jäsenmaksun. Jäsenyyttä ei poisteta automaattisesti hyvityksessä', $GLOBALS['rytkoset_test_mails'][1]['message'] );
+	}
+
 	// --- Submit handler ------------------------------------------------------
 
 	public function test_guest_submit_handler_uses_order_key_and_redirects_to_receipt(): void {

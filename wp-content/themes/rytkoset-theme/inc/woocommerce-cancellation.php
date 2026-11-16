@@ -1320,6 +1320,11 @@ if ( ! function_exists( 'rytkoset_theme_send_order_cancellation_admin_email' ) )
 			$lines[] = __( 'Tilaus sisältää fyysisen tuotteen. Tarkista tuotteen vastaanottopäivä, 14 vuorokauden määräaika ja palautuskelpoisuus ennen hyvitystä.', 'rytkoset-theme' );
 		}
 
+		if ( function_exists( 'rytkoset_theme_is_membership_order' ) && rytkoset_theme_is_membership_order( $order ) ) {
+			// The membership stays active after a refund until it is removed by hand (#746).
+			$lines[] = __( 'Tilaus sisältää jäsenmaksun. Jäsenyyttä ei poisteta automaattisesti hyvityksessä: tarkista ja poista tämän tilauksen antama jäsenyys käsin käyttäjän profiilista, mutta säilytä aiempi, tilauksesta riippumaton jäsenyys.', 'rytkoset-theme' );
+		}
+
 		$edit_url = $order->get_edit_order_url();
 
 		if ( $edit_url ) {

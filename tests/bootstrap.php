@@ -1033,6 +1033,19 @@ function sanitize_key( $key ) {
 	return preg_replace( '/[^a-z0-9_\-]/', '', $key );
 }
 
+/**
+ * Simplified slug sanitizer: lower-cased ASCII words joined by hyphens.
+ */
+function sanitize_title( $title, $fallback_title = '', $context = 'save' ) {
+	$slug = strtr( mb_strtolower( (string) $title ), array( 'ä' => 'a', 'ö' => 'o', 'å' => 'a' ) );
+	$slug = trim( (string) preg_replace( '/[^a-z0-9_]+/', '-', $slug ), '-' );
+
+	return '' === $slug ? (string) $fallback_title : $slug;
+}
+
+function clean_post_cache( $post ): void {
+}
+
 function sanitize_text_field( $str ) {
 	$str = (string) $str;
 	$str = wp_strip_all_tags_simple( $str );
@@ -1524,6 +1537,11 @@ function wp_insert_post( $postarr, $wp_error = false ) {
 		$post->post_status = (string) $postarr['post_status'];
 	}
 
+	// Mirrors core: a published post without an explicit slug gets one from its title.
+	$post->post_name = isset( $postarr['post_name'] ) && '' !== (string) $postarr['post_name']
+		? sanitize_title( (string) $postarr['post_name'] )
+		: ( 'publish' === $post->post_status ? sanitize_title( $post->post_title ) : '' );
+
 	foreach ( (array) ( $postarr['meta_input'] ?? array() ) as $meta_key => $meta_value ) {
 		update_post_meta( $post_id, (string) $meta_key, $meta_value );
 	}
@@ -1549,6 +1567,11 @@ function wp_update_post( $postarr, $wp_error = false ) {
 
 	if ( array_key_exists( 'post_status', $postarr ) ) {
 		$post->post_status = (string) $postarr['post_status'];
+	}
+
+	// Mirrors core: an existing slug is kept unless the update names a new one.
+	if ( array_key_exists( 'post_name', $postarr ) ) {
+		$post->post_name = sanitize_title( (string) $postarr['post_name'] );
 	}
 
 	foreach ( (array) ( $postarr['meta_input'] ?? array() ) as $meta_key => $meta_value ) {

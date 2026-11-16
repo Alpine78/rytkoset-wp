@@ -99,6 +99,16 @@ final class ChatSitemapTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'Marja-Liisa Patrikaisella', $sitemap );
 	}
 
+	public function test_sitemap_hints_ignore_commented_out_headings(): void {
+		$page               = rytkoset_test_register_post( 21, 'page', 'Hallitus' );
+		$page->post_content = '<!-- <h2>Luonnos: Erotettavat jäsenet</h2> --><h2>Hallituksen kokoonpano</h2><p>Hallitus kokoontuu keväisin.</p>';
+
+		$hints = rytkoset_theme_chat_get_sitemap_page_hints( $page );
+
+		$this->assertStringContainsString( 'Hallituksen kokoonpano', $hints );
+		$this->assertStringNotContainsString( 'Erotettavat', $hints );
+	}
+
 	public function test_sitemap_hint_join_skips_terms_that_would_be_cut_midword(): void {
 		$hints = rytkoset_theme_chat_join_sitemap_hint_terms(
 			array( str_repeat( 'a', 275 ), 'Antero Rytkönen', 'Rodhger' ),

@@ -268,6 +268,43 @@ tarkistaa sähköpostin edelleen manipuloidun Store API -pyynnön varalta.
 
 Jokainen osto päivittää jäsenyyden erikseen: uusi kausi (uusi tilaus = uusi order meta = uusi käsittely) jatkaa jäsenyyttä, kun voimassaolopäivä on edellistä myöhäisempi. Manuaalinen profiilipäivitys toimii normaalisti myös automaattisten päivitysten rinnalla.
 
+### Hyvitetty tai peruttu jäsenmaksutilaus (#746)
+
+Jäsenyyttä **ei poisteta automaattisesti**, kun sen asettanut tilaus
+hyvitetään tai perutaan. Tilaukselle ei tallenneta, mitä se muutti (aiempi
+tyyppi, kausi ja päättymispäivä), joten automaattinen palautus voisi lyhentää
+aiempaa, tilauksesta riippumatonta jäsenyyttä. Sen sijaan teema muistuttaa
+ylläpitoa:
+
+- Koukut `woocommerce_order_status_refunded`, `woocommerce_order_status_cancelled`
+  ja `woocommerce_order_partially_refunded` kirjaavat tilausmuistiinpanon ja
+  lähettävät ilmoituksen yhteyssähköpostiin (suodatin
+  `rytkoset_theme_membership_refund_reminder_recipient`).
+- Muistutus lähtee vain, jos tilauksen jäsenyys on jo kytketty tiliin
+  (`_rytkoset_membership_order_processed`) tai jos maksettu vierastilaus odottaa
+  yhä tilikytkentää. Maksamaton peruttu tilaus ei aiheuta muistutusta.
+  Kokonaan hyvitetty tai peruttu odottava tilaus ei voi enää kytkeytyä, koska
+  kytkentähaku rajaa tilat `processing`- ja `completed`-tiloihin.
+- Jokainen tapahtuma muistutetaan kerran tilausta kohden (`refunded`,
+  `cancelled` ja jokainen osittaishyvitys omalla tunnisteellaan, metassa
+  `_rytkoset_membership_refund_reminders`).
+- Ilmoitus kertoo tilauksen jäsenmaksutuotteet, käyttäjän profiililinkin ja
+  muistuttaa tarkistamaan perhejäsenrivit (perhejäsenmaksu) sekä
+  jäsenhinnalla ostetut digilehdet. Ylläpitäjä poistaa tai palauttaa
+  jäsenyyden käsin käyttäjän profiilissa ja säilyttää aiemman jäsenyyden.
+- Jäsenyyden saaja tallennetaan tilaukselle käsittelyhetkellä
+  (`_rytkoset_membership_order_beneficiary_user_id`), koska laskutussähköposti
+  tai tilauksen asiakas voi muuttua myöhemmin. Jos tilaus ei muuttanut
+  jäsenyyttä (käyttäjällä oli jo vähintään yhtä pitkä jäsenyys), merkitään
+  lisäksi `_rytkoset_membership_order_unchanged`, ja muistutus kertoo sen.
+  Ennen #746:ta käsitellyissä tilauksissa saaja päätellään uudelleen, ja
+  ilmoitus pyytää varmistamaan sen tilausmuistiinpanoista.
+- Muistutus lähtee myös, jos jäsenmaksutuote on myöhemmin poistettu tai sen
+  jäsenyysmerkintä poistettu: käsittelymerkintä riittää todisteeksi.
+
+Itsepalveluperuutuksen ylläpitoilmoitus mainitsee saman asian, kun tilauksessa
+on jäsenmaksu (`docs/woocommerce-peruutus.md`).
+
 ## Sähköpostiosoitteen hallinnan todentaminen (#744)
 
 Odottava jäsenyys, vanhan vierastilauksen jäsenyys ja perherivin linkitys

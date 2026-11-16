@@ -2728,6 +2728,8 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 
 		if ( $current_covers_new ) {
 			$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
+			$order->update_meta_data( rytkoset_theme_get_membership_order_beneficiary_meta_key(), (int) $user_id );
+			$order->update_meta_data( rytkoset_theme_get_membership_order_unchanged_meta_key(), '1' );
 			$order->add_order_note(
 				__( 'Jäsenyystilaa ei muutettu: käyttäjällä on jo vähintään yhtä pitkään voimassa oleva jäsenyys.', 'rytkoset-theme' ),
 				false
@@ -2783,6 +2785,7 @@ function rytkoset_theme_apply_membership_from_order( $order ) {
 	$is_now_active = rytkoset_theme_user_has_own_active_membership( $user_id );
 
 	$order->update_meta_data( rytkoset_theme_get_membership_order_processed_meta_key(), current_time( 'mysql' ) );
+	$order->update_meta_data( rytkoset_theme_get_membership_order_beneficiary_meta_key(), (int) $user_id );
 	$order->add_order_note( implode( ' ', $note_parts ), false );
 	$order->save();
 
@@ -2812,6 +2815,267 @@ function rytkoset_theme_maybe_apply_membership_from_order( $order_id, $order ) {
 }
 add_action( 'woocommerce_order_status_processing', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
 add_action( 'woocommerce_order_status_completed', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
+
+// ---------------------------------------------------------------------------
+// Reminder when a membership order is refunded or cancelled (#746)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the order meta key listing the refund/cancel events already reminded about (#746).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_refund_reminder_meta_key() {
+	return '_rytkoset_membership_refund_reminders';
+}
+
+/**
+ * Returns the order meta key storing the user an order's membership was applied to (#746).
+ *
+ * The billing email or order customer can change later, so the refund reminder
+ * relies on this stored identity instead of resolving the user again.
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_order_beneficiary_meta_key() {
+	return '_rytkoset_membership_order_beneficiary_user_id';
+}
+
+/**
+ * Returns the order meta key marking an order that left an equal or longer membership unchanged (#746).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_order_unchanged_meta_key() {
+	return '_rytkoset_membership_order_unchanged';
+}
+
+/**
+ * Returns the admin profile URL of a user, independent of the current requester (#746).
+ *
+ * get_edit_user_link() returns an empty string when the current request cannot edit
+ * users, e.g. a payment provider webhook. The destination enforces permissions itself.
+ *
+ * @param int $user_id User ID.
+ * @return string
+ */
+function rytkoset_theme_get_membership_admin_profile_url( $user_id ) {
+	return admin_url( 'user-edit.php?user_id=' . absint( $user_id ) );
+}
+
+/**
+ * Builds the administrator reminder lines for a refunded or cancelled membership order (#746).
+ *
+ * The theme deliberately does not revoke the membership: an order does not record what
+ * it changed, so an automatic revert could shorten a longer, independent membership.
+ *
+ * @param WC_Order $order       Membership order.
+ * @param string   $event_label Finnish description of what happened to the order.
+ * @param bool     $awaiting    True when the membership still awaits a verified account.
+ * @return string[]
+ */
+function rytkoset_theme_get_membership_refund_reminder_lines( $order, $event_label, $awaiting ) {
+	$lines = array(
+		sprintf(
+			/* translators: 1: order number, 2: what happened to the order. */
+			__( 'Tilaus %1$s on %2$s, ja se sisältää jäsenmaksun. Jäsenyyttä ei poisteta automaattisesti.', 'rytkoset-theme' ),
+			$order->get_order_number(),
+			$event_label
+		),
+		'',
+	);
+
+	$has_family = false;
+	$items      = rytkoset_theme_get_membership_order_items( $order );
+
+	if ( empty( $items ) ) {
+		$lines[] = __( 'Tilauksen tuotteista ei enää tunnisteta jäsenmaksua (tuote on poistettu tai sen asetuksia on muutettu), mutta tilaus on käsitelty jäsenyystilauksena. Tarkista tilausmuistiinpanoista, mitä jäsenyyttä se koski.', 'rytkoset-theme' );
+	}
+
+	foreach ( $items as $item ) {
+		$details = array_filter( array( (string) $item['period'], '' !== (string) $item['expiry_date'] ? sprintf( /* translators: %s: expiry date. */ __( 'voimassa %s asti', 'rytkoset-theme' ), (string) $item['expiry_date'] ) : '' ) );
+		$lines[] = '- ' . (string) $item['type_label'] . ( empty( $details ) ? '' : ' (' . implode( ', ', $details ) . ')' );
+
+		if ( 'annual_family' === (string) $item['type'] ) {
+			$has_family = true;
+		}
+	}
+
+	$lines[] = '';
+
+	if ( $awaiting ) {
+		$lines[] = __( 'Jäsenyyttä ei ole vielä kytketty käyttäjätiliin: se odottaa laskutussähköpostin vahvistusta ja kytkeytyy, jos tilaus on yhä maksettu-tilassa. Peru jäsenyys tarvittaessa muuttamalla tilauksen tila.', 'rytkoset-theme' );
+	} else {
+		$beneficiary = absint( $order->get_meta( rytkoset_theme_get_membership_order_beneficiary_meta_key(), true ) );
+
+		if ( $beneficiary > 0 && '1' === (string) $order->get_meta( rytkoset_theme_get_membership_order_unchanged_meta_key(), true ) ) {
+			$lines[] = sprintf(
+				/* translators: 1: user ID, 2: user profile URL. */
+				__( 'Tilaus ei muuttanut käyttäjän #%1$d jäsenyyttä, koska hänellä oli jo vähintään yhtä pitkä jäsenyys: %2$s', 'rytkoset-theme' ),
+				$beneficiary,
+				rytkoset_theme_get_membership_admin_profile_url( $beneficiary )
+			);
+		} elseif ( $beneficiary > 0 ) {
+			$lines[] = sprintf(
+				/* translators: 1: user ID, 2: user profile URL. */
+				__( 'Jäsenyys kytkettiin käyttäjään #%1$d: %2$s', 'rytkoset-theme' ),
+				$beneficiary,
+				rytkoset_theme_get_membership_admin_profile_url( $beneficiary )
+			);
+		} else {
+			// Orders processed before the beneficiary was stored: resolve the user again, but
+			// the account may have changed since, so the administrator must confirm it.
+			$user_id = rytkoset_theme_get_membership_order_user_id( $order );
+
+			$lines[] = $user_id > 0
+				? sprintf(
+					/* translators: 1: user ID, 2: user profile URL. */
+					__( 'Tilaukseen on nyt yhdistetty käyttäjä #%1$d: %2$s. Tilaus käsiteltiin ennen kuin jäsenyyden saaja tallennettiin, joten varmista käyttäjä tilausmuistiinpanoista.', 'rytkoset-theme' ),
+					$user_id,
+					rytkoset_theme_get_membership_admin_profile_url( $user_id )
+				)
+				: __( 'Jäsenyyden saajaa ei voitu päätellä. Katso käyttäjä tilausmuistiinpanoista.', 'rytkoset-theme' );
+		}
+
+		$lines[] = __( 'Tarkista käyttäjän profiilista jäsenyyden tyyppi, kausi ja päättymispäivä. Jos jäsenyys on peräisin vain tästä tilauksesta, poista se tai palauta aiempi tila käsin. Älä poista aiempaa, tilauksesta riippumatonta jäsenyyttä, kuten ainaisjäsenyyttä tai aiemmin maksettua kautta.', 'rytkoset-theme' );
+	}
+
+	if ( $has_family ) {
+		$lines[] = __( 'Tilaus sisältää perhejäsenmaksun: tarkista myös päätilin perhejäsenrivit ja niiden linkitykset.', 'rytkoset-theme' );
+	}
+
+	$lines[] = __( 'Jäsenhinnalla ostetut digilehdet jäävät käyttöön; tarkista ne tarvittaessa.', 'rytkoset-theme' );
+
+	$edit_url = $order->get_edit_order_url();
+
+	if ( $edit_url ) {
+		$lines[] = '';
+		$lines[] = sprintf(
+			/* translators: %s: order edit URL. */
+			__( 'Avaa tilaus: %s', 'rytkoset-theme' ),
+			$edit_url
+		);
+	}
+
+	return $lines;
+}
+
+/**
+ * Adds an order note and emails the administrator to review a refunded or cancelled membership (#746).
+ *
+ * Runs only when the order's membership was applied, or still awaits a verified account on a
+ * paid order. Each event is reminded about once per order.
+ *
+ * @param WC_Order $order       WooCommerce order object.
+ * @param string   $event_key   Unique key of the event, e.g. `refunded` or `partial_123`.
+ * @param string   $event_label Finnish description of what happened to the order.
+ * @return bool True when a reminder was recorded.
+ */
+function rytkoset_theme_remind_membership_refund( $order, $event_key, $event_label ) {
+	if ( ! $order instanceof WC_Order ) {
+		return false;
+	}
+
+	// The processed marker proves the order granted a membership even if its product was
+	// later deleted or no longer flagged as a membership product.
+	$applied  = '' !== (string) $order->get_meta( rytkoset_theme_get_membership_order_processed_meta_key(), true );
+	$awaiting = ! $applied
+		&& rytkoset_theme_is_membership_order( $order )
+		&& rytkoset_theme_order_membership_is_awaiting_account( $order )
+		&& in_array( $order->get_status(), array( 'processing', 'completed' ), true );
+
+	if ( ! $applied && ! $awaiting ) {
+		return false;
+	}
+
+	$meta_key = rytkoset_theme_get_membership_refund_reminder_meta_key();
+	$reminded = $order->get_meta( $meta_key, true );
+	$reminded = is_array( $reminded ) ? $reminded : array();
+	$event    = sanitize_key( (string) $event_key );
+
+	if ( '' === $event || in_array( $event, $reminded, true ) ) {
+		return false;
+	}
+
+	$reminded[] = $event;
+	$order->update_meta_data( $meta_key, $reminded );
+	$order->add_order_note(
+		sprintf(
+			/* translators: %s: what happened to the order. */
+			__( 'Jäsenmaksutilaus on %s. Jäsenyyttä ei poisteta automaattisesti: tarkista käyttäjän jäsenyys, perhejäsenrivit ja jäsenhinnalla ostetut digilehdet käsin.', 'rytkoset-theme' ),
+			$event_label
+		),
+		false
+	);
+	$order->save();
+
+	/**
+	 * Filters the recipient of the membership refund reminder (#746).
+	 *
+	 * @param string   $recipient Email address.
+	 * @param WC_Order $order     Order object.
+	 */
+	$recipient = apply_filters( 'rytkoset_theme_membership_refund_reminder_recipient', rytkoset_theme_get_contact_email(), $order );
+
+	if ( is_email( $recipient ) ) {
+		wp_mail(
+			$recipient,
+			sprintf(
+				/* translators: %s: order number. */
+				__( 'Tarkista jäsenyys: jäsenmaksutilaus %s hyvitetty tai peruttu', 'rytkoset-theme' ),
+				$order->get_order_number()
+			),
+			implode( "\n", rytkoset_theme_get_membership_refund_reminder_lines( $order, $event_label, $awaiting ) ),
+			array( 'Content-Type: text/plain; charset=UTF-8' )
+		);
+	}
+
+	return true;
+}
+
+/**
+ * Reminds about a fully refunded membership order (#746).
+ *
+ * @param int           $order_id Order ID.
+ * @param WC_Order|null $order    Order object.
+ * @return void
+ */
+function rytkoset_theme_remind_membership_order_refunded( $order_id, $order = null ) {
+	$order = $order instanceof WC_Order ? $order : wc_get_order( $order_id );
+
+	rytkoset_theme_remind_membership_refund( $order, 'refunded', __( 'hyvitetty', 'rytkoset-theme' ) );
+}
+add_action( 'woocommerce_order_status_refunded', 'rytkoset_theme_remind_membership_order_refunded', 10, 2 );
+
+/**
+ * Reminds about a cancelled membership order (#746).
+ *
+ * @param int           $order_id Order ID.
+ * @param WC_Order|null $order    Order object.
+ * @return void
+ */
+function rytkoset_theme_remind_membership_order_cancelled( $order_id, $order = null ) {
+	$order = $order instanceof WC_Order ? $order : wc_get_order( $order_id );
+
+	rytkoset_theme_remind_membership_refund( $order, 'cancelled', __( 'peruttu', 'rytkoset-theme' ) );
+}
+add_action( 'woocommerce_order_status_cancelled', 'rytkoset_theme_remind_membership_order_cancelled', 10, 2 );
+
+/**
+ * Reminds about each partial refund of a membership order (#746).
+ *
+ * @param int $order_id  Order ID.
+ * @param int $refund_id Refund ID.
+ * @return void
+ */
+function rytkoset_theme_remind_membership_order_partially_refunded( $order_id, $refund_id = 0 ) {
+	rytkoset_theme_remind_membership_refund(
+		wc_get_order( $order_id ),
+		'partial_' . absint( $refund_id ),
+		__( 'hyvitetty osittain', 'rytkoset-theme' )
+	);
+}
+add_action( 'woocommerce_order_partially_refunded', 'rytkoset_theme_remind_membership_order_partially_refunded', 10, 2 );
 
 // ---------------------------------------------------------------------------
 // Membership linking once an account has proven its email (#518, #519, #744)
