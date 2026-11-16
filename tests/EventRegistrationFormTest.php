@@ -427,6 +427,96 @@ final class EventRegistrationFormTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'web_form', get_post_meta( 1000, $meta_keys['source'], true ) );
 	}
 
+	public function test_public_submission_stores_a_slug_without_the_name(): void {
+		$this->event( 10 );
+
+		$_SERVER['REMOTE_ADDR'] = '203.0.113.31';
+		$_POST                  = array(
+			'event_id'                                 => '10',
+			'website'                                  => '',
+			'rytkoset_event_registration_submit_nonce' => 'rytkoset_submit_event_registration',
+			'registration_name'                        => 'Maija Meikäläinen',
+			'registration_email'                       => 'maija@example.test',
+			'registration_gdpr_consent'                => '1',
+		);
+
+		try {
+			rytkoset_theme_handle_event_registration_submission();
+			$this->fail( 'Expected the submission handler to redirect after saving.' );
+		} catch ( Rytkoset_Test_Redirect_Exception $redirect ) {
+			$this->assertStringContainsString( 'registration_status=success', $redirect->location );
+		}
+
+		$slug = get_post( 1000 )->post_name;
+
+		$this->assertTrue( rytkoset_theme_event_registration_slug_is_neutral( $slug ) );
+		$this->assertStringNotContainsString( 'maija', $slug );
+		$this->assertStringNotContainsString( 'meikalainen', $slug );
+	}
+
+	public function test_neutral_slug_detection_rejects_name_derived_slugs(): void {
+		$this->assertTrue( rytkoset_theme_event_registration_slug_is_neutral( 'ilmoittautuminen-120' ) );
+		$this->assertTrue( rytkoset_theme_event_registration_slug_is_neutral( 'ilmoittautuminen-120-2' ) );
+		$this->assertTrue( rytkoset_theme_event_registration_slug_is_neutral( 'ilmoittautuminen-ab12cd34ef56' ) );
+		$this->assertTrue( rytkoset_theme_event_registration_slug_is_neutral( 'ilmoittautuminen-120__trashed' ) );
+		$this->assertTrue( rytkoset_theme_event_registration_slug_is_neutral( rytkoset_theme_generate_event_registration_slug() ) );
+
+		$this->assertFalse( rytkoset_theme_event_registration_slug_is_neutral( '' ) );
+		$this->assertFalse( rytkoset_theme_event_registration_slug_is_neutral( 'maija-meikalainen-sukujuhla' ) );
+		$this->assertFalse( rytkoset_theme_event_registration_slug_is_neutral( 'ilmoittautuminen-maija-meikalainen' ) );
+		$this->assertFalse( rytkoset_theme_event_registration_slug_is_neutral( 'maija-meikalainen-sukujuhla__trashed' ) );
+	}
+
+	public function test_status_change_replaces_a_name_derived_slug(): void {
+		$this->event( 10 );
+		rytkoset_test_register_post( 120, 'event_registration', 'Maija Meikäläinen - Sukujuhla' );
+		get_post( 120 )->post_name = 'maija-meikalainen-sukujuhla';
+
+		$meta_keys = rytkoset_theme_get_event_registration_meta_keys();
+		update_post_meta( 120, $meta_keys['event_id'], 10 );
+		update_post_meta( 120, $meta_keys['name'], 'Maija Meikäläinen' );
+		update_post_meta( 120, '_wp_old_slug', 'maija-meikalainen-sukujuhla' );
+
+		$this->assertTrue( rytkoset_theme_set_event_registration_status( 120, 'cancelled' ) );
+
+		$this->assertSame( 'ilmoittautuminen-120', get_post( 120 )->post_name );
+		$this->assertSame( '', get_post_meta( 120, '_wp_old_slug', true ) );
+	}
+
+	public function test_slug_cleanup_rewrites_legacy_rows_once(): void {
+		rytkoset_test_register_post( 120, 'event_registration', 'Maija Meikäläinen - Sukujuhla' );
+		rytkoset_test_register_post( 121, 'event_registration', 'Anonymisoitu osallistuja - Sukujuhla' );
+		get_post( 120 )->post_name = 'maija-meikalainen-sukujuhla';
+		get_post( 121 )->post_name = 'ilmoittautuminen-121';
+		update_post_meta( 121, '_wp_old_slug', 'matti-meikalainen-sukujuhla' );
+
+		$GLOBALS['wpdb']->get_col_result = array( '120', '121' );
+
+		$this->assertSame( 1, rytkoset_theme_cleanup_event_registration_slugs() );
+		$this->assertSame( 'ilmoittautuminen-120', $GLOBALS['wpdb']->updates[0]['data']['post_name'] );
+		$this->assertSame( 120, $GLOBALS['wpdb']->updates[0]['where']['ID'] );
+		$this->assertCount( 1, $GLOBALS['wpdb']->updates );
+		$this->assertSame( '', get_post_meta( 121, '_wp_old_slug', true ) );
+		$this->assertSame( -1, rytkoset_theme_cleanup_event_registration_slugs() );
+	}
+
+	public function test_slug_cleanup_stays_retryable_after_a_database_error(): void {
+		rytkoset_test_register_post( 120, 'event_registration', 'Maija Meikäläinen - Sukujuhla' );
+		get_post( 120 )->post_name = 'maija-meikalainen-sukujuhla';
+
+		$GLOBALS['wpdb']->get_col_result = array( '120' );
+		$GLOBALS['wpdb']->last_error     = 'Deadlock found';
+
+		rytkoset_theme_cleanup_event_registration_slugs();
+
+		$this->assertSame( '', (string) get_option( rytkoset_theme_get_event_registration_slug_cleanup_option_name(), '' ) );
+
+		$GLOBALS['wpdb']->last_error = '';
+
+		$this->assertSame( 1, rytkoset_theme_cleanup_event_registration_slugs() );
+		$this->assertSame( '1', get_option( rytkoset_theme_get_event_registration_slug_cleanup_option_name(), '' ) );
+	}
+
 	// --- duplicate guard --------------------------------------------------
 
 	public function test_active_registration_check_can_exclude_the_edited_row(): void {

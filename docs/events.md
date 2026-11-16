@@ -351,6 +351,32 @@ kesken kassan tai tilauksen tilasiirtymän. Toteutus on moduulissa
 
 Maksuttomat `event_registration`-ilmoittautumiset ovat mukana WordPressin Privacy Tools -viennissä ja poistopyynnössä sähköpostiosoitteen perusteella. Poistopyyntö anonymisoi ilmoittautumisen: nimi korvataan arvolla `Anonymisoitu osallistuja`, sähköposti, ruokarajoitteet, lisätiedot ja käsin lisätyn tietueen henkilötiedon lähde poistetaan, mutta tapahtumaviittaus, status ja koodatut lähde-/informointikentät säilytetään raportointia varten. Yksittäisen tapahtuman maksuttomat ilmoittautumiset voi anonymisoida myös adminissa kohdassa `Tapahtumat > Osallistujat`, kun tapahtuma on valittuna.
 
+#### Neutraali `post_name` (#748)
+
+WordPress johtaa julkaistun tietueen `post_name`-kentän otsikosta, ja
+ilmoittautumisen otsikko alkaa osallistujan nimellä. Siksi:
+
+- Julkinen lomake luo tietueen neutraalilla tunnisteella
+  `ilmoittautuminen-<satunnaisosa>`.
+- Otsikon kirjoittaa yksi apufunktio,
+  `rytkoset_theme_sync_event_registration_title()`. Tallennus, tilan vaihto ja
+  anonymisointi käyttävät sitä, ja se vaihtaa nimestä johdetun tunnisteen muotoon
+  `ilmoittautuminen-<ID>` sekä poistaa ytimen tallentamat `_wp_old_slug`- ja
+  `_wp_desired_post_slug`-metat.
+- Vanhat rivit korjaa kertaluonteinen `rytkoset_theme_cleanup_event_registration_slugs()`,
+  joka ajetaan ensimmäisellä hallintasivun latauksella päivityksen jälkeen
+  (`admin_init`, valmis-merkintä optiossa `rytkoset_event_registration_slug_cleanup`).
+  Se koskee myös roskakorissa olevia ja jo anonymisoituja rivejä.
+
+Tarkistus tietokannasta:
+
+```sql
+SELECT ID, post_title, post_name FROM wp_posts
+WHERE post_type = 'event_registration' AND post_name NOT LIKE 'ilmoittautuminen-%';
+```
+
+Tuloksen pitää olla tyhjä luonnoksia (`auto-draft`, tyhjä `post_name`) lukuun ottamatta.
+
 ### Tapahtumakohtainen palautekysely (#666)
 
 Tapahtuman jälkeen ylläpitäjä voi pyytää lyhyen, anonyymin palautteen

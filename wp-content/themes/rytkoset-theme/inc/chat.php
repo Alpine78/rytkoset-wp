@@ -24,6 +24,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Returns the endpoint when it uses HTTPS, otherwise an empty string (#752).
+ *
+ * The API key travels in a request header, so a non-HTTPS endpoint is treated as
+ * unconfigured instead of sending the key in clear text.
+ *
+ * @param string $endpoint Configured endpoint URL.
+ * @return string
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_sanitize_endpoint' ) ) {
+	function rytkoset_theme_chat_sanitize_endpoint( $endpoint ) {
+		$endpoint = trim( (string) $endpoint );
+		$parts    = '' === $endpoint ? false : wp_parse_url( $endpoint );
+
+		if ( ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || '' === (string) ( $parts['host'] ?? '' ) ) {
+			return '';
+		}
+
+		return $endpoint;
+	}
+}
+
+/**
  * Palauttaa chat-välityksen konfiguraation `wp-config.php`-vakioista.
  *
  * Malli oletetaan aina saatavaksi (fallback), mutta avain ja endpoint ovat
@@ -42,6 +64,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_config' ) ) {
 		if ( '' === $model ) {
 			$model = 'mistral-small-latest';
 		}
+
+		$endpoint = rytkoset_theme_chat_sanitize_endpoint( $endpoint );
 
 		return array(
 			'api_key'          => $api_key,
@@ -396,6 +420,43 @@ if ( ! function_exists( 'rytkoset_theme_chat_format_iso_date' ) ) {
 }
 
 /**
+ * Returns true when a post may appear in the live context (#752).
+ *
+ * Same rule as the page tool and source prefetch for non-page types: published
+ * and not password protected.
+ *
+ * @param int $post_id Post ID.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_live_post_is_public' ) ) {
+	function rytkoset_theme_chat_live_post_is_public( $post_id ) {
+		$post = get_post( (int) $post_id );
+
+		return $post instanceof WP_Post
+			&& 'publish' === get_post_status( $post )
+			&& '' === trim( (string) $post->post_password );
+	}
+}
+
+/**
+ * Returns true when a WooCommerce product may appear in the live context (#752).
+ *
+ * Besides the post gate, a product hidden from the catalog (`hidden`) is left out,
+ * so the chat never lists a product the shop itself does not show.
+ *
+ * @param WC_Product|mixed $product Product object.
+ * @return bool
+ */
+if ( ! function_exists( 'rytkoset_theme_chat_live_product_is_public' ) ) {
+	function rytkoset_theme_chat_live_product_is_public( $product ) {
+		return $product instanceof WC_Product
+			&& 'publish' === $product->get_status()
+			&& 'hidden' !== (string) $product->get_catalog_visibility()
+			&& rytkoset_theme_chat_live_post_is_public( $product->get_id() );
+	}
+}
+
+/**
  * Palauttaa tulevien julkaistujen tapahtumien ID:t aikajärjestyksessä.
  *
  * "Tuleva" = tapahtumalla on kelvollinen päivämäärä eikä se ole mennyt
@@ -438,7 +499,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_upcoming_event_ids' ) ) {
 		foreach ( (array) $ids as $event_id ) {
 			$event_id = (int) $event_id;
 
-			if ( 'publish' !== get_post_status( $event_id ) ) {
+			if ( ! rytkoset_theme_chat_live_post_is_public( $event_id ) ) {
 				continue;
 			}
 
@@ -559,7 +620,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_membership_context' ) ) {
 		foreach ( (array) $ids as $product_id ) {
 			$product = wc_get_product( (int) $product_id );
 
-			if ( ! rytkoset_theme_is_membership_product( $product ) || 'publish' !== $product->get_status() ) {
+			if ( ! rytkoset_theme_is_membership_product( $product ) || ! rytkoset_theme_chat_live_product_is_public( $product ) ) {
 				continue;
 			}
 
@@ -632,7 +693,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_digital_magazine_context' ) ) {
 
 			$magazine_id = (int) $magazine_id;
 
-			if ( 'publish' !== get_post_status( $magazine_id ) ) {
+			if ( ! rytkoset_theme_chat_live_post_is_public( $magazine_id ) ) {
 				continue;
 			}
 
@@ -700,7 +761,7 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_shop_products_context' ) ) {
 
 			$product = wc_get_product( (int) $product_id );
 
-			if ( ! $product instanceof WC_Product || 'publish' !== $product->get_status() ) {
+			if ( ! rytkoset_theme_chat_live_product_is_public( $product ) ) {
 				continue;
 			}
 
@@ -2496,7 +2557,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_page_hints' ) ) {
 
 		$terms = array();
 		$seen  = array();
-		$html  = (string) $post->post_content;
+		// Commented-out markup is not visible on the page, so it must not become a hint (#752).
+		$html = (string) preg_replace( '/<!--.*?-->/s', '', (string) $post->post_content );
 
 		if ( preg_match_all( '/<h[1-6][^>]*>(.*?)<\/h[1-6]>/is', $html, $heading_matches ) ) {
 			foreach ( $heading_matches[1] as $heading ) {
@@ -2741,7 +2803,8 @@ if ( ! function_exists( 'rytkoset_theme_chat_get_sitemap_context' ) ) {
  * Event bodies carry the programme, schedule and catering details that no page
  * duplicates, so they must be selectable and readable. Each type keeps its own
  * access gate in rytkoset_theme_chat_get_public_source_post(): pages run the
- * full members-only check, events must be published and passwordless.
+ * full members-only check, events and gallery albums must be published and
+ * passwordless.
  *
  * @return array<int,string>
  */
