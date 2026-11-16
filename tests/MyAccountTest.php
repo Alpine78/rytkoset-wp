@@ -454,6 +454,42 @@ final class MyAccountTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'rytkoset_family_member_not_found', $result->get_error_codes()[0] );
 	}
 
+	public function test_apply_family_member_action_edit_rejects_a_removed_row(): void {
+		$members = array(
+			array(
+				'name'           => 'Poistettu Jäsen',
+				'email'          => 'poistettu@example.test',
+				'linked_user_id' => 41,
+				'status'         => 'removed',
+			),
+		);
+
+		// Re-editing a removed linked row with a new address would otherwise bring it back as
+		// pending_account without the add limit check (#750).
+		$result = rytkoset_theme_apply_account_family_member_action( $members, 'edit', 0, 'Uusi Nimi', 'uusi@example.test', 1 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'rytkoset_family_member_removed', $result->get_error_codes()[0] );
+	}
+
+	public function test_family_limit_cannot_be_bypassed_by_add_remove_edit_cycle(): void {
+		$members = rytkoset_theme_apply_account_family_member_action( array(), 'add', 0, 'Eka', 'eka@example.test', 1 );
+		$members = rytkoset_theme_apply_account_family_member_action( $members, 'remove', 0, '', '', 1 );
+		$members = rytkoset_theme_apply_account_family_member_action( $members, 'add', 0, 'Toka', 'toka@example.test', 1 );
+
+		$this->assertIsArray( $members );
+
+		$result = rytkoset_theme_apply_account_family_member_action( $members, 'edit', 0, 'Eka', 'kolmas@example.test', 1 );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+
+		$active = array_filter(
+			$members,
+			static fn( array $row ): bool => 'removed' !== ( $row['status'] ?? '' )
+		);
+		$this->assertCount( 1, $active );
+	}
+
 	public function test_apply_family_member_action_remove_marks_row_removed_without_deleting_it(): void {
 		$members = array(
 			array(

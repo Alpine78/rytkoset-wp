@@ -701,6 +701,12 @@ if ( ! function_exists( 'rytkoset_theme_apply_account_family_member_action' ) ) 
 			return new WP_Error( 'rytkoset_family_member_not_found', __( 'Perheenjäsentä ei löytynyt.', 'rytkoset-theme' ) );
 		}
 
+		// A removed row is history, not a slot: editing it would bring it back without the
+		// 'add' limit check, so the list could grow past the maximum (#750).
+		if ( 'removed' === ( $members[ $index ]['status'] ?? '' ) ) {
+			return new WP_Error( 'rytkoset_family_member_removed', __( 'Poistettua perheenjäsentä ei voi muokata. Lisää hänet tarvittaessa uudelleen.', 'rytkoset-theme' ) );
+		}
+
 		if ( 'edit' === $action ) {
 			$name = sanitize_text_field( (string) $name );
 

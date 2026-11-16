@@ -170,6 +170,48 @@ final class DigitalMagazineProductTest extends Rytkoset_Theme_Test_Case {
 		$this->assertFalse( rytkoset_theme_product_is_magazine_member_product( 0 ) );
 	}
 
+	// --- unpublished magazines and variations (#750) -----------------------
+
+	public function test_purchase_guards_cover_unpublished_magazines(): void {
+		$this->magazine( 10, 'member_and_regular', 5, 6 );
+		get_post( 10 )->post_status = 'future';
+
+		// Published-only lookups stay unchanged for access mails and listings.
+		$this->assertSame( 0, rytkoset_theme_get_magazine_id_by_product( 6 ) );
+		$this->assertFalse( rytkoset_theme_product_is_magazine_member_product( 6 ) );
+
+		$this->assertSame( 10, rytkoset_theme_get_magazine_id_by_product( 6, true ) );
+		$this->assertTrue( rytkoset_theme_product_is_magazine_member_product( 6, true ) );
+
+		// A non-member cannot add the member-price product of a scheduled magazine.
+		$this->assertFalse( rytkoset_theme_validate_digital_magazine_member_add_to_cart( true, 6 ) );
+
+		// The cart of a scheduled magazine still requires an account.
+		$this->cart_with_products( new WC_Product( array(), 5, 'publish', 'Lukuoikeus' ) );
+		$this->assertTrue( rytkoset_theme_cart_has_digital_magazine_product() );
+
+		// A trashed magazine no longer guards anything.
+		get_post( 10 )->post_status = 'trash';
+		$this->assertSame( 0, rytkoset_theme_get_magazine_id_by_product( 6, true ) );
+	}
+
+	public function test_purchase_guards_resolve_variations_to_the_parent_product(): void {
+		$this->magazine( 10, 'member_and_regular', 5, 6 );
+
+		$variation = new WC_Product( array( '_parent_id' => 6 ), 61, 'publish', 'Jäsenhinta – PDF' );
+
+		$this->assertSame( array( 61, 6 ), rytkoset_theme_get_magazine_lookup_product_ids( $variation ) );
+		$this->assertSame( 10, rytkoset_theme_get_magazine_id_for_purchase_product( $variation ) );
+		$this->assertTrue( rytkoset_theme_purchase_product_is_magazine_member_product( $variation ) );
+		$this->assertFalse( rytkoset_theme_validate_digital_magazine_member_add_to_cart( true, 6, 1, 61 ) );
+
+		$this->cart_with_products( $variation );
+		$this->assertTrue( rytkoset_theme_cart_has_digital_magazine_product() );
+
+		rytkoset_theme_validate_digital_magazine_member_cart_items();
+		$this->assertTrue( wc_has_notice( rytkoset_theme_get_digital_magazine_member_product_block_message(), 'error' ) );
+	}
+
 	// --- checkout account requirement (#558) -------------------------------
 
 	private function cart_with_products( WC_Product ...$products ): void {
@@ -282,6 +324,20 @@ final class DigitalMagazineProductTest extends Rytkoset_Theme_Test_Case {
 		rytkoset_test_register_user( 1, 'ostaja@rytkoset.test', 'Ostaja' );
 
 		$this->assertFalse( rytkoset_theme_filter_purchased_digital_magazine( false, 10, 1 ) );
+	}
+
+	public function test_purchase_filter_matches_billing_email_only_for_verified_accounts(): void {
+		$this->magazine( 10, 'paid', 5 );
+		$user = rytkoset_test_register_user( 1, 'Ostaja@Rytkoset.test', 'Ostaja' );
+
+		// Someone else's guest order used this address as its billing email.
+		$GLOBALS['rytkoset_test_bought_by_email']['ostaja@rytkoset.test:5'] = true;
+
+		$this->assertFalse( rytkoset_theme_filter_purchased_digital_magazine( false, 10, 1 ) );
+
+		do_action( 'after_password_reset', $user, 'uusi-salasana' );
+
+		$this->assertTrue( rytkoset_theme_filter_purchased_digital_magazine( false, 10, 1 ) );
 	}
 
 	// --- cancellation-right consent (#477) ----------------------------------

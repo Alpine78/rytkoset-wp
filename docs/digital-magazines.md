@@ -172,6 +172,24 @@ Jos jäsenstatusta ei voida varmistaa (kirjautumaton), ohjataan normaalihintaan.
   esimerkiksi muokatun suoran API-pyynnön vuoksi (#558).
 - Ostaja saa lukuoikeudesta saman sähköposti-ilmoituksen kuin manuaalisesta
   myönnöstä (#420), kerran tilausta ja lehteä kohti.
+- **Julkaisematon lehti ja variaatiot (#750):** jäsenhinnan, tilipakon ja
+  peruuttamissuostumuksen tarkistukset koskevat myös luonnos-, ajastettua,
+  odottavaa ja yksityistä lehteä, koska tuotetta voidaan myydä ennen lehden
+  julkaisua ja lukuoikeus syntyy julkaisussa. Roskakorissa oleva lehti ei
+  vaikuta. Variaatiotuote tarkistetaan sekä omalla että vanhemman tuotteen
+  ID:llä (`rytkoset_theme_get_magazine_id_for_purchase_product()`,
+  `rytkoset_theme_purchase_product_is_magazine_member_product()`). Lukuoikeuden
+  ilmoitusviesti, julkiset näkymät ja tilausvahvistuksen peruuttamisohjeen
+  pois jättäminen käyttävät edelleen vain julkaistuja lehtiä: julkaisemattoman
+  lehden ostaja saa peruuttamisohjeen, koska lukuoikeus ei ole vielä alkanut.
+- **Ostotarkistus ja sähköposti (#750):** WooCommercen
+  `wc_customer_bought_product()` täsmää tilauksen asiakas-ID:hen tai
+  laskutussähköpostiin. Sähköpostitäsmäys tehdään vain, jos tili on todistanut
+  hallitsevansa osoitettaan (#744), muuten vain asiakas-ID:llä. Näin toisen
+  henkilön tilaus samalla laskutusosoitteella ei avaa lukuoikeutta
+  vahvistamattomalle tilille. Ennen #744:ää luodun tilin vanhat
+  vierastilaukset avautuvat, kun tilin haltija asettaa salasanan
+  sähköpostilinkin kautta.
 
 > **Synkronointi:** lehden ja tuotteen linkitys (`_rytkoset_magazine_*_product_id`)
 > tallennetaan lehden metatietoon ja viittaa tuotteen ID:hen. Tuote-ID:t ovat eri

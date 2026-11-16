@@ -343,10 +343,9 @@ Rajaukset ja ylläpidon huomiot:
   (aktivointilokin "rekisteröitymisen yhteydessä" -merkinnät ja tilausten
   automaattiset linkitysmuistiinpanot).
 
-Rajaus: tämä sähköpostivahvistus koskee jäsenetuja ja perhelinkitystä.
-Digilehtien `inc/woocommerce-digital-magazine.php`-moduulin
-`wc_customer_bought_product()`-haku tunnistaa edelleen vierastilauksia tilin
-sähköpostilla; sitä ei muuteta tässä jäsenyyden vahvistuspolussa.
+Sama vahvistus koskee myös digilehtien ostotarkistusta (#750): lukuoikeus voi
+syntyä tilin sähköpostia vastaavan laskutussähköpostin perusteella vain, jos
+tili on todistanut osoitteensa. Ks. `docs/digital-magazines.md`.
 
 ## Vanhojen vierastilausten kytkentä tiliin (#518, rajattu #661, #744)
 
@@ -621,6 +620,9 @@ Toteutus (`inc/woocommerce-my-account.php`):
   samalla sähköpostilla: uusi rivi syrjäyttää historiallisen `removed`-rivin
   tallennuksessa, joten uudelleenlisäys ei kaadu duplikaattisähköpostivirheeseen
   (#541). Muut käyttämättömät `removed`-rivit säilyvät historiatietona.
+  Poistettua riviä ei voi muokata (`rytkoset_family_member_removed`, #750):
+  muuten käsin tehty muokkauspyyntö palauttaisi rivin ilman lisäyksen
+  enimmäismäärätarkistusta, ja perheeseen saisi rajattomasti jäseniä.
 - Rivin indeksi (ei erillistä rivitunnistetta) osoittaa suoraan kohtaan
   päätilin tallennetussa listassa — sama konventio kuin ylläpitäjän
   profiililomakkeella. Näkymä säilyttää alkuperäisen indeksin, vaikka
