@@ -579,6 +579,86 @@ function rytkoset_theme_build_event_registration_title( $name, $event_id ) {
 }
 
 /**
+ * Returns the fixed prefix of a registration's neutral post slug (#748).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_registration_slug_prefix() {
+	return 'ilmoittautuminen-';
+}
+
+/**
+ * Returns true when a registration slug is one of the theme's neutral slugs (#748).
+ *
+ * WordPress derives `post_name` from the title, which starts with the participant's
+ * name. Neutral slugs are the prefix followed by the post ID or a random token,
+ * optionally with the core uniqueness or trash suffix.
+ *
+ * @param string $slug Stored post slug.
+ * @return bool
+ */
+function rytkoset_theme_event_registration_slug_is_neutral( $slug ) {
+	$prefix = preg_quote( rytkoset_theme_get_event_registration_slug_prefix(), '/' );
+
+	return 1 === preg_match( '/^' . $prefix . '(?:\d+|[a-z0-9]{12})(?:-\d+)?(?:__trashed)?$/', (string) $slug );
+}
+
+/**
+ * Returns a neutral slug for a registration that does not exist yet (#748).
+ *
+ * @return string
+ */
+function rytkoset_theme_generate_event_registration_slug() {
+	return rytkoset_theme_get_event_registration_slug_prefix() . strtolower( wp_generate_password( 12, false ) );
+}
+
+/**
+ * Keeps a registration's admin title in sync and its slug free of personal data (#748).
+ *
+ * Single write path for the title: the save handler, the status change and the
+ * anonymization all call this, so the participant's name can never linger in
+ * `post_name` or in the slug history meta WordPress keeps for changed slugs.
+ *
+ * @param int    $registration_id Registration post ID.
+ * @param string $title           Target admin title.
+ * @return bool True when the post is in sync after the call.
+ */
+function rytkoset_theme_sync_event_registration_title( $registration_id, $title ) {
+	$registration_id = absint( $registration_id );
+	$post            = $registration_id > 0 ? get_post( $registration_id ) : null;
+
+	if ( ! $post instanceof WP_Post || 'event_registration' !== $post->post_type ) {
+		return false;
+	}
+
+	$update = array();
+
+	if ( $post->post_title !== $title ) {
+		$update['post_title'] = $title;
+	}
+
+	if ( ! rytkoset_theme_event_registration_slug_is_neutral( $post->post_name ) ) {
+		$update['post_name'] = rytkoset_theme_get_event_registration_slug_prefix() . $registration_id;
+	}
+
+	if ( empty( $update ) ) {
+		return true;
+	}
+
+	$update['ID'] = $registration_id;
+
+	remove_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
+	$updated = wp_update_post( $update, true );
+	add_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
+
+	// Core stores the previous slug of a published post and the pre-trash slug as meta.
+	delete_post_meta( $registration_id, '_wp_old_slug' );
+	delete_post_meta( $registration_id, '_wp_desired_post_slug' );
+
+	return ! is_wp_error( $updated ) && $updated > 0;
+}
+
+/**
  * Saves event registration meta.
  *
  * @param int $post_id Registration post ID.
@@ -718,20 +798,95 @@ function rytkoset_theme_save_event_registration( $post_id ) {
 		set_transient( 'rytkoset_evt_reg_dupe_notice_' . get_current_user_id(), absint( $post_id ), MINUTE_IN_SECONDS );
 	}
 
-	$title = rytkoset_theme_build_event_registration_title( $name, $event_id );
-
-	if ( get_the_title( $post_id ) !== $title ) {
-		remove_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
-		wp_update_post(
-			array(
-				'ID'         => $post_id,
-				'post_title' => $title,
-			)
-		);
-		add_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
-	}
+	rytkoset_theme_sync_event_registration_title( $post_id, rytkoset_theme_build_event_registration_title( $name, $event_id ) );
 }
 add_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
+
+/**
+ * Returns the option name marking the one-time registration slug cleanup as done (#748).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_event_registration_slug_cleanup_option_name() {
+	return 'rytkoset_event_registration_slug_cleanup';
+}
+
+/**
+ * Replaces name-derived slugs of existing registrations once (#748).
+ *
+ * Registrations created before the neutral slug kept the participant's name in
+ * `post_name` even after anonymization. Direct queries are used on purpose: the
+ * rows need no hooks, and `wp_update_post()` would copy the old slug into
+ * `_wp_old_slug` meta.
+ *
+ * @return int Number of rewritten rows, or -1 when the cleanup had already run. The cleanup
+ *             is marked done only when every read and write succeeded.
+ */
+function rytkoset_theme_cleanup_event_registration_slugs() {
+	global $wpdb;
+
+	$option_name = rytkoset_theme_get_event_registration_slug_cleanup_option_name();
+
+	if ( '1' === (string) get_option( $option_name, '' ) ) {
+		return -1;
+	}
+
+	$prefix = rytkoset_theme_get_event_registration_slug_prefix();
+	$ids    = $wpdb->get_col( $wpdb->prepare( "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s", 'event_registration' ) );
+	$count  = 0;
+	$failed = '' !== (string) $wpdb->last_error;
+
+	foreach ( (array) $ids as $id ) {
+		$id   = absint( $id );
+		$post = get_post( $id );
+
+		if ( ! $post instanceof WP_Post ) {
+			continue;
+		}
+
+		delete_post_meta( $id, '_wp_old_slug' );
+		delete_post_meta( $id, '_wp_desired_post_slug' );
+
+		// delete_post_meta() also returns false when there was nothing to delete, so a
+		// failed deletion is detected from the meta still being there.
+		if ( ! empty( get_post_meta( $id, '_wp_old_slug' ) ) || ! empty( get_post_meta( $id, '_wp_desired_post_slug' ) ) ) {
+			$failed = true;
+		}
+
+		if ( '' === $post->post_name || rytkoset_theme_event_registration_slug_is_neutral( $post->post_name ) ) {
+			continue;
+		}
+
+		$written = $wpdb->update( $wpdb->posts, array( 'post_name' => $prefix . $id ), array( 'ID' => $id ), array( '%s' ), array( '%d' ) );
+		clean_post_cache( $id );
+
+		if ( false === $written ) {
+			$failed = true;
+			continue;
+		}
+
+		++$count;
+	}
+
+	// A failed read or write leaves the cleanup unmarked, so the next admin page load retries it.
+	if ( ! $failed ) {
+		update_option( $option_name, '1', false );
+	}
+
+	return $count;
+}
+
+/**
+ * Runs the one-time registration slug cleanup in the admin (#748).
+ *
+ * @return void
+ */
+function rytkoset_theme_maybe_cleanup_event_registration_slugs() {
+	if ( '1' !== (string) get_option( rytkoset_theme_get_event_registration_slug_cleanup_option_name(), '' ) ) {
+		rytkoset_theme_cleanup_event_registration_slugs();
+	}
+}
+add_action( 'admin_init', 'rytkoset_theme_maybe_cleanup_event_registration_slugs' );
 
 /**
  * Shows a warning after a registration was stored cancelled as an accidental duplicate.
@@ -788,18 +943,8 @@ function rytkoset_theme_set_event_registration_status( $registration_id, $status
 
 	$name     = rytkoset_theme_get_event_registration_meta( $registration_id, 'name' );
 	$event_id = absint( rytkoset_theme_get_event_registration_meta( $registration_id, 'event_id' ) );
-	$title    = rytkoset_theme_build_event_registration_title( $name, $event_id );
 
-	if ( get_the_title( $registration_id ) !== $title ) {
-		remove_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
-		wp_update_post(
-			array(
-				'ID'         => $registration_id,
-				'post_title' => $title,
-			)
-		);
-		add_action( 'save_post_event_registration', 'rytkoset_theme_save_event_registration' );
-	}
+	rytkoset_theme_sync_event_registration_title( $registration_id, rytkoset_theme_build_event_registration_title( $name, $event_id ) );
 
 	return true;
 }
@@ -1495,6 +1640,8 @@ function rytkoset_theme_handle_event_registration_submission() {
 			'post_type'   => 'event_registration',
 			'post_status' => 'publish',
 			'post_title'  => rytkoset_theme_build_event_registration_title( $name, $event_id ),
+			// Without this WordPress derives the slug from the title, i.e. from the name (#748).
+			'post_name'   => rytkoset_theme_generate_event_registration_slug(),
 			'meta_input'  => $meta_input,
 		),
 		true
