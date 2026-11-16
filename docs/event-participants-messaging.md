@@ -91,6 +91,42 @@ WP-Cron käynnistyy normaalisti sivulatausten yhteydessä. Tuotannossa lähetyks
 
 Lähettäjäksi tulee WordPressin oletusosoite (admin_email). Vastauksia varten viestiin lisätään `Reply-To`-otsake, joka on lähettävän käyttäjän sähköpostiosoite.
 
+### Jonon lukitus (#747)
+
+Jono on yksi optio, jota lukevat ja kirjoittavat sekä admin-lomake, palautepyynnön
+automaattiajo että WP-Cron-käsittelijä. Rinnakkaiset pyynnöt eivät saa hävittää
+työtä eivätkä palauttaa lähetettyä vastaanottajaa `pending`-tilaan, joten:
+
+- **Kaksi lukkoa**, kumpikin oma rivinsä `wp_options`-taulussa:
+  `rytkoset_event_messaging_process_lock` (yksi käsittelyajo kerrallaan, vanhenee
+  10 minuutissa) ja `rytkoset_event_messaging_queue_lock` (yksi jonon
+  luku-muokkaus-kirjoitus kerrallaan, vanhenee 30 sekunnissa).
+- Lukko otetaan `INSERT IGNORE` -lauseella, kuten WordPressin ytimen
+  päivityslukko. `add_option()` ei kelpaa, koska sen `INSERT ... ON DUPLICATE KEY
+  UPDATE` ylikirjoittaa olemassa olevan rivin. Vanhentunut lukko otetaan haltuun
+  ehdollisella `UPDATE`-lauseella, joten vain yksi pyyntö voi periä sen.
+- Lukon arvo on `<aikaleima>|<satunnainen omistajatunniste>`. Pyyntö vapauttaa tai
+  uusii vain lukon, jonka se yhä omistaa, joten jumiin jäänyt pyyntö ei voi poistaa
+  seuraajansa lukkoa eikä kirjoittaa jonoa menetettyään lukon.
+- Jonoa ei koskaan kirjoiteta ilman lukkoa. Jos käsittelijä ei saa työn tulosta
+  talteen (odotus 45 sekuntia, pidempi kuin jonolukon vanhenemisaika), ajo
+  keskeytyy eikä työtä kirjata lokiin.
+- Jokainen jonon kirjoitus kulkee funktion
+  `rytkoset_theme_mutate_event_messaging_queue()` kautta: se ottaa jonolukon ja
+  lukee jonon tietokannasta pyynnön optiovälimuistin ohi.
+- Käsittelijä kirjoittaa tuloksen **työ kerrallaan**
+  (`rytkoset_theme_commit_event_messaging_job()`): vain saman `id`:n työ
+  korvataan tai poistetaan, joten ajon aikana lisätyt työt säilyvät. Keskeytynyt
+  ajo voi lähettää uudelleen enintään sen työn viestit, jota se oli käsittelemässä.
+- Jos jonolukkoa ei saada, `rytkoset_theme_enqueue_event_messaging_job()` palauttaa
+  tyhjän tunnisteen, ja kutsuja käsittelee sen epäonnistuneena jonotuksena.
+
+Käsittely on jaettu kolmeen osaan: ajo ja lukko
+(`rytkoset_theme_process_event_messaging_queue()`), yhden työn käsittely
+(`rytkoset_theme_process_event_messaging_job()`) ja yhden vastaanottajan lähetys
+(`rytkoset_theme_send_event_messaging_recipient()`). 18 viestiä / rullaava 60
+minuuttia -raja on ennallaan.
+
 ### Lähetysjono ja loki
 
 Sivun alaosassa on yksi taulukko (#696), jossa ovat ensin jonossa olevat työt
