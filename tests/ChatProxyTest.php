@@ -380,6 +380,15 @@ final class ChatProxyTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( '', $config['prompt_cache_key'] );
 	}
 
+	public function test_endpoint_must_use_https(): void {
+		$this->assertSame( 'https://api.mistral.ai/v1/chat/completions', rytkoset_theme_chat_sanitize_endpoint( ' https://api.mistral.ai/v1/chat/completions ' ) );
+		$this->assertSame( 'HTTPS://api.mistral.ai/v1/chat/completions', rytkoset_theme_chat_sanitize_endpoint( 'HTTPS://api.mistral.ai/v1/chat/completions' ) );
+		$this->assertSame( '', rytkoset_theme_chat_sanitize_endpoint( 'http://api.mistral.ai/v1/chat/completions' ) );
+		$this->assertSame( '', rytkoset_theme_chat_sanitize_endpoint( 'api.mistral.ai/v1/chat/completions' ) );
+		$this->assertSame( '', rytkoset_theme_chat_sanitize_endpoint( 'https:///v1/chat/completions' ) );
+		$this->assertSame( '', rytkoset_theme_chat_sanitize_endpoint( '' ) );
+	}
+
 	// --- rytkoset_theme_chat_maybe_add_prompt_cache_key() --------------------
 
 	public function test_prompt_cache_key_is_not_added_without_setting(): void {

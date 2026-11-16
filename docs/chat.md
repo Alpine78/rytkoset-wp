@@ -71,6 +71,8 @@ define( 'RYTKOSET_CHAT_API_MODEL', 'mistral-small-latest' );             // Vali
 define( 'RYTKOSET_CHAT_PROMPT_CACHE_KEY', 'rytkoset-chat-dev-v1' );       // Valinnainen dev-kokeilu. Puuttuva/tyhjä = pois käytöstä.
 ```
 
+`RYTKOSET_CHAT_API_ENDPOINT`:in pitää käyttää `https`-skeemaa: muu osoite käsitellään puuttuvana (`rytkoset_theme_chat_sanitize_endpoint()`, #752), koska API-avain kulkee pyynnön otsakkeessa. Uudelleenohjauksia ei seurata (`redirection => 0`, #749).
+
 Jos `RYTKOSET_CHAT_API_KEY` tai `RYTKOSET_CHAT_API_ENDPOINT` puuttuu, reitti palauttaa **hallitun virheen** (HTTP 503) — ei PHP-fatalia. Avain luetaan vain palvelimella eikä sitä koskaan tulosteta vasteeseen tai lokiin.
 
 **Mallinimen ylläpito:** `mistral-small-latest` on jo teeman oletus. `latest` seuraa malliperheen uusinta versiota ja vähentää mallinimen manuaalisia päivityksiä, mutta ei takaa avaimen käyttöoikeutta tai kiintiötä. Alias voi myös vaihtaa mallin käyttäytymistä ja hinnoittelua ilman sivuston omaa asetuspäivitystä. Tuotannon version voi vaihtoehtoisesti kiinnittää tarjoajan varmentamaan versiotunnisteeseen ja vaihtaa sen hallitusti dev-testauksen jälkeen; kiinnitetynkin version poistumista pitää seurata. Käytössä olevan mallin tieto tarkistetaan API:n `model`-kentästä tai konsolin mallivalinnasta, ei avustajan omasta tekstivastauksesta. Lähde: [Mistralin mallien elinkaari ja aliakset](https://docs.mistral.ai/inference/model-lifecycle), tarkistettu 12.10.2026.
@@ -228,7 +230,7 @@ FAQ-teksti täydentää pysyvää sivustokontekstia, automaattista tapahtuma-/tu
 - **Sisältö:** vakiintuneet faktat ja toimintaohjeet — jäsenyystyypit ja -hinnat, maksaminen nykyisellä Paytrail-maksutavalla, maksun jatkaminen vain ehdollisesti ("jos tilauksella näkyy Maksa / yritä uudelleen -painike"), tilauksen peruutus, tapahtumiin ilmoittautuminen, kirjautumisongelmat, historian tiivistelmä, yhteystiedot. Poista Mollien ulkomaanmaksu- ja RF-viiteohjeet Customizerin FAQ:sta kokeilujakson ajaksi.
 - **Pituus:** teksti lähetetään Mistralille **jokaisen viestin mukana**, joten pidä se tiiviinä (nyrkkisääntö: alle ~5 000 merkkiä). Pitkä teksti kasvattaa kuluja ja heikentää vastausten tarkkuutta.
 - **Ajantasaisuus:** päivitä FAQ, kun vain siellä ylläpidetty fakta muuttuu. Chatti saa julkaistut tapahtuma- ja tuotetiedot automaattisesta kontekstista, voi lukea rajattuja julkisia sivuja työkalulla ja lukee tilikauden suoraan Säännöt-sivulta, joten näitä tietoja ei pidä kopioida FAQ:hun. Nopeasti muuttuvien tietojen osalta parempi tapa on viitata ylläpidettyyn sivuun kuin kopioida yksityiskohdat FAQ:hun.
-- **Rajaukset:** älä laita FAQ:hun henkilötietoja äläkä mitään, mikä ei saa näkyä julkisesti — FAQ:n sisältö voi päätyä chatin vastauksiin kenelle tahansa kävijälle.
+- **Rajaukset:** älä laita FAQ:hun henkilötietoja äläkä mitään, mikä ei saa näkyä julkisesti — FAQ:n sisältö voi päätyä chatin vastauksiin kenelle tahansa kävijälle. Kävijä voi myös houkutella mallin toistamaan koko FAQ:n ja system-promptin sanasta sanaan, joten FAQ:hun ei kirjoiteta mitään sisäistä (esim. hallituksen keskeneräisiä asioita, sisäisiä ohjeita tai yhteystietoja, joita ei julkaista sivustolla) (#752).
 
 Testaa muutokset dev-ympäristössä kysymällä chatilta muutettuja kohtia ennen tuotantoon vientiä.
 
@@ -258,6 +260,8 @@ FAQ:n lisäksi system-promptiin liitetään **automaattisesti koottu** tietolohk
 - **Tulevat tapahtumat** (`rytkoset_event`, julkaistut, tapahtumapäivä tänään tai myöhemmin; tapahtumapäivä on voimassa päivän loppuun): nimi, päivämäärä, kellonaika, paikka, hinta, ilmoittautumisen takaraja samasta lähteestä kuin tapahtumasivun yhteenvetokortilla (maksuttomat: oma takaraja tai tapahtumapäivä; linkitetyt maksulliset tuotteet: tuotteen takaraja), #450-lisävalinnat (esim. bussin lähtöpaikat + määräkentän nimi) ja tapahtuman osoite. Maksulliset tapahtumat ohjataan tapahtumasivulle. Enintään 5 tapahtumaa aikajärjestyksessä. Jos tulevia tapahtumia ei ole, lohko toteaa sen eksplisiittisesti, ettei malli keksi tapahtumia.
 - **Jäsenyystuotteet** (`_rytkoset_membership_product = yes`, vain julkaistut): nimi, hinta, jäsenyystyyppi ja "jäsenyys voimassa X asti" -päivä. Osio jää kokonaan pois, jos WooCommerce ei ole aktiivinen (fail-safe).
 - **Muut verkkokaupan tuotteet** (#471, esim. sukulehdet, t-paidat): kaikki muut julkaistut ja hinnalliset WooCommerce-tuotteet — nimi, hinta, permalink — `menu_order`/nimi-järjestyksessä (sama järjestys kuin kaupan oletuslajittelu). Jäsenyystuotteet jätetään pois, koska niillä on jo oma osionsa yllä — ei duplikointia. Enintään 20 tuotetta. Osio jää kokonaan pois, jos julkaistuja ei-jäsenyystuotteita ei löydy.
+
+**Julkisuusportti (#752):** kaikki lohkon tapahtumat, tuotteet ja digilehdet läpäisevät saman portin kuin sivun lukutyökalu: julkaistu eikä salasanasuojattu (`rytkoset_theme_chat_live_post_is_public()`). Tuotteilta vaaditaan lisäksi, ettei luettelonäkyvyys ole `hidden` (`rytkoset_theme_chat_live_product_is_public()`), joten piilotettu tuote ei näy chatissa, vaikka se olisi julkaistu.
 
 Lohkon perään lisätään ohje, ettei malli arvioi vapaita paikkoja, ilmoittautumistilannetta tai tuotteiden varastotilannetta vaan ohjaa tapahtuman tai tuotteen sivulle. Toteutus: `rytkoset_theme_chat_get_live_context()` + apufunktiot (`..._get_upcoming_event_ids()`, `..._format_event_context()`, `..._get_membership_context()`, `..._get_shop_products_context()`) `inc/chat.php`:ssä; ei välimuistia (kevyet kyselyt ajetaan vain chat-pyynnön yhteydessä, rate limit rajaa volyymin).
 
@@ -402,6 +406,21 @@ Chatin tietosuojaominaisuudet, jotka selosteen ja dokumentaation väitteet perus
 - Keskusteluja **ei tallenneta** WordPressiin eikä pysyvästi selaimeen: historia säilyy selaimen **välilehtikohtaisessa istuntomuistissa** (`sessionStorage`, #498), jotta keskustelu jatkuu sivulatausten yli, ja tyhjenee kun välilehti suljetaan. Ei evästeitä eikä pysyvää tallennusta (`localStorage`); istuntomuisti palvelee vain kävijän itse aloittaman keskustelun jatkuvuutta (välttämätön tallennus) → ei suostumusbanneritarvetta.
 - Rate limit käsittelee kävijän IP-osoitetta lyhytaikaisesti palvelimella (transient, MD5-tiivisteenä avaimessa, enintään rajoitusikkunan ajan). IP:tä ei yhdistetä keskustelun sisältöön.
 - Widgetin disclaimer kehottaa olemaan syöttämättä arkaluonteisia tietoja, ja system-prompt ohjeistaa mallia olemaan pyytämättä niitä.
+
+### Hyväksytyt jäännösriskit (#752)
+
+- **Asiakkaan lähettämä historia:** selain lähettää enintään kahdeksan viimeistä
+  viestiä, myös assistentin vuorot, eikä palvelin voi todentaa niiden aitoutta.
+  Kävijä voi siis väärentää assistentin vastauksia omaan keskusteluunsa.
+  System-, tool- ja `tool_calls`-rakenteita ei voi syöttää, deterministiset
+  polut palauttavat vain julkista sisältöä, ja kustannukset rajaavat #749:n
+  koko sivuston katto ja IP-kohtainen raja. Vaikutus rajautuu hyökkääjän omaan
+  keskusteluun (harhaanjohtavat kuvakaappaukset, chatin käyttö yleisenä
+  kielimallina rajojen puitteissa). Riski hyväksytään; vastausten
+  HMAC-allekirjoitus on mahdollinen myöhempi kovennus.
+- **Käyttötilastojen laskurit** päivittyvät luku-kirjoitus-mallilla, joten
+  rinnakkaiset pyynnöt voivat hukata yksittäisiä lisäyksiä. Vaikutus on
+  kosmeettinen (Dashboard-widgetin luvut), eikä se koske kustannuskattoja.
 
 ### Tekstiehdotus tietosuojaselosteeseen
 

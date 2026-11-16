@@ -392,6 +392,54 @@ final class ChatLiveContextTest extends Rytkoset_Theme_Test_Case {
 
 	// --- rytkoset_theme_chat_get_live_context() ------------------------------
 
+	// --- public gate (#752) -------------------------------------------------
+
+	public function test_live_context_excludes_password_protected_and_hidden_items(): void {
+		$this->register_event( 10, 'Julkinen juhla', '2026-08-01' );
+		$this->register_event( 11, 'Salainen kokous', '2026-08-02' )->post_password = 'salasana';
+
+		$this->register_shop_product( 30, 'Sukukirja', 'publish', array( '_price' => '40' ) );
+		$this->register_shop_product( 31, 'Piilotettu tuote', 'publish', array( '_price' => '5', '_catalog_visibility' => 'hidden' ) );
+		$this->register_shop_product( 32, 'Suojattu tuote', 'publish', array( '_price' => '6' ) );
+		get_post( 32 )->post_password = 'salasana';
+		$this->register_shop_product( 33, 'Hakutuote', 'publish', array( '_price' => '7', '_catalog_visibility' => 'search' ) );
+
+		$this->register_shop_product(
+			34,
+			'Piilotettu jäsenyys',
+			'publish',
+			array(
+				'_rytkoset_membership_product' => 'yes',
+				'_rytkoset_membership_type'    => 'lifetime',
+				'_price'                       => '100',
+				'_catalog_visibility'          => 'hidden',
+			)
+		);
+		update_post_meta( 34, '_rytkoset_membership_product', 'yes' );
+
+		$this->register_digital_magazine( 40, 'Julkinen lehti', 'free' );
+		$this->register_digital_magazine( 41, 'Suojattu lehti', 'free' )->post_password = 'salasana';
+
+		$this->assertSame( array( 10 ), rytkoset_theme_chat_get_upcoming_event_ids() );
+
+		$products = rytkoset_theme_chat_get_shop_products_context();
+		$this->assertStringContainsString( 'Sukukirja', $products );
+		$this->assertStringContainsString( 'Hakutuote', $products );
+		$this->assertStringNotContainsString( 'Piilotettu tuote', $products );
+		$this->assertStringNotContainsString( 'Suojattu tuote', $products );
+
+		$this->assertStringNotContainsString( 'Piilotettu jäsenyys', rytkoset_theme_chat_get_membership_context() );
+
+		$magazines = rytkoset_theme_chat_get_digital_magazine_context();
+		$this->assertStringContainsString( 'Julkinen lehti', $magazines );
+		$this->assertStringNotContainsString( 'Suojattu lehti', $magazines );
+
+		$live = rytkoset_theme_chat_get_live_context();
+		foreach ( array( 'Salainen kokous', 'Piilotettu tuote', 'Suojattu tuote', 'Piilotettu jäsenyys', 'Suojattu lehti' ) as $hidden ) {
+			$this->assertStringNotContainsString( $hidden, $live );
+		}
+	}
+
 	public function test_live_context_states_when_no_upcoming_events(): void {
 		$this->assertStringContainsString(
 			'Ei tulevia tapahtumia tiedossa juuri nyt.',
