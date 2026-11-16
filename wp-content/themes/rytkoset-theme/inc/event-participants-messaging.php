@@ -254,6 +254,184 @@ function rytkoset_theme_update_event_messaging_queue( $queue ) {
 }
 
 /**
+ * Returns the option name of a messaging queue lock (#747).
+ *
+ * @param string $name Lock name: `process` (one queue run) or `queue` (one read-modify-write).
+ * @return string
+ */
+function rytkoset_theme_get_event_messaging_lock_option_name( $name ) {
+	return 'rytkoset_event_messaging_' . sanitize_key( (string) $name ) . '_lock';
+}
+
+/**
+ * Atomically acquires a messaging queue lock (#747).
+ *
+ * `add_option()` is not atomic (its INSERT overwrites on a duplicate key), so the
+ * lock uses the same `INSERT IGNORE` WordPress core uses for its upgrader lock:
+ * the unique `option_name` index lets exactly one request insert the row. A lock
+ * older than `$timeout` is taken over with a compare-and-swap `UPDATE`, so two
+ * requests cannot both inherit the same stale lock.
+ *
+ * The stored value is `<unix time>|<random owner token>`. The token lets a request
+ * release or renew only a lock it still owns.
+ *
+ * @param string $name    Lock name.
+ * @param int    $timeout Seconds after which a held lock counts as abandoned.
+ * @return bool True when this request holds the lock.
+ */
+function rytkoset_theme_acquire_event_messaging_lock( $name, $timeout ) {
+	global $wpdb;
+
+	$option  = rytkoset_theme_get_event_messaging_lock_option_name( $name );
+	$now     = time();
+	$timeout = max( 1, absint( $timeout ) );
+	$value   = $now . '|' . wp_generate_password( 20, false );
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- core table name.
+	$acquired = (bool) $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO `{$wpdb->options}` ( `option_name`, `option_value`, `autoload` ) VALUES ( %s, %s, 'off' ) /* LOCK */", $option, $value ) );
+
+	wp_cache_delete( $option, 'options' );
+	wp_cache_delete( 'notoptions', 'options' );
+
+	if ( ! $acquired ) {
+		$held = get_option( $option, '' );
+
+		if ( ! is_string( $held ) || ! is_numeric( strtok( $held, '|' ) ) || (int) $held > $now - $timeout ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- core table name.
+		$acquired = (bool) $wpdb->query( $wpdb->prepare( "UPDATE `{$wpdb->options}` SET `option_value` = %s WHERE `option_name` = %s AND `option_value` = %s /* LOCK */", $value, $option, $held ) );
+
+		wp_cache_delete( $option, 'options' );
+	}
+
+	if ( $acquired ) {
+		$GLOBALS['rytkoset_theme_event_messaging_locks'][ $option ] = $value;
+	}
+
+	return $acquired;
+}
+
+/**
+ * Extends a lock this request owns and confirms it still owns it (#747).
+ *
+ * @param string $name Lock name.
+ * @return bool False when the lock expired and another request took it over.
+ */
+function rytkoset_theme_renew_event_messaging_lock( $name ) {
+	global $wpdb;
+
+	$option = rytkoset_theme_get_event_messaging_lock_option_name( $name );
+	$owned  = (string) ( $GLOBALS['rytkoset_theme_event_messaging_locks'][ $option ] ?? '' );
+
+	if ( '' === $owned ) {
+		return false;
+	}
+
+	$value = time() . '|' . substr( (string) strstr( $owned, '|' ), 1 );
+
+	if ( $value === $owned ) {
+		// Same second: nothing to write, but ownership still has to be confirmed.
+		wp_cache_delete( $option, 'options' );
+
+		return get_option( $option, '' ) === $owned;
+	}
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- core table name.
+	$renewed = (bool) $wpdb->query( $wpdb->prepare( "UPDATE `{$wpdb->options}` SET `option_value` = %s WHERE `option_name` = %s AND `option_value` = %s /* LOCK */", $value, $option, $owned ) );
+
+	wp_cache_delete( $option, 'options' );
+
+	if ( $renewed ) {
+		$GLOBALS['rytkoset_theme_event_messaging_locks'][ $option ] = $value;
+	} else {
+		unset( $GLOBALS['rytkoset_theme_event_messaging_locks'][ $option ] );
+	}
+
+	return $renewed;
+}
+
+/**
+ * Releases a messaging queue lock, but only when this request still owns it (#747).
+ *
+ * A request whose lock expired and was taken over must not delete the new owner's lock.
+ *
+ * @param string $name Lock name.
+ * @return void
+ */
+function rytkoset_theme_release_event_messaging_lock( $name ) {
+	global $wpdb;
+
+	$option = rytkoset_theme_get_event_messaging_lock_option_name( $name );
+	$owned  = (string) ( $GLOBALS['rytkoset_theme_event_messaging_locks'][ $option ] ?? '' );
+
+	if ( '' === $owned ) {
+		return;
+	}
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- core table name.
+	$wpdb->query( $wpdb->prepare( "DELETE FROM `{$wpdb->options}` WHERE `option_name` = %s AND `option_value` = %s /* LOCK */", $option, $owned ) );
+
+	wp_cache_delete( $option, 'options' );
+	wp_cache_delete( 'notoptions', 'options' );
+	unset( $GLOBALS['rytkoset_theme_event_messaging_locks'][ $option ] );
+}
+
+/**
+ * Reads the queue from the database, bypassing this request's option cache (#747).
+ *
+ * `get_option()` serves a per-request cached copy, which would hide a job another
+ * request added after this request first read the queue.
+ *
+ * @return array
+ */
+function rytkoset_theme_get_fresh_event_messaging_queue() {
+	wp_cache_delete( rytkoset_theme_get_event_messaging_queue_option_key(), 'options' );
+	wp_cache_delete( 'notoptions', 'options' );
+
+	return rytkoset_theme_get_event_messaging_queue();
+}
+
+/**
+ * Runs one read-modify-write of the queue under the short queue lock (#747).
+ *
+ * Every queue write goes through this helper, so a job added while the cron run
+ * is sending cannot be overwritten and a sent recipient cannot return to pending.
+ *
+ * @param callable $mutator     Receives the current queue and returns the new queue.
+ * @param int      $max_wait_ms Longest time to wait for the lock, in milliseconds.
+ * @return bool True when the queue was updated under the lock. False means nothing was written.
+ */
+function rytkoset_theme_mutate_event_messaging_queue( $mutator, $max_wait_ms = 5000 ) {
+	$waited_ms = 0;
+
+	while ( ! rytkoset_theme_acquire_event_messaging_lock( 'queue', 30 ) ) {
+		if ( $waited_ms >= $max_wait_ms ) {
+			return false;
+		}
+
+		usleep( 100000 );
+		$waited_ms += 100;
+	}
+
+	try {
+		$queue = call_user_func( $mutator, rytkoset_theme_get_fresh_event_messaging_queue() );
+
+		// A request that stalled past the lease may have lost the lock; it must not write.
+		if ( ! rytkoset_theme_renew_event_messaging_lock( 'queue' ) ) {
+			return false;
+		}
+
+		rytkoset_theme_update_event_messaging_queue( is_array( $queue ) ? $queue : array() );
+	} finally {
+		rytkoset_theme_release_event_messaging_lock( 'queue' );
+	}
+
+	return true;
+}
+
+/**
  * Returns pruned send attempt timestamps from the last rolling hour.
  *
  * @param int|null $now Current Unix timestamp.
@@ -401,10 +579,18 @@ function rytkoset_theme_enqueue_event_messaging_job( $args ) {
 		'recipients'    => $recipients,
 	);
 
-	$queue   = rytkoset_theme_get_event_messaging_queue();
-	$queue[] = $job;
+	$queued = rytkoset_theme_mutate_event_messaging_queue(
+		static function ( $queue ) use ( $job ) {
+			$queue[] = $job;
 
-	rytkoset_theme_update_event_messaging_queue( $queue );
+			return $queue;
+		}
+	);
+
+	if ( ! $queued ) {
+		return '';
+	}
+
 	rytkoset_theme_ensure_event_messaging_cron_scheduled();
 
 	return $job['id'];
@@ -481,123 +667,198 @@ function rytkoset_theme_append_completed_event_messaging_job_to_log( $job ) {
 }
 
 /**
- * Processes pending event participant messages within the rolling hourly limit.
+ * Sends a queued message to one recipient.
  *
- * @return void
+ * @param array  $job           Queue job.
+ * @param array  $recipient     Recipient entry of the job.
+ * @param array  $headers       Mail headers of the job.
+ * @param string $feedback_link Feedback link of the job's event, or an empty string.
+ * @return bool True when wp_mail() accepted the message.
  */
-function rytkoset_theme_process_event_messaging_queue() {
-	$lock_key = 'rytkoset_event_messaging_queue_lock';
+function rytkoset_theme_send_event_messaging_recipient( $job, $recipient, $headers, $feedback_link ) {
+	$message = rytkoset_theme_personalize_event_message(
+		(string) ( $job['body'] ?? '' ),
+		(string) ( $recipient['name'] ?? '' ),
+		(string) ( $recipient['event_title'] ?? '' ),
+		$feedback_link
+	);
 
-	if ( get_transient( $lock_key ) ) {
-		return;
+	if ( ! empty( $recipient['additional_participant'] ) ) {
+		$message    .= "\n\n" . __( 'Saat tämän viestin, koska tapahtumaan ilmoittautunut henkilö antoi sähköpostiosoitteesi ilmoittautumisen yhteydessä. Osoitetta käytetään vain tämän tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin. Jos et halua näitä viestejä, vastaa tähän viestiin ja pyydä osoitteesi poistamista.', 'rytkoset-theme' );
+		$privacy_url = get_privacy_policy_url();
+		if ( $privacy_url ) {
+			$message .= "\n" . __( 'Tietosuojaseloste: ', 'rytkoset-theme' ) . $privacy_url;
+		}
 	}
 
-	set_transient( $lock_key, 1, 10 * MINUTE_IN_SECONDS );
+	return (bool) wp_mail( sanitize_email( (string) ( $recipient['email'] ?? '' ) ), (string) ( $job['subject'] ?? '' ), $message, $headers );
+}
 
-	try {
-		$now       = time();
-		$attempts  = rytkoset_theme_get_event_messaging_send_attempts( $now );
-		$available = max( 0, rytkoset_theme_get_event_messaging_hourly_limit() - count( $attempts ) );
+/**
+ * Sends one job's pending recipients within the remaining send allowance.
+ *
+ * @param array $job       Queue job.
+ * @param int   $available Send attempts still allowed in this run.
+ * @param int[] $attempts  Send attempt timestamps of the rolling hour.
+ * @return array{job:array,available:int,attempts:int[]} Updated job, allowance and attempts.
+ */
+function rytkoset_theme_process_event_messaging_job( $job, $available, $attempts ) {
+	$recipients = isset( $job['recipients'] ) && is_array( $job['recipients'] ) ? $job['recipients'] : array();
+	$headers    = array( 'Content-Type: text/plain; charset=UTF-8' );
+	$reply_to   = sanitize_email( (string) ( $job['reply_to'] ?? '' ) );
 
+	if ( '' !== $reply_to && is_email( $reply_to ) ) {
+		$headers[] = 'Reply-To: ' . $reply_to;
+	}
+
+	// Resolved once per job, not per recipient: the link carries no
+	// per-recipient token (#666). Empty for a "kaikki tapahtumat"
+	// broadcast (event_id 0), since one link cannot represent several events.
+	$feedback_link = function_exists( 'rytkoset_theme_get_event_feedback_public_url' )
+		? rytkoset_theme_get_event_feedback_public_url( (int) ( $job['event_id'] ?? 0 ) )
+		: '';
+
+	foreach ( $recipients as $index => $recipient ) {
 		if ( $available <= 0 ) {
-			rytkoset_theme_update_event_messaging_send_attempts( $attempts );
-			return;
+			break;
 		}
 
-		$queue = rytkoset_theme_get_event_messaging_queue();
-
-		if ( empty( $queue ) ) {
-			rytkoset_theme_update_event_messaging_send_attempts( $attempts );
-			return;
+		if ( 'pending' !== (string) ( $recipient['status'] ?? 'pending' ) ) {
+			continue;
 		}
 
+		$email = sanitize_email( (string) ( $recipient['email'] ?? '' ) );
+
+		if ( '' === $email || ! is_email( $email ) ) {
+			$recipients[ $index ]['status']    = 'failed';
+			$recipients[ $index ]['failed_at'] = current_time( 'mysql' );
+			$job['failed_count']               = (int) ( $job['failed_count'] ?? 0 ) + 1;
+			continue;
+		}
+
+		$attempts[] = time();
+		$ok         = rytkoset_theme_send_event_messaging_recipient( $job, $recipient, $headers, $feedback_link );
+		$sent_at    = current_time( 'mysql' );
+
+		if ( $ok ) {
+			$recipients[ $index ]['status']  = 'sent';
+			$recipients[ $index ]['sent_at'] = $sent_at;
+			$job['sent_count']               = (int) ( $job['sent_count'] ?? 0 ) + 1;
+		} else {
+			$recipients[ $index ]['status']    = 'failed';
+			$recipients[ $index ]['failed_at'] = $sent_at;
+			$job['failed_count']               = (int) ( $job['failed_count'] ?? 0 ) + 1;
+		}
+
+		$job['last_sent_at'] = $sent_at;
+		--$available;
+	}
+
+	$job['recipients'] = $recipients;
+
+	return array(
+		'job'       => $job,
+		'available' => $available,
+		'attempts'  => $attempts,
+	);
+}
+
+/**
+ * Writes one processed job back to the queue without touching other jobs (#747).
+ *
+ * The queue is re-read under the queue lock and only the job with the same ID is
+ * replaced, or removed when it has no pending recipients left. Jobs added while
+ * the run was sending are therefore kept.
+ *
+ * @param array $job Processed queue job.
+ * @return bool True when the queue was written under the lock. False means the job's
+ *              progress was not stored and the run must stop.
+ */
+function rytkoset_theme_commit_event_messaging_job( $job ) {
+	$job_id    = (string) ( $job['id'] ?? '' );
+	$completed = 0 === rytkoset_theme_get_event_messaging_pending_recipient_count( $job );
+	$mutator   = static function ( $queue ) use ( $job, $job_id, $completed ) {
 		$next_queue = array();
 
-		foreach ( $queue as $job ) {
-			$recipients = isset( $job['recipients'] ) && is_array( $job['recipients'] ) ? $job['recipients'] : array();
-
-			if ( $available > 0 ) {
-				$headers  = array( 'Content-Type: text/plain; charset=UTF-8' );
-				$reply_to = sanitize_email( (string) ( $job['reply_to'] ?? '' ) );
-
-				if ( '' !== $reply_to && is_email( $reply_to ) ) {
-					$headers[] = 'Reply-To: ' . $reply_to;
-				}
-
-				// Resolved once per job, not per recipient: the link carries no
-				// per-recipient token (#666). Empty for a "kaikki tapahtumat"
-				// broadcast (event_id 0), since one link cannot represent several events.
-				$feedback_link = function_exists( 'rytkoset_theme_get_event_feedback_public_url' )
-					? rytkoset_theme_get_event_feedback_public_url( (int) ( $job['event_id'] ?? 0 ) )
-					: '';
-
-				foreach ( $recipients as $index => $recipient ) {
-					if ( $available <= 0 ) {
-						break;
-					}
-
-					if ( 'pending' !== (string) ( $recipient['status'] ?? 'pending' ) ) {
-						continue;
-					}
-
-					$email = sanitize_email( (string) ( $recipient['email'] ?? '' ) );
-
-					if ( '' === $email || ! is_email( $email ) ) {
-						$recipients[ $index ]['status']    = 'failed';
-						$recipients[ $index ]['failed_at'] = current_time( 'mysql' );
-						$job['failed_count']               = (int) ( $job['failed_count'] ?? 0 ) + 1;
-						continue;
-					}
-
-					$message = rytkoset_theme_personalize_event_message(
-						(string) ( $job['body'] ?? '' ),
-						(string) ( $recipient['name'] ?? '' ),
-						(string) ( $recipient['event_title'] ?? '' ),
-						$feedback_link
-					);
-
-					if ( ! empty( $recipient['additional_participant'] ) ) {
-						$message    .= "\n\n" . __( 'Saat tämän viestin, koska tapahtumaan ilmoittautunut henkilö antoi sähköpostiosoitteesi ilmoittautumisen yhteydessä. Osoitetta käytetään vain tämän tapahtuman viestintään ja palautepyyntöön, ei uutiskirjeisiin tai markkinointiin. Jos et halua näitä viestejä, vastaa tähän viestiin ja pyydä osoitteesi poistamista.', 'rytkoset-theme' );
-						$privacy_url = get_privacy_policy_url();
-						if ( $privacy_url ) {
-							$message .= "\n" . __( 'Tietosuojaseloste: ', 'rytkoset-theme' ) . $privacy_url;
-						}
-					}
-
-					$attempt_time = time();
-					$attempts[]   = $attempt_time;
-					$ok           = wp_mail( $email, (string) ( $job['subject'] ?? '' ), $message, $headers );
-					$sent_at      = current_time( 'mysql' );
-
-					if ( $ok ) {
-						$recipients[ $index ]['status']  = 'sent';
-						$recipients[ $index ]['sent_at'] = $sent_at;
-						$job['sent_count']               = (int) ( $job['sent_count'] ?? 0 ) + 1;
-					} else {
-						$recipients[ $index ]['status']    = 'failed';
-						$recipients[ $index ]['failed_at'] = $sent_at;
-						$job['failed_count']               = (int) ( $job['failed_count'] ?? 0 ) + 1;
-					}
-
-					$job['last_sent_at'] = $sent_at;
-					--$available;
-				}
-			}
-
-			$job['recipients'] = $recipients;
-
-			if ( 0 === rytkoset_theme_get_event_messaging_pending_recipient_count( $job ) ) {
-				$job['completed_at'] = current_time( 'mysql' );
-				rytkoset_theme_append_completed_event_messaging_job_to_log( $job );
-			} else {
+		foreach ( $queue as $queued_job ) {
+			if ( '' === $job_id || (string) ( $queued_job['id'] ?? '' ) !== $job_id ) {
+				$next_queue[] = $queued_job;
+			} elseif ( ! $completed ) {
 				$next_queue[] = $job;
 			}
 		}
 
+		return $next_queue;
+	};
+
+	// The wait is longer than the queue lock's 30-second lease, so an abandoned lock
+	// is taken over instead of being bypassed. The queue is never written unlocked.
+	/**
+	 * Filters how long a processed job waits for the queue lock, in milliseconds.
+	 *
+	 * @param int $wait_ms Wait in milliseconds. Default 45000.
+	 */
+	$wait_ms = absint( apply_filters( 'rytkoset_theme_event_messaging_commit_wait_ms', 45000 ) );
+
+	return rytkoset_theme_mutate_event_messaging_queue( $mutator, $wait_ms );
+}
+
+/**
+ * Processes pending event participant messages within the rolling hourly limit.
+ *
+ * Only one run at a time holds the `process` lock. Progress is written back job
+ * by job, so an interrupted run cannot resend more than the job it was working on.
+ *
+ * @return void
+ */
+function rytkoset_theme_process_event_messaging_queue() {
+	if ( ! rytkoset_theme_acquire_event_messaging_lock( 'process', 10 * MINUTE_IN_SECONDS ) ) {
+		return;
+	}
+
+	try {
+		$attempts  = rytkoset_theme_get_event_messaging_send_attempts( time() );
+		$available = max( 0, rytkoset_theme_get_event_messaging_hourly_limit() - count( $attempts ) );
+
+		foreach ( rytkoset_theme_get_fresh_event_messaging_queue() as $job ) {
+			$has_pending = rytkoset_theme_get_event_messaging_pending_recipient_count( $job ) > 0;
+
+			if ( $has_pending && $available <= 0 ) {
+				break;
+			}
+
+			$result    = rytkoset_theme_process_event_messaging_job( $job, $available, $attempts );
+			$job       = $result['job'];
+			$available = $result['available'];
+			$attempts  = $result['attempts'];
+
+			$completed = 0 === rytkoset_theme_get_event_messaging_pending_recipient_count( $job );
+
+			if ( $completed ) {
+				$job['completed_at'] = current_time( 'mysql' );
+			}
+
+			rytkoset_theme_update_event_messaging_send_attempts( $attempts );
+
+			// The run stops when its progress cannot be stored.
+			if ( ! rytkoset_theme_commit_event_messaging_job( $job ) ) {
+				break;
+			}
+
+			if ( $completed ) {
+				rytkoset_theme_append_completed_event_messaging_job_to_log( $job );
+			}
+
+			// A long run keeps its lock fresh so a later cron run does not take it over,
+			// and stops when it no longer owns the lock.
+			if ( ! rytkoset_theme_renew_event_messaging_lock( 'process' ) ) {
+				break;
+			}
+		}
+
 		rytkoset_theme_update_event_messaging_send_attempts( $attempts );
-		rytkoset_theme_update_event_messaging_queue( $next_queue );
 	} finally {
-		delete_transient( $lock_key );
+		rytkoset_theme_release_event_messaging_lock( 'process' );
 	}
 }
 add_action( 'rytkoset_process_event_messaging_queue', 'rytkoset_theme_process_event_messaging_queue' );

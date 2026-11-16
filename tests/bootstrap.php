@@ -782,6 +782,7 @@ class Rytkoset_Test_WPDB {
 	public string $prefix = 'wp_';
 	public string $users = 'wp_users';
 	public string $posts = 'wp_posts';
+	public string $options = 'wp_options';
 	public string $last_query = '';
 	public string $last_error = '';
 	/** @var array<int,mixed> */
@@ -849,6 +850,47 @@ class Rytkoset_Test_WPDB {
 	 * @param array<string,mixed> $data
 	 * @param array<string,mixed> $where
 	 */
+	/**
+	 * Emulates the atomic lock statements the theme runs against the options table:
+	 * `INSERT IGNORE` (fails when the row exists) and the compare-and-swap `UPDATE` / `DELETE`.
+	 */
+	public function query( string $query ) {
+		$this->last_query = $query;
+		$args             = array_map( 'strval', $this->last_prepare_args );
+
+		if ( false !== strpos( $query, 'INSERT IGNORE' ) && 2 === count( $args ) ) {
+			if ( array_key_exists( $args[0], $GLOBALS['rytkoset_test_options'] ) ) {
+				return 0;
+			}
+
+			$GLOBALS['rytkoset_test_options'][ $args[0] ] = $args[1];
+
+			return 1;
+		}
+
+		if ( 0 === strpos( $query, 'UPDATE' ) && 3 === count( $args ) ) {
+			if ( (string) ( $GLOBALS['rytkoset_test_options'][ $args[1] ] ?? '' ) !== $args[2] ) {
+				return 0;
+			}
+
+			$GLOBALS['rytkoset_test_options'][ $args[1] ] = $args[0];
+
+			return 1;
+		}
+
+		if ( 0 === strpos( $query, 'DELETE' ) && 2 === count( $args ) ) {
+			if ( (string) ( $GLOBALS['rytkoset_test_options'][ $args[0] ] ?? '' ) !== $args[1] ) {
+				return 0;
+			}
+
+			unset( $GLOBALS['rytkoset_test_options'][ $args[0] ] );
+
+			return 1;
+		}
+
+		return 0;
+	}
+
 	public function update( string $table, array $data, array $where, array $format = array(), array $where_format = array() ): int {
 		$this->updates[] = array(
 			'table' => $table,
@@ -1262,6 +1304,13 @@ function wp_specialchars_decode( $text, $quote_style = ENT_QUOTES ) {
 }
 
 function wp_mail( $to, $subject, $message, $headers = '', $attachments = array() ) {
+	// Mirrors core's short-circuit filter; tests also use it to act in the middle of a send run.
+	$pre = apply_filters( 'pre_wp_mail', null, compact( 'to', 'subject', 'message', 'headers', 'attachments' ) );
+
+	if ( null !== $pre ) {
+		return (bool) $pre;
+	}
+
 	$GLOBALS['rytkoset_test_mails'][] = array(
 		'to'      => $to,
 		'subject' => $subject,
@@ -1269,6 +1318,14 @@ function wp_mail( $to, $subject, $message, $headers = '', $attachments = array()
 		'headers' => $headers,
 	);
 
+	return true;
+}
+
+function __return_zero(): int {
+	return 0;
+}
+
+function wp_cache_delete( $key, $group = '' ): bool {
 	return true;
 }
 
