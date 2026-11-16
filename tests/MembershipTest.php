@@ -235,7 +235,7 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_update_family_members_links_existing_account_by_email(): void {
 		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
-		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+		rytkoset_test_register_verified_user( 20, 'lapsi@example.test', 'Lapsi' );
 
 		$result = rytkoset_theme_update_family_members(
 			10,
@@ -258,7 +258,7 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 	public function test_email_resolution_does_not_move_account_from_another_family(): void {
 		rytkoset_test_register_user( 10, 'eka@example.test', 'Eka päätili' );
 		rytkoset_test_register_user( 11, 'toka@example.test', 'Toka päätili' );
-		rytkoset_test_register_user( 20, 'lapsi@example.test', 'Lapsi' );
+		rytkoset_test_register_verified_user( 20, 'lapsi@example.test', 'Lapsi' );
 
 		$this->assertTrue(
 			rytkoset_theme_update_family_members(
@@ -340,7 +340,7 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_re_added_email_of_removed_row_links_existing_account(): void {
 		rytkoset_test_register_user( 10, 'paakayttaja@example.test', 'Pääkäyttäjä' );
-		rytkoset_test_register_user( 20, 'liisa@example.test', 'Liisa' );
+		rytkoset_test_register_verified_user( 20, 'liisa@example.test', 'Liisa' );
 		update_user_meta(
 			10,
 			rytkoset_theme_get_family_members_meta_key(),
@@ -744,13 +744,20 @@ final class MembershipTest extends Rytkoset_Theme_Test_Case {
 		rytkoset_theme_cleanup_family_links_on_user_delete( 20 );
 		unset( $GLOBALS['rytkoset_test_users'][20], $GLOBALS['rytkoset_test_user_meta'][20] );
 
-		// A new account registers with the same email address; any later save of the family
-		// list resolves the pending row to it (#542).
-		rytkoset_test_register_user( 21, 'lapsi@example.test', 'Lapsi (uusi tili)' );
+		// A new account with the same email address is not linked while its holder has not
+		// proven control of the address (#744).
+		$new_user = rytkoset_test_register_user( 21, 'lapsi@example.test', 'Lapsi (uusi tili)' );
 
 		$this->assertTrue(
 			rytkoset_theme_update_family_members( 10, rytkoset_theme_get_family_members( 10 ) )
 		);
+		$this->assertSame( 0, rytkoset_theme_get_family_members( 10 )[0]['linked_user_id'] );
+		$this->assertSame( 'pending_account', rytkoset_theme_get_family_members( 10 )[0]['status'] );
+		$this->assertSame( 0, rytkoset_theme_get_family_primary_user_id( 21 ) );
+
+		// Completing an emailed password reset proves the address and links the pending row (#542).
+		do_action( 'after_password_reset', $new_user, 'new-password' );
+
 		$this->assertSame( 21, rytkoset_theme_get_family_members( 10 )[0]['linked_user_id'] );
 		$this->assertSame( 'active', rytkoset_theme_get_family_members( 10 )[0]['status'] );
 		$this->assertSame( 10, rytkoset_theme_get_family_primary_user_id( 21 ) );

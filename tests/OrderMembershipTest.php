@@ -185,7 +185,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 
 	public function test_apply_resolves_guest_order_by_billing_email(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
-		rytkoset_test_register_user( 11, 'match@rytkoset.test', 'Match' );
+		rytkoset_test_register_verified_user( 11, 'match@rytkoset.test', 'Match' );
 
 		$order = $this->membership_order(
 			array( $this->membership_product( 'lifetime' ) ),
@@ -266,7 +266,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 
 	// --- Membership linking on account registration (#518) --------------------
 
-	public function test_registration_applies_awaiting_membership_order(): void {
+	public function test_email_verification_applies_awaiting_membership_order(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
 
 		$order         = $this->membership_order(
@@ -280,8 +280,17 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$GLOBALS['rytkoset_test_orders'][1] = $order;
 		$mails_before_registration          = count( $GLOBALS['rytkoset_test_mails'] );
 
-		rytkoset_test_register_user( 30, 'uusi@rytkoset.test', 'Uusi' );
-		rytkoset_theme_apply_membership_on_user_register( 30 );
+		// Creating the account (e.g. at checkout) must not apply the membership (#744).
+		$user = rytkoset_test_register_user( 30, 'uusi@rytkoset.test', 'Uusi' );
+		do_action( 'user_register', 30, array() );
+		rytkoset_theme_apply_membership_for_verified_user( 30 );
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 30 )['type'] );
+		$this->assertTrue( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+		$this->assertSame( $mails_before_registration, count( $GLOBALS['rytkoset_test_mails'] ) );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
 
 		$this->assertSame( 'annual', rytkoset_theme_get_user_membership( 30 )['type'] );
 		$this->assertSame( '2029-12-31', rytkoset_theme_get_user_membership( 30 )['expires'] );
@@ -319,7 +328,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		);
 
 		rytkoset_test_register_user( 31, 'valmis@rytkoset.test', 'Valmis' );
-		rytkoset_theme_apply_membership_on_user_register( 31 );
+		rytkoset_theme_apply_membership_for_verified_user( 31 );
 
 		$this->assertSame( '', rytkoset_theme_get_user_membership( 31 )['type'] );
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
@@ -328,8 +337,8 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 	public function test_registration_without_membership_orders_changes_nothing(): void {
 		rytkoset_test_register_user( 32, 'tyhja@rytkoset.test', 'Tyhja' );
 
-		rytkoset_theme_apply_membership_on_user_register( 32 );
-		rytkoset_theme_apply_membership_on_user_register( 999 ); // unknown user
+		rytkoset_theme_apply_membership_for_verified_user( 32 );
+		rytkoset_theme_apply_membership_for_verified_user( 999 ); // unknown user
 
 		$this->assertSame( '', rytkoset_theme_get_user_membership( 32 )['type'] );
 		$this->assertCount( 0, $GLOBALS['rytkoset_test_mails'] );
@@ -369,7 +378,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 	public function test_manual_lifetime_activation_survives_family_order_and_family_benefits_expire_separately(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-08-31';
 		rytkoset_test_register_user( 150, 'primary@example.test', 'Päätili' );
-		rytkoset_test_register_user( 151, 'family@example.test', 'Perheenjäsen' );
+		rytkoset_test_register_verified_user( 151, 'family@example.test', 'Perheenjäsen' );
 
 		$this->assertSame(
 			'applied',
@@ -563,7 +572,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 	public function test_family_order_links_existing_account_and_stores_pending_and_register_only_rows(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
 		rytkoset_test_register_user( 100, 'ostaja@example.test', 'Ostaja' );
-		rytkoset_test_register_user( 101, 'lapsi@example.test', 'Lapsi' );
+		rytkoset_test_register_verified_user( 101, 'lapsi@example.test', 'Lapsi' );
 		update_user_meta( 101, rytkoset_theme_get_user_membership_type_meta_key(), 'lifetime' );
 
 		$order         = $this->membership_order(
@@ -602,7 +611,9 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertStringContainsString( 'https://rytkoset.test/tietosuoja/', $GLOBALS['rytkoset_test_mails'][1]['message'] );
 		$this->assertSame( 'puoliso@example.test', $GLOBALS['rytkoset_test_mails'][2]['to'] );
 		$this->assertStringContainsString( 'ilmoitettu Rytkösten sukuseura ry:n perhejäsenmaksun yhteydessä', $GLOBALS['rytkoset_test_mails'][2]['message'] );
-		$this->assertStringContainsString( 'Luo tili', $GLOBALS['rytkoset_test_mails'][2]['message'] );
+		$this->assertStringContainsString( 'luo tili tällä samalla sähköpostiosoitteella (puoliso@example.test)', $GLOBALS['rytkoset_test_mails'][2]['message'] );
+		$this->assertStringContainsString( 'action=register', $GLOBALS['rytkoset_test_mails'][2]['message'] );
+		$this->assertStringContainsString( 'action=lostpassword', $GLOBALS['rytkoset_test_mails'][2]['message'], 'An existing unverified account needs a recovery path (#744).' );
 		$this->assertStringContainsString( 'https://rytkoset.test/tietosuoja/', $GLOBALS['rytkoset_test_mails'][2]['message'] );
 	}
 
@@ -634,7 +645,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 1, $order->get_meta( rytkoset_theme_get_family_account_notices_sent_meta_key() ) );
 	}
 
-	public function test_registration_links_pending_family_member_and_grants_effective_membership(): void {
+	public function test_email_verification_links_pending_family_member_and_grants_effective_membership(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
 		rytkoset_test_register_user( 120, 'primary@example.test', 'Primary' );
 
@@ -652,8 +663,17 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$GLOBALS['rytkoset_test_orders'][521] = $order;
 		$mails_before_registration            = count( $GLOBALS['rytkoset_test_mails'] );
 
-		rytkoset_test_register_user( 121, 'uusi@example.test', 'Uusi jäsen' );
-		rytkoset_theme_apply_membership_on_user_register( 121 );
+		// Creating the account must not link the family row (#744).
+		$user = rytkoset_test_register_user( 121, 'uusi@example.test', 'Uusi jäsen' );
+		do_action( 'user_register', 121, array() );
+		rytkoset_theme_apply_membership_for_verified_user( 121 );
+		rytkoset_theme_link_family_member_account_from_order( $order, 121 );
+		rytkoset_theme_link_family_member_account_from_primary( 120, 121 );
+
+		$this->assertSame( 0, rytkoset_theme_get_family_members( 120 )[0]['linked_user_id'] );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 121 ) );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
 
 		$members = rytkoset_theme_get_family_members( 120 );
 
@@ -664,11 +684,11 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertSame( 'family', rytkoset_theme_get_effective_user_membership( 121 )['source'] );
 		$this->assertSame( $mails_before_registration, count( $GLOBALS['rytkoset_test_mails'] ), 'Linking inherited benefits must not send an own-membership confirmation.' );
 
-		rytkoset_theme_apply_membership_on_user_register( 121 );
+		rytkoset_theme_apply_membership_for_verified_user( 121 );
 		$this->assertCount( 1, rytkoset_theme_get_family_members( 120 ) );
 	}
 
-	public function test_registration_links_pending_self_service_family_member_without_order(): void {
+	public function test_email_verification_links_pending_self_service_family_member_without_order(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
 		rytkoset_test_register_user( 140, 'primary@example.test', 'Primary' );
 		update_user_meta( 140, rytkoset_theme_get_user_membership_type_meta_key(), 'family' );
@@ -688,8 +708,16 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		);
 		$this->assertSame( 'pending_account', rytkoset_theme_get_family_members( 140 )[0]['status'] );
 
-		rytkoset_test_register_user( 141, 'later@example.test', 'Myöhemmin rekisteröityvä' );
-		rytkoset_theme_apply_membership_on_user_register( 141 );
+		$user = rytkoset_test_register_user( 141, 'later@example.test', 'Myöhemmin rekisteröityvä' );
+		do_action( 'user_register', 141, array() );
+		rytkoset_theme_apply_membership_for_verified_user( 141 );
+
+		// A later write of the family list must not link the unverified account either (#744).
+		$this->assertTrue( rytkoset_theme_update_family_members( 140, rytkoset_theme_get_family_members( 140 ) ) );
+		$this->assertSame( 'pending_account', rytkoset_theme_get_family_members( 140 )[0]['status'] );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 141 ) );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
 
 		$member = rytkoset_theme_get_family_members( 140 )[0];
 
@@ -699,7 +727,7 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertTrue( rytkoset_theme_user_is_active_member( 141 ) );
 	}
 
-	public function test_guest_family_order_rows_are_processed_after_buyer_registers(): void {
+	public function test_guest_family_order_rows_are_processed_after_buyer_verifies_email(): void {
 		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
 
 		$order         = $this->membership_order(
@@ -717,8 +745,18 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'], 'Only the buyer account notice is sent before a primary account exists.' );
 
 		$GLOBALS['rytkoset_test_orders'][522] = $order;
-		rytkoset_test_register_user( 130, 'guest@example.test', 'Guest' );
-		rytkoset_theme_apply_membership_on_user_register( 130 );
+		// An account created with the billing address (e.g. at checkout) gets nothing (#744).
+		$user = rytkoset_test_register_user( 130, 'guest@example.test', 'Guest' );
+		do_action( 'user_register', 130, array() );
+		rytkoset_theme_apply_membership_for_verified_user( 130 );
+		rytkoset_theme_maybe_apply_membership_from_order( 522, $order );
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 130 )['type'] );
+		$this->assertCount( 0, rytkoset_theme_get_family_members( 130 ) );
+		$this->assertSame( '', $order->get_meta( rytkoset_theme_get_family_members_processed_meta_key() ) );
+		$this->assertCount( 1, $GLOBALS['rytkoset_test_mails'], 'No new mail before the address is verified.' );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
 
 		$members = rytkoset_theme_get_family_members( 130 );
 
@@ -780,6 +818,338 @@ final class OrderMembershipTest extends Rytkoset_Theme_Test_Case {
 	 * @param string   $email Member email.
 	 * @return void
 	 */
+	// --- #744: benefits require proven email control --------------------------
+
+	public function test_guest_order_is_not_applied_to_unverified_account_on_status_change(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		// The account already exists (created at checkout with this address) before the
+		// guest order reaches a paid status.
+		$user          = rytkoset_test_register_user( 40, 'squat@rytkoset.test', 'Squatter' );
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'lifetime', '', '' ) ),
+			0,
+			'squat@rytkoset.test'
+		);
+		$order->status = 'processing';
+
+		rytkoset_theme_apply_membership_from_order( $order );
+		$GLOBALS['rytkoset_test_orders'][1] = $order;
+
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 40 )['type'] );
+		$this->assertTrue( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+		$this->assertStringContainsString( 'action=lostpassword', $GLOBALS['rytkoset_test_mails'][0]['message'] );
+
+		// WooCommerce's emailed verification link is an accepted proof as well.
+		do_action( 'woocommerce_customer_email_verified', 40 );
+
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 40 )['type'] );
+		$this->assertFalse( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+		$this->assertInstanceOf( WP_User::class, $user );
+	}
+
+	public function test_awaiting_guest_order_attached_to_unverified_account_stays_awaiting(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'lifetime', '', '' ) ),
+			0,
+			'delayed@rytkoset.test'
+		);
+		$order->status = 'processing';
+		rytkoset_theme_apply_membership_from_order( $order );
+		$GLOBALS['rytkoset_test_orders'][1] = $order;
+
+		// WooCommerce's order confirmation account form creates the account and attaches
+		// it to the guest order without verifying the address.
+		$user              = rytkoset_test_register_user( 41, 'delayed@rytkoset.test', 'Delayed' );
+		$order->user_id    = 41;
+		$order->status     = 'completed';
+
+		rytkoset_theme_maybe_apply_membership_from_order( 1, $order );
+
+		$this->assertSame( 0, rytkoset_theme_get_membership_order_user_id( $order ) );
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 41 )['type'] );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
+
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 41 )['type'] );
+		$this->assertSame( 41, rytkoset_theme_get_membership_order_user_id( $order ) );
+	}
+
+	public function test_unpaid_guest_order_attached_before_first_paid_status_is_not_applied(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		// A guest order that never reached a paid status has no awaiting marker yet.
+		$order               = $this->membership_order(
+			array( $this->membership_product( 'annual_family', '2029-12-31', '2026-2029' ) ),
+			0,
+			'victim@rytkoset.test'
+		);
+		$order->id           = 540;
+		$order->date_created = new DateTimeImmutable( '2026-06-01 10:00:00', new DateTimeZone( 'UTC' ) );
+		$this->set_member_row( $order, 1, 'Victim', 'victim@rytkoset.test' );
+		$this->set_member_row( $order, 2, 'Lapsi', 'lapsi@rytkoset.test' );
+
+		// The order confirmation account form creates a new account and attaches the order.
+		$user                  = rytkoset_test_register_user( 43, 'victim@rytkoset.test', 'Attached' );
+		$user->user_registered = '2026-06-20 09:00:00';
+		$order->user_id        = 43;
+		$order->status         = 'processing';
+
+		rytkoset_theme_maybe_apply_membership_from_order( 540, $order );
+		$GLOBALS['rytkoset_test_orders'][540] = $order;
+
+		$this->assertSame( 0, rytkoset_theme_get_membership_order_user_id( $order ) );
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 43 )['type'] );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 43 ) );
+		$this->assertCount( 0, rytkoset_theme_get_family_members( 43 ) );
+		$this->assertTrue( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+
+		do_action( 'after_password_reset', $user, 'new-password' );
+
+		$this->assertSame( 'family', rytkoset_theme_get_user_membership( 43 )['type'] );
+		$this->assertCount( 1, rytkoset_theme_get_family_members( 43 ) );
+	}
+
+	public function test_attached_guest_order_rejects_proof_of_a_different_address(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		$order               = $this->membership_order(
+			array( $this->membership_product( 'lifetime', '', '' ) ),
+			0,
+			'victim@rytkoset.test'
+		);
+		$order->date_created = new DateTimeImmutable( '2026-06-01 10:00:00', new DateTimeZone( 'UTC' ) );
+		$order->status       = 'processing';
+		rytkoset_theme_apply_membership_from_order( $order );
+		$GLOBALS['rytkoset_test_orders'][1] = $order;
+
+		$user                  = rytkoset_test_register_user( 44, 'victim@rytkoset.test', 'Attached' );
+		$user->user_registered = '2026-06-20 09:00:00';
+		$order->user_id        = 44;
+
+		// The account switches to an address its holder controls and proves that one.
+		$user->user_email = 'attacker@rytkoset.test';
+		do_action( 'after_password_reset', $user, 'new-password' );
+		$this->assertTrue( rytkoset_theme_user_email_is_verified( 44 ) );
+
+		$order->status = 'completed';
+		rytkoset_theme_maybe_apply_membership_from_order( 1, $order );
+
+		$this->assertSame( 0, rytkoset_theme_get_membership_order_user_id( $order ) );
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 44 )['type'] );
+	}
+
+	public function test_verified_billing_owner_claims_order_attached_to_untrusted_account(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		$order               = $this->membership_order(
+			array( $this->membership_product( 'lifetime', '', '' ) ),
+			0,
+			'victim@rytkoset.test'
+		);
+		$order->date_created = new DateTimeImmutable( '2026-06-01 10:00:00', new DateTimeZone( 'UTC' ) );
+		$order->status       = 'processing';
+		rytkoset_theme_apply_membership_from_order( $order );
+		$GLOBALS['rytkoset_test_orders'][1] = $order;
+
+		// An unverified account attaches itself to the order and then frees the address.
+		$attached                  = rytkoset_test_register_user( 45, 'victim@rytkoset.test', 'Attached' );
+		$attached->user_registered = '2026-06-20 09:00:00';
+		$order->user_id            = 45;
+		$attached->user_email      = 'attacker@rytkoset.test';
+
+		// The real owner of the billing address registers and proves the address.
+		$owner                  = rytkoset_test_register_user( 46, 'victim@rytkoset.test', 'Owner' );
+		$owner->user_registered = '2026-06-21 09:00:00';
+		do_action( 'after_password_reset', $owner, 'new-password' );
+
+		$this->assertSame( 46, rytkoset_theme_get_membership_order_user_id( $order ) );
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 46 )['type'] );
+		$this->assertSame( '', rytkoset_theme_get_user_membership( 45 )['type'] );
+		$this->assertFalse( rytkoset_theme_order_membership_is_awaiting_account( $order ) );
+	}
+
+	public function test_unstamped_order_of_preexisting_account_stays_authoritative(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+
+		// An order placed while logged in before the buyer stamp existed.
+		$user                  = rytkoset_test_register_user( 45, 'old@rytkoset.test', 'Old' );
+		$user->user_registered = '2025-01-01 09:00:00';
+
+		$order               = $this->membership_order(
+			array( $this->membership_product( 'lifetime', '', '' ) ),
+			0,
+			'other-billing@rytkoset.test'
+		);
+		$order->user_id      = 45;
+		$order->date_created = new DateTimeImmutable( '2026-06-01 10:00:00', new DateTimeZone( 'UTC' ) );
+		$order->status       = 'processing';
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 45 )['type'] );
+	}
+
+	public function test_checkout_stamps_logged_in_membership_buyer_only(): void {
+		rytkoset_test_register_user( 46, 'buyer@rytkoset.test', 'Buyer' );
+		$key = rytkoset_theme_get_membership_order_buyer_meta_key();
+
+		$guest = $this->membership_order( array( $this->membership_product( 'lifetime', '', '' ) ), 0, 'buyer@rytkoset.test' );
+		$this->assertFalse( rytkoset_theme_stamp_membership_order_buyer( $guest ) );
+
+		$own          = $this->membership_order( array( $this->membership_product( 'lifetime', '', '' ) ), 0, 'buyer@rytkoset.test' );
+		$own->user_id = 46;
+
+		$this->assertFalse( rytkoset_theme_stamp_membership_order_buyer( $own ), 'No stamp without a logged-in buyer.' );
+
+		$GLOBALS['rytkoset_test_current_user'] = 46;
+
+		$other          = $this->membership_order( array( $this->membership_product( 'lifetime', '', '' ) ), 0, 'x@rytkoset.test' );
+		$other->user_id = 47;
+		$this->assertFalse( rytkoset_theme_stamp_membership_order_buyer( $other ), 'The order must belong to the logged-in user.' );
+
+		$plain          = $this->membership_order( array(), 0, 'buyer@rytkoset.test' );
+		$plain->user_id = 46;
+		$this->assertFalse( rytkoset_theme_stamp_membership_order_buyer( $plain ), 'Only membership orders are stamped.' );
+
+		rytkoset_theme_stamp_store_api_membership_order_buyer( $own );
+
+		$this->assertSame( 46, (int) $own->get_meta( $key ) );
+		$this->assertSame( 1, $own->save_count );
+		$this->assertSame( 46, rytkoset_theme_get_membership_order_user_id( $own ) );
+
+		// A stamp for another user never authorizes the attached account.
+		$own->user_id = 47;
+		rytkoset_test_register_verified_user( 47, 'buyer@rytkoset.test' );
+		$this->assertSame( 0, rytkoset_theme_get_membership_order_user_id( $own ) );
+	}
+
+	public function test_family_renewal_keeps_existing_link_of_unverified_member(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
+		rytkoset_test_register_user( 180, 'primary@example.test', 'Primary' );
+		rytkoset_test_register_user( 181, 'member@example.test', 'Member' );
+
+		// Linked before #744, so the member account has no proof of its address.
+		$this->assertTrue(
+			rytkoset_theme_update_family_members(
+				180,
+				array(
+					array(
+						'name'           => 'Member',
+						'email'          => 'member@example.test',
+						'linked_user_id' => 181,
+						'status'         => 'active',
+					),
+				)
+			)
+		);
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'annual_family', '2032-12-31', '2029-2032' ) ),
+			180,
+			'primary@example.test'
+		);
+		$order->id     = 541;
+		$order->status = 'processing';
+		$this->set_member_row( $order, 1, 'Primary', 'primary@example.test' );
+		$this->set_member_row( $order, 2, 'Member', 'member@example.test' );
+		$this->set_member_row( $order, 3, 'Uusi', 'uusi@example.test' );
+		rytkoset_test_register_user( 182, 'uusi@example.test', 'Uusi' );
+
+		rytkoset_theme_maybe_apply_membership_from_order( 541, $order );
+
+		$members = rytkoset_theme_get_family_members( 180 );
+
+		$this->assertSame( 181, $members[0]['linked_user_id'] );
+		$this->assertSame( 'active', $members[0]['status'] );
+		$this->assertSame( 180, rytkoset_theme_get_family_primary_user_id( 181 ) );
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 181 ) );
+		$this->assertSame( 0, $members[1]['linked_user_id'], 'A new link still needs proof.' );
+		$this->assertSame( 'pending_account', $members[1]['status'] );
+	}
+
+	public function test_logged_in_purchase_applies_to_unverified_buyer(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-06-23';
+		rytkoset_test_register_user( 42, 'buyer@rytkoset.test', 'Buyer' );
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'lifetime', '', '' ) ),
+			42,
+			'other-billing@rytkoset.test'
+		);
+		$order->status = 'processing';
+
+		rytkoset_theme_apply_membership_from_order( $order );
+
+		$this->assertSame( 'lifetime', rytkoset_theme_get_user_membership( 42 )['type'], 'A purchase made while logged in belongs to the buyer regardless of email proof.' );
+	}
+
+	public function test_family_order_does_not_link_unverified_existing_member_account(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
+		rytkoset_test_register_user( 160, 'primary@example.test', 'Primary' );
+		$member = rytkoset_test_register_user( 161, 'member@example.test', 'Member' );
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'annual_family', '2029-12-31', '2026-2029' ) ),
+			160,
+			'primary@example.test'
+		);
+		$order->id     = 530;
+		$order->status = 'processing';
+		$this->set_member_row( $order, 1, 'Primary', 'primary@example.test' );
+		$this->set_member_row( $order, 2, 'Member', 'member@example.test' );
+
+		rytkoset_theme_maybe_apply_membership_from_order( 530, $order );
+		$GLOBALS['rytkoset_test_orders'][530] = $order;
+
+		$row = rytkoset_theme_get_family_members( 160 )[0];
+
+		$this->assertSame( 0, $row['linked_user_id'] );
+		$this->assertSame( 'pending_account', $row['status'] );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 161 ) );
+
+		do_action( 'after_password_reset', $member, 'new-password' );
+
+		$this->assertSame( 161, rytkoset_theme_get_family_members( 160 )[0]['linked_user_id'] );
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 161 ) );
+	}
+
+	public function test_verification_does_not_restore_removed_family_row(): void {
+		$GLOBALS['rytkoset_test_now'] = '2026-07-10';
+		rytkoset_test_register_user( 170, 'primary@example.test', 'Primary' );
+		$member = rytkoset_test_register_verified_user( 171, 'member@example.test', 'Member' );
+
+		$order         = $this->membership_order(
+			array( $this->membership_product( 'annual_family', '2029-12-31', '2026-2029' ) ),
+			170,
+			'primary@example.test'
+		);
+		$order->id     = 531;
+		$order->status = 'processing';
+		$this->set_member_row( $order, 1, 'Primary', 'primary@example.test' );
+		$this->set_member_row( $order, 2, 'Member', 'member@example.test' );
+
+		rytkoset_theme_maybe_apply_membership_from_order( 531, $order );
+		$GLOBALS['rytkoset_test_orders'][531] = $order;
+		$this->assertTrue( rytkoset_theme_user_is_active_member( 171 ) );
+
+		// The primary account removes the member.
+		$members              = rytkoset_theme_get_family_members( 170 );
+		$members[0]['status'] = 'removed';
+		$this->assertTrue( rytkoset_theme_update_family_members( 170, $members ) );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 171 ) );
+
+		// A later proof event (new address proof after an email round trip) must not undo the removal.
+		delete_user_meta( 171, rytkoset_theme_get_verified_email_meta_key() );
+		do_action( 'after_password_reset', $member, 'new-password' );
+		$this->assertFalse( rytkoset_theme_link_family_member_account_from_order( $order, 171 ) );
+
+		$this->assertSame( 'removed', rytkoset_theme_get_family_members( 170 )[0]['status'] );
+		$this->assertFalse( rytkoset_theme_user_is_active_member( 171 ) );
+	}
+
 	private function set_member_row( WC_Order $order, int $index, string $name, string $email ): void {
 		$order->update_meta_data( "_wc_other/rytkoset/member_{$index}_name", $name );
 		$order->update_meta_data( "_wc_other/rytkoset/member_{$index}_email", $email );

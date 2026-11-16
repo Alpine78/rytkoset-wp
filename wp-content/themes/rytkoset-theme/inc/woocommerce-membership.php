@@ -1855,8 +1855,11 @@ function rytkoset_theme_order_has_family_membership( $order ) {
 /**
  * Resolves the WordPress user associated with a membership order.
  *
- * The linked order user wins. Guest orders fall back to an existing account
- * whose email matches the billing email, following the #518 membership path.
+ * The user attached to the order wins when the attachment is trustworthy
+ * (see rytkoset_theme_membership_order_user_is_authoritative(), #744). Guest
+ * orders, and unstamped orders with an untrusted attachment, fall back to an
+ * account that has proven control of the billing email, following the #518
+ * membership path.
  *
  * @param WC_Order $order WooCommerce order object.
  * @return int User ID, or 0 when no account can be resolved.
@@ -1867,9 +1870,21 @@ function rytkoset_theme_get_membership_order_user_id( $order ) {
 	}
 
 	$user_id = absint( $order->get_user_id() );
+	$user    = $user_id > 0 ? get_userdata( $user_id ) : false;
 
-	if ( $user_id > 0 && get_userdata( $user_id ) instanceof WP_User ) {
-		return $user_id;
+	if ( $user instanceof WP_User ) {
+		// The order's customer ID alone proves nothing: WooCommerce's order confirmation
+		// account form attaches a guest order to an account created afterwards (#744).
+		if ( rytkoset_theme_membership_order_user_is_authoritative( $order, $user ) ) {
+			return $user_id;
+		}
+
+		// A stamped order belongs to its logged-in buyer only. An unstamped order whose
+		// attachment is untrusted stays claimable by the proven billing-email owner below,
+		// so an unverified attached account cannot block the real owner indefinitely.
+		if ( absint( $order->get_meta( rytkoset_theme_get_membership_order_buyer_meta_key(), true ) ) > 0 ) {
+			return 0;
+		}
 	}
 
 	$email = rytkoset_theme_normalize_family_member_email( (string) $order->get_billing_email() );
@@ -1878,9 +1893,142 @@ function rytkoset_theme_get_membership_order_user_id( $order ) {
 		return 0;
 	}
 
-	$user = get_user_by( 'email', $email );
+	// Matching by billing email alone requires proven control of that address (#744).
+	$user = rytkoset_theme_get_verified_user_by_email( $email );
 
 	return $user instanceof WP_User ? absint( $user->ID ) : 0;
+}
+
+/**
+ * Returns the order meta key storing the user who placed a membership order while logged in (#744).
+ *
+ * @return string
+ */
+function rytkoset_theme_get_membership_order_buyer_meta_key() {
+	return '_rytkoset_membership_buyer_user_id';
+}
+
+/**
+ * Returns true when the order's attached user may receive the order's membership benefits (#744).
+ *
+ * An attached user is trusted when one of these holds:
+ * - the order was placed while logged in as that user (buyer stamp written at checkout),
+ * - the user has proven control of the order's billing email, which is the address a
+ *   guest order is matched by, or
+ * - the order carries no stamp and the account already existed when the order was
+ *   created (orders placed before the stamp existed; the order confirmation account
+ *   form always creates a new account, so it can never satisfy this).
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @param WP_User  $user  User attached to the order.
+ * @return bool
+ */
+function rytkoset_theme_membership_order_user_is_authoritative( $order, $user ) {
+	if ( ! $order instanceof WC_Order || ! $user instanceof WP_User || $user->ID <= 0 ) {
+		return false;
+	}
+
+	$buyer_id = absint( $order->get_meta( rytkoset_theme_get_membership_order_buyer_meta_key(), true ) );
+
+	if ( $buyer_id > 0 ) {
+		return absint( $user->ID ) === $buyer_id;
+	}
+
+	$billing_email = rytkoset_theme_normalize_family_member_email( (string) $order->get_billing_email() );
+
+	if (
+		'' !== $billing_email
+		&& rytkoset_theme_user_email_is_verified( $user->ID )
+		&& rytkoset_theme_normalize_family_member_email( (string) $user->user_email ) === $billing_email
+	) {
+		return true;
+	}
+
+	$created    = $order->get_date_created();
+	$registered = isset( $user->user_registered ) ? strtotime( (string) $user->user_registered . ' UTC' ) : false;
+
+	return $created instanceof DateTimeInterface
+		&& false !== $registered
+		&& $registered > 0
+		&& $registered < $created->getTimestamp();
+}
+
+/**
+ * Records the logged-in buyer on a membership order at checkout (#744).
+ *
+ * Membership carts are rejected for logged-out visitors before WooCommerce can create
+ * an account (add-to-cart and cart validation, #661). The `user_register` check is an
+ * extra guard: a request that created an account is never a logged-in purchase.
+ *
+ * @param WC_Order $order WooCommerce order being created at checkout.
+ * @return bool True when the stamp was written.
+ */
+function rytkoset_theme_stamp_membership_order_buyer( $order ) {
+	if ( ! $order instanceof WC_Order || did_action( 'user_register' ) > 0 ) {
+		return false;
+	}
+
+	$user_id = get_current_user_id();
+
+	if (
+		$user_id <= 0
+		|| absint( $order->get_user_id() ) !== $user_id
+		|| empty( rytkoset_theme_get_membership_order_items( $order ) )
+	) {
+		return false;
+	}
+
+	$order->update_meta_data( rytkoset_theme_get_membership_order_buyer_meta_key(), $user_id );
+
+	return true;
+}
+add_action( 'woocommerce_checkout_create_order', 'rytkoset_theme_stamp_membership_order_buyer' );
+
+/**
+ * Records the logged-in buyer on a membership order placed through the Checkout Block (#744).
+ *
+ * @param WC_Order $order WooCommerce order object.
+ * @return void
+ */
+function rytkoset_theme_stamp_store_api_membership_order_buyer( $order ) {
+	if ( rytkoset_theme_stamp_membership_order_buyer( $order ) ) {
+		$order->save();
+	}
+}
+add_action( 'woocommerce_store_api_checkout_update_order_meta', 'rytkoset_theme_stamp_store_api_membership_order_buyer' );
+
+/**
+ * Returns the account already linked to a family row with the given email (#744).
+ *
+ * A renewal must keep an established link even when that account has not proven its
+ * address; proof is required only for creating a new email-based link.
+ *
+ * @param array<int, array<string, mixed>> $members Stored family member rows.
+ * @param string                           $email   Normalized member email.
+ * @return int Linked user ID, or 0 when the row has no active link.
+ */
+function rytkoset_theme_get_active_family_member_link_for_email( $members, $email ) {
+	$email = (string) $email;
+
+	if ( '' === $email ) {
+		return 0;
+	}
+
+	foreach ( is_array( $members ) ? $members : array() as $member ) {
+		$linked_user_id = isset( $member['linked_user_id'] ) ? absint( $member['linked_user_id'] ) : 0;
+
+		if (
+			isset( $member['email'], $member['status'] )
+			&& $email === (string) $member['email']
+			&& 'active' === (string) $member['status']
+			&& $linked_user_id > 0
+			&& get_userdata( $linked_user_id ) instanceof WP_User
+		) {
+			return $linked_user_id;
+		}
+	}
+
+	return 0;
 }
 
 /**
@@ -2002,8 +2150,9 @@ function rytkoset_theme_family_order_members_include_email( $members, $email ) {
  * Sends the "create an account" notice to a guest membership buyer (#518).
  *
  * Plain-text Finnish email to the billing address: the membership fee was
- * received, member benefits need a site account, and registering with this
- * same email address activates the membership automatically. Sender comes
+ * received, member benefits need a site account, and the membership is
+ * activated once an account with this same email address has proven control
+ * of the address by setting its password through an emailed link (#744). Sender comes
  * from the inc/email.php wp_mail filters.
  *
  * @param WC_Order $order WooCommerce order object.
@@ -2029,13 +2178,8 @@ function rytkoset_theme_send_membership_account_notice_email( $order ) {
 		'',
 		__( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat käyttäjätilin. Jäsenyytesi automaattinen aktivointi odottaa, että sinulla on tili sivustolla.', 'rytkoset-theme' ),
 		'',
-		sprintf(
-			/* translators: %s: buyer's billing email address. */
-			__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin jäsenyytesi aktivoituu automaattisesti:', 'rytkoset-theme' ),
-			$email
-		),
-		wp_registration_url(),
 	);
+	$lines = array_merge( $lines, rytkoset_theme_get_email_verification_instruction_lines( $email ) );
 
 	$contact_email = rytkoset_theme_get_contact_email();
 
@@ -2066,7 +2210,7 @@ function rytkoset_theme_send_membership_account_notice_email( $order ) {
  *
  * The message states where the address came from and avoids disclosing order
  * details or the buyer's identity. Unknown addresses also receive account
- * registration instructions.
+ * registration and email verification instructions (#744).
  *
  * @param string $email         Family member email address.
  * @param bool   $needs_account Whether the address still needs a user account.
@@ -2092,12 +2236,7 @@ function rytkoset_theme_send_family_member_account_notice_email( $email, $needs_
 		$lines[] = '';
 		$lines[] = __( 'Jäsenedut sivustolla (jäsenille rajatut sivut, jäsenhinnat ja digilehdet) vaativat henkilökohtaisen käyttäjätilin.', 'rytkoset-theme' );
 		$lines[] = '';
-		$lines[] = sprintf(
-			/* translators: %s: family member email address. */
-			__( 'Luo tili tällä samalla sähköpostiosoitteella (%s), niin perhejäsenyys linkittyy tiliisi automaattisesti:', 'rytkoset-theme' ),
-			$email
-		);
-		$lines[] = wp_registration_url();
+		$lines   = array_merge( $lines, rytkoset_theme_get_email_verification_instruction_lines( $email ) );
 	} else {
 		$lines[] = '';
 		$lines[] = __( 'Perhejäsenyys on linkitetty tällä sähköpostiosoitteella olevaan käyttäjätiliisi.', 'rytkoset-theme' );
@@ -2229,10 +2368,13 @@ function rytkoset_theme_process_family_members_from_order( $order ) {
 			$linked_user_id = 0;
 
 			if ( '' !== $member['email'] ) {
-				$linked_user = get_user_by( 'email', $member['email'] );
+				$linked_user = rytkoset_theme_get_verified_user_by_email( $member['email'] );
 
 				if ( $linked_user instanceof WP_User ) {
 					$linked_user_id = absint( $linked_user->ID );
+				} else {
+					// Keep a link that already exists; only new links need the proof (#744).
+					$linked_user_id = rytkoset_theme_get_active_family_member_link_for_email( $members, $member['email'] );
 				}
 			}
 
@@ -2368,16 +2510,21 @@ function rytkoset_theme_get_family_membership_orders_for_email( $email ) {
 }
 
 /**
- * Links a newly registered user to their pending family member row (#519).
+ * Links a user who has proven their email to their pending family member row (#519, #744).
  *
  * @param WC_Order $order   Family membership order containing the member email.
- * @param int      $user_id Newly registered user ID.
+ * @param int      $user_id Family member user ID.
  * @return true|false|WP_Error True when linked/already linked, false when not applicable.
  */
 function rytkoset_theme_link_family_member_account_from_order( $order, $user_id ) {
 	$user = get_userdata( absint( $user_id ) );
 
 	if ( ! $order instanceof WC_Order || ! $user instanceof WP_User ) {
+		return false;
+	}
+
+	// The row is matched by email alone, so the account must have proven the address (#744).
+	if ( ! rytkoset_theme_user_email_is_verified( $user->ID ) ) {
 		return false;
 	}
 
@@ -2415,6 +2562,12 @@ function rytkoset_theme_link_family_member_account_from_order( $order, $user_id 
 
 		if ( absint( $member['linked_user_id'] ) === absint( $user->ID ) && 'active' === $member['status'] ) {
 			return true;
+		}
+
+		// Only a row still waiting for an account may be linked. A removed row must stay
+		// removed and a row linked to another account must not be taken over (#744).
+		if ( 'pending_account' !== $member['status'] || absint( $member['linked_user_id'] ) > 0 ) {
+			return false;
 		}
 
 		$members[ $index ]['linked_user_id'] = absint( $user->ID );
@@ -2476,7 +2629,7 @@ function rytkoset_theme_mark_membership_order_awaiting_account( $order ) {
 	if ( rytkoset_theme_send_membership_account_notice_email( $order ) ) {
 		$order->update_meta_data( rytkoset_theme_get_membership_account_notice_sent_meta_key(), current_time( 'mysql' ) );
 		$order->add_order_note(
-			__( 'Jäsenmaksutilausta ei voitu yhdistää WordPress-käyttäjään. Ostajalle lähetettiin laskutussähköpostiin ohje luoda tili: jäsenyys kytkeytyy automaattisesti, kun tili luodaan samalla sähköpostiosoitteella. Tarvittaessa jäsenyyden voi asettaa manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
+			__( 'Jäsenmaksutilausta ei voitu yhdistää WordPress-käyttäjään. Ostajalle lähetettiin laskutussähköpostiin ohje: jäsenyys kytkeytyy automaattisesti, kun samalla sähköpostiosoitteella olevan tilin osoite on vahvistettu asettamalla salasana sähköpostilinkin kautta. Tarvittaessa jäsenyyden voi asettaa manuaalisesti käyttäjähallinnassa.', 'rytkoset-theme' ),
 			false
 		);
 	} else {
@@ -2661,7 +2814,7 @@ add_action( 'woocommerce_order_status_processing', 'rytkoset_theme_maybe_apply_m
 add_action( 'woocommerce_order_status_completed', 'rytkoset_theme_maybe_apply_membership_from_order', 10, 2 );
 
 // ---------------------------------------------------------------------------
-// Membership linking on account registration (#518, #519)
+// Membership linking once an account has proven its email (#518, #519, #744)
 // ---------------------------------------------------------------------------
 
 /**
@@ -2694,21 +2847,21 @@ function rytkoset_theme_get_awaiting_membership_orders_for_email( $email ) {
 }
 
 /**
- * Applies awaiting guest membership orders when a new account is registered (#518).
+ * Applies awaiting guest membership orders and family rows to a verified account (#518, #744).
  *
- * WordPress registration verifies control of the email address via the password
- * set link, so the membership cannot be used by the wrong person. Each awaiting
- * order goes through the same apply path (never-shorten rule, confirmation
- * email, order note) as a normal status transition; the apply resolves the new
- * user by billing email.
+ * Runs when an account has proven control of its email address
+ * (`rytkoset_theme_user_email_verified`), never on account creation: WooCommerce
+ * creates accounts for any address without verification. Each awaiting order goes
+ * through the same apply path (never-shorten rule, confirmation email, order
+ * note) as a normal status transition; the apply resolves the user by billing email.
  *
- * @param int $user_id Newly registered user ID.
+ * @param int $user_id User ID whose email was verified.
  * @return void
  */
-function rytkoset_theme_apply_membership_on_user_register( $user_id ) {
+function rytkoset_theme_apply_membership_for_verified_user( $user_id ) {
 	$user = get_userdata( (int) $user_id );
 
-	if ( ! $user instanceof WP_User ) {
+	if ( ! $user instanceof WP_User || ! rytkoset_theme_user_email_is_verified( $user->ID ) ) {
 		return;
 	}
 
@@ -2725,4 +2878,4 @@ function rytkoset_theme_apply_membership_on_user_register( $user_id ) {
 		rytkoset_theme_link_family_member_account_from_order( $order, (int) $user->ID );
 	}
 }
-add_action( 'user_register', 'rytkoset_theme_apply_membership_on_user_register' );
+add_action( 'rytkoset_theme_user_email_verified', 'rytkoset_theme_apply_membership_for_verified_user' );

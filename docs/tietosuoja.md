@@ -111,7 +111,7 @@ Jos olet alle 13-vuotias, et voi tietosuojalain (1050/2018) 5 §:n mukaan itse a
 
 Kun rekisteröidyt sivustolle, tallennamme nimesi ja sähköpostiosoitteesi sekä mahdolliset profiilitiedot, jotka itse annat. Tietoja käytetään käyttäjätilin ylläpitoon, kirjautumiseen ja jäsenviestintään.
 
-Jos olet yhdistyksen jäsen, ylläpito voi jäsenrekisterin perusteella kytkeä jäsenyytesi käyttäjätiliisi, jotta saat sivuston jäsenedut käyttöösi. Jos sähköpostiosoitteellasi ei vielä ole käyttäjätiliä, osoitteeseen voidaan lähettää kertaluonteinen viesti, jossa kerrotaan tietojen olevan peräisin yhdistyksen jäsenrekisteristä ja ohjataan luomaan tili samalla osoitteella. Jäsenyyden kytkentää odottavat tiedot (sähköpostiosoite ja jäsenyyden tyyppi- ja voimassaolotiedot) säilytetään vain kytkentää varten, ja niiden poistoa voi pyytää rekisterinpitäjältä. Käsittelystä pidetään ylläpidon lokia (osoite, lopputulos, käsittelijä, aika).
+Jos olet yhdistyksen jäsen, ylläpito voi jäsenrekisterin perusteella kytkeä jäsenyytesi käyttäjätiliisi, jotta saat sivuston jäsenedut käyttöösi. Jos sähköpostiosoitteellasi ei vielä ole käyttäjätiliä, osoitteeseen voidaan lähettää kertaluonteinen viesti, jossa kerrotaan tietojen olevan peräisin yhdistyksen jäsenrekisteristä ja ohjataan luomaan tili samalla osoitteella. Jäsenyys kytketään tiliin vasta, kun olet osoittanut hallitsevasi sähköpostiosoitetta asettamalla tilin salasanan osoitteeseen lähetetyn linkin kautta; pelkkä tilin luominen osoitteellasi ei riitä. Tieto vahvistetusta osoitteesta tallennetaan käyttäjätilin tietoihin. Jäsenyyden kytkentää odottavat tiedot (sähköpostiosoite ja jäsenyyden tyyppi- ja voimassaolotiedot) säilytetään vain kytkentää varten, ja niiden poistoa voi pyytää rekisterinpitäjältä. Käsittelystä pidetään ylläpidon lokia (osoite, lopputulos, käsittelijä, aika).
 
 ### Rekisteröinnin bottisuoja
 
@@ -210,9 +210,12 @@ ja jäsenetujen hallintaan; virheellisen tai tarpeettoman perherivin korjaamista
 tai poistamista voi pyytää rekisterinpitäjältä.
 
 Jos perhejäsenelle ilmoitetulla sähköpostiosoitteella ei vielä ole
-käyttäjätiliä, osoitteeseen lähetetään kertaluonteinen viesti, jossa kerrotaan,
-että osoite on annettu perhejäsenmaksun yhteydessä, ohjataan tähän
-tietosuojaselosteeseen ja neuvotaan luomaan tili samalla osoitteella. Viestissä
+käyttäjätiliä tai tilin osoitetta ei ole vahvistettu, osoitteeseen lähetetään
+kertaluonteinen viesti, jossa kerrotaan, että osoite on annettu
+perhejäsenmaksun yhteydessä, ohjataan tähän tietosuojaselosteeseen ja neuvotaan
+luomaan tili samalla osoitteella tai vahvistamaan olemassa olevan tilin osoite.
+Perhejäsenyys linkitetään tiliin vasta, kun tilin haltija on asettanut
+salasanan osoitteeseen lähetetyn linkin kautta. Viestissä
 ei kerrota ostajan henkilöllisyyttä tai muita tilaustietoja. Ilman
 sähköpostiosoitetta tallennettu perherivi jää vain jäsenrekisteritiedoksi, eikä
 siitä lähetetä viestiä.

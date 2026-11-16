@@ -135,6 +135,26 @@ function rytkoset_test_register_user( int $id, string $email = '', string $displ
 }
 
 /**
+ * Registers a stub WP_User whose holder has proven control of the email address (#744).
+ *
+ * Stores the proof directly, without firing the verification action, so a test can
+ * set up an existing verified account without triggering the pending-benefit sweep.
+ *
+ * @param int    $id           User ID.
+ * @param string $email        Email address.
+ * @param string $display_name Display name.
+ * @param string $login        Login name.
+ * @return WP_User
+ */
+function rytkoset_test_register_verified_user( int $id, string $email = '', string $display_name = '', string $login = '' ): WP_User {
+	$user = rytkoset_test_register_user( $id, $email, $display_name, $login );
+
+	update_user_meta( $id, 'rytkoset_verified_email', strtolower( $email ) );
+
+	return $user;
+}
+
+/**
  * Registers a stub WP_Post in the test registry.
  *
  * @param int    $id     Post ID.
@@ -175,6 +195,9 @@ class WP_User {
 	public string $user_email;
 	public string $display_name;
 	public string $user_login;
+
+	/** @var string Registration time (UTC, mysql format); empty when a test does not need it. */
+	public string $user_registered = '';
 
 	public function __construct( int $id = 0, string $email = '', string $display_name = '', string $login = '' ) {
 		$this->ID           = $id;
