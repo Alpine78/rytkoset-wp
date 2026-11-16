@@ -27,6 +27,8 @@ Toteutus: `inc/woocommerce-cancellation.php`. WooCommerce-riippuvainen, teeman k
 | `completed`, muu peruuttamiskelpoinen tilaus | Käytettävissä 14 vrk tilauksen tekemisestä; **status jätetään ennalleen** ja pyyntö käsitellään manuaalisesti. |
 | Sekatilaus, jossa on myös peruuttamisoikeuden ulkopuolinen tuote | **Status jätetään aina ennalleen**, myös maksamattomassa tilauksessa. Ylläpitäjä käsittelee vain peruuttamisoikeuden piiriin kuuluvat tuotteet. |
 
+Jos tilauksessa on jäsenmaksu, admin-ilmoitus muistuttaa, ettei jäsenyyttä poisteta automaattisesti hyvityksessä. Kun tilaus sitten hyvitetään tai perutaan, teema lähettää vielä erillisen muistutuksen jäsenyyden tarkistamisesta (#746, ks. `docs/jasenyys.md`).
+
 Admin-ilmoitus menee teeman yhteyssähköpostiin (`rytkoset_theme_get_contact_email()`); vastaanottajaa voi muuttaa suodattimella `rytkoset_theme_order_cancellation_admin_recipient`.
 
 ## Fyysisten tuotteiden palautukset
